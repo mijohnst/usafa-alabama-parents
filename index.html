@@ -1109,15 +1109,15 @@ if (document.readyState === 'loading') {
         <div class="card" style="border-top-color:var(--blue);">
           <div class="form-group">
             <label>Your Name</label>
-            <input type="text" placeholder="Jane Smith"/>
+            <input type="text" id="contact-name" placeholder="Jane Smith" required/>
           </div>
           <div class="form-group">
             <label>Email Address</label>
-            <input type="email" placeholder="jsmith@example.com"/>
+            <input type="email" id="contact-email" placeholder="jsmith@example.com" required/>
           </div>
           <div class="form-group">
             <label>I am a...</label>
-            <select>
+            <select id="contact-iam">
               <option>— Select One —</option>
               <option>Parent of a current USAFA Cadet</option>
               <option>Parent of a new Appointee</option>
@@ -1128,13 +1128,13 @@ if (document.readyState === 'loading') {
           </div>
           <div class="form-group">
             <label>Cadet's Class Year (if applicable)</label>
-            <input type="text" placeholder="e.g. Class of 2028"/>
+            <input type="text" id="contact-year" placeholder="e.g. Class of 2028"/>
           </div>
           <div class="form-group">
             <label>Message</label>
-            <textarea placeholder="Tell us how we can help, or leave us a note..."></textarea>
+            <textarea id="contact-message" placeholder="Tell us how we can help, or leave us a note..." required></textarea>
           </div>
-          <button class="btn btn-gold" style="width:100%;">Send Message</button>
+          <button type="button" id="contact-submit" class="btn btn-gold" style="width:100%;">Send Message</button>
         </div>
       </div>
     </div>
@@ -1176,4 +1176,93 @@ if (document.readyState === 'loading') {
       <a href="https://www.usafawebguy.com/" target="_blank">Webguy</a>
       <a href="https://www.usafa.edu/military/basic-cadet-training/" target="_blank">Basic Training Info</a>
       <a href="https://www.usafa.edu/parents/parent-clubs-spirit-committees/" target="_blank">Spirit Committees</a>
-      <a href="https://www.facebook.com/groups/usafaal" target="_blank">F
+            <a href="https://www.facebook.com/groups/usafaal" target="_blank">Facebook Group</a>
+    </div>
+    <div class="footer-col">
+      <h5>Contact Us</h5>
+      <p style="margin-bottom:0.5rem;"><a href="mailto:alabamausafaparents@gmail.com" style="color:var(--gold);text-decoration:none;">alabamausafaparents@gmail.com</a></p>
+      <p style="margin:0;color:#ccc;font-size:0.85rem;">We typically respond within 24-48 hours</p>
+    </div>
+  </div>
+  <div style="text-align:center;padding:1.5rem 2rem;border-top:1px solid rgba(255,255,255,0.1);margin-top:2rem;">
+    <p style="margin:0;color:#999;font-size:0.85rem;">&copy; 2026 USAFA Parents Club of Alabama. All rights reserved.</p>
+  </div>
+</footer>
+
+
+<script>
+// Contact Form Handler
+document.getElementById('contact-submit')?.addEventListener('click', async function() {
+  const button = this;
+  const originalText = button.textContent;
+  
+  // Get form values
+  const name = document.getElementById('contact-name').value.trim();
+  const email = document.getElementById('contact-email').value.trim();
+  const iam = document.getElementById('contact-iam').value;
+  const classYear = document.getElementById('contact-year').value.trim();
+  const message = document.getElementById('contact-message').value.trim();
+  
+  // Validate
+  if (!name || !email || !message) {
+    alert('Please fill in all required fields (Name, Email, and Message)');
+    return;
+  }
+  
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert('Please enter a valid email address');
+    return;
+  }
+  
+  // Show loading state
+  button.disabled = true;
+  button.textContent = 'Sending...';
+  button.style.opacity = '0.6';
+  
+  try {
+    const response = await fetch('/contact-form.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: name,
+        email: email,
+        iam: iam,
+        classYear: classYear,
+        message: message
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Success!
+      alert(data.message);
+      
+      // Clear form
+      document.getElementById('contact-name').value = '';
+      document.getElementById('contact-email').value = '';
+      document.getElementById('contact-iam').selectedIndex = 0;
+      document.getElementById('contact-year').value = '';
+      document.getElementById('contact-message').value = '';
+    } else {
+      alert(data.message || 'Sorry, there was an error. Please email us directly at alabamausafaparents@gmail.com');
+    }
+    
+  } catch (error) {
+    console.error('Contact form error:', error);
+    alert('Sorry, there was an error sending your message. Please email us directly at alabamausafaparents@gmail.com');
+  } finally {
+    // Restore button
+    button.disabled = false;
+    button.textContent = originalText;
+    button.style.opacity = '1';
+  }
+});
+</script>
+
+</body>
+</html>
