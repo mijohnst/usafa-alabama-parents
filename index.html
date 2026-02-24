@@ -426,7 +426,7 @@ document.querySelectorAll('.nav-links a').forEach(function(link) {
   });
 });
 
-// Contact form AJAX
+// Contact form AJAX - sends JSON to contact-form.php
 var form = document.getElementById('contact-form');
 var statusEl = document.getElementById('form-status');
 form.addEventListener('submit', async function(e) {
@@ -437,7 +437,6 @@ form.addEventListener('submit', async function(e) {
   statusEl.className = '';
   statusEl.style.display = 'none';
   try {
-    // PHP expects JSON with fields: name, email, iam, classYear, message
     var payload = {
       name:      form.querySelector('#name').value.trim(),
       email:     form.querySelector('#email').value.trim(),
@@ -460,7 +459,7 @@ form.addEventListener('submit', async function(e) {
       throw new Error(data.message || 'Submission failed');
     }
   } catch(err) {
-    statusEl.textContent = 'Something went wrong. Please email us directly at usafapcofal@gmail.com';
+    statusEl.textContent = err.message || 'Something went wrong. Please email us directly at usafapcofal@gmail.com';
     statusEl.className = 'error';
   } finally {
     btn.textContent = 'Send Message';
@@ -469,11 +468,20 @@ form.addEventListener('submit', async function(e) {
 });
 
 // USAFA News loader
-// Tries usafa-news.php first; on failure falls back to USAFA RSS via CORS proxy.
+// 1. Tries usafa-news.php (PHP fetches & caches USAFA RSS, returns JSON wrapper)
+// 2. Falls back to direct USAFA RSS via allorigins CORS proxy
+// 3. Shows error link if both fail
+
+function fetchWithTimeout(url, ms) {
+  var ctrl = new AbortController();
+  var timer = setTimeout(function() { ctrl.abort(); }, ms);
+  return fetch(url, { signal: ctrl.signal }).finally(function() { clearTimeout(timer); });
+}
+
 function parseRSS(xmlText) {
   var parser = new DOMParser();
   var xml = parser.parseFromString(xmlText, 'text/xml');
-  var items = Array.from(xml.querySelectorAll('item')).slice(0, 6);
+  var items = Array.from(xml.querySelectorAll('item')).slice(0, 4);
   return items.map(function(item) {
     var raw = (item.querySelector('description') || {}).textContent || '';
     var tmp = document.createElement('div');
@@ -483,7 +491,7 @@ function parseRSS(xmlText) {
     var pubDate = (item.querySelector('pubDate') || {}).textContent || '';
     var date = '';
     if (pubDate) {
-      try { date = new Date(pubDate).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}); } catch(e) {}
+      try { date = new Date(pubDate).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}); } catch(ex) {}
     }
     return {
       title:   (item.querySelector('title') || {}).textContent || '',
@@ -513,9 +521,43 @@ function renderNews(items) {
 async function loadNews() {
   var container = document.getElementById('news-container');
 
-  // 1. Try usafa-news.php
-  // PHP returns: { status:'ok', items:[{title,link,pubDate,description}], cached_at }
+  // 1. Try usafa-news.php with 6s timeout
   try {
-    var r = await fetch('usafa-news.php');
+    var r = await fetchWithTimeout('usafa-news.php', 6000);
     if (r.ok) {
       var parsed = await r.json();
+      var raw = (parsed.status === 'ok' && parsed.items) ? parsed.items : (Array.isArray(parsed) ? parsed : null);
+      if (raw && raw.length > 0) {
+        var items = raw.map(function(i) {
+          var d = '';
+          if (i.pubDate) {
+            try { d = new Date(i.pubDate).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}); } catch(ex) {}
+          }
+          return { title: i.title, url: i.link, date: d, summary: i.description };
+        });
+        renderNews(items);
+        return;
+      }
+    }
+  } catch(e) { console.warn('usafa-news.php failed:', e.message); }
+
+  // 2. Fallback: allorigins CORS proxy -> USAFA RSS with 8s timeout
+  try {
+    var rssUrl = 'https://www.usafa.edu/feed/';
+    var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(rssUrl);
+    var r2 = await fetchWithTimeout(proxyUrl, 8000);
+    if (!r2.ok) throw new Error('proxy error');
+    var data = await r2.json();
+    var items2 = parseRSS(data.contents);
+    if (items2 && items2.length > 0) { renderNews(items2); return; }
+  } catch(e) { console.warn('RSS proxy fallback failed:', e.message); }
+
+  // 3. Both failed - show link
+  container.innerHTML = '<p class="news-loading">Unable to load news at this time. ' +
+    '<a href="https://www.usafa.edu/news/" target="_blank" rel="noopener" style="color:var(--blue);">Visit USAFA.edu directly &rarr;</a></p>';
+}
+
+loadNews();
+</script>
+</body>
+</html>
