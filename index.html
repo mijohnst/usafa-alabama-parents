@@ -147,6 +147,12 @@
     .contact-detail .icon{font-size:1.1rem;}
     .contact-detail a{color:var(--blue);}
     .contact-detail a:hover{color:var(--gold);}
+    .fb-icon{display:inline-flex;align-items:center;gap:.5rem;color:var(--blue);transition:color .2s;}
+    .fb-icon:hover{color:#1877f2;}
+    .fb-icon svg{width:22px;height:22px;flex-shrink:0;}
+    .footer-fb{display:inline-flex;align-items:center;gap:.5rem;font-size:.85rem;color:rgba(245,245,240,.55);transition:color .2s;}
+    .footer-fb:hover{color:#1877f2;}
+    .footer-fb svg{width:18px;height:18px;flex-shrink:0;}
     .contact-form{background:var(--white);border-radius:4px;padding:2.5rem;box-shadow:0 4px 24px rgba(10,22,40,.08);}
     .form-group{margin-bottom:1.25rem;}
     .form-group label{display:block;font-size:.75rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);margin-bottom:.4rem;}
@@ -338,8 +344,12 @@
         <h3>We'd love to hear from you</h3>
         <p>Whether you're a newly-appointed family, a current cadet parent, or someone interested in supporting our mission &mdash; fill out the form and a club officer will follow up shortly.</p>
         <div class="contact-detail"><span class="icon">&#9993;&#65039;</span><span><a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a></span></div>
-        <div class="contact-detail"><span class="icon">&#127760;</span><span><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener">Facebook Group</a></span></div>
+        <div class="contact-detail"><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener" class="fb-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg><span>Facebook Group</span></a></div>
         <p style="margin-top:1rem;font-size:.85rem;color:var(--gray);">We typically respond within 24&ndash;48 hours.</p>
+        <p style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #d0d8e4;font-size:.8rem;color:var(--gray);">
+          Having website issues? Contact the
+          <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue);">Site Administrator</a>.
+        </p>
       </div>
       <div class="contact-form">
         <form id="contact-form">
@@ -406,7 +416,7 @@
       <h4>Contact Us</h4>
       <ul>
         <li><a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a></li>
-        <li><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener">Facebook Group</a></li>
+        <li><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener" class="footer-fb"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg><span>Facebook Group</span></a></li>
       </ul>
       <p style="font-size:.8rem;color:rgba(245,245,240,.35);margin-top:1rem;">We typically respond within 24&ndash;48 hours</p>
     </div>
@@ -418,7 +428,6 @@
 </footer>
 
 <script>
-// Hamburger menu
 document.getElementById('hamburger').addEventListener('click', function() {
   document.getElementById('nav-links').classList.toggle('open');
 });
@@ -428,7 +437,6 @@ document.querySelectorAll('.nav-links a').forEach(function(link) {
   });
 });
 
-// Contact form AJAX - sends JSON to contact-form.php
 var form = document.getElementById('contact-form');
 var statusEl = document.getElementById('form-status');
 form.addEventListener('submit', async function(e) {
@@ -469,7 +477,6 @@ form.addEventListener('submit', async function(e) {
   }
 });
 
-// USAFA News loader
 function fetchWithTimeout(url, ms) {
   var ctrl = new AbortController();
   var timer = setTimeout(function() { ctrl.abort(); }, ms);
