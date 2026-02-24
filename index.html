@@ -199,7 +199,7 @@
 <section class="hero" id="home">
   <p class="hero-motto">&#127482;&#127480; &nbsp;Integrity First &middot; Service Before Self &middot; Excellence in All We Do&nbsp; &#127482;&#127480;</p>
   <h1>USAFA Parents Club<span>State of Alabama</span></h1>
-  <p class="hero-sub">Uniting families of United States Air Force Academy cadets across the great state of Alabama &mdash; offering support, community, and connection from R-Day through graduation.</p>
+  <p class="hero-sub">Uniting current, incoming, and alumni families of United States Air Force Academy cadets across the great state of Alabama &mdash; offering support, community, and connection from appointment through graduation and beyond.</p>
   <div class="hero-cta">
     <a href="#contact" class="btn btn-gold">Join Our Club</a>
     <a href="#about" class="btn btn-outline">Learn More</a>
@@ -470,10 +470,6 @@ form.addEventListener('submit', async function(e) {
 });
 
 // USAFA News loader
-// 1. Tries usafa-news.php (PHP fetches & caches USAFA RSS, returns JSON wrapper)
-// 2. Falls back to direct USAFA RSS via allorigins CORS proxy
-// 3. Shows error link if both fail
-
 function fetchWithTimeout(url, ms) {
   var ctrl = new AbortController();
   var timer = setTimeout(function() { ctrl.abort(); }, ms);
@@ -530,4 +526,36 @@ async function loadNews() {
       var parsed = await r.json();
       var raw = (parsed.status === 'ok' && parsed.items) ? parsed.items : (Array.isArray(parsed) ? parsed : null);
       if (raw && raw.length > 0) {
-        
+        var items = raw.map(function(i) {
+          var d = '';
+          if (i.pubDate) {
+            try { d = new Date(i.pubDate).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}); } catch(ex) {}
+          }
+          return { title: i.title, url: i.link, date: d, summary: i.description };
+        });
+        renderNews(items);
+        return;
+      }
+    }
+  } catch(e) { console.warn('usafa-news.php failed:', e.message); }
+
+  // 2. Fallback: allorigins CORS proxy with 8s timeout
+  try {
+    var rssUrl = 'https://www.usafa.edu/feed/';
+    var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(rssUrl);
+    var r2 = await fetchWithTimeout(proxyUrl, 8000);
+    if (!r2.ok) throw new Error('proxy error');
+    var data = await r2.json();
+    var items2 = parseRSS(data.contents);
+    if (items2 && items2.length > 0) { renderNews(items2); return; }
+  } catch(e) { console.warn('RSS proxy fallback failed:', e.message); }
+
+  // 3. Both failed
+  container.innerHTML = '<p class="news-loading">Unable to load news at this time. ' +
+    '<a href="https://www.usafa.edu/news/" target="_blank" rel="noopener" style="color:var(--blue);">Visit USAFA.edu directly &rarr;</a></p>';
+}
+
+loadNews();
+</script>
+</body>
+</html>
