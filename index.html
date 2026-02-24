@@ -340,7 +340,7 @@
         <p style="margin-top:1rem;font-size:.85rem;color:var(--gray);">We typically respond within 24&ndash;48 hours.</p>
       </div>
       <div class="contact-form">
-        <form id="contact-form" action="contact-form.php" method="POST">
+        <form id="contact-form">
           <div class="form-row">
             <div class="form-group"><label for="name">Your Name</label><input type="text" id="name" name="name" required placeholder="First Last" /></div>
             <div class="form-group"><label for="email">Email Address</label><input type="email" id="email" name="email" required placeholder="you@example.com" /></div>
@@ -455,6 +455,7 @@ form.addEventListener('submit', async function(e) {
       statusEl.textContent = data.message || 'Message sent! A club officer will follow up shortly.';
       statusEl.className = 'success';
       form.reset();
+      setTimeout(function() { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 2000);
     } else {
       throw new Error(data.message || 'Submission failed');
     }
