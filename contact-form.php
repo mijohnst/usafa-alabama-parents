@@ -19,7 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Get POST data
-$data = json_decode(file_get_contents('php://input'), true);
+$raw = file_get_contents('php://input');
+$data = json_decode($raw, true);
+
+// Fallback: also accept regular POST fields (form submission)
+if (empty($data)) {
+    $data = $_POST;
+}
 
 // Validate required fields
 $required_fields = ['name', 'email', 'message'];
