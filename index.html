@@ -90,6 +90,7 @@
     .events-list{display:flex;flex-direction:column;gap:1rem;margin-top:1rem;}
     .event-card{display:grid;grid-template-columns:80px 1fr;gap:1.5rem;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(200,168,75,.2);border-radius:4px;padding:1.5rem;transition:background .2s;}
     .event-card:hover{background:rgba(200,168,75,.06);}
+    .events-group-label{font-family:var(--font-display);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);padding:.25rem 0;border-bottom:1px solid rgba(200,168,75,.25);margin-bottom:.25rem;}
     .event-date{text-align:center;background:var(--gold);color:var(--navy);border-radius:4px;padding:.5rem;}
     .event-date .month{font-size:.65rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;}
     .event-date .day{font-family:var(--font-display);font-size:1.8rem;line-height:1;}
@@ -273,10 +274,31 @@
     <div class="divider"></div>
     <p style="color:rgba(245,245,240,.6);margin-bottom:2rem;">Stay connected with club news, quarterly meetings, and social gatherings across Alabama.</p>
     <div class="events-list">
-      <div class="event-card"><div class="event-date"><div class="month">Mar</div><div class="day">08</div></div><div class="event-info"><h3>Spring General Membership Meeting</h3><p>&#128205; Homewood Public Library, Birmingham, AL &middot; 2:00 PM &ndash; 4:00 PM</p><span class="event-tag tag-meeting">Meeting</span></div></div>
-      <div class="event-card"><div class="event-date"><div class="month">Mar</div><div class="day">22</div></div><div class="event-info"><h3>New Appointee Welcome Reception</h3><p>&#128205; Montgomery Country Club, Montgomery, AL &middot; 5:30 PM &ndash; 8:00 PM</p><span class="event-tag tag-social">Social</span></div></div>
-      <div class="event-card"><div class="event-date"><div class="month">Apr</div><div class="day">12</div></div><div class="event-info"><h3>BCT Care Package Packing Day</h3><p>&#128205; Huntsville &mdash; location TBD &middot; 10:00 AM &ndash; 1:00 PM</p><span class="event-tag tag-volunteer">Volunteer</span></div></div>
-      <div class="event-card"><div class="event-date"><div class="month">Jun</div><div class="day">05</div></div><div class="event-info"><h3>R-Day Family Support Gathering</h3><p>&#128205; Auburn &mdash; location TBD &middot; For families of Class of 2029 basics</p><span class="event-tag tag-social">Social</span></div></div>
+
+      <div class="events-group-label">Upcoming Events</div>
+
+      <div class="event-card"><div class="event-date"><div class="month">Jun</div><div class="day">06</div></div><div class="event-info"><h3>Appointee Send-off</h3><p>Date: June 6, 2026 </p><span class="event-tag tag-social">Social</span></div></div>
+
+      <div class="event-card"><div class="event-date"><div class="month">Apr</div><div class="day">12</div></div><div class="event-info"><h3>Annual Zoom Meeting</h3><p>April 12, 2026 at 4:00 PM </p><span class="event-tag tag-meeting">Meeting</span></div></div>
+
+      <div class="event-card"><div class="event-date"><div class="month">Sep</div><div class="day">4&ndash;6</div></div><div class="event-info"><h3>Parents Weekend Social</h3><p>September 4&ndash;6, 2026 &middot; No cost</p><span class="event-tag tag-social">Social</span></div></div>
+
+      <div class="event-card"><div class="event-date"><div class="month">TBA</div><div class="day">&#8212;</div></div><div class="event-info"><h3>Monthly Officer Meetings</h3><p>Dates TBA </p><span class="event-tag tag-meeting">Meeting</span></div></div>
+
+      <div class="event-card"><div class="event-date"><div class="month">TBA</div><div class="day">&#8212;</div></div><div class="event-info"><h3>Quarterly Parent Mixers</h3><p>North, Central &amp; South Alabama &middot; Dates TBA </p><span class="event-tag tag-social">Social</span></div></div>
+
+      <div class="events-group-label" style="margin-top:1rem;">For Our Cadets</div>
+
+      <div class="event-card"><div class="event-date"><div class="month">Year</div><div class="day">&#8212;</div></div><div class="event-info"><h3>Birthday Wishes</h3><p>$10 gift cards for all 62 cadets </p><span class="event-tag tag-volunteer">Cadet Support</span></div></div>
+
+      <div class="event-card"><div class="event-date"><div class="month">TBA</div><div class="day">&#8212;</div></div><div class="event-info"><h3>Milestone Celebrations</h3><p>One event per class year &mdash; BCT, Recognition, Ring Dance, etc. Costs vary by headcount.</p><span class="event-tag tag-social">Social</span></div></div>
+
+      <div class="events-group-label" style="margin-top:1rem;">Future Plans 2026-2027 &amp; Ideas</div>
+
+      <div class="event-card"><div class="event-date"><div class="month">Jan<br>Feb</div><div class="day">&#8212;</div></div><div class="event-info"><h3>Boodle Boxes</h3><p>Care boxes for all cadets &middot; Estimated $35&ndash;$50 per box</p><span class="event-tag tag-volunteer">Cadet Support</span></div></div>
+
+      <div class="event-card"><div class="event-date"><div class="month">2027</div><div class="day">&#8212;</div></div><div class="event-info"><h3>Taste of Home Event</h3><p>Details coming soon</p><span class="event-tag tag-social">Social</span></div></div>
+
     </div>
   </div>
 </section>
@@ -346,6 +368,10 @@
         <div class="contact-detail"><span class="icon">&#9993;&#65039;</span><span><a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a></span></div>
         <div class="contact-detail"><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener" class="fb-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg><span>Facebook Group</span></a></div>
         <p style="margin-top:1rem;font-size:.85rem;color:var(--gray);">We typically respond within 24&ndash;48 hours.</p>
+        <p style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #d0d8e4;font-size:.8rem;color:var(--gray);">
+          Having website issues? Contact the
+          <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue);">Site Administrator</a>.
+        </p>
         <p style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #d0d8e4;font-size:.8rem;color:var(--gray);">
           Having website issues? Contact the
           <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue);">Site Administrator</a>.
