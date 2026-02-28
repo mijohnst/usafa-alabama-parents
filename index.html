@@ -10,9 +10,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --navy:#0a1628; --navy2:#122040; --blue:#1a3a6b;
-      --gold:#c8a84b; --gold2:#e8c96a; --white:#f5f5f0;
-      --gray:#8a96a8; --light:#e8edf4;
+      /* Updated to official USAFA colors: Blue and Silver */
+      --navy:#003087; --navy2:#00205B; --blue:#0033A0;
+      --silver:#8A8D8F; --silver2:#A7A9AC; --white:#f5f5f0;
+      --gray:#6B6E70; --light:#e8edf4;
       --font-display:'Cinzel',serif; --font-body:'Source Sans 3',sans-serif;
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -22,122 +23,123 @@
     img{max-width:100%;display:block;}
 
     /* NAV */
-    nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,22,40,0.97);backdrop-filter:blur(8px);border-bottom:1px solid rgba(200,168,75,0.3);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;}
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,48,135,0.97);backdrop-filter:blur(8px);border-bottom:1px solid rgba(138,141,143,0.3);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;}
     .nav-brand{display:flex;align-items:center;gap:.75rem;font-family:var(--font-display);color:var(--white);font-size:.95rem;letter-spacing:.05em;}
     .nav-brand img{width:38px;height:38px;object-fit:contain;border-radius:4px;padding:2px;}
     .nav-brand span{line-height:1.2;}
-    .nav-brand small{display:block;font-size:.65rem;color:var(--gold);letter-spacing:.1em;font-family:var(--font-body);}
+    .nav-brand small{display:block;font-size:.65rem;color:var(--silver2);letter-spacing:.1em;font-family:var(--font-body);}
     .nav-links{display:flex;gap:1.75rem;list-style:none;}
     .nav-links a{color:rgba(245,245,240,.8);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;transition:color .2s;}
-    .nav-links a:hover{color:var(--gold);}
+    .nav-links a:hover{color:var(--silver2);}
     .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px;}
     .hamburger span{width:24px;height:2px;background:var(--white);display:block;transition:.3s;}
     @media(max-width:768px){
       .hamburger{display:flex;}
-      .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:var(--navy);border-top:1px solid rgba(200,168,75,.2);padding:1rem 0;}
+      .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:var(--navy);border-top:1px solid rgba(138,141,143,.2);padding:1rem 0;}
       .nav-links.open{display:flex;}
       .nav-links a{padding:.65rem 2rem;display:block;}
     }
 
     /* HERO */
-    .hero{min-height:100vh;background:linear-gradient(160deg,rgba(10,22,40,.92) 0%,rgba(10,22,40,.75) 50%,rgba(26,58,107,.85) 100%),url('https://www.usafa.edu/app/uploads/2019/08/AFA_Aerial_003.jpg') center/cover no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6rem 2rem 4rem;position:relative;}
-    .hero::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 80px,rgba(200,168,75,.03) 80px,rgba(200,168,75,.03) 81px);pointer-events:none;}
-    .hero-motto{font-size:.75rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem;opacity:0;animation:fadeUp .6s .2s forwards;}
+    .hero{min-height:100vh;background:linear-gradient(160deg,rgba(0,48,135,.92) 0%,rgba(0,48,135,.75) 50%,rgba(0,51,160,.85) 100%),url('https://www.usafa.edu/app/uploads/2019/08/AFA_Aerial_003.jpg') center/cover no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6rem 2rem 4rem;position:relative;}
+    .hero::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 80px,rgba(138,141,143,.03) 80px,rgba(138,141,143,.03) 81px);pointer-events:none;}
+    .hero-motto{font-size:.75rem;letter-spacing:.3em;text-transform:uppercase;color:var(--silver2);margin-bottom:1.5rem;opacity:0;animation:fadeUp .6s .2s forwards;}
     .hero h1{font-family:var(--font-display);font-size:clamp(2rem,5vw,3.8rem);color:var(--white);line-height:1.15;margin-bottom:.5rem;opacity:0;animation:fadeUp .6s .4s forwards;}
-    .hero h1 span{color:var(--gold);display:block;}
+    .hero h1 span{color:var(--silver2);display:block;}
     .hero-sub{font-size:clamp(.9rem,2vw,1.1rem);color:rgba(245,245,240,.75);max-width:640px;margin:1rem auto 2.5rem;opacity:0;animation:fadeUp .6s .6s forwards;}
     .hero-cta{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;opacity:0;animation:fadeUp .6s .8s forwards;}
     .btn{padding:.75rem 2rem;font-family:var(--font-body);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;border-radius:3px;cursor:pointer;transition:all .2s;border:2px solid transparent;display:inline-block;}
-    .btn-gold{background:var(--gold);color:var(--navy);border-color:var(--gold);}
-    .btn-gold:hover{background:var(--gold2);border-color:var(--gold2);}
+    .btn-gold{background:var(--silver);color:var(--navy);border-color:var(--silver);}
+    .btn-gold:hover{background:var(--silver2);border-color:var(--silver2);}
     .btn-outline{background:transparent;color:var(--white);border-color:rgba(245,245,240,.5);}
-    .btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+    .btn-outline:hover{border-color:var(--silver2);color:var(--silver2);}
     .hero-stats{display:flex;gap:3rem;margin-top:4rem;opacity:0;animation:fadeUp .6s 1s forwards;}
     .stat{text-align:center;}
-    .stat strong{display:block;font-family:var(--font-display);font-size:2rem;color:var(--gold);}
+    .stat strong{display:block;font-family:var(--font-display);font-size:2rem;color:var(--silver2);}
     .stat span{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,245,240,.6);}
     @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 
     /* SECTIONS */
     section{padding:5rem 2rem;}
-    .section-label{font-size:.72rem;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.5rem;}
+    .section-label{font-size:.72rem;letter-spacing:.25em;text-transform:uppercase;color:var(--blue);font-weight:600;margin-bottom:.5rem;}
     .section-title{font-family:var(--font-display);font-size:clamp(1.6rem,3vw,2.4rem);color:var(--navy);margin-bottom:1.5rem;}
     .container{max-width:1100px;margin:0 auto;}
-    .divider{width:48px;height:3px;background:linear-gradient(90deg,var(--gold),transparent);margin-bottom:2rem;}
+    .divider{width:48px;height:3px;background:linear-gradient(90deg,var(--blue),transparent);margin-bottom:2rem;}
 
     /* ABOUT */
     #about{background:var(--white);}
-    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;}
-    .about-img img{width:100%;border-radius:4px;box-shadow:12px 12px 0 var(--gold);}
-    .about-list{list-style:none;margin-top:1.5rem;display:flex;flex-direction:column;gap:.6rem;}
-    .about-list li{padding-left:1.4rem;position:relative;font-size:.95rem;color:#3a4a5a;}
-    .about-list li::before{content:'▸';position:absolute;left:0;color:var(--gold);}
-    @media(max-width:768px){.about-grid{grid-template-columns:1fr;gap:2.5rem;}}
+    .about-grid{display:grid;grid-template-columns:280px 1fr;gap:3rem;align-items:start;}
+    .about-img img{width:100%;max-width:280px;border-radius:4px;box-shadow:12px 12px 0 var(--silver);}
+    @media(max-width:768px){.about-grid{grid-template-columns:1fr;gap:2rem;}.about-img{text-align:center;}.about-img img{max-width:200px;margin:0 auto;}}
 
     /* PROGRAMS */
     #programs{background:var(--light);}
     .programs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;margin-top:1rem;}
-    .program-card{background:var(--white);border-radius:4px;padding:2rem;border-left:3px solid var(--gold);transition:transform .2s,box-shadow .2s;}
-    .program-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(10,22,40,.1);}
+    .program-card{background:var(--white);border-radius:4px;padding:2rem;border-left:3px solid var(--blue);transition:transform .2s,box-shadow .2s;}
+    .program-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,48,135,.1);}
     .program-icon{font-size:1.8rem;margin-bottom:.75rem;}
     .program-card h3{font-family:var(--font-display);font-size:1rem;color:var(--navy);margin-bottom:.5rem;}
     .program-card p{font-size:.9rem;color:#5a6a7a;}
-    .coming-soon{display:inline-block;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);padding:2px 8px;border-radius:2px;margin-top:.75rem;}
+    .coming-soon{display:inline-block;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--blue);border:1px solid var(--blue);padding:2px 8px;border-radius:2px;margin-top:.75rem;}
+
+    /* MEMBERSHIP */
+    #membership{background:var(--navy2);}
+    #membership .section-title{color:var(--white);}
+    #membership .section-label{color:var(--silver2);}
+    #membership .divider{background:linear-gradient(90deg,var(--silver),transparent);}
+    .membership-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:1rem;}
+    .membership-card{background:rgba(255,255,255,.04);border:1px solid rgba(138,141,143,.25);border-radius:4px;padding:2.5rem;}
+    .membership-card h3{font-family:var(--font-display);font-size:1.2rem;color:var(--silver2);margin-bottom:1rem;}
+    .membership-card p{font-size:.9rem;color:rgba(245,245,240,.75);margin-bottom:1rem;}
+    .price-tag{font-family:var(--font-display);font-size:2rem;color:var(--white);margin-bottom:1rem;}
+    .price-tag span{font-size:.9rem;color:var(--gray);font-family:var(--font-body);}
+    .payment-note{font-size:.8rem;color:rgba(245,245,240,.5);margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(138,141,143,.15);}
+    .payment-note a{color:var(--silver2);}
+    @media(max-width:640px){.membership-grid{grid-template-columns:1fr;}}
 
     /* EVENTS */
     #events{background:var(--navy);}
     #events .section-title{color:var(--white);}
+    #events .section-label{color:var(--silver2);}
+    #events .divider{background:linear-gradient(90deg,var(--silver),transparent);}
     .events-list{display:flex;flex-direction:column;gap:1rem;margin-top:1rem;}
-    .event-card{display:grid;grid-template-columns:80px 1fr;gap:1.5rem;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(200,168,75,.2);border-radius:4px;padding:1.5rem;transition:background .2s;}
-    .event-card:hover{background:rgba(200,168,75,.06);}
-    .events-group-label{font-family:var(--font-display);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);padding:.25rem 0;border-bottom:1px solid rgba(200,168,75,.25);margin-bottom:.25rem;}
-    .event-date{text-align:center;background:var(--gold);color:var(--navy);border-radius:4px;padding:.5rem;}
+    .event-card{display:grid;grid-template-columns:80px 1fr;gap:1.5rem;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(138,141,143,.2);border-radius:4px;padding:1.5rem;transition:background .2s;}
+    .event-card:hover{background:rgba(138,141,143,.06);}
+    .events-group-label{font-family:var(--font-display);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--silver2);padding:.25rem 0;border-bottom:1px solid rgba(138,141,143,.25);margin-bottom:.25rem;}
+    .event-date{text-align:center;background:var(--silver);color:var(--navy);border-radius:4px;padding:.5rem;}
     .event-date .month{font-size:.65rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;}
     .event-date .day{font-family:var(--font-display);font-size:1.8rem;line-height:1;}
     .event-info h3{font-family:var(--font-display);font-size:1rem;color:var(--white);margin-bottom:.25rem;}
     .event-info p{font-size:.85rem;color:rgba(245,245,240,.6);}
     .event-tag{display:inline-block;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;padding:2px 8px;border-radius:2px;margin-top:.4rem;}
-    .tag-meeting{background:rgba(26,58,107,.8);color:var(--gold2);}
-    .tag-social{background:rgba(200,168,75,.15);color:var(--gold2);}
+    .tag-meeting{background:rgba(0,51,160,.8);color:var(--silver2);}
+    .tag-social{background:rgba(138,141,143,.15);color:var(--silver2);}
     .tag-volunteer{background:rgba(50,120,50,.3);color:#90e890;}
 
     /* NEWS */
     #usafa-news{background:var(--light);}
     #news-container{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;margin-top:1.5rem;}
-    .news-card{background:var(--white);border-radius:4px;overflow:hidden;border:1px solid rgba(10,22,40,.08);transition:transform .2s,box-shadow .2s;}
-    .news-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(10,22,40,.1);}
+    .news-card{background:var(--white);border-radius:4px;overflow:hidden;border:1px solid rgba(0,48,135,.08);transition:transform .2s,box-shadow .2s;}
+    .news-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,48,135,.1);}
     .news-card-body{padding:1.5rem;}
     .news-card-date{font-size:.75rem;color:var(--gray);letter-spacing:.08em;margin-bottom:.5rem;}
     .news-card h3{font-family:var(--font-display);font-size:.95rem;color:var(--navy);margin-bottom:.5rem;}
     .news-card p{font-size:.875rem;color:#5a6a7a;}
     .news-card a.read-more{display:inline-block;margin-top:.75rem;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);font-weight:600;}
-    .news-card a.read-more:hover{color:var(--gold);}
+    .news-card a.read-more:hover{color:var(--silver);}
     .news-loading{color:var(--gray);font-style:italic;grid-column:1/-1;padding:2rem 0;}
     .news-view-all{margin-top:2rem;text-align:center;}
-
-    /* MEMBERSHIP */
-    #membership{background:var(--navy2);}
-    #membership .section-title{color:var(--white);}
-    .membership-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:1rem;}
-    .membership-card{background:rgba(255,255,255,.04);border:1px solid rgba(200,168,75,.25);border-radius:4px;padding:2.5rem;}
-    .membership-card h3{font-family:var(--font-display);font-size:1.2rem;color:var(--gold);margin-bottom:1rem;}
-    .membership-card p{font-size:.9rem;color:rgba(245,245,240,.75);margin-bottom:1rem;}
-    .price-tag{font-family:var(--font-display);font-size:2rem;color:var(--white);margin-bottom:1rem;}
-    .price-tag span{font-size:.9rem;color:var(--gray);font-family:var(--font-body);}
-    .payment-note{font-size:.8rem;color:rgba(245,245,240,.5);margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(200,168,75,.15);}
-    .payment-note a{color:var(--gold);}
-    @media(max-width:640px){.membership-grid{grid-template-columns:1fr;}}
 
     /* LEADERSHIP */
     #leadership{background:var(--white);}
     .leadership-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.5rem;margin-top:1rem;}
-    .officer-card{background:var(--light);border-radius:4px;padding:2rem 1.5rem;text-align:center;border-top:3px solid var(--gold);transition:transform .2s;}
+    .officer-card{background:var(--light);border-radius:4px;padding:2rem 1.5rem;text-align:center;border-top:3px solid var(--blue);transition:transform .2s;}
     .officer-card:hover{transform:translateY(-3px);}
     .officer-icon{width:60px;height:60px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 1rem;}
     .officer-card h3{font-family:var(--font-display);font-size:1rem;color:var(--navy);margin-bottom:.25rem;}
-    .officer-role{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.75rem;}
+    .officer-role{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);font-weight:600;margin-bottom:.75rem;}
     .officer-card a{font-size:.8rem;color:var(--blue);word-break:break-all;}
-    .officer-card a:hover{color:var(--gold);}
+    .officer-card a:hover{color:var(--silver);}
 
     /* CONTACT */
     #contact{background:var(--light);}
@@ -147,18 +149,18 @@
     .contact-detail{display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:var(--navy);margin-bottom:.75rem;}
     .contact-detail .icon{font-size:1.1rem;}
     .contact-detail a{color:var(--blue);}
-    .contact-detail a:hover{color:var(--gold);}
+    .contact-detail a:hover{color:var(--silver);}
     .fb-icon{display:inline-flex;align-items:center;gap:.5rem;color:var(--blue);transition:color .2s;}
     .fb-icon:hover{color:#1877f2;}
     .fb-icon svg{width:22px;height:22px;flex-shrink:0;}
     .footer-fb{display:inline-flex;align-items:center;gap:.5rem;font-size:.85rem;color:rgba(245,245,240,.55);transition:color .2s;}
     .footer-fb:hover{color:#1877f2;}
     .footer-fb svg{width:18px;height:18px;flex-shrink:0;}
-    .contact-form{background:var(--white);border-radius:4px;padding:2.5rem;box-shadow:0 4px 24px rgba(10,22,40,.08);}
+    .contact-form{background:var(--white);border-radius:4px;padding:2.5rem;box-shadow:0 4px 24px rgba(0,48,135,.08);}
     .form-group{margin-bottom:1.25rem;}
     .form-group label{display:block;font-size:.75rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);margin-bottom:.4rem;}
     .form-group input,.form-group select,.form-group textarea{width:100%;padding:.7rem 1rem;border:1px solid #d0d8e4;border-radius:3px;font-family:var(--font-body);font-size:.9rem;color:var(--navy);background:var(--white);transition:border-color .2s;}
-    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,58,107,.08);}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,51,160,.08);}
     .form-group textarea{resize:vertical;min-height:120px;}
     .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
     #form-status{margin-top:1rem;padding:.75rem 1rem;border-radius:3px;font-size:.875rem;display:none;}
@@ -167,14 +169,14 @@
     @media(max-width:768px){.contact-grid{grid-template-columns:1fr;gap:2rem;}.form-row{grid-template-columns:1fr;}}
 
     /* FOOTER */
-    footer{background:var(--navy);border-top:1px solid rgba(200,168,75,.2);padding:4rem 2rem 2rem;}
+    footer{background:var(--navy);border-top:1px solid rgba(138,141,143,.2);padding:4rem 2rem 2rem;}
     .footer-grid{max-width:1100px;margin:0 auto 3rem;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:3rem;}
     .footer-brand img{width:80px;margin-bottom:1rem;border-radius:4px;}
     .footer-brand p{font-size:.85rem;color:rgba(245,245,240,.55);line-height:1.8;max-width:280px;}
-    .footer-col h4{font-family:var(--font-display);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;}
+    .footer-col h4{font-family:var(--font-display);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--silver2);margin-bottom:1rem;}
     .footer-col ul{list-style:none;display:flex;flex-direction:column;gap:.5rem;}
     .footer-col li a{font-size:.85rem;color:rgba(245,245,240,.55);transition:color .2s;}
-    .footer-col li a:hover{color:var(--gold);}
+    .footer-col li a:hover{color:var(--silver2);}
     .footer-bottom{max-width:1100px;margin:0 auto;padding-top:1.5rem;border-top:1px solid rgba(245,245,240,.08);display:flex;justify-content:space-between;align-items:center;font-size:.8rem;color:rgba(245,245,240,.35);flex-wrap:wrap;gap:.5rem;}
     @media(max-width:900px){.footer-grid{grid-template-columns:1fr 1fr;}}
     @media(max-width:560px){.footer-grid{grid-template-columns:1fr;}}
@@ -186,7 +188,7 @@
 <nav>
   <a href="#" class="nav-brand">
     <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
-    <span>USAFA Parents Club<small>State of Alabama</small></span>
+    <span>USAFA Parents Club<small>of Alabama</small></span>
   </a>
   <button class="hamburger" id="hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
@@ -194,9 +196,9 @@
   <ul class="nav-links" id="nav-links">
     <li><a href="#about">About</a></li>
     <li><a href="#programs">Programs</a></li>
+    <li><a href="#membership">Membership</a></li>
     <li><a href="#events">Events</a></li>
     <li><a href="#usafa-news">News</a></li>
-    <li><a href="#membership">Membership</a></li>
     <li><a href="#leadership">Leadership</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
@@ -204,18 +206,17 @@
 
 <!-- HERO -->
 <section class="hero" id="home">
-  <p class="hero-motto">&#127482;&#127480; &nbsp;Integrity First &middot; Service Before Self &middot; Excellence in All We Do&nbsp; &#127482;&#127480;</p>
-  <h1>USAFA Parents Club<span>State of Alabama</span></h1>
+  <p class="hero-motto">Integrity First &middot; Service Before Self &middot; Excellence in All We Do</p>
+  <h1>USAFA Parents Club<span>of Alabama</span></h1>
   <p class="hero-sub">Uniting current, incoming, and alumni families of United States Air Force Academy cadets across the great state of Alabama &mdash; offering support, community, and connection from appointment through graduation and beyond.</p>
   <div class="hero-cta">
     <a href="#contact" class="btn btn-gold">Join Our Club</a>
     <a href="#about" class="btn btn-outline">Learn More</a>
   </div>
   <div class="hero-stats">
-    <div class="stat"><strong>60+</strong><span>Cadet Families</span></div>
+    <div class="stat"><strong>60+</strong><span>Current Cadets</span></div>
     <div class="stat"><strong>4+</strong><span>Annual Events</span></div>
     <div class="stat"><strong>5+</strong><span>Years Active</span></div>
-    <div class="stat"><strong>60+</strong><span>Current Cadets</span></div>
   </div>
 </section>
 
@@ -227,19 +228,11 @@
     <div class="divider"></div>
     <div class="about-grid">
       <div class="about-img">
-        <img src="logo02.png" alt="USAFA Parents Club of Alabama" />
+        <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
       </div>
       <div class="about-content">
         <p>The USAFA Parents Club of Alabama is a volunteer-run, non-profit organization dedicated to supporting Alabama families whose sons and daughters have earned the honor of attending the United States Air Force Academy in Colorado Springs, Colorado.</p>
-        <p style="margin-top:1rem;">We serve as a bridge between families at home and their cadets at the Academy, working in coordination with Academy officials and liaison officers &mdash; providing guidance, community, and resources from the moment of appointment through commissioning day.</p>
-        <ul class="about-list">
-          <li>Care package drives and morale support for cadets during BCT</li>
-          <li>Informational meetings for newly-appointed families</li>
-          <li>Parent-to-parent mentorship and peer support network</li>
-          <li>Recognition of Alabama cadet achievements and milestones</li>
-          <li>Coordination with regional USAFA Liaison Officers</li>
-          <li>Connection to the National USAFA Parents Club network</li>
-        </ul>
+        <p style="margin-top:1rem;">We serve as a bridge for families at home and their cadets at the Academy, working in coordination with Academy officials and liaison officers &mdash; providing guidance, community, and resources from the moment of appointment through commissioning day.</p>
       </div>
     </div>
   </div>
@@ -251,7 +244,7 @@
     <p class="section-label">What We Do</p>
     <h2 class="section-title">Programs &amp; Support</h2>
     <div class="divider"></div>
-    <p style="color:#5a6a7a;max-width:620px;margin-bottom:2rem;">From BCT basics to graduation celebrations, we're with Alabama families every step of the journey.</p>
+    <p style="color:#5a6a7a;max-width:720px;margin-bottom:2rem;">From BCT basics to graduation celebrations, we're with Alabama families every step of the journey.</p>
     <div class="programs-grid">
       <div class="program-card"><div class="program-icon">&#128230;</div><h3>Care Package Coordination</h3><p>We organize coordinated care package drives during Basic Cadet Training so your cadet knows Alabama is cheering them on through one of the toughest six weeks of their life.</p><span class="coming-soon">Coming Soon</span></div>
       <div class="program-card"><div class="program-icon">&#129309;</div><h3>Welcome Program</h3><p>Just received an appointment? We host dedicated sessions for new families covering what to expect at R-Day, how the Academy year works, and how to stay connected.</p><span class="coming-soon">Coming Soon</span></div>
@@ -262,6 +255,30 @@
       <div class="program-card"><div class="program-icon">&#129303;</div><h3>Community Support</h3><p>Building a strong network of Alabama families who understand the unique USAFA experience &mdash; because no parent should navigate this journey alone.</p><span class="coming-soon">Coming Soon</span></div>
       <div class="program-card"><div class="program-icon">&#127881;</div><h3>Graduation Support</h3><p>Commissioning Week is a whirlwind. We provide guidance on planning, logistics, and local Alabama celebration ideas for when your cadet earns their commission.</p><span class="coming-soon">Coming Soon</span></div>
       <div class="program-card"><div class="program-icon">&#128225;</div><h3>Liaison Coordination</h3><p>We work closely with USAFA Liaison Officers throughout Alabama to help connect promising high school students with the appointment process and resources.</p><span class="coming-soon">Coming Soon</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- MEMBERSHIP - Moved up, right after Programs -->
+<section id="membership">
+  <div class="container">
+    <p class="section-label">Support Our Mission</p>
+    <h2 class="section-title">Membership &amp; Donations</h2>
+    <div class="divider"></div>
+    <div class="membership-grid">
+      <div class="membership-card">
+        <h3>Annual Membership</h3>
+        <div class="price-tag">$75 <span>/ year</span></div>
+        <p>Membership dues cover the cost of cadet support activities and events, general club operations, and care packages for Alabama cadets throughout their Academy journey.</p>
+        <a href="#contact" class="btn btn-gold">Contact Us to Join</a>
+        <p class="payment-note">Payment via Zelle or check. Contact us at <a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a> to arrange payment.</p>
+      </div>
+      <div class="membership-card">
+        <h3>Support Through Donations</h3>
+        <p>In addition to membership dues, we welcome donations to help fund additional care packages, events, and cadet support activities. Every contribution makes a difference!</p>
+        <a href="#contact" class="btn btn-outline" style="color:var(--silver2);border-color:var(--silver2);">Get In Touch</a>
+        <p class="payment-note">For donation inquiries please reach out at <a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a></p>
+      </div>
     </div>
   </div>
 </section>
@@ -315,30 +332,6 @@
   </div>
 </section>
 
-<!-- MEMBERSHIP -->
-<section id="membership">
-  <div class="container">
-    <p class="section-label">Support Our Mission</p>
-    <h2 class="section-title">Membership</h2>
-    <div class="divider"></div>
-    <div class="membership-grid">
-      <div class="membership-card">
-        <h3>Annual Membership</h3>
-        <div class="price-tag">$75 <span>/ year</span></div>
-        <p>Membership dues cover the cost of cadet support activities and events, general club operations, and care packages for Alabama cadets throughout their Academy journey.</p>
-        <a href="#contact" class="btn btn-gold">Contact Us to Join</a>
-        <p class="payment-note">Payment via Zelle or check. Contact us at <a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a> to arrange payment.</p>
-      </div>
-      <div class="membership-card">
-        <h3>Support Through Donations</h3>
-        <p>In addition to membership dues, we welcome donations to help fund additional care packages, events, and cadet support activities. Every contribution makes a difference!</p>
-        <a href="#contact" class="btn btn-outline" style="color:var(--gold);border-color:var(--gold);">Get In Touch</a>
-        <p class="payment-note">For donation inquiries please reach out at <a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a></p>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- LEADERSHIP -->
 <section id="leadership">
   <div class="container">
@@ -368,10 +361,6 @@
         <div class="contact-detail"><span class="icon">&#9993;&#65039;</span><span><a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a></span></div>
         <div class="contact-detail"><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener" class="fb-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg><span>Facebook Group</span></a></div>
         <p style="margin-top:1rem;font-size:.85rem;color:var(--gray);">We typically respond within 24&ndash;48 hours.</p>
-        <p style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #d0d8e4;font-size:.8rem;color:var(--gray);">
-          Having website issues? Contact the
-          <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue);">Site Administrator</a>.
-        </p>
         <p style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #d0d8e4;font-size:.8rem;color:var(--gray);">
           Having website issues? Contact the
           <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue);">Site Administrator</a>.
@@ -418,9 +407,9 @@
       <ul>
         <li><a href="#about">About Us</a></li>
         <li><a href="#programs">Programs</a></li>
+        <li><a href="#membership">Membership</a></li>
         <li><a href="#events">Events</a></li>
         <li><a href="#usafa-news">News</a></li>
-        <li><a href="#membership">Membership</a></li>
         <li><a href="#leadership">Leadership</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
