@@ -1,56 +1,91 @@
 <?php
 /**
- * USAFA News Feed Fetcher
+ * USAFA News Feed Fetcher (Fixed Version)
  * This script fetches the USAFA RSS feed and caches it to improve performance
+ * Handles redirects and protocol mismatches
  */
 
 // Set headers for JSON response
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
+header('Cache-Control: max-age=1800'); // 30 minutes
 
 // Cache settings
-$cacheFile = 'usafa-news-cache.json';
+$cacheFile = dirname(__FILE__) . '/usafa-news-cache.json';
 $cacheTime = 1800; // Cache for 30 minutes (1800 seconds)
 
 // Check if cache exists and is still valid
-if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
-    // Serve from cache
-    echo file_get_contents($cacheFile);
-    exit;
+if (file_exists($cacheFile)) {
+    $cacheAge = time() - filemtime($cacheFile);
+    if ($cacheAge < $cacheTime) {
+        // Serve from cache with proper headers
+        header('X-Cache: hit');
+        echo file_get_contents($cacheFile);
+        exit;
+    }
 }
 
 // Cache expired or doesn't exist - fetch fresh data
 $feedUrl = 'https://www.usafa.edu/feed/';
 
-// Initialize cURL
+// Initialize cURL with comprehensive options
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $feedUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
 curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 curl_setopt($ch, CURLOPT_USERAGENT, 'Alabama USAFA Parents Club Website');
+curl_setopt($ch, CURLOPT_ENCODING, 'gzip,deflate');
+
+// Add IPv4 preference
+curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
 $xmlContent = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError = curl_error($ch);
 curl_close($ch);
 
 // Check if fetch was successful
 if ($httpCode != 200 || !$xmlContent) {
+    error_log("USAFA Feed Error - HTTP Code: $httpCode, cURL Error: $curlError");
+    
     // If fetch failed, try to serve old cache if it exists
     if (file_exists($cacheFile)) {
+        header('X-Cache: stale');
         echo file_get_contents($cacheFile);
     } else {
-        echo json_encode(['error' => 'Unable to fetch news feed']);
+        http_response_code(503);
+        echo json_encode([
+            'error' => 'Unable to fetch news feed',
+            'httpCode' => $httpCode,
+            'details' => $curlError
+        ]);
     }
     exit;
 }
 
-// Parse XML
-$xml = simplexml_load_string($xmlContent);
+// Parse XML - trim whitespace/BOM that can break simplexml
+$xmlContent = trim($xmlContent);
+$xmlContent = preg_replace('/^\xEF\xBB\xBF/', '', $xmlContent); // Strip UTF-8 BOM
+
+$xml = @simplexml_load_string($xmlContent);
 
 if (!$xml) {
-    echo json_encode(['error' => 'Unable to parse RSS feed']);
+    error_log("USAFA Feed XML Parse Error - Content starts with: " . substr($xmlContent, 0, 200));
+    error_log("USAFA Feed XML Parse Error - Content length: " . strlen($xmlContent));
+    
+    // Try to serve cache on parse failure
+    if (file_exists($cacheFile)) {
+        header('X-Cache: stale');
+        echo file_get_contents($cacheFile);
+    } else {
+        http_response_code(502);
+        echo json_encode(['error' => 'Unable to parse RSS feed']);
+    }
     exit;
 }
 
@@ -60,6 +95,10 @@ $count = 0;
 
 foreach ($xml->channel->item as $item) {
     if ($count >= 4) break; // Only get 4 articles
+    
+    $title = (string)$item->title;
+    $link = (string)$item->link;
+    $pubDate = (string)$item->pubDate;
     
     // Clean description - remove HTML tags
     $description = strip_tags((string)$item->description);
@@ -72,28 +111,44 @@ foreach ($xml->channel->item as $item) {
         $description = substr($description, 0, 180) . '...';
     }
     
-    $newsItems[] = [
-        'title' => (string)$item->title,
-        'link' => (string)$item->link,
-        'pubDate' => (string)$item->pubDate,
-        'description' => $description
-    ];
-    
-    $count++;
+    // Only add if we have a title
+    if ($title) {
+        $newsItems[] = [
+            'title' => $title,
+            'link' => $link,
+            'pubDate' => $pubDate,
+            'description' => $description
+        ];
+        $count++;
+    }
+}
+
+// If we got no items, serve stale cache instead of empty response
+if (empty($newsItems)) {
+    error_log("USAFA Feed: XML parsed OK but 0 items extracted");
+    if (file_exists($cacheFile)) {
+        header('X-Cache: stale-empty-parse');
+        echo file_get_contents($cacheFile);
+        exit;
+    }
 }
 
 // Create JSON response
 $response = [
     'status' => 'ok',
     'items' => $newsItems,
-    'cached_at' => date('Y-m-d H:i:s')
+    'cached_at' => date('Y-m-d H:i:s'),
+    'fetched_at' => date('Y-m-d H:i:s')
 ];
 
 $jsonResponse = json_encode($response, JSON_PRETTY_PRINT);
 
-// Save to cache
-file_put_contents($cacheFile, $jsonResponse);
+// Save to cache if we got valid items
+if (!empty($newsItems)) {
+    @file_put_contents($cacheFile, $jsonResponse);
+}
 
 // Output response
+header('X-Cache: miss');
 echo $jsonResponse;
 ?>
