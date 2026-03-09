@@ -104,7 +104,7 @@
     .badge-note::before{content:'🏅';}
     .payment-portal{margin-top:auto;padding:1.5rem;background:rgba(0,53,148,.04);border:1px dashed rgba(0,53,148,.3);border-radius:4px;text-align:center;}
     .payment-portal p{font-size:.85rem;color:var(--gray);margin-bottom:1rem;}
-    .payment-portal .btn-pay{background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:.85rem 2.5rem;font-size:.85rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;}
+    .payment-portal .btn-pay{background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:.85rem 2.5rem;font-size:.85rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;width:100%;display:block;text-align:center;}
     .payment-portal .btn-pay:hover{background:linear-gradient(180deg,#2166cc 0%,#003080 100%);box-shadow:0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2);top:2px;}
     @media(max-width:640px){.membership-grid{grid-template-columns:1fr;}}
 
@@ -239,7 +239,7 @@
   <h1>USAFA Parents Club<span>of Alabama</span></h1>
   <p class="hero-sub">Uniting current, incoming, and alumni families of United States Air Force Academy cadets across the great state of Alabama &mdash; offering support, community, and connection from appointment through graduation and beyond.</p>
   <div class="hero-cta">
-    <a href="#contact" class="btn btn-gold">Join Our Club</a>
+    <a href="#membership" class="btn btn-gold">Join Our Club</a>
     <a href="#about" class="btn btn-outline">Learn More</a>
   </div>
   <div class="hero-stats">
@@ -278,21 +278,28 @@
         <h3>Annual Membership</h3>
         <div class="price-tag">$75 <span>/ year</span></div>
         <p>Membership dues cover cadet support activities, club operations, and care packages for Alabama cadets throughout their Academy journey.</p>
-        <p style="margin-top:.75rem;">As a member, you'll be part of a community of Alabama families who share the unique experience of having a son or daughter at the Academy — with access to resources and a network of parents who understand the journey firsthand.</p>
-        <div class="badge-note">Paid members will receive a club identification badge</div>
+        <p style="margin-top:.75rem;">Membership benefits include:</p>
+        <ul style="margin-left:1.5rem;margin-top:.5rem;line-height:1.8;">
+          <li>Two Parents' Club Name Badges*</li>
+          <li>Goodie box in the fall</li>
+          <li>Gift card in the spring</li>
+          <li>Birthday Card (with a food gift card) each year</li>
+        </ul>
+        <p style="margin-top:.75rem;">As a member, you'll also be part of a community of Alabama families who share the unique experience of having a son or daughter at the Academy &mdash; with access to resources and a network of parents who understand the journey firsthand.</p>
         <div class="payment-portal" style="margin-top:auto;">
-          <p>Secure online payment — coming soon. Use the button below to pay your annual dues.</p>
-          <a href="#" class="btn btn-pay" onclick="alert('Secure payment portal coming soon. Please contact info@alabamafalcons.org to arrange payment in the meantime.'); return false;">Pay Annual Dues</a>
+          <p>Ready to join? Click below to fill out your membership application and pay your annual dues.</p>
+          <a href="membership.html" class="btn btn-pay">Join Us!</a>
         </div>
       </div>
       <div class="membership-card">
         <h3>Donations</h3>
         <div class="program-icon" style="font-size:2rem;margin-bottom:.75rem;">🤝</div>
         <p>In addition to membership dues, we gratefully accept donations of any amount. Your generosity directly funds care packages, cadet recognition events, and family support activities across Alabama.</p>
-        <p style="margin-top:.75rem;">Every contribution — large or small — makes a real difference in the lives of Alabama cadets and their families.</p>
+        <p style="margin-top:.75rem;">Donations are a wonderful way for extended family and friends — grandparents, aunts, uncles, cousins, and close friends — to show their support for our cadets and our mission.</p>
+        <p style="margin-top:.75rem;">Every contribution — large or small — makes a real difference in the lives of Alabama cadets and their families. <strong>All donors receive an honorary badge featuring their cadet's name as a token of our gratitude.</strong></p>
         <div class="payment-portal" style="margin-top:auto;">
           <p>Secure online donation — coming soon. To donate now, please reach out directly.</p>
-          <a href="mailto:info@alabamafalcons.org" class="btn btn-pay">Make a Donation</a>
+          <a href="payment.html" class="btn btn-pay">Make a Donation</a>
         </div>
       </div>
     </div>
@@ -309,17 +316,17 @@
     <p class="section-label">What We Do</p>
     <h2 class="section-title">Programs &amp; Support</h2>
     <div class="divider"></div>
-    <p style="color:#5a6a7a;max-width:720px;margin-bottom:2rem;">From BCT basics to graduation celebrations, we're with Alabama families every step of the journey.</p>
+    <p style="color:#5a6a7a;max-width:720px;margin-bottom:2rem;">From BCT basics to graduation celebrations, we're with Alabama families every step of the journey. Many of these initiatives are still growing &mdash; we're looking for members to help bring them to life. If you'd like to get involved, <a href="#contact" style="color:var(--blue);font-weight:600;">reach out to us</a>.</p>
     <div class="programs-grid">
       <div class="program-card"><div class="program-icon">&#128230;</div><h3>Care Package Coordination</h3><p>We organize coordinated care package drives during Basic Cadet Training so your cadet knows Alabama is cheering them on through one of the toughest six weeks of their life.</p><span class="coming-soon">Coming Soon</span></div>
       <div class="program-card"><div class="program-icon">&#129309;</div><h3>Welcome Program</h3><p>Just received an appointment? We host dedicated sessions for new families covering what to expect at R-Day, how the Academy year works, and how to stay connected.</p><span class="coming-soon">Coming Soon</span></div>
       <div class="program-card"><div class="program-icon">&#127942;</div><h3>Recognition Program</h3><p>We celebrate and recognize the outstanding achievements of Alabama cadets throughout their Academy journey &mdash; from R-Day through commissioning and beyond.</p><span class="coming-soon">Coming Soon</span></div>
-      <div class="program-card"><div class="program-icon">&#128483;&#65039;</div><h3>Parent Mentorship</h3><p>Upperclass cadet parents volunteer to mentor families of basics and fourth-class cadets &mdash; sharing experience, reassurance, and practical advice.</p><a href="mentorship.html" class="btn btn-gold" style="margin-top: 1rem; display: inline-block; padding: 0.6rem 1.2rem; font-size: 0.8rem; text-align: center;">Learn More</a></div>
+      <div class="program-card"><div class="program-icon">&#128483;&#65039;</div><h3>Parent Mentorship</h3><p>Upperclass cadet parents volunteer to mentor families of basics and fourth-class cadets &mdash; sharing experience, reassurance, and practical advice.</p><p style="margin-top:.5rem;font-size:.8rem;color:var(--accent);font-weight:600;font-style:italic;">&#9888;&#65039; This program is currently under development. Stay tuned!</p><a href="mentorship.html" class="btn btn-gold" style="margin-top: 1rem; display: inline-block; padding: 0.6rem 1.2rem; font-size: 0.8rem; text-align: center;">Learn More</a></div>
       <div class="program-card"><div class="program-icon">&#128172;</div><h3>Cadet Connection</h3><p>Helping families stay connected with their cadets through communication tips, care package ideas, and understanding the unique challenges of Academy life.</p><span class="coming-soon">Coming Soon</span></div>
       <div class="program-card"><div class="program-icon">&#128218;</div><h3>Family Resources</h3><p>Access to information, guides, and resources to help families navigate the Academy experience &mdash; from initial appointment through graduation day.</p><span class="coming-soon">Coming Soon</span></div>
       <div class="program-card"><div class="program-icon">&#129303;</div><h3>Community Support</h3><p>Building a strong network of Alabama families who understand the unique USAFA experience &mdash; because no parent should navigate this journey alone.</p><span class="coming-soon">Coming Soon</span></div>
       <div class="program-card"><div class="program-icon">&#127881;</div><h3>Graduation Support</h3><p>Commissioning Week is a whirlwind. We provide guidance on planning, logistics, and local Alabama celebration ideas for when your cadet earns their commission.</p><span class="coming-soon">Coming Soon</span></div>
-      <div class="program-card"><div class="program-icon">&#128225;</div><h3>Liaison Coordination</h3><p>We work closely with USAFA Liaison Officers throughout Alabama to help connect promising high school students with the appointment process and resources.</p><a href="liaison.html" class="btn btn-gold" style="margin-top: 1rem; display: inline-block; padding: 0.6rem 1.2rem; font-size: 0.8rem; text-align: center;">Learn More</a></div>
+      <div class="program-card"><div class="program-icon">&#128225;</div><h3>Congressional Liaison &amp; Nominations</h3><p>Connecting prospective cadet families with Alabama's congressional delegation, nomination guidance, and USAFA Admissions Liaison Officers throughout the appointment process.</p><p style="margin-top:.5rem;font-size:.8rem;color:var(--accent);font-weight:600;font-style:italic;">&#9888;&#65039; This program is currently under development. Stay tuned!</p><a href="liaison.html" class="btn btn-gold" style="margin-top: 1rem; display: inline-block; padding: 0.6rem 1.2rem; font-size: 0.8rem; text-align: center;">Learn More</a></div>
     </div>
   </div>
 </section>
@@ -385,7 +392,7 @@
         <div class="officer-photo">👤</div>
         <h3>Tony Kim</h3>
         <p class="officer-role">Member at Large</p>
-        <a href="mailto:atlarge@alabamafalcons.org" class="send-email">Send Email</a>
+        <a href="mailto:memberatlarge@alabamafalcons.org" class="send-email">Send Email</a>
       </div>
     </div>
   </div>
@@ -535,7 +542,7 @@
     <div class="footer-col">
       <h4>Contact Us</h4>
       <ul>
-        <li><a href="mailto:info@alabamafalcons.org">Send Email</a></li>
+        <li><a href="/cdn-cgi/l/email-protection#224b4c444d62434e4340434f4344434e414d4c510c4d5045">Send Email</a></li>
       </ul>
     </div>
   </div>
@@ -545,7 +552,7 @@
   </div>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 document.getElementById('hamburger').addEventListener('click', function() {
   document.getElementById('nav-links').classList.toggle('open');
 });
@@ -665,23 +672,27 @@ async function loadNews() {
   try {
     var rssUrl = 'https://www.usafa.edu/feed/';
     var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(rssUrl);
-    var r2 = await fetchWithTimeout(proxyUrl, 10000);
-    if (r2.ok) {
-      var data = await r2.json();
-      if (data.contents) {
-        var items = parseRSS(data.contents);
-        if (items.length > 0) {
-          renderNews(items);
-          return;
-        }
+    var r = await fetchWithTimeout(proxyUrl, 6000);
+    if (r.ok) {
+      var data = await r.json();
+      var xmlText = data.contents;
+      var items = parseRSS(xmlText);
+      if (items && items.length > 0) {
+        renderNews(items);
+        return;
       }
     }
-  } catch(e) { console.warn('allorigins fallback failed:', e.message); }
+  } catch(e) { console.warn('RSS proxy failed:', e.message); }
 
-  container.innerHTML = '<p class="news-loading">Unable to load news at this time. Please visit <a href="https://www.usafa.edu/news/" target="_blank" rel="noopener">usafa.edu/news</a> directly.</p>';
+  renderNews([]);
 }
 
-loadNews();
+// Load news when page loads
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadNews);
+} else {
+  loadNews();
+}
 </script>
 </body>
 </html>

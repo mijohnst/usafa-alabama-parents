@@ -8,7 +8,7 @@
 header('Content-Type: application/json');
 
 // Configuration
-$to_email = 'usafapcofal@gmail.com'; // Where form submissions go
+$to_email = 'info@alabamafalcons.org'; // Where form submissions go
 $subject_prefix = '[USAFA AL Website]'; // Email subject prefix
 
 // Check if this is a POST request
@@ -84,7 +84,7 @@ if ($mail_sent) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Sorry, there was an error sending your message. Please email us directly at usafapcofal@gmail.com'
+        'message' => 'Sorry, there was an error sending your message. Please email us directly at info@alabamafalcons.org'
     ]);
 }
 ?>

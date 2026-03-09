@@ -78,6 +78,12 @@
       color: var(--white);
       font-size: 0.95rem;
       letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .nav-brand:hover {
+      opacity: 0.8;
     }
 
     .nav-brand img {
@@ -517,23 +523,23 @@
 <body>
   <!-- NAVIGATION -->
   <nav>
-    <div class="nav-brand">
-      <img src="logo01.png" alt="USAFA Logo" />
-      <div>
-        <span>USAFA Parents Club</span>
-        <small>Alabama</small>
-      </div>
-    </div>
-    <ul class="nav-links" id="navLinks">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="mentorship.html" style="color: var(--silver2);">Mentorship</a></li>
-      <li><a href="#contact">Contact</a></li>
-    </ul>
-    <button class="hamburger" id="hamburger">
-      <span></span>
-      <span></span>
-      <span></span>
+    <a href="index.html" class="nav-brand">
+      <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
+      <span>USAFA Parents Club<small>of Alabama</small></span>
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
     </button>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#programs">Programs</a></li>
+      <li><a href="index.html#membership">Membership</a></li>
+      <li><a href="index.html#leadership">Leadership</a></li>
+      <li><a href="index.html#events">Events</a></li>
+      <li><a href="index.html#usafa-news">News</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+      <li><a href="mentorship.html" style="color: var(--silver2);">Mentorship</a></li>
+    </ul>
   </nav>
 
   <!-- HERO -->
@@ -730,7 +736,7 @@
   <script>
     // Mobile menu toggle
     const hamburger = document.getElementById('hamburger');
-    const navLinks = document.getElementById('navLinks');
+    const navLinks = document.getElementById('nav-links');
 
     hamburger.addEventListener('click', function() {
       navLinks.classList.toggle('open');
@@ -793,7 +799,7 @@
           throw new Error(data.message || 'Submission failed');
         }
       } catch(err) {
-        statusEl.textContent = err.message || 'Something went wrong. Please email us directly at usafapcofal@gmail.com';
+        statusEl.textContent = err.message || 'Something went wrong. Please email us directly at info@alabamafalcons.org';
         statusEl.className = 'error';
         statusEl.style.display = 'block';
       } finally {
