@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Thong - Your Personal Thong Selector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Pacifico&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Righteous', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .container {
+            text-align: center;
+            padding: 3rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 4rem;
+            background: linear-gradient(45deg, #ff006e, #fb5607, #ffbe0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            font-family: 'Pacifico', cursive;
+            letter-spacing: 2px;
+        }
+
+        .tagline {
+            font-size: 1.5rem;
+            color: #764ba2;
+            margin-bottom: 2.5rem;
+            font-weight: 300;
+        }
+
+        .input-group {
+            margin: 2rem 0;
+        }
+
+        label {
+            display: block;
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.2rem;
+            border: 3px solid #ff006e;
+            border-radius: 15px;
+            outline: none;
+            font-family: 'Righteous', cursive;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: #fb5607;
+            box-shadow: 0 0 20px rgba(251, 86, 7, 0.3);
+            transform: scale(1.02);
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff006e, #fb5607);
+            color: white;
+            padding: 1.2rem 3rem;
+            font-size: 1.4rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Righteous', cursive;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(255, 0, 110, 0.4);
+            margin-top: 1.5rem;
+        }
+
+        button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 0, 110, 0.6);
+        }
+
+        button:active {
+            transform: translateY(-1px);
+        }
+
+        .celebration {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ff006e;
+            animation: fall 3s linear infinite;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .result {
+            display: none;
+        }
+
+        .result h2 {
+            font-size: 3rem;
+            color: #ff006e;
+            margin-bottom: 2rem;
+            animation: bounce 1s ease infinite;
+            font-family: 'Pacifico', cursive;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .thong-recommendation {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            border: 5px dashed #ff006e;
+            border-radius: 20px;
+            animation: pulse 2s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .sparkle {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            animation: sparkle 1s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% {
+                transform: scale(0) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1) rotate(180deg);
+                opacity: 1;
+            }
+        }
+
+        .try-again {
+            margin-top: 2rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            font-size: 1.1rem;
+            padding: 1rem 2rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        .floating-thongs {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .thong-icon {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.6;
+            animation: float 6s ease-in-out infinite;
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+            25% {
+                transform: translateY(-20px) rotate(5deg);
+            }
+            50% {
+                transform: translateY(-10px) rotate(-5deg);
+            }
+            75% {
+                transform: translateY(-30px) rotate(3deg);
+            }
+        }
+
+        .thong-icon:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+        .thong-icon:nth-child(2) { top: 15%; right: 8%; animation-delay: 1s; }
+        .thong-icon:nth-child(3) { top: 40%; left: 3%; animation-delay: 2s; }
+        .thong-icon:nth-child(4) { top: 45%; right: 5%; animation-delay: 1.5s; }
+        .thong-icon:nth-child(5) { top: 70%; left: 8%; animation-delay: 0.5s; }
+        .thong-icon:nth-child(6) { top: 75%; right: 10%; animation-delay: 2.5s; }
+        .thong-icon:nth-child(7) { top: 25%; left: 15%; animation-delay: 3s; }
+        .thong-icon:nth-child(8) { top: 60%; right: 15%; animation-delay: 1.8s; }
+        .thong-icon:nth-child(9) { top: 85%; left: 20%; animation-delay: 0.8s; }
+        .thong-icon:nth-child(10) { top: 30%; right: 20%; animation-delay: 2.2s; }
+    </style>
+</head>
+<body>
+    <div class="floating-thongs">
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+        <div class="thong-icon">🩲</div>
+    </div>
+    
+    <div class="stars" id="stars"></div>
+    
+    <div class="container fade-in" id="mainContainer">
+        <div id="inputSection">
+            <h1>✨ Auto Thong ✨</h1>
+            <p class="tagline">Let me help you pick out the perfect thong!</p>
+            
+            <div class="input-group">
+                <label for="activity">What will you be doing today?</label>
+                <input 
+                    type="text" 
+                    id="activity" 
+                    placeholder="e.g., Cleaning house, Going to work, Netflix marathon..."
+                    autocomplete="off"
+                >
+            </div>
+            
+            <button onclick="findThong()">Find My Thong! 🎉</button>
+        </div>
+
+        <div class="result" id="resultSection">
+            <h2>🎊 Perfect Match! 🎊</h2>
+            <div class="thong-recommendation" id="recommendation"></div>
+            <button class="try-again" onclick="tryAgain()">Pick Another Thong!</button>
+        </div>
+    </div>
+
+    <div class="celebration" id="celebration"></div>
+
+    <script>
+        // Create twinkling stars
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 50; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 3 + 's';
+            starsContainer.appendChild(star);
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('activity').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                findThong();
+            }
+        });
+
+        function findThong() {
+            const activity = document.getElementById('activity').value.trim();
+            
+            if (!activity) {
+                alert('Please tell me what you\'ll be doing! 💕');
+                return;
+            }
+
+            // Hide input section
+            document.getElementById('inputSection').style.display = 'none';
+
+            // Show celebration
+            celebrate();
+
+            // Show result after celebration
+            setTimeout(() => {
+                document.getElementById('recommendation').textContent = 
+                    `You should wear your ${activity} thong! 💖`;
+                document.getElementById('resultSection').style.display = 'block';
+                document.getElementById('resultSection').classList.add('fade-in');
+            }, 2000);
+        }
+
+        function celebrate() {
+            const celebration = document.getElementById('celebration');
+            celebration.style.display = 'block';
+
+            // Create confetti
+            const colors = ['#ff006e', '#fb5607', '#ffbe0b', '#8338ec', '#3a86ff', '#06ffa5'];
+            
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 2 + 's';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    celebration.appendChild(confetti);
+
+                    // Remove confetti after animation
+                    setTimeout(() => {
+                        confetti.remove();
+                    }, 5000);
+                }, i * 20);
+            }
+
+            // Create sparkles around the container
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'sparkle';
+                    sparkle.innerHTML = '✨';
+                    sparkle.style.left = (Math.random() * 80 + 10) + '%';
+                    sparkle.style.top = (Math.random() * 80 + 10) + '%';
+                    sparkle.style.fontSize = (Math.random() * 20 + 20) + 'px';
+                    sparkle.style.animationDelay = (Math.random() * 0.5) + 's';
+                    celebration.appendChild(sparkle);
+
+                    setTimeout(() => {
+                        sparkle.remove();
+                    }, 2000);
+                }, i * 100);
+            }
+
+            // Hide celebration after 3 seconds
+            setTimeout(() => {
+                celebration.style.display = 'none';
+            }, 3000);
+        }
+
+        function tryAgain() {
+            document.getElementById('activity').value = '';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('activity').focus();
+        }
+    </script>
+</body>
+</html>
