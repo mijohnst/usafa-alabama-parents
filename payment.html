@@ -101,13 +101,55 @@
     .info-box p { color: var(--gray); margin-bottom: 0.5rem; font-size: 0.95rem; }
     .info-box p:last-child { margin-bottom: 0; }
 
+    /* CREDIT CARD IFRAME */
+    .payment-iframe-container { 
+      background: var(--white); 
+      border-radius: 8px; 
+      padding: 2rem; 
+      margin: 2rem auto; 
+      max-width: 700px;
+      box-shadow: 0 4px 12px rgba(0, 53, 148, 0.1);
+    }
+    .payment-iframe-container h4 { 
+      color: var(--navy); 
+      margin-bottom: 1rem; 
+      font-size: 1.2rem; 
+      font-family: var(--font-display);
+      text-align: center;
+    }
+    .payment-iframe-container p {
+      color: var(--gray);
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+    .iframe-wrapper {
+      position: relative;
+      width: 100%;
+      min-height: 600px;
+      background: #fff;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(0, 53, 148, 0.1);
+    }
+    .iframe-wrapper iframe {
+      width: 100%;
+      min-height: 600px;
+      border: none;
+      display: block;
+    }
+
     /* FOOTER */
     footer { background: var(--topbar); color: rgba(245, 245, 240, 0.6); text-align: center; padding: 2rem; font-size: 0.85rem; }
     footer a { color: rgba(245, 245, 240, 0.8); transition: color 0.2s; }
     footer a:hover { color: var(--white); }
     footer p { margin-bottom: 0.5rem; }
 
-    @media (max-width: 768px) { .hero h1 { font-size: 2rem; } }
+    @media (max-width: 768px) { 
+      .hero h1 { font-size: 2rem; }
+      .payment-iframe-container { padding: 1.5rem; }
+      .iframe-wrapper, .iframe-wrapper iframe { min-height: 700px; }
+    }
   </style>
 </head>
 <body>
@@ -124,6 +166,7 @@
     <ul class="nav-links" id="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="membership.html">Membership</a></li>
+      <li><a href="payment.html">Payment</a></li>
       <li><a href="index.html#contact">Contact</a></li>
     </ul>
   </nav>
@@ -155,6 +198,26 @@
       <h3>Payment Methods</h3>
       <p>We offer several convenient ways to pay your membership dues:</p>
       
+      <!-- CREDIT CARD PAYMENT -->
+      <div class="payment-iframe-container">
+        <h4>💳 Pay by Credit or Debit Card</h4>
+        <p>Complete your payment securely using our encrypted payment form below:</p>
+        <div class="iframe-wrapper">
+          <iframe 
+            src="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=5AhJ%2FOLwSHiqdo5gHVrF8gAAAZz3MghI"
+            title="Secure Credit Card Payment"
+            allowtransparency="true"
+            scrolling="auto">
+          </iframe>
+        </div>
+      </div>
+
+      <!-- DIVIDER -->
+      <div style="margin: 3rem 0; text-align: center; position: relative;">
+        <hr style="border: none; border-top: 1px solid rgba(0, 53, 148, 0.2);">
+        <span style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--light); padding: 0 1rem; color: var(--gray); font-size: 0.9rem; font-weight: 600;">OR</span>
+      </div>
+
       <!-- IMPORTANT ZELLE NOTICE -->
       <div style="margin: 2rem auto; padding: 1.75rem; background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px; max-width: 600px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);">
         <div style="display: flex; align-items: flex-start; gap: 1rem;">
@@ -167,7 +230,7 @@
             <p style="color: #856404; margin-bottom: 1rem; font-size: 0.95rem; line-height: 1.6;">
               <strong>Step 1:</strong> Open your bank's mobile app or log into your online banking<br>
               <strong>Step 2:</strong> Find "Send Money with Zelle" (usually in the transfer or payments section)<br>
-              <strong>Step 3:</strong> Send payment to: <strong style="font-size: 1.05rem;">usafapcofal@gmail.com</strong><br>
+              <strong>Step 3:</strong> Send payment to: <strong style="font-size: 1.05rem;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="730600121517000307160313121f1c1f131f121f131f1e075d1e0217">[email&#160;protected]</a></strong><br>
               <strong>Step 4:</strong> Or scan the QR code below from within your bank's Zelle feature
             </p>
             <p style="color: #856404; font-size: 0.88rem; font-style: italic; margin: 0;">
@@ -188,7 +251,7 @@
             <strong>Send payment to:</strong>
           </p>
           <p style="color: var(--navy); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; font-family: monospace;">
-            usafapcofal@gmail.com
+            <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f186989c9e999e8f9c909990958db19699959d98df929e9c">[email&#160;protected]</a>
           </p>
           <p style="color: var(--gray); font-size: 0.85rem; margin: 0;">
             Recipient: USAFA CLUBOFALABAMA
@@ -199,7 +262,7 @@
       <div style="margin: 2rem 0; padding: 1.5rem; background: var(--white); border-radius: 4px;">
         <h4 style="color: var(--navy); margin-bottom: 1rem; font-size: 1rem;">Pay by Check</h4>
         <p style="color: var(--gray); margin-bottom: 1.5rem;">If you prefer to pay by check, please contact our Treasurer for mailing instructions:</p>
-        <a href="mailto:treasurer@alabamafalcons.org" style="background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:.85rem 2.5rem;font-size:.85rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;display:inline-block;width:auto;text-decoration:none;" onmouseover="this.style.boxShadow='0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2)';this.style.top='2px';this.style.background='linear-gradient(180deg,#2166cc 0%,#003080 100%)'" onmouseout="this.style.boxShadow='0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25)';this.style.top='0';this.style.background='linear-gradient(180deg,#1a5cbf 0%,#002554 100%)'">Email Treasurer</a>
+        <a href="/cdn-cgi/l/email-protection#cebabcaea9aebfaca0a9aea38eafaba0a3a0acaaa7aaa6a2a3bae0a3bfaa" style="background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:.85rem 2.5rem;font-size:.85rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;display:inline-block;width:auto;text-decoration:none;" onmouseover="this.style.boxShadow='0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2)';this.style.top='2px';this.style.background='linear-gradient(180deg,#2166cc 0%,#003080 100%)'" onmouseout="this.style.boxShadow='0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25)';this.style.top='0';this.style.background='linear-gradient(180deg,#1a5cbf 0%,#002554 100%)'">Email Treasurer</a>
       </div>
 
       <div style="margin: 2rem 0; padding: 1.5rem; background: var(--white); border-radius: 4px; border-left: 4px solid var(--accent);">
@@ -208,7 +271,7 @@
           Beyond membership dues, we welcome donations of any amount. Your generosity directly supports our cadets and families throughout their Academy journey.
         </p>
         <p style="color: var(--navy); margin-bottom: 0; font-size: 0.95rem; font-weight: 600;">
-          To make a donation, simply use the same Zelle QR code above (<strong>usafapcofal@gmail.com</strong>) and send any amount you wish to contribute. Thank you for supporting the USAFA Parents Club of Alabama!
+          To make a donation, you can use the credit card form above, the Zelle QR code (<strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3b4e485a5d5a4b585459595477585258505511585456">[email&#160;protected]</a></strong>), or contact our Treasurer. Thank you for supporting the USAFA Parents Club of Alabama!
         </p>
       </div>
     </div>
@@ -219,7 +282,7 @@
     <p><a href="index.html">Home</a> | <a href="membership.html">Membership</a> | <a href="payment.html">Payment</a> | <a href="index.html#contact">Contact</a></p>
   </footer>
 
-  <script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     // Mobile menu toggle
     document.getElementById('hamburger').addEventListener('click', function() {
       document.getElementById('nav-links').classList.toggle('open');
@@ -230,80 +293,14 @@
       });
     });
 
-    // Form submission
-    document.getElementById('membershipForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-
-      var form = this;
-      var statusEl = document.getElementById('formStatus');
-      var btn = form.querySelector('button[type="submit"]');
-
-      btn.textContent = 'Submitting...';
-      btn.disabled = true;
-      statusEl.style.display = 'none';
-      statusEl.className = '';
-
-      var payload = {
-        cadetFirstName: form.querySelector('#cadetFirstName').value.trim(),
-        cadetMiddleName: form.querySelector('#cadetMiddleName').value.trim(),
-        cadetLastName: form.querySelector('#cadetLastName').value.trim(),
-        nickname: form.querySelector('#nickname').value.trim(),
-        cadetEmail: form.querySelector('#cadetEmail').value.trim(),
-        graduationYear: form.querySelector('#graduationYear').value.trim(),
-        cadetDOB: form.querySelector('#cadetDOB').value,
-        poBox: form.querySelector('#poBox').value.trim(),
-        squadron: form.querySelector('#squadron').value.trim(),
-        highSchool: form.querySelector('#highSchool').value.trim(),
-        photoConsent: (form.querySelector('input[name="photoConsent"]:checked') || {}).value || '',
-        directoryConsent: (form.querySelector('input[name="directoryConsent"]:checked') || {}).value || '',
-        parent1Name: form.querySelector('#parent1Name').value.trim(),
-        parent2Name: form.querySelector('#parent2Name').value.trim(),
-        additionalFamily: form.querySelector('#additionalFamily').value.trim(),
-        streetAddress: form.querySelector('#streetAddress').value.trim(),
-        city: form.querySelector('#city').value.trim(),
-        state: form.querySelector('#state').value.trim(),
-        zipCode: form.querySelector('#zipCode').value.trim(),
-        parent1Phone: form.querySelector('#parent1Phone').value.trim(),
-        parent2Phone: form.querySelector('#parent2Phone').value.trim(),
-        parent1Email: form.querySelector('#parent1Email').value.trim(),
-        parent2Email: form.querySelector('#parent2Email').value.trim(),
-        membershipTier: form.querySelector('#membershipTier').value
-      };
-
-      try {
-        console.log('Submitting form data to PHP backend...');
-        var resp = await fetch('membership-handler.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        console.log('Response status:', resp.status);
-        var result = await resp.json();
-        console.log('Response data:', result);
-
-        if (resp.ok && result.success) {
-          statusEl.textContent = result.message + ' Redirecting to payment page...';
-          statusEl.className = 'success';
-          statusEl.style.display = 'block';
-          btn.textContent = 'Submit Application';
-          btn.disabled = false;
-          
-          // Redirect to payment page after 2 seconds
-          setTimeout(function() {
-            window.location.href = 'payment.html';
-          }, 2000);
-        } else {
-          throw new Error(result.error || 'Submission failed');
+    // Adjust iframe height dynamically if needed
+    window.addEventListener('message', function(event) {
+      // Listen for height messages from the iframe
+      if (event.data && event.data.height) {
+        var iframe = document.querySelector('.iframe-wrapper iframe');
+        if (iframe) {
+          iframe.style.height = event.data.height + 'px';
         }
-
-      } catch(err) {
-        console.error('Form submission error:', err);
-        statusEl.textContent = 'Error submitting form: ' + err.message + ' Please try again.';
-        statusEl.className = 'error';
-        statusEl.style.display = 'block';
-        btn.textContent = 'Submit Application';
-        btn.disabled = false;
       }
     });
   </script>
