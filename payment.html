@@ -101,44 +101,6 @@
     .info-box p { color: var(--gray); margin-bottom: 0.5rem; font-size: 0.95rem; }
     .info-box p:last-child { margin-bottom: 0; }
 
-    /* CREDIT CARD IFRAME */
-    .payment-iframe-container { 
-      background: var(--white); 
-      border-radius: 8px; 
-      padding: 2rem; 
-      margin: 2rem auto; 
-      max-width: 700px;
-      box-shadow: 0 4px 12px rgba(0, 53, 148, 0.1);
-    }
-    .payment-iframe-container h4 { 
-      color: var(--navy); 
-      margin-bottom: 1rem; 
-      font-size: 1.2rem; 
-      font-family: var(--font-display);
-      text-align: center;
-    }
-    .payment-iframe-container p {
-      color: var(--gray);
-      margin-bottom: 1.5rem;
-      font-size: 0.95rem;
-      text-align: center;
-    }
-    .iframe-wrapper {
-      position: relative;
-      width: 100%;
-      min-height: 600px;
-      background: #fff;
-      border-radius: 4px;
-      overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(0, 53, 148, 0.1);
-    }
-    .iframe-wrapper iframe {
-      width: 100%;
-      min-height: 600px;
-      border: none;
-      display: block;
-    }
-
     /* FOOTER */
     footer { background: var(--topbar); color: rgba(245, 245, 240, 0.6); text-align: center; padding: 2rem; font-size: 0.85rem; }
     footer a { color: rgba(245, 245, 240, 0.8); transition: color 0.2s; }
@@ -147,8 +109,6 @@
 
     @media (max-width: 768px) { 
       .hero h1 { font-size: 2rem; }
-      .payment-iframe-container { padding: 1.5rem; }
-      .iframe-wrapper, .iframe-wrapper iframe { min-height: 700px; }
     }
   </style>
 </head>
@@ -199,17 +159,24 @@
       <p>We offer several convenient ways to pay your membership dues:</p>
       
       <!-- CREDIT CARD PAYMENT -->
-      <div class="payment-iframe-container">
-        <h4>💳 Pay by Credit or Debit Card</h4>
-        <p>Complete your payment securely using our encrypted payment form below:</p>
-        <div class="iframe-wrapper">
-          <iframe 
-            src="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=5AhJ%2FOLwSHiqdo5gHVrF8gAAAZz3MghI"
-            title="Secure Credit Card Payment"
-            allowtransparency="true"
-            scrolling="auto">
-          </iframe>
-        </div>
+      <div style="margin: 2rem auto; padding: 2rem; background: var(--white); border-radius: 8px; max-width: 600px; box-shadow: 0 4px 12px rgba(0, 53, 148, 0.1); text-align: center;">
+        <h4 style="color: var(--navy); margin-bottom: 1rem; font-size: 1.2rem; font-family: var(--font-display);">💳 Pay Membership Dues by Credit or Debit Card</h4>
+        <p style="color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem;">
+          Click the button below to complete your membership payment securely through our encrypted payment processor:
+        </p>
+        <a 
+          href="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=0AN%2BK2m7TiOaia2eCgxw1gAAAZz3Hr3E" 
+          target="_blank"
+          rel="noopener noreferrer"
+          style="background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:1.2rem 3rem;font-size:.95rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;display:inline-block;text-decoration:none;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;" 
+          onmouseover="this.style.boxShadow='0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2)';this.style.top='2px';this.style.background='linear-gradient(180deg,#2166cc 0%,#003080 100%)'" 
+          onmouseout="this.style.boxShadow='0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25)';this.style.top='0';this.style.background='linear-gradient(180deg,#1a5cbf 0%,#002554 100%)'">
+          🔒 Pay Membership Dues
+        </a>
+        <p style="color: var(--gray); margin-top: 1.5rem; font-size: 0.85rem; line-height: 1.5;">
+          You will be securely redirected to our payment processor.<br>
+          <strong>Secure SSL encryption</strong> protects your payment information.
+        </p>
       </div>
 
       <!-- DIVIDER -->
@@ -270,8 +237,25 @@
         <p style="color: var(--gray); margin-bottom: 1rem; font-size: 0.95rem; line-height: 1.6;">
           Beyond membership dues, we welcome donations of any amount. Your generosity directly supports our cadets and families throughout their Academy journey.
         </p>
-        <p style="color: var(--navy); margin-bottom: 0; font-size: 0.95rem; font-weight: 600;">
-          To make a donation, you can use the credit card form above, the Zelle QR code (<strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3b4e485a5d5a4b585459595477585258505511585456">[email&#160;protected]</a></strong>), or contact our Treasurer. Thank you for supporting the USAFA Parents Club of Alabama!
+        <p style="color: var(--navy); margin-bottom: 1.5rem; font-size: 0.95rem; font-weight: 600;">
+          To make a donation, you can use the options below:
+        </p>
+        
+        <!-- Donation Credit Card Button -->
+        <div style="text-align: center; margin: 1.5rem 0;">
+          <a 
+            href="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=5AhJ%2FOLwSHiqdo5gHVrF8gAAAZz3MghI" 
+            target="_blank"
+            rel="noopener noreferrer"
+            style="background:linear-gradient(180deg,#c41e3a 0%,#8b1528 100%);color:#ffffff;border:none;padding:1rem 2.5rem;font-size:.9rem;box-shadow:0 4px 0 #6b0f1a,0 6px 12px rgba(196,30,58,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;display:inline-block;text-decoration:none;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;" 
+            onmouseover="this.style.boxShadow='0 2px 0 #6b0f1a,0 4px 8px rgba(196,30,58,.2)';this.style.top='2px';this.style.background='linear-gradient(180deg,#d62d47 0%,#a01a2e 100%)'" 
+            onmouseout="this.style.boxShadow='0 4px 0 #6b0f1a,0 6px 12px rgba(196,30,58,.25)';this.style.top='0';this.style.background='linear-gradient(180deg,#c41e3a 0%,#8b1528 100%)'">
+            💝 Donate by Credit/Debit Card
+          </a>
+        </div>
+        
+        <p style="color: var(--gray); margin-top: 1.5rem; font-size: 0.9rem; text-align: center;">
+          Or use Zelle (<strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9aefeef8fffcfcf8affeeab8fbffecf9effed6f1fbf7fff4b4f9f5f7">[email&#160;protected]</a></strong>) to send any amount you wish to contribute. Thank you for supporting the USAFA Parents Club of Alabama!
         </p>
       </div>
     </div>
@@ -291,17 +275,6 @@
       link.addEventListener('click', function() {
         document.getElementById('nav-links').classList.remove('open');
       });
-    });
-
-    // Adjust iframe height dynamically if needed
-    window.addEventListener('message', function(event) {
-      // Listen for height messages from the iframe
-      if (event.data && event.data.height) {
-        var iframe = document.querySelector('.iframe-wrapper iframe');
-        if (iframe) {
-          iframe.style.height = event.data.height + 'px';
-        }
-      }
     });
   </script>
 </body>
