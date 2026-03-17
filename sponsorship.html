@@ -25,8 +25,12 @@
     a{color:inherit;text-decoration:none;}
     img{max-width:100%;display:block;}
 
+    /* DEMO DISCLAIMER */
+    .demo-banner{position:fixed;top:0;left:0;right:0;z-index:200;background:#d32f2f;color:white;text-align:center;padding:.75rem 2rem;font-size:.9rem;font-weight:600;letter-spacing:.05em;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+    .demo-banner-spacer{height:112px;}
+
     /* NAV */
-    nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,37,84,0.98);backdrop-filter:blur(8px);border-bottom:1px solid rgba(138,141,143,0.3);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;}
+    nav{position:fixed;top:48px;left:0;right:0;z-index:100;background:rgba(0,37,84,0.98);backdrop-filter:blur(8px);border-bottom:1px solid rgba(138,141,143,0.3);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;}
     .nav-brand{display:flex;align-items:center;gap:.75rem;font-family:var(--font-display);color:var(--white);font-size:.95rem;letter-spacing:.05em;}
     .nav-brand img{width:38px;height:38px;object-fit:contain;border-radius:4px;padding:2px;}
     .nav-brand span{line-height:1.2;}
@@ -41,6 +45,7 @@
       .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:1rem 0;}
       .nav-links.open{display:flex;}
       .nav-links a{padding:.65rem 2rem;display:block;}
+      .demo-banner{font-size:.8rem;padding:.6rem 1rem;}
     }
 
     /* HERO */
@@ -98,6 +103,12 @@
   </style>
 </head>
 <body>
+
+  <!-- DEMO DISCLAIMER -->
+  <div class="demo-banner">
+    ⚠️ DEMO VERSION - This sponsorship page is currently for demonstration purposes only
+  </div>
+  <div class="demo-banner-spacer"></div>
 
   <!-- NAV -->
   <nav>
