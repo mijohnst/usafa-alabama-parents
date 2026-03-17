@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A Message from Our President - USAFA Parents Club of Alabama</title>
+  <link rel="icon" type="image/png" href="logo01.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy:#003594;
+      --navy2:#003594;
+      --blue:#003594;
+      --topbar:#002554;
+      --silver:#8A8D8F; --silver2:#A7A9AC; --white:#f5f5f0;
+      --gray:#6B6E70; --light:#e8edf4;
+      --accent:#c41e3a;
+      --font-display:'Cinzel',serif; --font-body:'Source Sans 3',sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:var(--font-body);background:var(--white);color:var(--navy);line-height:1.7;overflow-x:hidden;}
+    a{color:inherit;text-decoration:none;}
+    img{max-width:100%;display:block;}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,37,84,0.98);backdrop-filter:blur(8px);border-bottom:1px solid rgba(138,141,143,0.3);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;}
+    .nav-brand{display:flex;align-items:center;gap:.75rem;font-family:var(--font-display);color:var(--white);font-size:.95rem;letter-spacing:.05em;cursor:pointer;transition:opacity .2s;}
+    .nav-brand:hover{opacity:.8;}
+    .nav-brand img{width:38px;height:38px;object-fit:contain;border-radius:4px;padding:2px;}
+    .nav-brand span{line-height:1.2;}
+    .nav-brand small{display:block;font-size:.65rem;color:var(--silver2);letter-spacing:.1em;font-family:var(--font-body);}
+    .nav-links{display:flex;gap:1.75rem;list-style:none;}
+    .nav-links a{color:rgba(245,245,240,.8);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;transition:color .2s;}
+    .nav-links a:hover{color:var(--silver2);}
+    .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px;}
+    .hamburger span{width:24px;height:2px;background:var(--white);display:block;transition:.3s;}
+    @media(max-width:768px){
+      .hamburger{display:flex;}
+      .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:1rem 0;}
+      .nav-links.open{display:flex;}
+      .nav-links a{padding:.65rem 2rem;display:block;}
+    }
+
+    /* HERO */
+    .hero{margin-top:64px;background:linear-gradient(135deg,var(--navy) 0%,#001e52 100%);color:var(--white);padding:4rem 2rem;text-align:center;min-height:320px;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;overflow:hidden;}
+    .hero::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 20% 50%,rgba(138,141,143,0.1) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(138,141,143,0.05) 0%,transparent 50%);pointer-events:none;}
+    .hero-content{position:relative;z-index:2;max-width:800px;animation:fadeInUp 0.8s ease-out;}
+    .hero h1{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);font-weight:700;letter-spacing:0.03em;margin-bottom:0.5rem;line-height:1.2;}
+    .hero .subtitle{font-size:1.1rem;color:rgba(245,245,240,0.85);margin-bottom:0;font-weight:300;line-height:1.6;}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+
+    /* LETTER CONTENT */
+    .letter-section{padding:4rem 2rem;max-width:900px;margin:0 auto;}
+    .letter-section.gray-bg{background:var(--light);}
+    .letter-intro{font-size:1.05rem;color:var(--gray);margin-bottom:2rem;font-style:italic;border-left:3px solid var(--blue);padding-left:1.5rem;}
+    .letter-body{color:var(--gray);font-size:1rem;}
+    .letter-body h2{font-family:var(--font-display);font-size:1.6rem;color:var(--navy);margin:2.5rem 0 1rem;position:relative;padding-bottom:0.5rem;}
+    .letter-body h2::after{content:'';position:absolute;bottom:0;left:0;width:48px;height:3px;background:var(--accent);border-radius:2px;}
+    .letter-body h3{font-family:var(--font-display);font-size:1.2rem;color:var(--navy);margin:1.5rem 0 0.75rem;}
+    .letter-body p{margin-bottom:1.25rem;line-height:1.8;}
+    .letter-body ul{margin:0 0 1.25rem 2rem;}
+    .letter-body li{margin-bottom:0.5rem;}
+    .signature{margin-top:3rem;font-style:italic;color:var(--navy);}
+    .signature .name{font-family:var(--font-display);font-size:1.2rem;font-weight:600;margin-top:0.5rem;font-style:normal;}
+
+    /* PROGRAM CARDS */
+    .programs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;margin-top:2rem;}
+    .program-card{background:var(--white);border-radius:4px;padding:2rem;border-left:3px solid var(--blue);transition:transform .2s,box-shadow .2s,background .2s,border-left-color .2s;box-shadow:0 2px 8px rgba(0,53,148,.08);}
+    .program-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,53,148,.2);background:#b8cce8;border-left-color:#A6192E;}
+    .program-icon{font-size:1.8rem;margin-bottom:.75rem;}
+    .program-card h3{font-family:var(--font-display);font-size:1.1rem;color:var(--navy);margin-bottom:.5rem;}
+    .program-card p{font-size:.9rem;color:#5a6a7a;line-height:1.6;}
+    .program-card .volunteer-link{display:inline-block;margin-top:1rem;font-size:.85rem;color:var(--blue);font-weight:600;transition:color .2s;}
+    .program-card .volunteer-link:hover{color:var(--accent);}
+
+    /* CTA SECTION */
+    .cta-section{background:linear-gradient(135deg,var(--navy) 0%,#001e52 100%);color:var(--white);padding:4rem 2rem;text-align:center;}
+    .cta-section h2{font-family:var(--font-display);font-size:2rem;margin-bottom:1rem;color:var(--white);}
+    .cta-section p{font-size:1.1rem;margin-bottom:2rem;color:rgba(245,245,240,0.9);}
+    .cta-buttons{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;}
+    .btn{display:inline-block;padding:0.9rem 2rem;border-radius:4px;font-family:var(--font-body);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-size:0.85rem;transition:all .15s ease;cursor:pointer;text-decoration:none;}
+    .btn-primary{background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);position:relative;top:0;}
+    .btn-primary:hover{background:linear-gradient(180deg,#2166cc 0%,#003080 100%);box-shadow:0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2);top:2px;}
+    .btn-secondary{background:rgba(255,255,255,0.15);color:var(--white);border:2px solid var(--white);}
+    .btn-secondary:hover{background:rgba(255,255,255,0.25);}
+
+    /* FOOTER */
+    footer{background:var(--topbar);color:rgba(245,245,240,.6);padding:3rem 2rem 1.5rem;}
+    .footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2.5rem;max-width:1100px;margin:0 auto 2rem;}
+    .footer-brand img{width:48px;margin-bottom:1rem;}
+    .footer-brand p{font-size:.85rem;line-height:1.6;}
+    .footer-col h4{color:var(--white);font-family:var(--font-display);font-size:.9rem;margin-bottom:1rem;letter-spacing:.05em;}
+    .footer-col ul{list-style:none;}
+    .footer-col li{margin-bottom:.5rem;}
+    .footer-col a{color:rgba(245,245,240,.7);font-size:.8rem;transition:color .2s;}
+    .footer-col a:hover{color:var(--white);}
+    .footer-bottom{border-top:1px solid rgba(245,245,240,.15);padding-top:1.5rem;text-align:center;font-size:.75rem;display:flex;justify-content:space-between;max-width:1100px;margin:0 auto;flex-wrap:wrap;gap:1rem;}
+    @media(max-width:768px){.footer-bottom{flex-direction:column;text-align:center;}}
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="index.html" class="nav-brand">
+      <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
+      <span>USAFA Parents Club<small>of Alabama</small></span>
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="index.html#membership">Membership</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-content">
+      <h1>A Message from Our President</h1>
+      <p class="subtitle">Welcome to the USAFA Parents Club of Alabama</p>
+    </div>
+  </div>
+
+  <!-- LETTER -->
+  <section class="letter-section">
+    <p class="letter-intro">Dear USAFA Alabama Families,</p>
+    
+    <div class="letter-body">
+      <p>I am absolutely thrilled to connect with you today! As we look toward the future of our club, I am filled with pride for the young men and women we represent—our incredible cadets who are working so hard at the Academy. While they are far from home, our mission is to ensure they always feel the support of their Alabama roots, and we have some exciting new ways to make that happen!</p>
+
+      <p>First, I want to give a massive shout-out to our dedicated team of volunteer officers. Vice President Susan Jackson, Secretary Shelley Kavlick, and Treasurer Mike Sheehy have been working tirelessly behind the scenes for months, meeting as often as once a week to move our club forward. I also want to extend a special thank you to our web designer, Mike Johnston, for his incredible vision and hard work.</p>
+
+      <h2>The Wait is Over: Revealing Our New Website!</h2>
+      <p>We are so excited to officially reveal our brand-new website! This was designed specifically to help us connect with you and for you to connect with us. It is your one-stop shop for upcoming events, the latest news from USAFA, and so much more. Our big plans to support our amazing cadets start right here!</p>
+      
+      <p style="text-align:center;margin:2rem 0;">
+        <a href="index.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Explore Our New Website →</a>
+      </p>
+
+      <h2>Investing in Our Cadets</h2>
+      <p>To continue our mission of supporting our future officers, we need your help. We are asking all families to get current on their parent dues. These funds go directly toward the programs and initiatives that celebrate our cadets' milestones.</p>
+      
+      <ul>
+        <li><strong>Annual Dues:</strong> $75 per year</li>
+        <li><strong>Four-Year Discount:</strong> $275 (covers your cadet's entire journey!)</li>
+      </ul>
+      
+      <p>Our new website makes this easier than ever with multiple payment options available.</p>
+      
+      <p style="text-align:center;margin:2rem 0;">
+        <a href="membership.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Pay Your Dues Online →</a>
+      </p>
+
+      <h2>Save the Date: Annual Meeting via Zoom</h2>
+      <p>We want you to be a part of your cadet's journey! Whether you have a little time to give or a lot, there are many ways to get involved. Please join us for our Annual USAFA Alabama Parents Club Meeting:</p>
+      
+      <ul>
+        <li><strong>When:</strong> Sunday, April 12th, 2026</li>
+        <li><strong>Time:</strong> 4:00 PM Central</li>
+        <li><strong>Where:</strong> Via Zoom (link will be sent to members)</li>
+      </ul>
+      
+      <p>During this meeting, we will introduce the board, share our by-laws, discuss upcoming fundraising, and reveal our exciting plans for our outstanding cadets.</p>
+
+      <p>It is truly my pleasure to serve alongside such a dedicated group of parents. Together, we are supporting the future leaders of this great nation.</p>
+
+      <p><strong>God bless each of your families.</strong></p>
+
+      <div class="signature">
+        <p>Sincerely,</p>
+        <p class="name">Kari Johnston</p>
+        <p>President, USAFA Alabama Parents Club</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GET INVOLVED -->
+  <section class="letter-section gray-bg">
+    <h2 style="font-family:var(--font-display);font-size:2rem;color:var(--navy);margin-bottom:1rem;text-align:center;">Ways to Get Involved</h2>
+    <p style="text-align:center;color:var(--gray);margin-bottom:2rem;max-width:700px;margin-left:auto;margin-right:auto;">Whether you have a little time to give or a lot, there are many ways to support our cadets and connect with other Alabama families. Join us at our annual meeting to learn more about volunteer opportunities!</p>
+
+    <div class="programs-grid">
+      <div class="program-card">
+        <div class="program-icon">📦</div>
+        <h3>Care Package Program</h3>
+        <p>Help send care packages throughout the year to remind our cadets they have a home state cheering them on.</p>
+      </div>
+
+      <div class="program-card">
+        <div class="program-icon">🎓</div>
+        <h3>Welcome New Families</h3>
+        <p>Share your experience and help newly appointed families navigate the Academy journey.</p>
+      </div>
+
+      <div class="program-card">
+        <div class="program-icon">📅</div>
+        <h3>Event Planning</h3>
+        <p>Help coordinate club events and create opportunities for Alabama families to connect.</p>
+      </div>
+
+      <div class="program-card">
+        <div class="program-icon">🤝</div>
+        <h3>Parent Mentorship</h3>
+        <p>Be matched with a new Academy parent to offer guidance and support.</p>
+      </div>
+
+      <div class="program-card">
+        <div class="program-icon">📱</div>
+        <h3>Communications</h3>
+        <p>Help manage social media, send newsletters, or keep our community informed and engaged.</p>
+      </div>
+
+      <div class="program-card">
+        <div class="program-icon">🎖️</div>
+        <h3>Cadet Recognition</h3>
+        <p>Help celebrate Alabama cadet achievements and ensure our cadets know we're proud of them.</p>
+      </div>
+    </div>
+
+    <p style="text-align:center;margin-top:2.5rem;">
+      <a href="mailto:info@alabamafalcons.org?subject=Volunteer Interest" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Express Interest in Volunteering</a>
+    </p>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Join Us in Supporting Our Cadets!</h2>
+    <p>Together, we are supporting the future leaders of this great nation.</p>
+    <div class="cta-buttons">
+      <a href="membership.html" class="btn btn-primary">Pay Your Dues</a>
+      <a href="index.html" class="btn btn-secondary">Explore the Website</a>
+      <a href="mailto:info@alabamafalcons.org" class="btn btn-secondary">Contact Us</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
+        <p>Supporting Alabama cadet families with pride, purpose, and community.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="index.html#about">About Us</a></li>
+          <li><a href="index.html#programs">Programs</a></li>
+          <li><a href="index.html#membership">Membership</a></li>
+          <li><a href="index.html#leadership">Leadership</a></li>
+          <li><a href="index.html#events">Events</a></li>
+          <li><a href="index.html#usafa-news">News</a></li>
+          <li><a href="index.html#contact">Contact</a></li>
+          <li><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener">Alabama Falcons Facebook</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>USAFA Resources</h4>
+        <ul>
+          <li><a href="https://www.usafa.edu" target="_blank" rel="noopener">USAFA Official Site</a></li>
+          <li><a href="https://www.usafa.edu/parents" target="_blank" rel="noopener">USAFA Parents Page</a></li>
+          <li><a href="https://www.usafa.edu/contact-us/" target="_blank" rel="noopener">USAFA Key Contacts</a></li>
+          <li><a href="https://www.usafa.org/" target="_blank" rel="noopener">Alumni Association (AOG)</a></li>
+          <li><a href="https://www.usafawebguy.com/" target="_blank" rel="noopener">Webguy</a></li>
+          <li><a href="https://www.usafa.edu/military/basic-cadet-training/" target="_blank" rel="noopener">Basic Training Info</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact Us</h4>
+        <ul>
+          <li><a href="mailto:info@alabamafalcons.org">Send Email</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 USAFA Parents Club of Alabama. All rights reserved.</span>
+      <span>Aim High &middot; Fly &middot; Fight &middot; Win</span>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile menu toggle
+    document.getElementById('hamburger').addEventListener('click', function() {
+      document.getElementById('nav-links').classList.toggle('open');
+    });
+    document.querySelectorAll('.nav-links a').forEach(function(link) {
+      link.addEventListener('click', function() {
+        document.getElementById('nav-links').classList.remove('open');
+      });
+    });
+  </script>
+</body>
+</html>
