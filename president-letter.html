@@ -76,6 +76,10 @@
     .program-card .volunteer-link{display:inline-block;margin-top:1rem;font-size:.85rem;color:var(--blue);font-weight:600;transition:color .2s;}
     .program-card .volunteer-link:hover{color:var(--accent);}
 
+    /* CALENDAR LINKS */
+    .calendar-link{display:inline-block;padding:0.5rem 1rem;background:var(--light);color:var(--navy);border-radius:4px;font-size:0.8rem;font-weight:600;border:1px solid rgba(0,53,148,0.2);transition:all 0.2s;text-decoration:none;}
+    .calendar-link:hover{background:var(--navy);color:var(--white);border-color:var(--navy);}
+
     /* CTA SECTION */
     .cta-section{background:linear-gradient(135deg,var(--navy) 0%,#001e52 100%);color:var(--white);padding:4rem 2rem;text-align:center;}
     .cta-section h2{font-family:var(--font-display);font-size:2rem;margin-bottom:1rem;color:var(--white);}
@@ -154,17 +158,32 @@
       <p>Our new website makes this easier than ever with multiple payment options available.</p>
       
       <p style="text-align:center;margin:2rem 0;">
-        <a href="membership.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Pay Your Dues Online →</a>
+        <a href="membership.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Pay Dues Online →</a>
       </p>
 
       <h2>Save the Date: Annual Meeting via Zoom</h2>
-      <p>We want you to be a part of your cadet's journey! Whether you have a little time to give or a lot, there are many ways to get involved. Please join us for our Annual USAFA Alabama Parents Club Meeting:</p>
+      <p>We want you to be a part of your cadet's journey! Whether you have a little time to give or a lot, there are many ways to get involved. We are actively looking for members to help with care packages, event planning, cadet recognition, communications, and mentorship programs. Your involvement directly supports our Alabama cadets!</p>
+      
+      <p>Please join us for our Annual USAFA Alabama Parents Club Meeting:</p>
       
       <ul>
         <li><strong>When:</strong> Sunday, April 12th, 2026</li>
         <li><strong>Time:</strong> 4:00 PM Central</li>
-        <li><strong>Where:</strong> Via Zoom (link will be sent to members)</li>
+        <li><strong>Where:</strong> Via Zoom</li>
       </ul>
+      
+      <p style="text-align:center;margin:1.5rem 0;">
+        <a href="https://us02web.zoom.us/meeting/register/pM8EQAVcQNaI9xpTiryJYg" target="_blank" rel="noopener" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Register for Zoom Meeting →</a>
+      </p>
+      
+      <div class="calendar-buttons" style="text-align:center;margin:1rem 0;">
+        <p style="font-size:0.9rem;color:var(--gray);margin-bottom:0.75rem;">Add to your calendar:</p>
+        <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+          <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Annual+USAFA+Alabama+Parents+Club+Meeting&dates=20260412T160000/20260412T170000&details=Join+us+for+our+Annual+USAFA+Alabama+Parents+Club+Meeting.+We+will+introduce+the+board,+share+our+by-laws,+discuss+upcoming+fundraising,+and+reveal+our+exciting+plans+for+our+outstanding+cadets.%0A%0AZoom+Link:+https://us02web.zoom.us/meeting/register/pM8EQAVcQNaI9xpTiryJYg&location=Via+Zoom&ctz=America/Chicago" target="_blank" rel="noopener" class="calendar-link">Google Calendar</a>
+          <a href="https://outlook.live.com/calendar/0/deeplink/compose?subject=Annual+USAFA+Alabama+Parents+Club+Meeting&startdt=2026-04-12T16:00:00&enddt=2026-04-12T17:00:00&body=Join+us+for+our+Annual+USAFA+Alabama+Parents+Club+Meeting.+We+will+introduce+the+board,+share+our+by-laws,+discuss+upcoming+fundraising,+and+reveal+our+exciting+plans+for+our+outstanding+cadets.%0A%0AZoom+Link:+https://us02web.zoom.us/meeting/register/pM8EQAVcQNaI9xpTiryJYg&location=Via+Zoom" target="_blank" rel="noopener" class="calendar-link">Outlook</a>
+          <a href="data:text/calendar;charset=utf8,BEGIN:VCALENDAR%0AVERSION:2.0%0ABEGIN:VEVENT%0ADTSTART:20260412T210000Z%0ADTEND:20260412T220000Z%0ASUMMARY:Annual USAFA Alabama Parents Club Meeting%0ADESCRIPTION:Join us for our Annual USAFA Alabama Parents Club Meeting. We will introduce the board, share our by-laws, discuss upcoming fundraising, and reveal our exciting plans for our outstanding cadets.\n\nZoom Link: https://us02web.zoom.us/meeting/register/pM8EQAVcQNaI9xpTiryJYg%0ALOCATION:Via Zoom%0AEND:VEVENT%0AEND:VCALENDAR" download="usafa-alabama-meeting.ics" class="calendar-link">Apple/iCal</a>
+        </div>
+      </div>
       
       <p>During this meeting, we will introduce the board, share our by-laws, discuss upcoming fundraising, and reveal our exciting plans for our outstanding cadets.</p>
 
@@ -180,62 +199,14 @@
     </div>
   </section>
 
-  <!-- GET INVOLVED -->
-  <section class="letter-section gray-bg">
-    <h2 style="font-family:var(--font-display);font-size:2rem;color:var(--navy);margin-bottom:1rem;text-align:center;">Ways to Get Involved</h2>
-    <p style="text-align:center;color:var(--gray);margin-bottom:2rem;max-width:700px;margin-left:auto;margin-right:auto;">Whether you have a little time to give or a lot, there are many ways to support our cadets and connect with other Alabama families. Join us at our annual meeting to learn more about volunteer opportunities!</p>
-
-    <div class="programs-grid">
-      <div class="program-card">
-        <div class="program-icon">📦</div>
-        <h3>Care Package Program</h3>
-        <p>Help send care packages throughout the year to remind our cadets they have a home state cheering them on.</p>
-      </div>
-
-      <div class="program-card">
-        <div class="program-icon">🎓</div>
-        <h3>Welcome New Families</h3>
-        <p>Share your experience and help newly appointed families navigate the Academy journey.</p>
-      </div>
-
-      <div class="program-card">
-        <div class="program-icon">📅</div>
-        <h3>Event Planning</h3>
-        <p>Help coordinate club events and create opportunities for Alabama families to connect.</p>
-      </div>
-
-      <div class="program-card">
-        <div class="program-icon">🤝</div>
-        <h3>Parent Mentorship</h3>
-        <p>Be matched with a new Academy parent to offer guidance and support.</p>
-      </div>
-
-      <div class="program-card">
-        <div class="program-icon">📱</div>
-        <h3>Communications</h3>
-        <p>Help manage social media, send newsletters, or keep our community informed and engaged.</p>
-      </div>
-
-      <div class="program-card">
-        <div class="program-icon">🎖️</div>
-        <h3>Cadet Recognition</h3>
-        <p>Help celebrate Alabama cadet achievements and ensure our cadets know we're proud of them.</p>
-      </div>
-    </div>
-
-    <p style="text-align:center;margin-top:2.5rem;">
-      <a href="mailto:info@alabamafalcons.org?subject=Volunteer Interest" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Express Interest in Volunteering</a>
-    </p>
-  </section>
-
   <!-- CTA -->
   <section class="cta-section">
     <h2>Join Us in Supporting Our Cadets!</h2>
     <p>Together, we are supporting the future leaders of this great nation.</p>
     <div class="cta-buttons">
-      <a href="membership.html" class="btn btn-primary">Pay Your Dues</a>
-      <a href="index.html" class="btn btn-secondary">Explore the Website</a>
-      <a href="mailto:info@alabamafalcons.org" class="btn btn-secondary">Contact Us</a>
+      <a href="membership.html" class="btn btn-primary">Pay Dues</a>
+      <a href="index.html" class="btn btn-primary">Explore the Website</a>
+      <a href="mailto:info@alabamafalcons.org" class="btn btn-primary">Contact Us</a>
     </div>
   </section>
 
