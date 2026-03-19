@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sponsorship - USAFA Parents Club of Alabama</title>
+  <link rel="icon" type="image/png" href="logo01.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy:#003594;
+      --navy2:#003594;
+      --blue:#003594;
+      --topbar:#002554;
+      --silver:#8A8D8F; --silver2:#A7A9AC; --white:#f5f5f0;
+      --gray:#6B6E70; --light:#e8edf4;
+      --font-display:'Cinzel',serif; --font-body:'Source Sans 3',sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:var(--font-body);background:var(--white);color:var(--navy);line-height:1.7;overflow-x:hidden;}
+    a{color:inherit;text-decoration:none;}
+    img{max-width:100%;display:block;}
+
+    /* DEMO DISCLAIMER */
+    .demo-banner{position:fixed;top:0;left:0;right:0;z-index:200;background:#d32f2f;color:white;text-align:center;padding:.75rem 2rem;font-size:.9rem;font-weight:600;letter-spacing:.05em;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+    .demo-banner-spacer{height:112px;}
+
+    /* NAV */
+    nav{position:fixed;top:48px;left:0;right:0;z-index:100;background:rgba(0,37,84,0.98);backdrop-filter:blur(8px);border-bottom:1px solid rgba(138,141,143,0.3);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;}
+    .nav-brand{display:flex;align-items:center;gap:.75rem;font-family:var(--font-display);color:var(--white);font-size:.95rem;letter-spacing:.05em;}
+    .nav-brand img{width:38px;height:38px;object-fit:contain;border-radius:4px;padding:2px;}
+    .nav-brand span{line-height:1.2;}
+    .nav-brand small{display:block;font-size:.65rem;color:var(--silver2);letter-spacing:.1em;font-family:var(--font-body);}
+    .nav-links{display:flex;gap:1.75rem;list-style:none;}
+    .nav-links a{color:rgba(245,245,240,.8);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;transition:color .2s;}
+    .nav-links a:hover{color:var(--silver2);}
+    .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px;}
+    .hamburger span{width:24px;height:2px;background:var(--white);display:block;transition:.3s;}
+    @media(max-width:768px){
+      .hamburger{display:flex;}
+      .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:1rem 0;}
+      .nav-links.open{display:flex;}
+      .nav-links a{padding:.65rem 2rem;display:block;}
+      .demo-banner{font-size:.8rem;padding:.6rem 1rem;}
+    }
+
+    /* HERO */
+    .hero-sponsor{min-height:45vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,var(--topbar) 100%);color:var(--white);text-align:center;padding:4rem 2rem 3rem;position:relative;overflow:hidden;}
+    .hero-sponsor::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.05)"/></svg>');opacity:0.3;}
+    .hero-content{position:relative;z-index:1;max-width:800px;margin:0 auto;}
+    .hero-sponsor h1{font-family:var(--font-display);font-size:2.8rem;font-weight:700;letter-spacing:.05em;margin-bottom:1rem;text-shadow:2px 2px 4px rgba(0,0,0,0.3);}
+    .hero-sponsor p{font-size:1.2rem;color:var(--silver2);line-height:1.6;}
+    @media(max-width:768px){.hero-sponsor h1{font-size:2rem;}}
+
+    /* SPONSORS SECTION */
+    .sponsors-section{max-width:1100px;margin:0 auto;padding:4rem 2rem;}
+    .sponsors-intro{text-align:center;margin-bottom:4rem;}
+    .sponsors-intro h2{font-family:var(--font-display);font-size:2rem;color:var(--navy);margin-bottom:1rem;}
+    .sponsors-intro p{font-size:1.1rem;color:var(--gray);max-width:700px;margin:0 auto;}
+
+    /* SPONSOR CARD */
+    .sponsor-card{background:white;border-radius:12px;overflow:hidden;box-shadow:0 6px 24px rgba(0,53,148,0.1);margin-bottom:3rem;border-top:4px solid var(--navy);}
+    
+    .sponsor-header{display:grid;grid-template-columns:300px 1fr;gap:2rem;padding:2.5rem;align-items:center;background:linear-gradient(to right,var(--light),white);}
+    .sponsor-logo-box{display:flex;align-items:center;justify-content:center;background:white;padding:1.5rem;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+    .sponsor-logo-box img{max-width:100%;height:auto;max-height:120px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.08));}
+    .sponsor-header-info h3{font-family:var(--font-display);font-size:1.8rem;color:var(--navy);margin-bottom:.5rem;}
+    .sponsor-location{color:var(--gray);font-size:1rem;margin-bottom:1rem;font-style:italic;}
+    .sponsor-badge{display:inline-block;background:var(--navy);color:white;padding:.4rem 1rem;border-radius:20px;font-size:.85rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;}
+
+    .sponsor-body{padding:2.5rem;}
+    
+    .contribution-box{background:linear-gradient(135deg,var(--navy),var(--topbar));color:white;padding:1.75rem;border-radius:8px;margin-bottom:2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+    .contribution-info h4{font-family:var(--font-display);font-size:1.2rem;margin-bottom:.25rem;}
+    .contribution-info p{font-size:.95rem;color:var(--silver2);}
+    .contribution-amount-lg{font-size:2.5rem;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,0.2);}
+
+    .sponsor-description{font-size:1.05rem;line-height:1.8;color:var(--navy);margin-bottom:1.5rem;}
+    
+    .sponsor-impact{background:var(--light);padding:1.75rem;border-radius:8px;margin-bottom:2rem;}
+    .sponsor-impact h4{font-family:var(--font-display);font-size:1.3rem;color:var(--navy);margin-bottom:1rem;}
+    .sponsor-impact p{font-size:1rem;line-height:1.8;color:var(--navy);}
+
+    .sponsor-gratitude{font-size:1.05rem;line-height:1.8;color:var(--navy);font-style:italic;padding:1.5rem;border-left:4px solid var(--navy);background:rgba(0,53,148,0.02);}
+
+    .sponsor-link{display:inline-flex;align-items:center;gap:.5rem;color:var(--navy);font-weight:600;margin-top:1rem;transition:color .3s;}
+    .sponsor-link:hover{color:var(--topbar);}
+
+    @media(max-width:768px){
+      .sponsor-header{grid-template-columns:1fr;text-align:center;}
+      .contribution-box{flex-direction:column;text-align:center;}
+    }
+
+    /* FOOTER */
+    footer{background:var(--topbar);color:var(--white);padding:2rem;text-align:center;}
+    footer p{font-size:.9rem;color:var(--silver2);}
+    footer a{color:var(--silver2);text-decoration:underline;}
+    footer a:hover{color:var(--white);}
+
+  </style>
+</head>
+<body>
+
+  <!-- DEMO DISCLAIMER -->
+  <div class="demo-banner">
+    ⚠️ DEMO VERSION - This sponsorship page is currently for demonstration purposes only
+  </div>
+  <div class="demo-banner-spacer"></div>
+
+  <!-- NAV -->
+  <nav>
+    <a href="index.html" class="nav-brand">
+      <img src="logo01.png" alt="USAFA Logo" />
+      <span>USAFA Parents Club<small>ALABAMA</small></span>
+    </a>
+    <button class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#leadership">Leadership</a></li>
+      <li><a href="index.html#resources">Resources</a></li>
+      <li><a href="index.html#news">News</a></li>
+      <li><a href="payments.html">Donate</a></li>
+      <li><a href="sponsorship.html">Sponsorship</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-sponsor">
+    <div class="hero-content">
+      <h1>Our Community Partners</h1>
+      <p>We are deeply grateful to the businesses and individuals who support our mission to serve the families and cadets of the Alabama USAFA Parents Club. Their generosity makes our events, resources, and community possible.</p>
+    </div>
+  </section>
+
+  <!-- SPONSORS SECTION -->
+  <section class="sponsors-section">
+    
+    <div class="sponsors-intro">
+      <h2>Thank You to Our Sponsors</h2>
+      <p>These outstanding partners share our commitment to supporting the next generation of Air Force leaders and strengthening our community.</p>
+    </div>
+
+    <!-- SPONSOR: YULISTA -->
+    <div class="sponsor-card">
+      <div class="sponsor-header">
+        <div class="sponsor-logo-box">
+          <img src="yulista-logo.png" alt="Yulista Logo" />
+        </div>
+        <div class="sponsor-header-info">
+          <h3>Yulista Holding, LLC</h3>
+          <p class="sponsor-location">Huntsville, Alabama</p>
+          <span class="sponsor-badge">Premier Sponsor</span>
+        </div>
+      </div>
+
+      <div class="sponsor-body">
+        <div class="contribution-box">
+          <div class="contribution-info">
+            <h4>June Cadet Sendoff 2025</h4>
+            <p>Supporting families and cadets</p>
+          </div>
+          <div class="contribution-amount-lg">$500</div>
+        </div>
+
+        <p class="sponsor-description">
+          Yulista is an Alaska Native Corporation and trusted aerospace and defense partner, headquartered right here in Huntsville, Alabama. With a dedicated team of over 800 professionals, Yulista delivers comprehensive aviation maintenance, engineering, logistics, and mission support services to military and civilian customers worldwide across aviation, aerospace, maritime, ground systems, and cyber/IT domains.
+        </p>
+
+        <div class="sponsor-impact">
+          <h4>Supporting Our Community</h4>
+          <p>Yulista's generous contribution directly supports our annual June Cadet Sendoff event, where families gather to meet, share a meal together, and provide care packages to cadets as they embark on their journey at the United States Air Force Academy. This meaningful event strengthens bonds during an important transition and demonstrates the power of community support.</p>
+        </div>
+
+        <p class="sponsor-gratitude">
+          We extend our deepest gratitude to Yulista for their outstanding support of our mission. Their commitment to service—both in defense of our nation and in support of our local community—exemplifies the values we hold dear. We are honored to partner with an organization that shares our dedication to developing future Air Force leaders.
+        </p>
+
+        <a href="https://yulista.com" target="_blank" rel="noopener" class="sponsor-link">
+          Learn More About Yulista →
+        </a>
+      </div>
+    </div>
+
+    <!-- ADD MORE SPONSORS HERE - Just duplicate the sponsor-card structure above -->
+    
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; <span id="year"></span> USAFA Parents Club of Alabama. All rights reserved. | <a href="index.html">Home</a> | <a href="index.html#about">About</a> | <a href="payments.html">Donate</a></p>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+
+</body>
+</html>
