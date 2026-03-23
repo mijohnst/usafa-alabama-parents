@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Membership Application - USAFA Parents Club of Alabama</title>
+  <title>Membership Payment - USAFA Parents Club of Alabama</title>
   <link rel="icon" type="image/png" href="logo01.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -64,42 +64,279 @@
     .section h2::after { content: ''; position: absolute; bottom: 0; left: 0; width: 60px; height: 3px; background: var(--accent); border-radius: 2px; }
     .section p { color: var(--gray); margin-bottom: 1.25rem; font-size: 1rem; }
 
-    /* FORM */
-    .form-section { background: var(--light); padding: 2rem; border-radius: 4px; margin: 2rem 0; }
-    .form-section h3 { font-family: var(--font-display); color: var(--navy); margin-bottom: 0.5rem; letter-spacing: 0.01em; }
-    .form-section > p { color: var(--gray); margin-bottom: 1.5rem; font-size: 0.95rem; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-    @media (max-width: 600px) {
-      .form-row, .form-row-3 { grid-template-columns: 1fr; }
-    }
-    .form-group { margin-bottom: 1.25rem; }
-    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--navy); font-size: 0.9rem; }
-    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; font-family: var(--font-body); color: var(--navy); font-size: 0.95rem; background: var(--white); }
-    .form-group textarea { resize: vertical; min-height: 80px; }
-    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 2px rgba(0, 53, 148, 0.15); }
-    .form-group .hint { font-size: 0.78rem; color: var(--gray); margin-top: 0.25rem; }
-
-    .radio-group { display: flex; gap: 1.5rem; margin-top: 0.25rem; }
-    .radio-group label { font-weight: 400; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
-    .radio-group input[type="radio"] { width: auto; accent-color: var(--navy); }
-
-    .form-divider { border: none; border-top: 2px solid rgba(0, 53, 148, 0.15); margin: 2rem 0 1.5rem; }
-    .form-divider-label { font-family: var(--font-display); font-size: 1.1rem; color: var(--navy); margin-bottom: 1rem; }
-
-    .cta-button { display: inline-block; background: var(--navy); color: var(--white); padding: 0.9rem 2rem; border-radius: 4px; font-family: var(--font-body); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.85rem; transition: all 0.3s ease; border: 2px solid var(--navy); cursor: pointer; width: 100%; }
-    .cta-button:hover { background: #001e52; }
-    .cta-button:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    #formStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; }
-    #formStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
-    #formStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
-
     /* INFO BOX */
     .info-box { background: var(--light); border-left: 4px solid var(--blue); border-radius: 4px; padding: 1.5rem 2rem; margin: 2rem 0; }
     .info-box h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--navy); }
     .info-box p { color: var(--gray); margin-bottom: 0.5rem; font-size: 0.95rem; }
     .info-box p:last-child { margin-bottom: 0; }
+
+    /* PAYMENT METHODS HEADER */
+    .payment-methods-header {
+      text-align: center;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .payment-methods-header h3 {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 1rem;
+    }
+    .payment-methods-header .intro-text {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 1.5rem;
+    }
+    .payment-options-list {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .payment-options-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .payment-options-list .number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--navy);
+      color: var(--white);
+      border-radius: 50%;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    /* PAYMENT METHOD BOX */
+    .payment-method-box {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 2rem;
+      margin: 2rem 0;
+      box-shadow: 0 4px 12px rgba(0, 53, 148, 0.1);
+      border: 2px solid var(--light);
+    }
+    .payment-method-box .box-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding-bottom: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--light);
+    }
+    .payment-method-box .box-header .icon {
+      font-size: 1.75rem;
+    }
+    .payment-method-box .box-header h4 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0;
+    }
+    .payment-method-box .box-content {
+      text-align: center;
+    }
+    .payment-method-box .box-content p {
+      color: var(--gray);
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
+
+    /* IMPORTANT NOTICE BOX - Standardized */
+    .important-notice {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0;
+      text-align: left;
+    }
+    .important-notice .notice-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .important-notice .notice-header .icon {
+      font-size: 1.25rem;
+    }
+    .important-notice .notice-header h5 {
+      color: #856404;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .important-notice p {
+      color: #856404;
+      font-size: 0.9rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .important-notice p + p {
+      margin-top: 0.5rem;
+    }
+
+    /* PAYMENT BUTTONS */
+    .payment-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 400px;
+      margin: 1.5rem auto;
+    }
+    .payment-btn {
+      display: inline-block;
+      color: #ffffff;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border-radius: 4px;
+      position: relative;
+      top: 0;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+    .payment-btn-primary {
+      background: linear-gradient(180deg, #1a5cbf 0%, #002554 100%);
+      box-shadow: 0 4px 0 #001535, 0 6px 12px rgba(0,0,0,0.25);
+    }
+    .payment-btn-primary:hover {
+      background: linear-gradient(180deg, #2166cc 0%, #003080 100%);
+      box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,0.2);
+      top: 2px;
+    }
+    .payment-btn-secondary {
+      background: linear-gradient(180deg, #1a5cbf 0%, #002554 100%);
+      box-shadow: 0 4px 0 #001535, 0 6px 12px rgba(0,0,0,0.25);
+    }
+    .payment-btn-secondary:hover {
+      background: linear-gradient(180deg, #2166cc 0%, #003080 100%);
+      box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,0.2);
+      top: 2px;
+    }
+    .payment-btn .btn-amount {
+      display: block;
+      font-size: 0.8rem;
+      opacity: 0.9;
+      margin-top: 0.25rem;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    /* ZELLE QR SECTION */
+    .zelle-qr-section {
+      background: #e8edf4;
+      padding: 1.5rem;
+      border-radius: 6px;
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+    .zelle-qr-section h5 {
+      color: var(--navy);
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .zelle-qr-section img {
+      max-width: 220px;
+      margin: 0 auto 1rem;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .zelle-recipient {
+      background: var(--white);
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 1rem;
+    }
+    .zelle-recipient p {
+      margin: 0.25rem 0;
+    }
+    .zelle-recipient .email {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--navy);
+    }
+
+    /* CHECK EMAIL BUTTON */
+    .email-btn {
+      display: inline-block;
+      background: linear-gradient(180deg, #1a5cbf 0%, #002554 100%);
+      color: #ffffff;
+      border: none;
+      padding: 0.85rem 2.5rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-decoration: none;
+      box-shadow: 0 4px 0 #001535, 0 6px 12px rgba(0,0,0,0.25);
+      border-radius: 4px;
+      position: relative;
+      top: 0;
+      transition: all 0.15s ease;
+    }
+    .email-btn:hover {
+      background: linear-gradient(180deg, #2166cc 0%, #003080 100%);
+      box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,0.2);
+      top: 2px;
+    }
+
+    /* DONATION SECTION */
+    .donation-section {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 2rem;
+      margin: 3rem 0 2rem;
+      box-shadow: 0 4px 12px rgba(0, 53, 148, 0.1);
+      border: 2px solid var(--light);
+      border-left: 4px solid var(--accent);
+    }
+    .donation-section h4 {
+      color: var(--navy);
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .donation-btn {
+      display: inline-block;
+      background: linear-gradient(180deg, #c41e3a 0%, #8b1528 100%);
+      color: #ffffff;
+      border: none;
+      padding: 1rem 2.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-decoration: none;
+      box-shadow: 0 4px 0 #6b0f1a, 0 6px 12px rgba(196,30,58,0.25);
+      border-radius: 4px;
+      position: relative;
+      top: 0;
+      transition: all 0.15s ease;
+    }
+    .donation-btn:hover {
+      background: linear-gradient(180deg, #d62d47 0%, #a01a2e 100%);
+      box-shadow: 0 2px 0 #6b0f1a, 0 4px 8px rgba(196,30,58,0.2);
+      top: 2px;
+    }
 
     /* FOOTER */
     footer { background: var(--topbar); color: rgba(245, 245, 240, 0.6); text-align: center; padding: 2rem; font-size: 0.85rem; }
@@ -109,6 +346,8 @@
 
     @media (max-width: 768px) { 
       .hero h1 { font-size: 2rem; }
+      .payment-options-list { flex-direction: column; align-items: center; gap: 0.75rem; }
+      .payment-methods-header h3 { font-size: 1.4rem; }
     }
   </style>
 </head>
@@ -148,134 +387,156 @@
       <h3>&#128197; Membership Dues</h3>
       <p><strong>Prep School</strong> &mdash; $75/year &mdash; For families with cadets at the USAFA Preparatory School.</p>
       <p><strong>1-Year</strong> &mdash; $75 &mdash; Annual membership for one year.</p>
-      <p><strong>4-Year</strong> &mdash; $300 &mdash; Full Academy membership covering all four years.</p>
+      <p><strong>4-Year</strong> &mdash; $275 &mdash; Full Academy membership covering all four years.</p>
     </div>
   </section>
 
-  <!-- PAYMENT SECTION -->
-  <section class="section">
-    <div class="form-section" style="text-align:center;">
+  <!-- PAYMENT METHODS SECTION -->
+  <section class="section" style="padding-top: 0;">
+    
+    <!-- PAYMENT METHODS HEADER - Prominent, above all boxes -->
+    <div class="payment-methods-header">
       <h3>Payment Methods</h3>
-      <p>We offer several convenient ways to pay your membership dues:</p>
-      
-      <!-- CREDIT CARD PAYMENT -->
-      <div style="margin: 2rem auto; padding: 2rem; background: var(--white); border-radius: 8px; max-width: 600px; box-shadow: 0 4px 12px rgba(0, 53, 148, 0.1); text-align: center;">
-        <h4 style="color: var(--navy); margin-bottom: 1rem; font-size: 1.2rem; font-family: var(--font-display);">💳 Pay Membership Dues by Credit or Debit Card</h4>
-        <p style="color: var(--gray); margin-bottom: 1.5rem; font-size: 0.95rem;">
-          Click the button below to complete your membership payment securely through our encrypted payment processor:
-        </p>
+      <p class="intro-text">We offer three convenient ways to pay your membership dues:</p>
+      <ul class="payment-options-list">
+        <li><span class="number">1</span> Credit/Debit Card</li>
+        <li><span class="number">2</span> Zelle</li>
+        <li><span class="number">3</span> Check</li>
+      </ul>
+    </div>
+
+    <!-- PAYMENT METHOD 1: CREDIT/DEBIT CARD -->
+    <div class="payment-method-box">
+      <div class="box-header">
+        <span class="icon">💳</span>
+        <h4>Pay by Credit or Debit Card</h4>
+      </div>
+      <div class="box-content">
+        <p>Click the appropriate button below to complete your membership payment securely through our encrypted payment processor:</p>
         
-        <!-- Important reminder box -->
-        <div style="background: #e3f2fd; border: 2px solid #1976d2; border-radius: 6px; padding: 1rem 1.25rem; margin-bottom: 2rem; text-align: left;">
-          <p style="color: #0d47a1; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">
-            📝 Important: When completing your payment
-          </p>
-          <p style="color: #1565c0; font-size: 0.88rem; margin: 0; line-height: 1.5;">
-            Please enter your <strong>Cadet's full name</strong> in the <strong>"Remarks"</strong> section of the payment page so we can properly match your payment to your membership application.
-          </p>
+        <!-- Important Notice -->
+        <div class="important-notice">
+          <div class="notice-header">
+            <span class="icon">⚠️</span>
+            <h5>Important: When completing your payment</h5>
+          </div>
+          <p>Please enter your <strong>Cadet's full name</strong> in the <strong>"Remarks"</strong> section of the payment page so we can properly match your payment to your membership application.</p>
         </div>
-        
-        <a 
-          href="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=0AN%2BK2m7TiOaia2eCgxw1gAAAZz3Hr3E" 
-          target="_blank"
-          rel="noopener noreferrer"
-          style="background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:1.2rem 3rem;font-size:.95rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;display:inline-block;text-decoration:none;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;" 
-          onmouseover="this.style.boxShadow='0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2)';this.style.top='2px';this.style.background='linear-gradient(180deg,#2166cc 0%,#003080 100%)'" 
-          onmouseout="this.style.boxShadow='0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25)';this.style.top='0';this.style.background='linear-gradient(180deg,#1a5cbf 0%,#002554 100%)'">
-          🔒 Pay Membership Dues
-        </a>
-        <p style="color: var(--gray); margin-top: 1.5rem; font-size: 0.85rem; line-height: 1.5;">
+
+        <!-- Two Payment Buttons -->
+        <div class="payment-buttons">
+          <a 
+            href="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=0AN%2BK2m7TiOaia2eCgxw1gAAAZz3Hr3E" 
+            target="_blank"
+            rel="noopener noreferrer"
+            class="payment-btn payment-btn-primary">
+            🔒 Pay $75 Annual Dues
+            <span class="btn-amount">Prep School or 1-Year Membership</span>
+          </a>
+          <a 
+            href="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=REPLACE_WITH_275_TOKEN" 
+            target="_blank"
+            rel="noopener noreferrer"
+            class="payment-btn payment-btn-secondary">
+            🔒 Pay $275 Four-Year Dues
+            <span class="btn-amount">Full Academy Membership</span>
+          </a>
+        </div>
+
+        <p style="color: var(--gray); margin-top: 1.5rem; font-size: 0.85rem;">
           You will be securely redirected to our payment processor.<br>
           <strong>Secure SSL encryption</strong> protects your payment information.
         </p>
       </div>
+    </div>
 
-      <!-- DIVIDER -->
-      <div style="margin: 3rem 0; text-align: center; position: relative;">
-        <hr style="border: none; border-top: 1px solid rgba(0, 53, 148, 0.2);">
-        <span style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--light); padding: 0 1rem; color: var(--gray); font-size: 0.9rem; font-weight: 600;">OR</span>
+    <!-- PAYMENT METHOD 2: ZELLE -->
+    <div class="payment-method-box">
+      <div class="box-header">
+        <span class="icon">📱</span>
+        <h4>Pay by Zelle</h4>
       </div>
+      <div class="box-content">
+        
+        <!-- Important Notice -->
+        <div class="important-notice">
+          <div class="notice-header">
+            <span class="icon">⚠️</span>
+            <h5>Important: How to Pay with Zelle</h5>
+          </div>
+          <p><strong>Zelle payments must be sent FROM YOUR OWN BANK'S mobile app or online banking.</strong></p>
+          <p>
+            <strong>Step 1:</strong> Open your bank's mobile app or log into your online banking<br>
+            <strong>Step 2:</strong> Find "Send Money with Zelle" (usually in the transfer or payments section)<br>
+            <strong>Step 3:</strong> Send payment to: <strong>treasurer@alabamafalcons.org</strong><br>
+            <strong>Step 4:</strong> Or scan the QR code below from within your bank's Zelle feature
+          </p>
+          <p style="font-style: italic; margin-top: 0.75rem;">Note: You cannot pay with Zelle by clicking a link or button on this website. You must initiate the payment from your own banking app.</p>
+        </div>
 
-      <!-- IMPORTANT ZELLE NOTICE -->
-      <div style="margin: 2rem auto; padding: 1.75rem; background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px; max-width: 600px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);">
-        <div style="display: flex; align-items: flex-start; gap: 1rem;">
-          <div style="font-size: 2.5rem; line-height: 1;">⚠️</div>
-          <div style="text-align: left; flex: 1;">
-            <h4 style="color: #856404; margin-bottom: 0.75rem; font-size: 1.2rem; font-weight: 700;">IMPORTANT: How to Pay with Zelle</h4>
-            <p style="color: #856404; margin-bottom: 0.75rem; font-size: 1rem; font-weight: 600; line-height: 1.5;">
-              Zelle payments must be sent FROM YOUR OWN BANK'S mobile app or online banking.
-            </p>
-            <p style="color: #856404; margin-bottom: 1rem; font-size: 0.95rem; line-height: 1.6;">
-              <strong>Step 1:</strong> Open your bank's mobile app or log into your online banking<br>
-              <strong>Step 2:</strong> Find "Send Money with Zelle" (usually in the transfer or payments section)<br>
-              <strong>Step 3:</strong> Send payment to: <strong style="font-size: 1.05rem;">usafapcofal@gmail.com</strong><br>
-              <strong>Step 4:</strong> Or scan the QR code below from within your bank's Zelle feature
-            </p>
-            <p style="color: #856404; font-size: 0.88rem; font-style: italic; margin: 0;">
-              Note: You cannot pay with Zelle by clicking a link or button on this website. You must initiate the payment from your own banking app.
-            </p>
+        <!-- Zelle QR Code Section -->
+        <div class="zelle-qr-section">
+          <h5>Zelle QR Code</h5>
+          <p style="color: var(--gray); margin-bottom: 1rem; font-size: 0.95rem;">Open your bank's Zelle feature and scan this QR code:</p>
+          <img src="zelle.jpg" alt="Zelle Payment QR Code">
+          <div class="zelle-recipient">
+            <p style="color: var(--navy); font-size: 0.9rem;"><strong>Send payment to:</strong></p>
+            <p class="email">treasurer@alabamafalcons.org</p>
+            <p style="color: var(--gray); font-size: 0.85rem;">Recipient: USAFA CLUBOFALABAMA</p>
           </div>
         </div>
       </div>
+    </div>
 
-      <div style="margin: 2rem auto; padding: 1.5rem; background: var(--white); border-radius: 4px; max-width: 400px; text-align: center;">
-        <h4 style="color: var(--navy); margin-bottom: 1rem; font-size: 1rem;">Zelle QR Code</h4>
-        <p style="color: var(--gray); margin-bottom: 1.5rem; font-size: 0.95rem;">Open your bank's Zelle feature and scan this QR code:</p>
-        <div style="margin: 1.5rem 0; display: flex; justify-content: center;">
-          <img src="zelle.jpg" alt="Zelle Payment QR Code" style="max-width: 260px; width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-        </div>
-        <div style="background: #e8edf4; padding: 1rem; border-radius: 4px; margin-top: 1.5rem;">
-          <p style="color: var(--navy); font-size: 0.9rem; margin-bottom: 0.5rem;">
-            <strong>Send payment to:</strong>
-          </p>
-          <p style="color: var(--navy); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; font-family: monospace;">
-            usafapcofal@gmail.com
-          </p>
-          <p style="color: var(--gray); font-size: 0.85rem; margin: 0;">
-            Recipient: USAFA CLUBOFALABAMA
-          </p>
-        </div>
+    <!-- PAYMENT METHOD 3: CHECK -->
+    <div class="payment-method-box">
+      <div class="box-header">
+        <span class="icon">✉️</span>
+        <h4>Pay by Check</h4>
       </div>
-
-      <!-- DIVIDER -->
-      <div style="margin: 3rem 0; text-align: center; position: relative;">
-        <hr style="border: none; border-top: 1px solid rgba(0, 53, 148, 0.2);">
-        <span style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--light); padding: 0 1rem; color: var(--gray); font-size: 0.9rem; font-weight: 600;">OR</span>
-      </div>
-
-      <div style="margin: 2rem 0; padding: 1.5rem; background: var(--white); border-radius: 4px;">
-        <h4 style="color: var(--navy); margin-bottom: 1rem; font-size: 1rem;">Pay by Check</h4>
-        <p style="color: var(--gray); margin-bottom: 1.5rem;">If you prefer to pay by check, please contact our Treasurer for mailing instructions:</p>
-        <a href="mailto:treasurer@alabamafalcons.org" style="background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:.85rem 2.5rem;font-size:.85rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;display:inline-block;width:auto;text-decoration:none;" onmouseover="this.style.boxShadow='0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2)';this.style.top='2px';this.style.background='linear-gradient(180deg,#2166cc 0%,#003080 100%)'" onmouseout="this.style.boxShadow='0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25)';this.style.top='0';this.style.background='linear-gradient(180deg,#1a5cbf 0%,#002554 100%)'">Email Treasurer</a>
-      </div>
-
-      <div style="margin: 2rem 0; padding: 1.5rem; background: var(--white); border-radius: 4px; border-left: 4px solid var(--accent);">
-        <h4 style="color: var(--navy); margin-bottom: 1rem; font-size: 1rem;">💝 Additional Donations Welcome</h4>
-        <p style="color: var(--gray); margin-bottom: 1rem; font-size: 0.95rem; line-height: 1.6;">
-          Beyond membership dues, we welcome donations of any amount. Your generosity directly supports our cadets and families throughout their Academy journey.
-        </p>
-        <p style="color: var(--navy); margin-bottom: 1.5rem; font-size: 0.95rem; font-weight: 600;">
-          To make a donation, you can use the options below:
-        </p>
+      <div class="box-content">
+        <p>If you prefer to pay by check, please contact our Treasurer for mailing instructions:</p>
         
-        <!-- Donation Credit Card Button -->
-        <div style="text-align: center; margin: 1.5rem 0;">
-          <a 
-            href="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=5AhJ%2FOLwSHiqdo5gHVrF8gAAAZz3MghI" 
-            target="_blank"
-            rel="noopener noreferrer"
-            style="background:linear-gradient(180deg,#c41e3a 0%,#8b1528 100%);color:#ffffff;border:none;padding:1rem 2.5rem;font-size:.9rem;box-shadow:0 4px 0 #6b0f1a,0 6px 12px rgba(196,30,58,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;display:inline-block;text-decoration:none;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;" 
-            onmouseover="this.style.boxShadow='0 2px 0 #6b0f1a,0 4px 8px rgba(196,30,58,.2)';this.style.top='2px';this.style.background='linear-gradient(180deg,#d62d47 0%,#a01a2e 100%)'" 
-            onmouseout="this.style.boxShadow='0 4px 0 #6b0f1a,0 6px 12px rgba(196,30,58,.25)';this.style.top='0';this.style.background='linear-gradient(180deg,#c41e3a 0%,#8b1528 100%)'">
-            💝 Donate by Credit/Debit Card
-          </a>
+        <!-- Important Notice -->
+        <div class="important-notice">
+          <div class="notice-header">
+            <span class="icon">⚠️</span>
+            <h5>Important: When mailing your check</h5>
+          </div>
+          <p>Please include your <strong>Cadet's full name</strong> in the memo line so we can properly match your payment to your membership application.</p>
         </div>
-        
-        <p style="color: var(--gray); margin-top: 1.5rem; font-size: 0.9rem; text-align: center;">
-          Or use Zelle (<strong>usafapcofal@gmail.com</strong>) to send any amount you wish to contribute. Thank you for supporting the USAFA Parents Club of Alabama!
-        </p>
+
+        <div style="margin-top: 1.5rem;">
+          <a href="mailto:treasurer@alabamafalcons.org?subject=Check%20Payment%20-%20Membership%20Dues&body=Hello%2C%0A%0AI%20would%20like%20to%20pay%20my%20membership%20dues%20by%20check.%20Please%20send%20me%20the%20mailing%20instructions.%0A%0ACadet%20Name%3A%20%0AMembership%20Type%3A%20%0A%0AThank%20you!" class="email-btn">📧 Email Treasurer</a>
+        </div>
       </div>
     </div>
+
+    <!-- DONATION SECTION -->
+    <div class="donation-section">
+      <h4>💝 Additional Donations Welcome</h4>
+      <p style="color: var(--gray); margin-bottom: 1rem; font-size: 0.95rem; line-height: 1.6;">
+        Beyond membership dues, we welcome donations of any amount. Your generosity directly supports our cadets and families throughout their Academy journey.
+      </p>
+      <p style="color: var(--navy); margin-bottom: 1.5rem; font-size: 0.95rem; font-weight: 600;">
+        To make a donation, you can use the options below:
+      </p>
+      
+      <div style="text-align: center; margin: 1.5rem 0;">
+        <a 
+          href="https://www.convergepay.com/hosted-payments?ssl_txn_auth_token=5AhJ%2FOLwSHiqdo5gHVrF8gAAAZz3MghI" 
+          target="_blank"
+          rel="noopener noreferrer"
+          class="donation-btn">
+          💝 Donate by Credit/Debit Card
+        </a>
+      </div>
+      
+      <p style="color: var(--gray); margin-top: 1.5rem; font-size: 0.9rem; text-align: center;">
+        Or use Zelle (<strong>treasurer@alabamafalcons.org</strong>) to send any amount you wish to contribute. Thank you for supporting the USAFA Parents Club of Alabama!
+      </p>
+    </div>
+
   </section>
 
   <footer>
@@ -283,7 +544,7 @@
     <p><a href="index.html">Home</a> | <a href="membership.html">Membership</a> | <a href="payment.html">Payment</a> | <a href="index.html#contact">Contact</a></p>
   </footer>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     // Mobile menu toggle
     document.getElementById('hamburger').addEventListener('click', function() {
       document.getElementById('nav-links').classList.toggle('open');
