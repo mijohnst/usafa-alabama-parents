@@ -163,6 +163,9 @@
 
     .btn-dark{background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;}
     .btn-dark:hover{background:linear-gradient(180deg,#2166cc 0%,#003080 100%);box-shadow:0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2);top:2px;}
+    .btn-sponsor{background:linear-gradient(180deg,#FFD54F 0%,#D4A017 100%);color:#1a1a1a;border:none;box-shadow:0 4px 0 #9a7200,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;font-weight:700;}
+    .btn-sponsor:hover{background:linear-gradient(180deg,#FFE082 0%,#E6B422 100%);box-shadow:0 2px 0 #9a7200,0 4px 8px rgba(0,0,0,.2);top:2px;color:#1a1a1a;}
+    .sponsor-callout{margin-top:2rem;padding:1.75rem 2rem;background:linear-gradient(135deg,rgba(255,199,44,.06) 0%,rgba(212,160,23,.04) 100%);border:1px solid rgba(212,160,23,.25);border-radius:6px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.04);}
     /* CONTACT */
     #contact{background:var(--white);}
     .contact-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:4rem;align-items:start;}
@@ -300,6 +303,10 @@
       We are a <strong>501(c)(3) organization</strong> and your contributions are tax deductible.
       <a href="https://www.irs.gov/charities-non-profits/charitable-organizations/exemption-requirements-501c3-organizations" target="_blank" rel="noopener">Learn more about 501(c)(3) requirements &rarr;</a>
     </div>
+    <div class="sponsor-callout">
+      <p style="color:#5a6a7a;margin-bottom:.75rem;">We're grateful for the businesses and individuals who support our mission.</p>
+      <a href="sponsorship.html" class="btn btn-sponsor" style="display:inline-block;">Our Sponsors</a>
+    </div>
   </div>
 </section>
 
@@ -401,8 +408,6 @@
     <div class="events-list">
 
       <div class="events-group-label label-upcoming">Upcoming Events</div>
-
-      <div class="event-card"><div class="event-date"><div class="month">Apr</div><div class="day">02</div></div><div class="event-info"><h3>Alabama USAFA Founders Day Dinner</h3><p>5:00 &ndash; 8:00 PM &middot; <a href="https://web.cvent.com/event/6f3eaa1f-80d4-442c-834a-5fbc8c097d2d/summary" target="_blank" rel="noopener" style="display:inline-block;margin-top:.4rem;padding:.35rem .9rem;background:#003594;color:#fff;border-radius:4px;font-size:.8rem;font-weight:600;text-decoration:none;transition:background .2s;">Register &rarr;</a></p><span class="event-tag tag-social">Social</span></div></div>
 
             <div class="event-card"><div class="event-date"><div class="month">Apr</div><div class="day">12</div></div><div class="event-info"><h3>USAFA Parents Club of Alabama Annual Meeting</h3><p>4:00 PM &middot; <a href="https://us02web.zoom.us/meeting/register/pM8EQAVcQNaI9xpTiryJYg" target="_blank" rel="noopener" style="display:inline-block;margin-top:.4rem;padding:.35rem .9rem;background:#2D8CFF;color:#fff;border-radius:4px;font-size:.8rem;font-weight:600;text-decoration:none;transition:background .2s;">&#127910; Join the Zoom</a></p><span class="event-tag tag-meeting">Meeting</span></div></div>
 
@@ -667,13 +672,30 @@ async function loadNews() {
         return;
       }
     }
+    // Fallback to RSS if PHP endpoint fails or returns no items
+    var rssResponse = await fetchWithTimeout('https://www.usafa.edu/news/feed/', 6000);
+    if (rssResponse.ok) {
+      var rssText = await rssResponse.text();
+      var rssItems = parseRSS(rssText);
+      if (rssItems && rssItems.length > 0) {
+        renderNews(rssItems.map(function(item) {
+          return {
+            title: item.title,
+            description: item.summary,
+            link: item.url,
+            date: item.date
+          };
+        }));
+        return;
+      }
+    }
+    container.innerHTML = '<p class="news-loading">Unable to load news at this time. <a href="https://www.usafa.edu/news/" target="_blank" rel="noopener" style="color:var(--blue);">Visit USAFA News</a></p>';
   } catch (err) {
-    console.error('News load error:', err);
+    container.innerHTML = '<p class="news-loading">Unable to load news at this time. <a href="https://www.usafa.edu/news/" target="_blank" rel="noopener" style="color:var(--blue);">Visit USAFA News</a></p>';
   }
-  container.innerHTML = '<p class="news-loading">Unable to load news at this time. <a href="https://www.usafa.edu/news/" target="_blank" rel="noopener">Visit USAFA News</a></p>';
 }
 
-loadNews();
+document.addEventListener('DOMContentLoaded', loadNews);
 </script>
 </body>
 </html>
