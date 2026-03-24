@@ -58,11 +58,6 @@
     .hero p { font-size: 1.1rem; color: rgba(245, 245, 240, 0.9); margin-bottom: 0; font-weight: 300; line-height: 1.6; }
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* ALREADY MEMBER */
-    .already-member { text-align: center; padding: 1.75rem 2rem; background: var(--light); border-bottom: 2px solid rgba(0, 53, 148, 0.15); }
-    .already-member a { display: inline-block; background: linear-gradient(180deg, #1a5cbf 0%, #002554 100%); color: var(--white); padding: 0.9rem 2rem; border-radius: 4px; font-family: var(--font-body); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.85rem; transition: all 0.15s ease; box-shadow: 0 4px 0 #001535, 0 6px 12px rgba(0,0,0,.25); position: relative; top: 0; }
-    .already-member a:hover { background: linear-gradient(180deg, #2166cc 0%, #003080 100%); box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,.2); top: 2px; }
-
     /* CONTENT */
     .section { padding: 3rem 2rem; max-width: 1000px; margin: 0 auto; }
     .section h2 { font-family: var(--font-display); font-size: 2rem; font-weight: 700; letter-spacing: 0.02em; color: var(--navy); margin-bottom: 1.5rem; position: relative; padding-bottom: 0.75rem; }
@@ -137,19 +132,21 @@
   <div class="hero">
     <div class="hero-content">
       <h1>Membership Application</h1>
-      <p>Join the USAFA Parents Club of Alabama and connect with families across the state who share the pride and journey of having a cadet at the Air Force Academy.</p>
+      <p>New to the club? Join us! Already a member? Use this form to renew and keep your information current. Connect with families across Alabama who share the pride and journey of having a cadet at the Air Force Academy.</p>
     </div>
   </div>
 
-  <!-- ALREADY MEMBER LINK -->
-  <div class="already-member">
-    <a href="payment.html">Already a member? Make a payment →</a>
-  </div>
-
-  <!-- BECOME A MEMBER -->
+  <!-- MEMBERSHIP APPLICATION -->
   <section class="section">
-    <h2>Become a Member</h2>
+    <h2>Membership Application</h2>
     <p>Membership in the USAFA Parents Club of Alabama provides access to our community of cadet families, mentorship programs, care package drives, event invitations, and a network of parents who understand the unique USAFA experience.</p>
+
+    <div style="background: #e3f2fd; border: 2px solid #1976d2; border-radius: 6px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;">
+      <p style="color: #0d47a1; font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: flex-start; gap: 0.75rem;">
+        <span style="font-size: 1.25rem;">🔄</span>
+        <span><strong>Current members:</strong> Please complete this form each year to keep your contact information up to date and ensure you receive all club communications.</span>
+      </p>
+    </div>
 
     <div class="form-section">
       <h3>Member Information</h3>
