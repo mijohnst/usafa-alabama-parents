@@ -1050,8 +1050,8 @@
     // Year in footer
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Trivia Game
-    const questions = [
+    // Trivia Game - Full Question Bank (20 questions)
+    const questionBank = [
       {
         question: "In what year was the United States Air Force Academy established?",
         options: ["1947", "1954", "1959", "1962"],
@@ -1081,18 +1081,126 @@
         options: ["3 years", "4 years", "5 years", "8 years"],
         correct: 2,
         explanation: "Graduates commit to serve a minimum of 5 years on active duty as commissioned officers in the Air Force or Space Force."
+      },
+      {
+        question: "What is the USAFA mascot?",
+        options: ["Eagles", "Falcons", "Thunderbirds", "Hawks"],
+        correct: 1,
+        explanation: "The Falcon is the official mascot of USAFA. The Academy has live falcon mascots that appear at athletic events."
+      },
+      {
+        question: "In what state is the United States Air Force Academy located?",
+        options: ["Texas", "Virginia", "Colorado", "California"],
+        correct: 2,
+        explanation: "USAFA is located in Colorado Springs, Colorado, at an elevation of approximately 7,000 feet."
+      },
+      {
+        question: "What is the name of the famous chapel at USAFA known for its distinctive spires?",
+        options: ["Cadet Chapel", "Academy Cathedral", "Falcon Chapel", "Air Force Sanctuary"],
+        correct: 0,
+        explanation: "The Cadet Chapel, with its 17 iconic aluminum spires, is one of the most visited man-made tourist attractions in Colorado."
+      },
+      {
+        question: "What are fourth-class cadets (freshmen) commonly called at USAFA?",
+        options: ["Plebes", "Doolies", "Rats", "Smacks"],
+        correct: 1,
+        explanation: "Fourth-class cadets are called 'Doolies,' derived from the Greek word 'doulos' meaning slave or servant."
+      },
+      {
+        question: "How many cadet squadrons are there at USAFA?",
+        options: ["20", "30", "40", "50"],
+        correct: 2,
+        explanation: "There are 40 cadet squadrons at USAFA, organized into four groups."
+      },
+      {
+        question: "What is the elevation of the Air Force Academy campus?",
+        options: ["5,000 feet", "6,000 feet", "7,000 feet", "8,000 feet"],
+        correct: 2,
+        explanation: "The Academy sits at approximately 7,000 feet elevation, which can affect new cadets during BCT as they adjust to the altitude."
+      },
+      {
+        question: "Which president signed the legislation to establish the Air Force Academy?",
+        options: ["Harry Truman", "Dwight Eisenhower", "John F. Kennedy", "Franklin Roosevelt"],
+        correct: 1,
+        explanation: "President Dwight D. Eisenhower signed the legislation establishing the Air Force Academy in 1954."
+      },
+      {
+        question: "What is the approximate length of the march to Jacks Valley during BCT?",
+        options: ["3 miles", "4.5 miles", "5.5 miles", "7 miles"],
+        correct: 2,
+        explanation: "Basic cadets march approximately 5.5 miles from the cadet area to Jacks Valley for the second phase of BCT."
+      },
+      {
+        question: "What year did the first class graduate from USAFA?",
+        options: ["1955", "1957", "1959", "1961"],
+        correct: 2,
+        explanation: "The Class of 1959 was the first graduating class of the United States Air Force Academy."
+      },
+      {
+        question: "What is the USAFA Honor Code?",
+        options: ["Duty, Honor, Country", "We will not lie, steal, or cheat", "Integrity First, Service Before Self", "Excellence in All We Do"],
+        correct: 1,
+        explanation: "The Cadet Honor Code states: 'We will not lie, steal, or cheat, nor tolerate among us anyone who does.'"
+      },
+      {
+        question: "What ceremony marks the end of BCT and acceptance into the Cadet Wing?",
+        options: ["Recognition", "Acceptance Day", "Commitment Ceremony", "Doolie Day Out"],
+        correct: 1,
+        explanation: "Acceptance Day marks the completion of BCT and the formal acceptance of new fourth-class cadets into the Cadet Wing."
+      },
+      {
+        question: "How many cadets does Mitchell Hall typically serve meals to daily?",
+        options: ["4,000", "8,000", "12,000", "16,000"],
+        correct: 2,
+        explanation: "Mitchell Hall serves approximately 12,000 meals daily to the entire cadet wing."
+      },
+      {
+        question: "What is the name of the annual football game between Air Force and Army?",
+        options: ["The Classic", "Commander-in-Chief's Trophy Game", "The Rivalry", "Service Academy Showdown"],
+        correct: 1,
+        explanation: "The Commander-in-Chief's Trophy is awarded annually to the winner of the triangular series between Air Force, Army, and Navy."
+      },
+      {
+        question: "What are the two main dormitories at USAFA called?",
+        options: ["North Hall and South Hall", "Vandenberg Hall and Sijan Hall", "Mitchell Hall and Arnold Hall", "Fairchild Hall and Harmon Hall"],
+        correct: 1,
+        explanation: "Vandenberg Hall and Sijan Hall are the two cadet dormitories at USAFA, named after Air Force leaders."
+      },
+      {
+        question: "What is 'Recognition' at USAFA?",
+        options: ["An award ceremony", "The end of fourth-class year restrictions", "A promotion board", "A graduation event"],
+        correct: 1,
+        explanation: "Recognition is a ceremony marking the end of the fourth-class (freshman) year, when Doolies are recognized as full members of the Cadet Wing."
       }
     ];
 
+    const QUESTIONS_PER_GAME = 5;
+    let activeQuestions = [];
     let currentQuestion = 0;
     let score = 0;
     let answered = false;
 
+    // Shuffle array using Fisher-Yates algorithm
+    function shuffleArray(array) {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    // Select random questions for this game
+    function selectRandomQuestions() {
+      const shuffled = shuffleArray(questionBank);
+      activeQuestions = shuffled.slice(0, QUESTIONS_PER_GAME);
+    }
+
     function loadQuestion() {
-      const q = questions[currentQuestion];
-      document.getElementById('questionNum').textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+      const q = activeQuestions[currentQuestion];
+      document.getElementById('questionNum').textContent = `Question ${currentQuestion + 1} of ${QUESTIONS_PER_GAME}`;
       document.getElementById('questionText').textContent = q.question;
-      document.getElementById('totalQuestions').textContent = questions.length;
+      document.getElementById('totalQuestions').textContent = QUESTIONS_PER_GAME;
       
       const container = document.getElementById('optionsContainer');
       container.innerHTML = q.options.map((opt, i) => 
@@ -1108,7 +1216,7 @@
       if (answered) return;
       answered = true;
       
-      const q = questions[currentQuestion];
+      const q = activeQuestions[currentQuestion];
       const options = document.querySelectorAll('.trivia-option');
       const feedback = document.getElementById('feedback');
       const feedbackText = document.getElementById('feedbackText');
@@ -1135,7 +1243,7 @@
       feedback.classList.add('show');
       
       const nextBtn = document.getElementById('nextBtn');
-      if (currentQuestion < questions.length - 1) {
+      if (currentQuestion < QUESTIONS_PER_GAME - 1) {
         nextBtn.textContent = "Next Question →";
         nextBtn.disabled = false;
       } else {
@@ -1145,13 +1253,13 @@
     }
 
     function nextQuestion() {
-      if (currentQuestion < questions.length - 1) {
+      if (currentQuestion < QUESTIONS_PER_GAME - 1) {
         currentQuestion++;
         loadQuestion();
       } else {
         // Show final results
         const container = document.querySelector('.trivia-container');
-        const percentage = Math.round((score / questions.length) * 100);
+        const percentage = Math.round((score / QUESTIONS_PER_GAME) * 100);
         let message = "";
         let emoji = "";
         
@@ -1173,9 +1281,10 @@
           <div style="text-align:center;padding:2rem;">
             <div style="font-size:4rem;margin-bottom:1rem;">${emoji}</div>
             <h3 style="font-size:1.8rem;margin-bottom:1rem;">Quiz Complete!</h3>
-            <p style="font-size:1.2rem;margin-bottom:.5rem;">Your Score: <strong>${score}</strong> out of <strong>${questions.length}</strong></p>
+            <p style="font-size:1.2rem;margin-bottom:.5rem;">Your Score: <strong>${score}</strong> out of <strong>${QUESTIONS_PER_GAME}</strong></p>
             <p style="font-size:2.5rem;font-weight:700;color:var(--gold);margin:1rem 0;">${percentage}%</p>
-            <p style="font-size:1.1rem;color:var(--silver2);margin-bottom:2rem;">${message}</p>
+            <p style="font-size:1.1rem;color:var(--silver2);margin-bottom:1rem;">${message}</p>
+            <p style="font-size:.9rem;color:var(--silver);margin-bottom:2rem;">Questions are randomly selected from a pool of ${questionBank.length}. Play again for new questions!</p>
             <button class="trivia-btn" onclick="resetQuiz()">Play Again</button>
           </div>
         `;
@@ -1183,40 +1292,40 @@
     }
 
     function resetQuiz() {
+      // Reset game state
       currentQuestion = 0;
       score = 0;
-      document.getElementById('currentScore').textContent = 0;
+      answered = false;
       
-      // Rebuild the container
-      const gameSection = document.querySelector('.game-section');
-      gameSection.innerHTML = `
-        <div class="game-header">
-          <h3>How Well Do You Know USAFA?</h3>
-          <p>Answer these questions to test your Air Force Academy knowledge</p>
+      // Select new random questions
+      selectRandomQuestions();
+      
+      // Rebuild the trivia container HTML
+      const container = document.querySelector('.trivia-container');
+      container.innerHTML = `
+        <div class="trivia-question">
+          <span class="question-number" id="questionNum">Question 1 of ${QUESTIONS_PER_GAME}</span>
+          <p class="question-text" id="questionText">Loading question...</p>
         </div>
-        <div class="trivia-container">
-          <div class="trivia-question">
-            <span class="question-number" id="questionNum">Question 1 of 5</span>
-            <p class="question-text" id="questionText">Loading question...</p>
-          </div>
-          <div class="trivia-options" id="optionsContainer"></div>
-          <div class="trivia-feedback" id="feedback">
-            <p id="feedbackText"></p>
-          </div>
-          <div class="trivia-controls">
-            <button class="trivia-btn" id="nextBtn" onclick="nextQuestion()" disabled>Next Question →</button>
-          </div>
-          <div class="score-display">
-            <p class="score-label">Your Score</p>
-            <p class="score-value"><span id="currentScore">0</span> / <span id="totalQuestions">5</span></p>
-          </div>
+        <div class="trivia-options" id="optionsContainer"></div>
+        <div class="trivia-feedback" id="feedback">
+          <p id="feedbackText"></p>
+        </div>
+        <div class="trivia-controls">
+          <button class="trivia-btn" id="nextBtn" onclick="nextQuestion()" disabled>Next Question →</button>
+        </div>
+        <div class="score-display">
+          <p class="score-label">Your Score</p>
+          <p class="score-value"><span id="currentScore">0</span> / <span id="totalQuestions">${QUESTIONS_PER_GAME}</span></p>
         </div>
       `;
       
+      // Load first question
       loadQuestion();
     }
 
-    // Initialize
+    // Initialize game
+    selectRandomQuestions();
     loadQuestion();
   </script>
 
