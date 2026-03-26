@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring 2026 Newsletter - USAFA Parents Club of Alabama</title>
+  <link rel="icon" type="image/png" href="logo01.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy:#003594;
+      --navy2:#003594;
+      --blue:#003594;
+      --topbar:#002554;
+      --silver:#8A8D8F; 
+      --silver2:#A7A9AC; 
+      --white:#f5f5f0;
+      --gray:#6B6E70; 
+      --light:#e8edf4;
+      --gold:#C5A572;
+      --font-display:'Cinzel',serif; 
+      --font-body:'Source Sans 3',sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:var(--font-body);background:var(--white);color:var(--navy);line-height:1.7;overflow-x:hidden;}
+    a{color:inherit;text-decoration:none;}
+    img{max-width:100%;display:block;}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,37,84,0.98);backdrop-filter:blur(8px);border-bottom:1px solid rgba(138,141,143,0.3);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;}
+    .nav-brand{display:flex;align-items:center;gap:.75rem;font-family:var(--font-display);color:var(--white);font-size:.95rem;letter-spacing:.05em;}
+    .nav-brand img{width:38px;height:38px;object-fit:contain;border-radius:4px;padding:2px;}
+    .nav-brand span{line-height:1.2;}
+    .nav-brand small{display:block;font-size:.65rem;color:var(--silver2);letter-spacing:.1em;font-family:var(--font-body);}
+    .nav-links{display:flex;gap:1.75rem;list-style:none;}
+    .nav-links a{color:rgba(245,245,240,.8);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;transition:color .2s;}
+    .nav-links a:hover{color:var(--silver2);}
+    .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px;}
+    .hamburger span{width:24px;height:2px;background:var(--white);display:block;transition:.3s;}
+    @media(max-width:768px){
+      .hamburger{display:flex;}
+      .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:1rem 0;}
+      .nav-links.open{display:flex;}
+      .nav-links a{padding:.65rem 2rem;display:block;}
+    }
+
+    /* NEWSLETTER HEADER */
+    .newsletter-header{
+      min-height:50vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg,var(--navy) 0%,var(--topbar) 50%,#001a3a 100%);
+      color:var(--white);
+      text-align:center;
+      padding:6rem 2rem 4rem;
+      position:relative;
+      overflow:hidden;
+      margin-top:64px;
+    }
+    .newsletter-header::before{
+      content:'';
+      position:absolute;
+      top:0;left:0;right:0;bottom:0;
+      background:
+        radial-gradient(circle at 20% 80%,rgba(197,165,114,0.15) 0%,transparent 40%),
+        radial-gradient(circle at 80% 20%,rgba(255,255,255,0.08) 0%,transparent 30%),
+        url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><path d="M30 0L35 25L60 30L35 35L30 60L25 35L0 30L25 25Z" fill="rgba(255,255,255,0.03)"/></svg>');
+      opacity:0.8;
+    }
+    .header-content{position:relative;z-index:1;max-width:800px;margin:0 auto;}
+    .newsletter-edition{
+      display:inline-block;
+      background:var(--gold);
+      color:var(--topbar);
+      padding:.35rem 1.25rem;
+      border-radius:20px;
+      font-size:.8rem;
+      font-weight:700;
+      letter-spacing:.15em;
+      text-transform:uppercase;
+      margin-bottom:1.5rem;
+    }
+    .newsletter-header h1{
+      font-family:var(--font-display);
+      font-size:3rem;
+      font-weight:700;
+      letter-spacing:.05em;
+      margin-bottom:.75rem;
+      text-shadow:2px 4px 8px rgba(0,0,0,0.3);
+    }
+    .newsletter-header .tagline{
+      font-size:1.25rem;
+      color:var(--silver2);
+      margin-bottom:1rem;
+    }
+    .newsletter-date{
+      font-size:1rem;
+      color:rgba(255,255,255,0.7);
+      border-top:1px solid rgba(255,255,255,0.2);
+      padding-top:1rem;
+      margin-top:1.5rem;
+    }
+    @media(max-width:768px){
+      .newsletter-header h1{font-size:2rem;}
+      .newsletter-header{min-height:40vh;padding-top:5rem;}
+    }
+
+    /* TABLE OF CONTENTS */
+    .toc{
+      background:white;
+      max-width:900px;
+      margin:-3rem auto 3rem;
+      border-radius:16px;
+      box-shadow:0 8px 40px rgba(0,53,148,0.15);
+      padding:2rem 2.5rem;
+      position:relative;
+      z-index:10;
+    }
+    .toc h2{
+      font-family:var(--font-display);
+      font-size:1.3rem;
+      color:var(--navy);
+      margin-bottom:1.25rem;
+      padding-bottom:.75rem;
+      border-bottom:2px solid var(--light);
+    }
+    .toc-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:1rem;
+    }
+    .toc-item{
+      display:flex;
+      align-items:center;
+      gap:.75rem;
+      padding:.75rem 1rem;
+      background:var(--light);
+      border-radius:8px;
+      transition:all .2s ease;
+      cursor:pointer;
+    }
+    .toc-item:hover{
+      background:var(--navy);
+      color:white;
+      transform:translateX(4px);
+    }
+    .toc-icon{font-size:1.5rem;}
+    .toc-label{font-size:.9rem;font-weight:600;}
+
+    /* MAIN CONTENT */
+    .newsletter-content{
+      max-width:900px;
+      margin:0 auto;
+      padding:0 2rem 4rem;
+    }
+
+    /* SECTION STYLING */
+    .section{
+      margin-bottom:4rem;
+      scroll-margin-top:80px;
+    }
+    .section-header{
+      display:flex;
+      align-items:center;
+      gap:1rem;
+      margin-bottom:2rem;
+    }
+    .section-icon{
+      width:50px;
+      height:50px;
+      background:linear-gradient(135deg,var(--navy),var(--topbar));
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1.5rem;
+      flex-shrink:0;
+    }
+    .section-title{
+      font-family:var(--font-display);
+      font-size:1.6rem;
+      color:var(--navy);
+      letter-spacing:.03em;
+    }
+    .section-subtitle{
+      font-size:.9rem;
+      color:var(--gray);
+    }
+
+    /* CADET SPOTLIGHT */
+    .spotlight-card{
+      background:white;
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 4px 24px rgba(0,53,148,0.12);
+    }
+    .spotlight-banner{
+      background:linear-gradient(to right,var(--navy),var(--topbar));
+      color:white;
+      padding:1rem 2rem;
+      font-family:var(--font-display);
+      font-size:1.1rem;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      text-align:center;
+    }
+    .spotlight-content{
+      display:grid;
+      grid-template-columns:280px 1fr;
+      gap:2rem;
+      padding:2rem;
+    }
+    @media(max-width:700px){
+      .spotlight-content{grid-template-columns:1fr;text-align:center;}
+    }
+    .spotlight-photo{
+      position:relative;
+    }
+    .spotlight-photo img{
+      width:100%;
+      height:350px;
+      object-fit:cover;
+      border-radius:12px;
+      box-shadow:0 4px 16px rgba(0,0,0,0.15);
+    }
+    .spotlight-class-badge{
+      position:absolute;
+      bottom:-10px;
+      left:50%;
+      transform:translateX(-50%);
+      background:var(--gold);
+      color:var(--topbar);
+      padding:.4rem 1.25rem;
+      border-radius:20px;
+      font-weight:700;
+      font-size:.85rem;
+      letter-spacing:.1em;
+      box-shadow:0 2px 8px rgba(0,0,0,0.2);
+    }
+    .spotlight-info h3{
+      font-family:var(--font-display);
+      font-size:1.8rem;
+      color:var(--navy);
+      margin-bottom:.25rem;
+    }
+    .spotlight-hometown{
+      color:var(--gray);
+      font-size:1rem;
+      margin-bottom:1.5rem;
+      font-style:italic;
+    }
+    .spotlight-bio{
+      font-size:1.05rem;
+      line-height:1.9;
+      color:var(--navy);
+      margin-bottom:1.5rem;
+    }
+    .spotlight-stats{
+      display:flex;
+      gap:2rem;
+      flex-wrap:wrap;
+    }
+    .stat-item{
+      text-align:center;
+    }
+    .stat-icon{font-size:1.5rem;margin-bottom:.25rem;}
+    .stat-label{font-size:.75rem;color:var(--gray);text-transform:uppercase;letter-spacing:.1em;}
+    .stat-value{font-size:1rem;font-weight:700;color:var(--navy);}
+
+    /* ARTICLE CARDS */
+    .article-card{
+      background:white;
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 4px 24px rgba(0,53,148,0.1);
+    }
+    .article-image{
+      height:200px;
+      background:linear-gradient(135deg,var(--navy) 0%,var(--topbar) 100%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:white;
+      font-size:4rem;
+      position:relative;
+    }
+    .article-image::after{
+      content:'';
+      position:absolute;
+      bottom:0;left:0;right:0;
+      height:60px;
+      background:linear-gradient(to top,rgba(0,37,84,0.8),transparent);
+    }
+    .article-tag{
+      position:absolute;
+      top:1rem;
+      left:1rem;
+      background:var(--gold);
+      color:var(--topbar);
+      padding:.3rem .75rem;
+      border-radius:4px;
+      font-size:.75rem;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+    }
+    .article-body{padding:2rem;}
+    .article-title{
+      font-family:var(--font-display);
+      font-size:1.5rem;
+      color:var(--navy);
+      margin-bottom:.75rem;
+      line-height:1.3;
+    }
+    .article-meta{
+      font-size:.85rem;
+      color:var(--gray);
+      margin-bottom:1rem;
+    }
+    .article-text{
+      font-size:1rem;
+      line-height:1.9;
+      color:var(--navy);
+      margin-bottom:1.5rem;
+    }
+    .article-cta{
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      background:var(--navy);
+      color:white;
+      padding:.75rem 1.5rem;
+      border-radius:6px;
+      font-weight:600;
+      font-size:.9rem;
+      transition:all .2s ease;
+    }
+    .article-cta:hover{background:var(--topbar);transform:translateY(-2px);}
+
+    /* SPONSOR FEATURE */
+    .sponsor-feature{
+      background:linear-gradient(135deg,var(--light) 0%,white 100%);
+      border-radius:16px;
+      padding:2.5rem;
+      border:2px solid var(--navy);
+      position:relative;
+    }
+    .sponsor-feature::before{
+      content:'THANK YOU TO OUR SPONSOR';
+      position:absolute;
+      top:-12px;
+      left:2rem;
+      background:var(--navy);
+      color:white;
+      padding:.3rem 1rem;
+      font-size:.7rem;
+      font-weight:700;
+      letter-spacing:.15em;
+      border-radius:4px;
+    }
+    .sponsor-grid{
+      display:grid;
+      grid-template-columns:200px 1fr;
+      gap:2rem;
+      align-items:center;
+    }
+    @media(max-width:600px){
+      .sponsor-grid{grid-template-columns:1fr;text-align:center;}
+    }
+    .sponsor-logo{
+      max-width:180px;
+      margin:0 auto;
+    }
+    .sponsor-logo img{
+      width:100%;
+      filter:drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+    .sponsor-info h4{
+      font-family:var(--font-display);
+      font-size:1.4rem;
+      color:var(--navy);
+      margin-bottom:.5rem;
+    }
+    .sponsor-amount{
+      display:inline-block;
+      background:var(--gold);
+      color:var(--topbar);
+      padding:.25rem .75rem;
+      border-radius:4px;
+      font-weight:700;
+      font-size:.9rem;
+      margin-bottom:1rem;
+    }
+    .sponsor-text{
+      font-size:1rem;
+      line-height:1.8;
+      color:var(--navy);
+    }
+
+    /* NEWS GRID */
+    .news-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+      gap:1.5rem;
+    }
+    .news-item{
+      background:white;
+      border-radius:12px;
+      padding:1.5rem;
+      box-shadow:0 2px 12px rgba(0,53,148,0.08);
+      border-left:4px solid var(--navy);
+      transition:all .2s ease;
+    }
+    .news-item:hover{
+      transform:translateY(-3px);
+      box-shadow:0 4px 20px rgba(0,53,148,0.15);
+    }
+    .news-date{
+      font-size:.75rem;
+      color:var(--gray);
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      margin-bottom:.5rem;
+    }
+    .news-headline{
+      font-family:var(--font-display);
+      font-size:1.1rem;
+      color:var(--navy);
+      margin-bottom:.75rem;
+      line-height:1.4;
+    }
+    .news-excerpt{
+      font-size:.9rem;
+      color:var(--gray);
+      line-height:1.6;
+    }
+
+    /* PREPARATION CHECKLIST */
+    .prep-section{
+      background:white;
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 4px 24px rgba(0,53,148,0.1);
+    }
+    .prep-header{
+      background:linear-gradient(to right,var(--navy),var(--topbar));
+      color:white;
+      padding:1.5rem 2rem;
+    }
+    .prep-header h3{
+      font-family:var(--font-display);
+      font-size:1.3rem;
+      letter-spacing:.05em;
+    }
+    .prep-header p{color:var(--silver2);font-size:.95rem;margin-top:.25rem;}
+    .prep-content{padding:2rem;}
+    .prep-category{margin-bottom:2rem;}
+    .prep-category:last-child{margin-bottom:0;}
+    .prep-category-title{
+      display:flex;
+      align-items:center;
+      gap:.75rem;
+      font-family:var(--font-display);
+      font-size:1.1rem;
+      color:var(--navy);
+      margin-bottom:1rem;
+    }
+    .prep-category-icon{font-size:1.3rem;}
+    .prep-list{list-style:none;}
+    .prep-list li{
+      padding:.75rem 1rem;
+      background:var(--light);
+      border-radius:8px;
+      margin-bottom:.5rem;
+      display:flex;
+      align-items:flex-start;
+      gap:.75rem;
+      font-size:.95rem;
+      line-height:1.5;
+    }
+    .prep-check{
+      width:20px;
+      height:20px;
+      border:2px solid var(--navy);
+      border-radius:4px;
+      flex-shrink:0;
+      margin-top:2px;
+      cursor:pointer;
+      transition:all .2s ease;
+    }
+    .prep-check.checked{
+      background:var(--navy);
+      position:relative;
+    }
+    .prep-check.checked::after{
+      content:'✓';
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%,-50%);
+      color:white;
+      font-size:.7rem;
+      font-weight:bold;
+    }
+
+    /* GAME SECTION */
+    .game-section{
+      background:linear-gradient(135deg,var(--topbar) 0%,var(--navy) 100%);
+      border-radius:16px;
+      padding:2.5rem;
+      color:white;
+    }
+    .game-header{
+      text-align:center;
+      margin-bottom:2rem;
+    }
+    .game-header h3{
+      font-family:var(--font-display);
+      font-size:1.5rem;
+      margin-bottom:.5rem;
+    }
+    .game-header p{color:var(--silver2);}
+    .trivia-container{
+      background:rgba(255,255,255,0.1);
+      border-radius:12px;
+      padding:2rem;
+    }
+    .trivia-question{
+      text-align:center;
+      margin-bottom:1.5rem;
+    }
+    .question-number{
+      display:inline-block;
+      background:var(--gold);
+      color:var(--topbar);
+      padding:.25rem .75rem;
+      border-radius:20px;
+      font-size:.8rem;
+      font-weight:700;
+      margin-bottom:1rem;
+    }
+    .question-text{
+      font-size:1.25rem;
+      font-weight:600;
+      line-height:1.5;
+    }
+    .trivia-options{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:1rem;
+      margin-bottom:1.5rem;
+    }
+    @media(max-width:500px){.trivia-options{grid-template-columns:1fr;}}
+    .trivia-option{
+      background:rgba(255,255,255,0.15);
+      border:2px solid rgba(255,255,255,0.3);
+      border-radius:8px;
+      padding:1rem;
+      cursor:pointer;
+      transition:all .2s ease;
+      text-align:center;
+      font-weight:600;
+    }
+    .trivia-option:hover{
+      background:rgba(255,255,255,0.25);
+      border-color:var(--gold);
+    }
+    .trivia-option.correct{
+      background:rgba(76,175,80,0.4);
+      border-color:#4CAF50;
+    }
+    .trivia-option.incorrect{
+      background:rgba(244,67,54,0.4);
+      border-color:#F44336;
+    }
+    .trivia-option.disabled{
+      pointer-events:none;
+      opacity:0.7;
+    }
+    .trivia-feedback{
+      text-align:center;
+      padding:1rem;
+      border-radius:8px;
+      margin-bottom:1rem;
+      display:none;
+    }
+    .trivia-feedback.show{display:block;}
+    .trivia-feedback.correct-feedback{background:rgba(76,175,80,0.3);}
+    .trivia-feedback.incorrect-feedback{background:rgba(244,67,54,0.3);}
+    .trivia-controls{
+      display:flex;
+      justify-content:center;
+      gap:1rem;
+    }
+    .trivia-btn{
+      background:var(--gold);
+      color:var(--topbar);
+      border:none;
+      padding:.75rem 1.5rem;
+      border-radius:6px;
+      font-weight:700;
+      cursor:pointer;
+      transition:all .2s ease;
+    }
+    .trivia-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2);}
+    .trivia-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+    .score-display{
+      text-align:center;
+      margin-top:1.5rem;
+      padding-top:1.5rem;
+      border-top:1px solid rgba(255,255,255,0.2);
+    }
+    .score-label{font-size:.9rem;color:var(--silver2);}
+    .score-value{font-size:2rem;font-weight:700;color:var(--gold);}
+
+    /* FOOTER */
+    footer{
+      background:var(--topbar);
+      color:var(--white);
+      padding:3rem 2rem;
+      text-align:center;
+    }
+    .footer-links{
+      display:flex;
+      justify-content:center;
+      gap:2rem;
+      flex-wrap:wrap;
+      margin-bottom:1.5rem;
+    }
+    .footer-links a{
+      color:var(--silver2);
+      font-size:.9rem;
+      transition:color .2s;
+    }
+    .footer-links a:hover{color:white;}
+    footer p{font-size:.85rem;color:var(--silver);}
+
+    /* ANIMATIONS */
+    @keyframes fadeInUp{
+      from{opacity:0;transform:translateY(20px);}
+      to{opacity:1;transform:translateY(0);}
+    }
+    .animate-in{animation:fadeInUp .6s ease forwards;}
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="index.html" class="nav-brand">
+      <img src="logo01.png" alt="USAFA Logo" />
+      <span>USAFA Parents Club<small>ALABAMA</small></span>
+    </a>
+    <button class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#leadership">Leadership</a></li>
+      <li><a href="index.html#resources">Resources</a></li>
+      <li><a href="index.html#news">News</a></li>
+      <li><a href="payments.html">Donate</a></li>
+      <li><a href="sponsorship.html">Sponsorship</a></li>
+    </ul>
+  </nav>
+
+  <!-- NEWSLETTER HEADER -->
+  <header class="newsletter-header">
+    <div class="header-content">
+      <span class="newsletter-edition">Spring 2026 Edition</span>
+      <h1>The Alabama Falcon</h1>
+      <p class="tagline">Official Newsletter of the USAFA Parents Club of Alabama</p>
+      <p class="newsletter-date">Volume 1, Issue 1 • March 2026</p>
+    </div>
+  </header>
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <h2>In This Issue</h2>
+    <div class="toc-grid">
+      <a href="#spotlight" class="toc-item">
+        <span class="toc-icon">🎖️</span>
+        <span class="toc-label">Cadet Spotlight</span>
+      </a>
+      <a href="#events" class="toc-item">
+        <span class="toc-icon">📅</span>
+        <span class="toc-label">Upcoming Events</span>
+      </a>
+      <a href="#sponsor" class="toc-item">
+        <span class="toc-icon">🤝</span>
+        <span class="toc-label">Sponsor Feature</span>
+      </a>
+      <a href="#news" class="toc-item">
+        <span class="toc-icon">📰</span>
+        <span class="toc-label">Academy News</span>
+      </a>
+      <a href="#prepare" class="toc-item">
+        <span class="toc-icon">✈️</span>
+        <span class="toc-label">New Cadet Prep</span>
+      </a>
+      <a href="#game" class="toc-item">
+        <span class="toc-icon">🎯</span>
+        <span class="toc-label">Trivia Challenge</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="newsletter-content">
+
+    <!-- CADET SPOTLIGHT -->
+    <section id="spotlight" class="section">
+      <div class="section-header">
+        <div class="section-icon">🎖️</div>
+        <div>
+          <h2 class="section-title">Alabama Cadet Spotlight</h2>
+          <p class="section-subtitle">Celebrating our cadets from the Heart of Dixie</p>
+        </div>
+      </div>
+      
+      <div class="spotlight-card">
+        <div class="spotlight-banner">★ Featured Cadet ★</div>
+        <div class="spotlight-content">
+          <div class="spotlight-photo">
+            <img src="photo_2025-07-21_06-27-17.jpg" alt="Cadet Hunter Johnston" />
+            <span class="spotlight-class-badge">Class of 2028</span>
+          </div>
+          <div class="spotlight-info">
+            <h3>Hunter Johnston</h3>
+            <p class="spotlight-hometown">📍 Madison, Alabama</p>
+            <p class="spotlight-bio">
+              Before answering the call to serve at the United States Air Force Academy, Hunter Johnston demonstrated exceptional leadership as the Wing Commander of his local JROTC program at Bob Jones High School in Madison, Alabama. A natural competitor, he also served as captain of the tennis team, learning valuable lessons about strategy, discipline, and teamwork on the court.
+            </p>
+            <p class="spotlight-bio">
+              Hunter's journey to USAFA included a year at Marion Military Institute, where he further honed his military bearing and academic foundation. Now thriving at the Academy, Hunter is pursuing a degree in Aerospace Engineering—a challenging major that reflects his passion for flight and space. His ultimate goal? To earn his wings and become a pilot in the United States Air Force.
+            </p>
+            <div class="spotlight-stats">
+              <div class="stat-item">
+                <div class="stat-icon">🎓</div>
+                <div class="stat-label">Major</div>
+                <div class="stat-value">Aerospace Engineering</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-label">HS Achievement</div>
+                <div class="stat-value">JROTC Wing Commander</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-icon">✈️</div>
+                <div class="stat-label">Career Goal</div>
+                <div class="stat-value">USAF Pilot</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- UPCOMING EVENTS -->
+    <section id="events" class="section">
+      <div class="section-header">
+        <div class="section-icon">📅</div>
+        <div>
+          <h2 class="section-title">Mark Your Calendars</h2>
+          <p class="section-subtitle">Upcoming events for Alabama USAFA families</p>
+        </div>
+      </div>
+      
+      <div class="article-card">
+        <div class="article-image">
+          <span class="article-tag">Upcoming Event</span>
+          🎉
+        </div>
+        <div class="article-body">
+          <h3 class="article-title">Alabama USAFA Founders Day Dinner</h3>
+          <p class="article-meta">📍 Location TBA • 🗓️ April 2026</p>
+          <p class="article-text">
+            Join the USAFA Parents Club of Alabama as we celebrate Founders Day—a tradition commemorated on April 1st to honor the historic establishment of the United States Air Force Academy by President Dwight D. Eisenhower in 1954. This special dinner brings together parents, cadets, graduates, and supporters from across Alabama to celebrate the Academy's legacy and the remarkable achievements of our future Air Force and Space Force leaders.
+          </p>
+          <p class="article-text">
+            Founders Day celebrations are a cornerstone of USAFA alumni chapters nationwide, honoring the Academy's mission of developing leaders of character. Our Alabama chapter event will feature guest speakers, cadet recognition, fellowship, and an opportunity to strengthen the bonds within our USAFA family. Don't miss this chance to connect with fellow parents and celebrate our cadets!
+          </p>
+          <a href="https://web.cvent.com/event/6f3eaa1f-80d4-442c-834a-5fbc8c097d2d/summary" target="_blank" rel="noopener" class="article-cta">
+            Register Now →
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPONSOR FEATURE -->
+    <section id="sponsor" class="section">
+      <div class="section-header">
+        <div class="section-icon">🤝</div>
+        <div>
+          <h2 class="section-title">Community Partners</h2>
+          <p class="section-subtitle">Recognizing those who support our mission</p>
+        </div>
+      </div>
+      
+      <div class="sponsor-feature">
+        <div class="sponsor-grid">
+          <div class="sponsor-logo">
+            <img src="yulista-logo.png" alt="Yulista Holding LLC" />
+          </div>
+          <div class="sponsor-info">
+            <h4>Yulista Holding, LLC</h4>
+            <span class="sponsor-amount">$500 • June Cadet Sendoff Sponsor</span>
+            <p class="sponsor-text">
+              Based right here in Huntsville, Alabama, Yulista is an Alaska Native Corporation and trusted aerospace and defense partner with over 800 professionals delivering aviation maintenance, engineering, logistics, and mission support services worldwide. Their generous $500 contribution directly supports our annual June Cadet Sendoff event, where families gather to share a meal and provide care packages to cadets embarking on their Academy journey.
+            </p>
+            <p class="sponsor-text" style="margin-top:1rem;">
+              Beyond defense contracting, Yulista's mission is deeply rooted in serving people—their success helps sustain the way of life for Central Yup'ik and Athabascan communities in Alaska. We are honored to partner with an organization that shares our dedication to developing future Air Force leaders.
+            </p>
+            <div style="margin-top:1.5rem;">
+              <a href="sponsorship.html" class="article-cta">Learn More About Sponsorship →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACADEMY NEWS -->
+    <section id="news" class="section">
+      <div class="section-header">
+        <div class="section-icon">📰</div>
+        <div>
+          <h2 class="section-title">Academy News & Updates</h2>
+          <p class="section-subtitle">What's happening at USAFA</p>
+        </div>
+      </div>
+      
+      <div class="news-grid">
+        <div class="news-item">
+          <p class="news-date">February 2026</p>
+          <h4 class="news-headline">Class of 2026 Celebrates 100s Night</h4>
+          <p class="news-excerpt">Firsties marked the final 100 days before graduation during the traditional 100s Night dining-in ceremony at Mitchell Hall, celebrating their journey toward commissioning.</p>
+        </div>
+        <div class="news-item">
+          <p class="news-date">March 2026</p>
+          <h4 class="news-headline">NCLS 2026: Courage to Lead</h4>
+          <p class="news-excerpt">The 33rd National Character and Leadership Symposium featured speakers focused on "Courage to Lead in the Profession of Arms," connecting attendees with military leadership principles.</p>
+        </div>
+        <div class="news-item">
+          <p class="news-date">March 2026</p>
+          <h4 class="news-headline">New Quantum Technologies Minor</h4>
+          <p class="news-excerpt">USAFA launched a Quantum Technologies minor integrating physics, computer science and engineering to prepare cadets for future operational and technical leadership roles in emerging technologies.</p>
+        </div>
+        <div class="news-item">
+          <p class="news-date">March 2026</p>
+          <h4 class="news-headline">Updated Base Access Procedures</h4>
+          <p class="news-excerpt">The Academy has implemented updated installation access procedures effective March 1, including suspension of the Trusted Traveler program. All visitors now require sponsored passes.</p>
+        </div>
+        <div class="news-item">
+          <p class="news-date">2026</p>
+          <h4 class="news-headline">Holaday Scholar Selected</h4>
+          <p class="news-excerpt">Cadet 1st Class Alexandra Skeen, Class of 2026, will pursue graduate studies at Oxford University as the recipient of the prestigious Holaday Scholarship.</p>
+        </div>
+        <div class="news-item">
+          <p class="news-date">Upcoming</p>
+          <h4 class="news-headline">2026 Graduation: May 30</h4>
+          <p class="news-excerpt">Mark your calendars! The Class of 2026 graduation ceremony is scheduled for May 30, 2026 at Falcon Stadium. Class of 2030 begins BCT on June 25, 2026.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW CADET PREPARATION -->
+    <section id="prepare" class="section">
+      <div class="section-header">
+        <div class="section-icon">✈️</div>
+        <div>
+          <h2 class="section-title">Preparing for Basic Cadet Training</h2>
+          <p class="section-subtitle">Essential tips for the Class of 2030</p>
+        </div>
+      </div>
+      
+      <div class="prep-section">
+        <div class="prep-header">
+          <h3>What to Expect & How to Prepare</h3>
+          <p>Basic Cadet Training (BCT) is a six-week transformation program. Here's how to arrive ready.</p>
+        </div>
+        <div class="prep-content">
+          
+          <div class="prep-category">
+            <div class="prep-category-title">
+              <span class="prep-category-icon">💪</span>
+              Physical Preparation
+            </div>
+            <ul class="prep-list">
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Establish a daily 30-minute aerobic workout routine, including running at least 2 miles</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Practice pull-ups, push-ups, sit-ups, and standing long jump—these are tested during BCT</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Build stamina for the 1.5-mile aerobics test and prepare for altitude adjustment in Colorado</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Break in comfortable boots and water-resistant sandals to prevent blisters during Jacks Valley</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="prep-category">
+            <div class="prep-category-title">
+              <span class="prep-category-icon">📚</span>
+              Knowledge Preparation
+            </div>
+            <ul class="prep-list">
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Study the Cadet Honor Code and understand its principles and application</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Learn Air Force and Space Force heritage, military customs, and courtesies</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Review the Chain of Command and understand military rank structure</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Familiarize yourself with reporting procedures and drill basics</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="prep-category">
+            <div class="prep-category-title">
+              <span class="prep-category-icon">🧠</span>
+              Mental Preparation
+            </div>
+            <ul class="prep-list">
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Develop stress management techniques—BCT is designed to push your limits</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Practice focusing on tasks while under pressure; build mental resilience</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Understand that your Cadre (upper-class instructors) are there to help you succeed</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span>Prepare for teamwork—BCT emphasizes cohesion and supporting your fellow cadets</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="prep-category">
+            <div class="prep-category-title">
+              <span class="prep-category-icon">📋</span>
+              Key Dates for Class of 2030
+            </div>
+            <ul class="prep-list">
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span><strong>June 25, 2026:</strong> In-Processing Day—BCT Begins</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span><strong>June 26, 2026:</strong> Swearing-In Ceremony (4:00 PM, Stillman Parade Field)</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span><strong>July 18, 2026:</strong> March Out to Jacks Valley (5.5-mile march to field training)</span>
+              </li>
+              <li>
+                <span class="prep-check" onclick="this.classList.toggle('checked')"></span>
+                <span><strong>July 31, 2026:</strong> BCT Culminating Event & Acceptance into Cadet Wing</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- TRIVIA GAME -->
+    <section id="game" class="section">
+      <div class="section-header">
+        <div class="section-icon">🎯</div>
+        <div>
+          <h2 class="section-title">USAFA Trivia Challenge</h2>
+          <p class="section-subtitle">Test your knowledge of the Air Force Academy!</p>
+        </div>
+      </div>
+      
+      <div class="game-section">
+        <div class="game-header">
+          <h3>How Well Do You Know USAFA?</h3>
+          <p>Answer these questions to test your Air Force Academy knowledge</p>
+        </div>
+        
+        <div class="trivia-container">
+          <div class="trivia-question">
+            <span class="question-number" id="questionNum">Question 1 of 5</span>
+            <p class="question-text" id="questionText">Loading question...</p>
+          </div>
+          
+          <div class="trivia-options" id="optionsContainer">
+            <!-- Options populated by JS -->
+          </div>
+          
+          <div class="trivia-feedback" id="feedback">
+            <p id="feedbackText"></p>
+          </div>
+          
+          <div class="trivia-controls">
+            <button class="trivia-btn" id="nextBtn" onclick="nextQuestion()" disabled>Next Question →</button>
+          </div>
+          
+          <div class="score-display">
+            <p class="score-label">Your Score</p>
+            <p class="score-value"><span id="currentScore">0</span> / <span id="totalQuestions">5</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#about">About Us</a>
+      <a href="payments.html">Donate</a>
+      <a href="sponsorship.html">Sponsorship</a>
+      <a href="mailto:info@alabamafalcons.org">Contact</a>
+    </div>
+    <p>&copy; <span id="year"></span> USAFA Parents Club of Alabama. All rights reserved.</p>
+    <p style="margin-top:.5rem;font-size:.8rem;">Go Falcons! 🦅</p>
+  </footer>
+
+  <script>
+    // Year in footer
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Trivia Game
+    const questions = [
+      {
+        question: "In what year was the United States Air Force Academy established?",
+        options: ["1947", "1954", "1959", "1962"],
+        correct: 1,
+        explanation: "The Air Force Academy was established on April 1, 1954, by President Dwight D. Eisenhower."
+      },
+      {
+        question: "What is the name of the 3,300-acre rural training area where cadets complete Second BCT?",
+        options: ["Eagle Valley", "Jacks Valley", "Falcon Field", "Cadet Canyon"],
+        correct: 1,
+        explanation: "Jacks Valley is where cadets complete the second phase of Basic Cadet Training, including field training and the famous 5.5-mile march."
+      },
+      {
+        question: "What is the name of the cadet dining facility at USAFA?",
+        options: ["Falcon Hall", "Arnold Hall", "Mitchell Hall", "Doolittle Dining Center"],
+        correct: 2,
+        explanation: "Mitchell Hall is the largest dining facility of its kind in the United States Air Force, serving approximately 12,000 meals daily."
+      },
+      {
+        question: "How long is Basic Cadet Training (BCT)?",
+        options: ["4 weeks", "6 weeks", "8 weeks", "10 weeks"],
+        correct: 1,
+        explanation: "BCT is a six-week intensive program that transforms civilians into military academy cadets prepared for the four-year commissioning program."
+      },
+      {
+        question: "What is the minimum active duty service commitment after graduating from USAFA?",
+        options: ["3 years", "4 years", "5 years", "8 years"],
+        correct: 2,
+        explanation: "Graduates commit to serve a minimum of 5 years on active duty as commissioned officers in the Air Force or Space Force."
+      }
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+    let answered = false;
+
+    function loadQuestion() {
+      const q = questions[currentQuestion];
+      document.getElementById('questionNum').textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+      document.getElementById('questionText').textContent = q.question;
+      document.getElementById('totalQuestions').textContent = questions.length;
+      
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = q.options.map((opt, i) => 
+        `<div class="trivia-option" onclick="selectAnswer(${i})">${opt}</div>`
+      ).join('');
+      
+      document.getElementById('feedback').classList.remove('show', 'correct-feedback', 'incorrect-feedback');
+      document.getElementById('nextBtn').disabled = true;
+      answered = false;
+    }
+
+    function selectAnswer(index) {
+      if (answered) return;
+      answered = true;
+      
+      const q = questions[currentQuestion];
+      const options = document.querySelectorAll('.trivia-option');
+      const feedback = document.getElementById('feedback');
+      const feedbackText = document.getElementById('feedbackText');
+      
+      options.forEach((opt, i) => {
+        opt.classList.add('disabled');
+        if (i === q.correct) {
+          opt.classList.add('correct');
+        } else if (i === index && index !== q.correct) {
+          opt.classList.add('incorrect');
+        }
+      });
+      
+      if (index === q.correct) {
+        score++;
+        document.getElementById('currentScore').textContent = score;
+        feedbackText.textContent = "✓ Correct! " + q.explanation;
+        feedback.classList.add('correct-feedback');
+      } else {
+        feedbackText.textContent = "✗ Not quite. " + q.explanation;
+        feedback.classList.add('incorrect-feedback');
+      }
+      
+      feedback.classList.add('show');
+      
+      const nextBtn = document.getElementById('nextBtn');
+      if (currentQuestion < questions.length - 1) {
+        nextBtn.textContent = "Next Question →";
+        nextBtn.disabled = false;
+      } else {
+        nextBtn.textContent = "See Final Score";
+        nextBtn.disabled = false;
+      }
+    }
+
+    function nextQuestion() {
+      if (currentQuestion < questions.length - 1) {
+        currentQuestion++;
+        loadQuestion();
+      } else {
+        // Show final results
+        const container = document.querySelector('.trivia-container');
+        const percentage = Math.round((score / questions.length) * 100);
+        let message = "";
+        let emoji = "";
+        
+        if (percentage === 100) {
+          message = "Perfect Score! You're a true USAFA expert!";
+          emoji = "🏆";
+        } else if (percentage >= 80) {
+          message = "Excellent! You really know your Academy!";
+          emoji = "🎖️";
+        } else if (percentage >= 60) {
+          message = "Good job! Keep learning about USAFA!";
+          emoji = "👍";
+        } else {
+          message = "Keep studying! There's more to learn about the Academy.";
+          emoji = "📚";
+        }
+        
+        container.innerHTML = `
+          <div style="text-align:center;padding:2rem;">
+            <div style="font-size:4rem;margin-bottom:1rem;">${emoji}</div>
+            <h3 style="font-size:1.8rem;margin-bottom:1rem;">Quiz Complete!</h3>
+            <p style="font-size:1.2rem;margin-bottom:.5rem;">Your Score: <strong>${score}</strong> out of <strong>${questions.length}</strong></p>
+            <p style="font-size:2.5rem;font-weight:700;color:var(--gold);margin:1rem 0;">${percentage}%</p>
+            <p style="font-size:1.1rem;color:var(--silver2);margin-bottom:2rem;">${message}</p>
+            <button class="trivia-btn" onclick="resetQuiz()">Play Again</button>
+          </div>
+        `;
+      }
+    }
+
+    function resetQuiz() {
+      currentQuestion = 0;
+      score = 0;
+      document.getElementById('currentScore').textContent = 0;
+      
+      // Rebuild the container
+      const gameSection = document.querySelector('.game-section');
+      gameSection.innerHTML = `
+        <div class="game-header">
+          <h3>How Well Do You Know USAFA?</h3>
+          <p>Answer these questions to test your Air Force Academy knowledge</p>
+        </div>
+        <div class="trivia-container">
+          <div class="trivia-question">
+            <span class="question-number" id="questionNum">Question 1 of 5</span>
+            <p class="question-text" id="questionText">Loading question...</p>
+          </div>
+          <div class="trivia-options" id="optionsContainer"></div>
+          <div class="trivia-feedback" id="feedback">
+            <p id="feedbackText"></p>
+          </div>
+          <div class="trivia-controls">
+            <button class="trivia-btn" id="nextBtn" onclick="nextQuestion()" disabled>Next Question →</button>
+          </div>
+          <div class="score-display">
+            <p class="score-label">Your Score</p>
+            <p class="score-value"><span id="currentScore">0</span> / <span id="totalQuestions">5</span></p>
+          </div>
+        </div>
+      `;
+      
+      loadQuestion();
+    }
+
+    // Initialize
+    loadQuestion();
+  </script>
+
+</body>
+</html>
