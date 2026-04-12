@@ -56,17 +56,18 @@
     /* SPONSOR SHOWCASE */
     .sponsor-showcase{background:white;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,53,148,0.12);}
     
-    .sponsor-header{background:linear-gradient(to right,var(--light),white);padding:3rem;text-align:center;border-bottom:3px solid var(--navy);}
-    .sponsor-logo-large{max-width:450px;height:auto;margin:0 auto 2rem;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.1));}
-    .company-name{font-family:var(--font-display);font-size:2.2rem;color:var(--navy);margin-bottom:.5rem;}
-    .company-location{color:var(--gray);font-size:1.1rem;font-style:italic;}
+    .sponsor-header{background:linear-gradient(to right,var(--light),white);padding:2rem;text-align:center;border-bottom:3px solid var(--navy);display:flex;align-items:center;justify-content:center;gap:2rem;}
+    .sponsor-logo-large{max-width:120px;height:auto;flex-shrink:0;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.1));}
+    .sponsor-header-content{text-align:left;}
+    .company-name{font-family:var(--font-display);font-size:1.4rem;color:var(--navy);margin-bottom:.25rem;}
+    .company-location{color:var(--gray);font-size:0.95rem;font-style:italic;}
     
     .sponsor-body{padding:3rem;}
     
-    .contribution-banner{background:linear-gradient(135deg,var(--navy),var(--topbar));color:white;padding:2rem;border-radius:12px;text-align:center;margin-bottom:3rem;}
-    .contribution-banner h2{font-family:var(--font-display);font-size:1.5rem;margin-bottom:.75rem;letter-spacing:.05em;}
-    .contribution-amount{font-size:3.5rem;font-weight:700;margin:.5rem 0;text-shadow:2px 2px 4px rgba(0,0,0,0.2);}
-    .contribution-purpose{font-size:1.15rem;color:var(--silver2);margin-top:.75rem;}
+    .contribution-banner{background:linear-gradient(135deg,var(--navy),var(--topbar));color:white;padding:1.5rem 2rem;border-radius:12px;text-align:center;margin-bottom:2.5rem;}
+    .contribution-banner h2{font-family:var(--font-display);font-size:1.2rem;margin-bottom:.5rem;letter-spacing:.05em;}
+    .contribution-amount{font-size:2.8rem;font-weight:700;margin:.25rem 0;text-shadow:2px 2px 4px rgba(0,0,0,0.2);}
+    .contribution-purpose{font-size:0.95rem;color:var(--silver2);margin-top:.5rem;}
     
     .about-section{margin-bottom:3rem;}
     .section-heading{font-family:var(--font-display);font-size:1.6rem;color:var(--navy);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:2px solid var(--light);}
@@ -142,8 +143,10 @@
       <!-- SPONSOR HEADER -->
       <div class="sponsor-header">
         <img src="yulista-logo.png" alt="Yulista Logo" class="sponsor-logo-large" />
-        <h2 class="company-name">Yulista Holding, LLC</h2>
-        <p class="company-location">Huntsville, Alabama</p>
+        <div class="sponsor-header-content">
+          <h2 class="company-name">Yulista Holding, LLC</h2>
+          <p class="company-location">Huntsville, Alabama</p>
+        </div>
       </div>
 
       <!-- SPONSOR BODY -->
