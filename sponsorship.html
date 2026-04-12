@@ -43,11 +43,11 @@
     }
 
     /* HERO */
-    .hero-sponsor{min-height:25vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,var(--topbar) 100%);color:var(--white);text-align:center;padding:2rem;position:relative;overflow:hidden;}
-    .hero-sponsor::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.05)"/></svg>');opacity:0.3;}
-    .hero-content{position:relative;z-index:1;max-width:700px;margin:0 auto;}
-    .hero-sponsor h1{font-family:var(--font-display);font-size:1.8rem;font-weight:700;letter-spacing:.05em;margin-bottom:.25rem;text-shadow:2px 2px 4px rgba(0,0,0,0.3);}
-    .hero-sponsor p{font-size:0.95rem;color:var(--silver2);}
+    .hero{min-height:35vh;background-color:#003594;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4rem 2rem;position:relative;background-image:linear-gradient(rgba(0,53,148,0.88),rgba(0,37,84,0.92)),url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCAYuA+gDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDxWQHzAc0vPY4pkrEnvTdwPHOaAJAWXILcGjkfxGmAknBoycnrQA7jP3jRn/aNMLHoSaazH1oAm3D+8aTeQMAmock9zSZPqaAJOaO1RhvU0E8cUAPGcc0oOO/FQ5PrQWx9KAJieevFJkHq3NQlj0HSk3Y5NAE+T3NMB5pmc9TQCDmgBWwTTuCKiyCetG75uDQBKpFOABNQ55pdxBzQBKcA0mamFs80gb3oAlGB2ppIJ6UwcgnNJnvzQBJgGlJwOKYp4pOtAEoXcM5oxTBntSg80AOo4JpQRSEgGgB3FOBGOaizmg0ASgipAFK8ioBwM07fn1oAsqFCjinqRjgVXBBUc09T6GgCX2xTN4BxinfjTGUHvQA1ircmmNs3UOw28VF1OaAJWVSKamBwBmk68UsbiNuaAJFAJ+7g0siBTmlLkjKimEk/eoAYcNxQCOlNwFWkAoAmDBeBTTxzTc9PakJy3NADsjrQeTTTRgUASAihcA9aTgUo+lADtw9aPxpOg6UA56CgBRg96UtjgcimnIPQUUALwaUH3pMelpw6elACdaUcCkJpM0AP3elNb1pOe1OA9aABTuFAANLx2FAxQAEUuemOaQE56UZOe1ADiQxG4YpCq9qQjHU0KBQAHAIxQTk0u0ZFLtyaABeOtPO01Hk0fSgByelBpQT0NIRQAoccUbhQpPSlIoAOOtIfWlHTFIRmgBQ3FAUUoAxQtAC4FGBigmlxQAAYFKORSDilzigB2R1pu8dhSZ7UcelAC8E5qdFVgCagX1qWIjJBoAlMIIJ9aj8tVzTw5BwORTZG5oAjOKQn");background-size:cover;background-attachment:fixed;overflow:hidden;}
+    .hero::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,53,148,0.4);z-index:0;}
+    .hero-content{position:relative;z-index:1;max-width:700px;color:white;}
+    .hero h1{font-family:var(--font-display);color:white;font-size:2.5rem;font-weight:700;letter-spacing:.05em;margin-bottom:1rem;text-shadow:2px 2px 4px rgba(0,0,0,0.3);}
+    .hero p{color:var(--silver2);font-size:1.05rem;}
     @media(max-width:768px){.hero-sponsor h1{font-size:1.8rem;}}
 
     /* MAIN CONTENT */
@@ -129,12 +129,12 @@
   </nav>
 
   <!-- HERO -->
-  <section class="hero-sponsor">
+  <div class="hero">
     <div class="hero-content">
       <h1>Thank You to Our Sponsors</h1>
       <p>Supporting the next generation of Air Force leaders</p>
     </div>
-  </section>
+  </div>
 
   <!-- MAIN CONTENT -->
   <div class="main-content">
