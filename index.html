@@ -642,8 +642,40 @@ function renderNews(items) {
 
 async function loadNews() {
   var container = document.getElementById('news-container');
+
+  // Fallback cached news data
+  var cachedNewsData = {
+    status: 'ok',
+    items: [
+      {
+        title: 'Cadet Military Education Training streamlines four-class development',
+        link: 'https://www.usafa.edu/cadet-military-education-training-streamlines-four-class-development/',
+        pubDate: 'Thu, 09 Apr 2026 19:04:17 +0000',
+        description: 'Cadet 2nd Class Sophie Kent, left, mentors Cadet 3rd Class Charles Arquette in the Multi-Domain Laboratory, at the U.S. Air Force Academy, Colo., Jan. 14, 2026. The Cadet Military Education Training program streamlines four-class development through mentorship.'
+      },
+      {
+        title: 'Colonel Tellez to Succeed Brigadier General Marks as Commandant',
+        link: 'https://www.usafa.edu/colonel-tellez-to-succeed-brigadier-general-marks-as-commandant-reinforcing-warfighter-focus-at-the-academy/',
+        pubDate: 'Thu, 09 Apr 2026 15:04:56 +0000',
+        description: 'Brig. Gen. Gavin P. Marks and Col. Brandon J. Tellez. Tellez has been assigned as the U.S. Air Force Academy\'s 32nd commandant of cadets, succeeding Marks, reinforcing warfighter focus at the Academy.'
+      },
+      {
+        title: 'Historic ceremony marks 306th FTG realignment to USAFA',
+        link: 'https://www.usafa.edu/historic-ceremony-marks-306th-ftg-realignment-to-usafa/',
+        pubDate: 'Wed, 01 Apr 2026 22:28:32 +0000',
+        description: 'Lt. Col. Jonathan B. Vaage, 98th Flying Training Squadron commander, swaps an Air Education and Training Command patch for a U.S. Air Force Academy one during a ceremony on Davis Army Airfield.'
+      },
+      {
+        title: 'Cadets focus on science, technology, engineering and mathematics',
+        link: 'https://www.usafa.edu/cadets-focus-on-science-technology-engineering-and-mathematics/',
+        pubDate: 'Mon, 30 Mar 2026 16:46:31 +0000',
+        description: 'Cadet 1st Class Lauren Mirande, left, and Cadet 2nd Class Abigail Anderson, right, learn about volcanic rock types in the Geospatial Science Laboratory, at the U.S. Air Force Academy, exploring STEM education.'
+      }
+    ]
+  };
+
   try {
-    var r = await fetchWithTimeout('/usafa-news-cache.json', 6000);
+    var r = await fetchWithTimeout('/usafa-news.php', 6000);
     if (r.ok) {
       var parsed = await r.json();
       var raw = (parsed.status === 'ok' && parsed.items) ? parsed.items : (Array.isArray(parsed) ? parsed : null);
@@ -658,3 +690,39 @@ async function loadNews() {
             link: i.link || '',
             date: d,
             description: i.description
+          };
+        });
+        renderNews(items);
+        return;
+      }
+    }
+  } catch (error) {
+    console.error('News fetch error:', error);
+  }
+
+  // Fallback to cached data if fetch fails or returns no items
+  var items = cachedNewsData.items.map(function(i) {
+    var d = '';
+    if (i.pubDate) {
+      try { d = new Date(i.pubDate).toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'}); } catch(ex) {}
+    }
+    return {
+      title: i.title || '',
+      link: i.link || '',
+      date: d,
+      description: i.description
+    };
+  });
+  renderNews(items);
+}
+
+// Load news when page loads
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadNews);
+} else {
+  loadNews();
+}
+</script>
+
+</body>
+</html>
