@@ -1,0 +1,14 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//USAFA Parents Club of Alabama//Appointee Sendoff//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+DTSTART;TZID=America/Chicago:20260606T120000
+DTEND;TZID=America/Chicago:20260606T140000
+SUMMARY:USAFA Appointee Send-off
+LOCATION:The Ritchey Center\, Maxwell AFB\, AL
+DESCRIPTION:Celebrating our newest appointees before they head to USAFA. Register at https://alabamafalcons.org/sendoff.html
+URL:https://alabamafalcons.org/sendoff.html
+END:VEVENT
+END:VCALENDAR

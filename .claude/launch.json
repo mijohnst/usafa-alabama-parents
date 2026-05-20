@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "website",
+      "runtimeExecutable": "C:/Users/mjohnston/AppData/Local/Programs/Python/Python310/python.exe",
+      "runtimeArgs": ["-m", "http.server"],
+      "autoPort": true
+    }
+  ]
+}
