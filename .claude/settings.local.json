@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//tmp/**)",
+      "Bash(convert tony-kim.jpg -resize 300x300 -quality 85 tony-kim-compressed.jpg)",
+      "Bash(ls -lh tony-kim*.jpg)",
+      "Bash(base64 -w0 tony-kim.jpg)",
+      "Bash(bash /tmp/update.sh)",
+      "Bash(perl)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(ls -lh /tmp/*.jpg)",
+      "Bash(ls -lhtr /tmp/s*)",
+      "Bash(ls -lh /tmp/*.tmp)",
+      "Bash(xargs ls:*)",
+      "Bash(find /tmp -type f -name \"*.jpg\" -exec ls -lh {} \\\\;)",
+      "Bash(ls -lh \"C:\\\\Users\\\\mjohnston\\\\Documents\\\\USAFA Parents club\\\\website\"/*.jpg)",
+      "Bash(grep -iE '\\\\.\\(jpg|jpeg|png\\)$')",
+      "Bash(bash /tmp/fix_emails.sh)",
+      "Read(//c/Users/mjohnston/Documents/USAFA Parents club/website/**)",
+      "Bash(timeout 5 python -m http.server 9000)",
+      "Bash(pkill -f \"python.exe\")",
+      "Bash(/c/Users/mjohnston/AppData/Local/Programs/Python/Python310/python.exe -m http.server 8001)",
+      "Bash(netstat -ano)",
+      "Bash(\"C:\\\\\\\\Users\\\\\\\\mjohnston\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Programs\\\\\\\\Python\\\\\\\\Python310\\\\\\\\python.exe\" --version)",
+      "Bash(curl -s http://localhost:8001/)",
+      "WebFetch(domain:mijohnst.github.io)",
+      "WebFetch(domain:alabamafalcons.org)",
+      "Bash(grep -i \"usafa\\\\\\\\|alabama\\\\\\\\|falcon\")",
+      "Bash(grep -E \"\\\\.\\(html|php|json|css\\)$\")",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -s http://localhost:8001/sponsorship.html)",
+      "Bash(curl -s http://localhost:3000/sponsorship.html)",
+      "Bash(awk 'NR>=237 && NR<=250' \"C:\\\\Users\\\\mjohnston\\\\Documents\\\\USAFA Parents club\\\\website\\\\sponsorship.html\")",
+      "Bash(awk -F: '$1 > 237 && $1 < 245')",
+      "WebSearch"
+    ]
+  }
+}

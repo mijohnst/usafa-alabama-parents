@@ -1,0 +1,120 @@
+<?php
+header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+
+if (!$input) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid request data.']);
+    exit;
+}
+
+// Validate required fields (all except real_id_state, real_id_number, email)
+$required = ['last', 'first', 'dob', 'real_id_state', 'real_id_number', 'dod_id_holder', 'us_citizen', 'cadet_name', 'affiliation', 'phone', 'email'];
+foreach ($required as $field) {
+    if (empty(trim($input[$field] ?? ''))) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
+        exit;
+    }
+}
+
+// Paste your deployed Apps Script Web App URL here after following setup instructions
+define('APPS_SCRIPT_URL', 'https://script.google.com/macros/s/AKfycbz4ZSWEaO7ttsOJ2Baw9ybPl_eeHbgqXDeCwZHmW7zHqdFInul1b1BEJa82le5v2Ljv/exec');
+
+$dob_raw = trim($input['dob'] ?? '');
+$dob     = $dob_raw ? date('m/d/Y', strtotime($dob_raw)) : '';
+
+$payload = json_encode([
+    'last'           => trim($input['last']           ?? ''),
+    'first'          => trim($input['first']          ?? ''),
+    'dob'            => $dob,
+    'real_id_state'  => trim($input['real_id_state']  ?? ''),
+    'real_id_number' => trim($input['real_id_number'] ?? ''),
+    'dod_id_holder'  => trim($input['dod_id_holder']  ?? ''),
+    'us_citizen'     => trim($input['us_citizen']     ?? ''),
+    'cadet_name'     => trim($input['cadet_name']     ?? ''),
+    'affiliation'    => trim($input['affiliation']    ?? ''),
+    'phone'          => trim($input['phone']          ?? ''),
+    'email'          => trim($input['email']          ?? ''),
+]);
+
+$ch = curl_init(APPS_SCRIPT_URL);
+curl_setopt($ch, CURLOPT_POST,          true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,    $payload);
+curl_setopt($ch, CURLOPT_HTTPHEADER,    ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch, CURLOPT_TIMEOUT,       15);
+
+$response  = curl_exec($ch);
+$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curl_err  = curl_error($ch);
+curl_close($ch);
+
+if ($response === false || !empty($curl_err) || $http_code >= 400) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Could not save your registration. Please try again or email secretary@alabamafalcons.org.']);
+    exit;
+}
+
+$result = json_decode($response, true);
+if (isset($result['success']) && $result['success'] === false) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => $result['message'] ?? 'Registration could not be saved.']);
+    exit;
+}
+
+// Email notification to secretary
+$data = json_decode($payload, true);
+$to      = 'secretary@alabamafalcons.org';
+$subject = 'New Sendoff Registration – ' . $data['first'] . ' ' . $data['last'];
+$body    = "A new registration has been submitted for the Cadet Class of 2030 Sendoff.\n\n"
+         . "Last Name:                  " . $data['last']           . "\n"
+         . "First Name:                 " . $data['first']          . "\n"
+         . "Date of Birth:              " . $data['dob']            . "\n"
+         . "REAL ID State:              " . ($data['real_id_state']  ?: '—') . "\n"
+         . "REAL ID Number (DL):        " . ($data['real_id_number'] ?: '—') . "\n"
+         . "DOD ID Holder:              " . $data['dod_id_holder']  . "\n"
+         . "US Citizen:                 " . $data['us_citizen']     . "\n"
+         . "Cadet Name:                 " . $data['cadet_name']     . "\n"
+         . "Affiliation with Cadet:     " . $data['affiliation']    . "\n"
+         . "Phone:                      " . $data['phone']          . "\n"
+         . "Email:                      " . ($data['email']          ?: '—') . "\n";
+
+$headers = "From: no-reply@alabamafalcons.org\r\n"
+         . "Reply-To: " . ($data['email'] ?: 'no-reply@alabamafalcons.org') . "\r\n"
+         . "Content-Type: text/plain; charset=UTF-8\r\n";
+
+mail($to, $subject, $body, $headers);
+
+// Confirmation email to registrant
+if (!empty($data['email'])) {
+    $conf_to      = $data['email'];
+    $conf_subject = 'Registration Confirmation – USAFA Alabama Cadet Sendoff';
+    $conf_body    = "Dear " . $data['first'] . " " . $data['last'] . ",\n\n"
+                  . "You have successfully registered for entry into Maxwell Air Force Base to attend the USAFA Alabama Cadet Sendoff.\n\n"
+                  . "Please retain this email as confirmation of your registration. Below is a summary of the information you submitted:\n\n"
+                  . "Last Name:                  " . $data['last']        . "\n"
+                  . "First Name:                 " . $data['first']       . "\n"
+                  . "Cadet Name:                 " . $data['cadet_name']  . "\n"
+                  . "Affiliation with Cadet:     " . $data['affiliation'] . "\n"
+                  . "Phone:                      " . $data['phone']       . "\n"
+                  . "Email:                      " . $data['email']       . "\n\n"
+                  . "If you have any questions, please contact us at secretary@alabamafalcons.org.\n\n"
+                  . "We look forward to celebrating with you!\n\n"
+                  . "USAFA Parents Club of Alabama\n"
+                  . "alabamafalcons.org";
+    $conf_headers = "From: no-reply@alabamafalcons.org\r\n"
+                  . "Reply-To: secretary@alabamafalcons.org\r\n"
+                  . "Content-Type: text/plain; charset=UTF-8\r\n";
+    mail($conf_to, $conf_subject, $conf_body, $conf_headers);
+}
+
+echo json_encode(['success' => true, 'message' => 'Registration submitted! We look forward to seeing you at the sendoff.']);
