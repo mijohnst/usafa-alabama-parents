@@ -206,6 +206,102 @@
 </head>
 <body>
 
+<!-- GRADUATION CELEBRATION OVERLAY -->
+<div id="grad-overlay" style="
+  display:none;
+  position:fixed;inset:0;z-index:99999;
+  background:#002554;
+  flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;
+">
+  <canvas id="confetti-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+  <div id="grad-message" style="
+    position:relative;text-align:center;padding:2rem;
+    opacity:0;transform:scale(0.85);
+    transition:opacity 0.8s ease,transform 0.8s ease;
+  ">
+    <div style="font-family:'Cinzel',serif;font-size:clamp(1rem,4vw,2.2rem);color:#FFD700;letter-spacing:0.05em;margin-bottom:0.5rem;">
+      &#9733; Congratulations &#9733;
+    </div>
+    <div style="font-family:'Cinzel',serif;font-size:clamp(1.4rem,6vw,3.5rem);color:#FFFFFF;font-weight:700;line-height:1.2;margin-bottom:0.75rem;">
+      Class of 2026<br>Alabama Graduates!
+    </div>
+    <div style="font-family:'Source Sans 3',sans-serif;font-size:clamp(0.85rem,2.5vw,1.1rem);color:#8A8D8F;margin-top:0.5rem;">
+      USAFA Parents Club of Alabama
+    </div>
+    <div style="margin-top:1.8rem;font-family:'Source Sans 3',sans-serif;font-size:0.8rem;color:#8A8D8F;opacity:0.7;">
+      Tap anywhere to continue
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  if(sessionStorage.getItem('grad2026shown')) return;
+  sessionStorage.setItem('grad2026shown','1');
+
+  var overlay = document.getElementById('grad-overlay');
+  var msg = document.getElementById('grad-message');
+  var canvas = document.getElementById('confetti-canvas');
+  var ctx = canvas.getContext('2d');
+  overlay.style.display = 'flex';
+
+  // Resize canvas
+  function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Confetti particles
+  var colors = ['#FFD700','#FFFFFF','#003594','#8A8D8F','#C0A800'];
+  var particles = [];
+  for(var i=0;i<120;i++){
+    particles.push({
+      x: Math.random()*window.innerWidth,
+      y: Math.random()*window.innerHeight - window.innerHeight,
+      w: Math.random()*10+4, h: Math.random()*6+3,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      rot: Math.random()*360,
+      vx: (Math.random()-0.5)*2,
+      vy: Math.random()*3+1.5,
+      vr: (Math.random()-0.5)*4
+    });
+  }
+
+  var rafId;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(function(p){
+      ctx.save();
+      ctx.translate(p.x+p.w/2, p.y+p.h/2);
+      ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      if(p.y > canvas.height+10){ p.y=-10; p.x=Math.random()*canvas.width; }
+    });
+    rafId = requestAnimationFrame(draw);
+  }
+  draw();
+
+  // Fade in message
+  setTimeout(function(){ msg.style.opacity='1'; msg.style.transform='scale(1)'; }, 200);
+
+  function dismiss(){
+    cancelAnimationFrame(rafId);
+    overlay.style.transition='opacity 0.5s ease';
+    overlay.style.opacity='0';
+    setTimeout(function(){ overlay.style.display='none'; }, 500);
+  }
+
+  // Auto-dismiss after 6 seconds
+  var autoTimer = setTimeout(dismiss, 6000);
+
+  // Click to dismiss early
+  overlay.addEventListener('click', function(){ clearTimeout(autoTimer); dismiss(); });
+})();
+</script>
+
 <!-- NAV -->
 <nav>
   <a href="#" class="nav-brand">
