@@ -207,16 +207,45 @@
 <body>
 
 <!-- GRADUATION CELEBRATION OVERLAY -->
+<style>
+@keyframes falconSwoop {
+  0%   { left:-15vw; top:10vh;  font-size:5rem;  transform:rotate(-15deg) scaleX(1); opacity:1; }
+  30%  { left:30vw;  top:55vh; font-size:8rem;  transform:rotate(10deg)  scaleX(1); }
+  50%  { left:55vw;  top:30vh; font-size:9rem;  transform:rotate(-5deg)  scaleX(1); }
+  80%  { left:85vw;  top:15vh; font-size:6rem;  transform:rotate(-20deg) scaleX(-1); opacity:1; }
+  100% { left:110vw; top:5vh;  font-size:5rem;  transform:rotate(-25deg) scaleX(-1); opacity:0; }
+}
+@keyframes falconPulse {
+  0%,100% { transform: scale(1) rotate(-5deg); }
+  50%      { transform: scale(1.15) rotate(5deg); }
+}
+</style>
 <div id="grad-overlay" style="
   display:none;
   position:fixed;inset:0;z-index:99999;
   background:#002554;
   flex-direction:column;align-items:center;justify-content:center;
-  cursor:pointer;
+  cursor:pointer;overflow:hidden;
 ">
   <canvas id="confetti-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+
+  <!-- Swooping falcon -->
+  <div id="grad-falcon" style="
+    position:absolute;top:10vh;left:-15vw;
+    font-size:5rem;line-height:1;pointer-events:none;
+    animation:falconSwoop 1.4s cubic-bezier(0.4,0,0.2,1) forwards;
+  ">🦅</div>
+
+  <!-- Centered falcon displayed after swoop -->
+  <div id="grad-falcon-center" style="
+    position:relative;font-size:clamp(4rem,12vw,8rem);line-height:1;
+    opacity:0;transform:scale(0.5);
+    transition:opacity 0.5s ease,transform 0.5s ease;
+    margin-bottom:0.5rem;
+  ">🦅</div>
+
   <div id="grad-message" style="
-    position:relative;text-align:center;padding:2rem;
+    position:relative;text-align:center;padding:0 2rem 2rem;
     opacity:0;transform:scale(0.85);
     transition:opacity 0.8s ease,transform 0.8s ease;
   ">
@@ -240,13 +269,13 @@
   if(sessionStorage.getItem('grad2026shown')) return;
   sessionStorage.setItem('grad2026shown','1');
 
-  var overlay = document.getElementById('grad-overlay');
-  var msg = document.getElementById('grad-message');
-  var canvas = document.getElementById('confetti-canvas');
-  var ctx = canvas.getContext('2d');
+  var overlay      = document.getElementById('grad-overlay');
+  var msg          = document.getElementById('grad-message');
+  var falconCenter = document.getElementById('grad-falcon-center');
+  var canvas       = document.getElementById('confetti-canvas');
+  var ctx          = canvas.getContext('2d');
   overlay.style.display = 'flex';
 
-  // Resize canvas
   function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
   resize();
   window.addEventListener('resize', resize);
@@ -284,8 +313,16 @@
   }
   draw();
 
-  // Fade in message
-  setTimeout(function(){ msg.style.opacity='1'; msg.style.transform='scale(1)'; }, 200);
+  // After swoop completes, show centered falcon then message
+  setTimeout(function(){
+    falconCenter.style.opacity = '1';
+    falconCenter.style.transform = 'scale(1)';
+    falconCenter.style.animation = 'falconPulse 2s ease-in-out infinite';
+  }, 1500);
+  setTimeout(function(){
+    msg.style.opacity='1';
+    msg.style.transform='scale(1)';
+  }, 1900);
 
   function dismiss(){
     cancelAnimationFrame(rafId);
@@ -294,10 +331,7 @@
     setTimeout(function(){ overlay.style.display='none'; }, 500);
   }
 
-  // Auto-dismiss after 6 seconds
-  var autoTimer = setTimeout(dismiss, 6000);
-
-  // Click to dismiss early
+  var autoTimer = setTimeout(dismiss, 7500);
   overlay.addEventListener('click', function(){ clearTimeout(autoTimer); dismiss(); });
 })();
 </script>
