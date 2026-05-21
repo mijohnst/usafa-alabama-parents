@@ -208,13 +208,6 @@
 
 <!-- GRADUATION CELEBRATION OVERLAY -->
 <style>
-@keyframes falconSwoop {
-  0%   { left:-15vw; top:10vh;  font-size:5rem;  transform:rotate(-15deg) scaleX(1); opacity:1; }
-  30%  { left:30vw;  top:55vh; font-size:8rem;  transform:rotate(10deg)  scaleX(1); }
-  50%  { left:55vw;  top:30vh; font-size:9rem;  transform:rotate(-5deg)  scaleX(1); }
-  80%  { left:85vw;  top:15vh; font-size:6rem;  transform:rotate(-20deg) scaleX(-1); opacity:1; }
-  100% { left:110vw; top:5vh;  font-size:5rem;  transform:rotate(-25deg) scaleX(-1); opacity:0; }
-}
 @keyframes falconPulse {
   0%,100% { transform: scale(1) rotate(-5deg); }
   50%      { transform: scale(1.15) rotate(5deg); }
@@ -229,18 +222,11 @@
 ">
   <canvas id="confetti-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
 
-  <!-- Swooping falcon -->
-  <div id="grad-falcon" style="
-    position:absolute;top:10vh;left:-15vw;
-    font-size:5rem;line-height:1;pointer-events:none;
-    animation:falconSwoop 1.4s cubic-bezier(0.4,0,0.2,1) forwards;
-  ">🦅</div>
-
-  <!-- Centered falcon displayed after swoop -->
+  <!-- Centered falcon -->
   <div id="grad-falcon-center" style="
     position:relative;font-size:clamp(4rem,12vw,8rem);line-height:1;
     opacity:0;transform:scale(0.5);
-    transition:opacity 0.5s ease,transform 0.5s ease;
+    transition:opacity 0.6s ease,transform 0.6s ease;
     margin-bottom:0.5rem;
   ">🦅</div>
 
@@ -313,16 +299,16 @@
   }
   draw();
 
-  // After swoop completes, show centered falcon then message
+  // Falcon scales in immediately, message follows
   setTimeout(function(){
     falconCenter.style.opacity = '1';
     falconCenter.style.transform = 'scale(1)';
     falconCenter.style.animation = 'falconPulse 2s ease-in-out infinite';
-  }, 1500);
+  }, 200);
   setTimeout(function(){
     msg.style.opacity='1';
     msg.style.transform='scale(1)';
-  }, 1900);
+  }, 700);
 
   function dismiss(){
     cancelAnimationFrame(rafId);
