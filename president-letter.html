@@ -35,6 +35,12 @@
     .nav-links{display:flex;gap:1.75rem;list-style:none;}
     .nav-links a{color:rgba(245,245,240,.8);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;transition:color .2s;}
     .nav-links a:hover{color:var(--silver2);}
+    .nav-dropdown{position:relative;}
+    .nav-dropdown>a::after{content:' \25BE';font-size:.65rem;}
+    .nav-dropdown-menu{display:none;position:absolute;top:100%;left:0;background:#002554;border-top:2px solid #A6192E;border-radius:0 0 4px 4px;min-width:190px;list-style:none;padding:.5rem 0;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,.35);}
+    .nav-dropdown:hover .nav-dropdown-menu{display:block;}
+    .nav-dropdown-menu li a{display:block;padding:.5rem 1.25rem;white-space:nowrap;font-size:.75rem;}
+    .nav-dropdown-menu li a:hover{background:rgba(255,255,255,.07);}
     .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px;}
     .hamburger span{width:24px;height:2px;background:var(--white);display:block;transition:.3s;}
     @media(max-width:768px){
@@ -42,6 +48,9 @@
       .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:1rem 0;}
       .nav-links.open{display:flex;}
       .nav-links a{padding:.65rem 2rem;display:block;}
+      .nav-dropdown-menu{position:static;display:none;background:rgba(0,0,0,.2);box-shadow:none;border:none;padding:0;min-width:unset;}
+      .nav-dropdown.open .nav-dropdown-menu{display:block;}
+      .nav-dropdown-menu li a{padding:.5rem 3.5rem;}
     }
 
     /* HERO */
@@ -110,31 +119,66 @@
 
   <!-- NAV -->
   <nav>
-    <a href="index.html" class="nav-brand">
-      <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
-      <span>USAFA Parents Club<small>of Alabama</small></span>
-    </a>
-    <button class="hamburger" id="hamburger" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-    <ul class="nav-links" id="nav-links">
-      <li><a href="index.html#about">About</a></li>
-      <li><a href="index.html#programs">Programs</a></li>
-      <li><a href="index.html#membership">Membership</a></li>
-      <li><a href="index.html#leadership">Leadership</a></li>
-      <li><a href="index.html#events">Events</a></li>
-      <li><a href="index.html#usafa-news">News</a></li>
-      <li><a href="sponsorship.html">Sponsors</a></li>
-      <li><a href="index.html#contact">Contact</a></li>
-      <li style="display:flex;align-items:center;padding-left:.5rem;">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" height="20" width="30" style="border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.4);display:block;" title="Alabama" aria-hidden="true">
-          <rect width="60" height="40" fill="white"/>
-          <line x1="0" y1="0" x2="60" y2="40" stroke="#A6192E" stroke-width="9"/>
-          <line x1="60" y1="0" x2="0" y2="40" stroke="#A6192E" stroke-width="9"/>
-        </svg>
-      </li>
-    </ul>
-  </nav>
+  <a href="index.html" class="nav-brand">
+    <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
+    <span>USAFA Parents Club<small>of Alabama</small></span>
+  </a>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <ul class="nav-links" id="nav-links">
+    <li class="nav-dropdown">
+      <a href="index.html#about">About</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#about">About Us</a></li>
+        <li><a href="index.html#leadership">Leadership</a></li>
+        <li><a href="president-letter.html">President's Letter</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="mentorship.html">Programs</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="mentorship.html">Mentorship</a></li>
+        <li><a href="liaison.html">Liaison</a></li>
+        <li><a href="familyresources.html">Family Resources</a></li>
+        <li><a href="cadetconnection.html">Cadet Connection</a></li>
+        <li><a href="communitysupport.html">Community Support</a></li>
+        <li><a href="nominations.html">Alabama Delegation</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="index.html#membership">Get Involved</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#membership">Membership</a></li>
+        <li><a href="sponsorship.html">Sponsors</a></li>
+        <li><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener">Alabama Falcons Facebook</a></li>
+      </ul>
+    </li>
+    <li><a href="index.html#events">Events</a></li>
+    <li class="nav-dropdown">
+      <a href="index.html#usafa-news">Resources</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#usafa-news">USAFA News</a></li>
+        <li><a href="https://www.usafa.edu" target="_blank" rel="noopener">USAFA Official Site</a></li>
+        <li><a href="https://www.usafa.edu/parents" target="_blank" rel="noopener">USAFA Parents Page</a></li>
+        <li><a href="https://www.usafa.edu/academics/academic-calendar/" target="_blank" rel="noopener">USAFA Calendars</a></li>
+        <li><a href="https://www.usafa.edu/contact-us/" target="_blank" rel="noopener">USAFA Key Contacts</a></li>
+        <li><a href="https://www.usafa.edu/military/basic-cadet-training/" target="_blank" rel="noopener">Basic Training Info</a></li>
+        <li><a href="https://www.usafa.org/" target="_blank" rel="noopener">Alumni Association (AOG)</a></li>
+        <li><a href="https://www.usafawebguy.com/" target="_blank" rel="noopener">Webguy</a></li>
+        <li><a href="https://shop.usafa.org/products/air-force-academy-cadet-saber-usafa" target="_blank" rel="noopener">Saber Orders</a></li>
+      </ul>
+    </li>
+    <li><a href="index.html#contact">Contact</a></li>
+    <li style="display:flex;align-items:center;padding-left:.5rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" height="20" width="30" style="border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.4);display:block;" title="Alabama" aria-hidden="true">
+        <rect width="60" height="40" fill="white"/>
+        <line x1="0" y1="0" x2="60" y2="40" stroke="#A6192E" stroke-width="9"/>
+        <line x1="60" y1="0" x2="0" y2="40" stroke="#A6192E" stroke-width="9"/>
+      </svg>
+    </li>
+  </ul>
+</nav>
 
   <!-- HERO -->
   <div class="hero">
@@ -205,42 +249,6 @@
 
   <!-- FOOTER -->
   <footer>
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
-        <p>Supporting Alabama cadet families with pride, purpose, and community.</p>
-      </div>
-      <div class="footer-col">
-        <h4>Quick Links</h4>
-        <ul>
-          <li><a href="index.html#about">About Us</a></li>
-          <li><a href="index.html#programs">Programs</a></li>
-          <li><a href="index.html#membership">Membership</a></li>
-          <li><a href="index.html#leadership">Leadership</a></li>
-          <li><a href="index.html#events">Events</a></li>
-          <li><a href="index.html#usafa-news">News</a></li>
-          <li><a href="index.html#contact">Contact</a></li>
-          <li><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener">Alabama Falcons Facebook</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>USAFA Resources</h4>
-        <ul>
-          <li><a href="https://www.usafa.edu" target="_blank" rel="noopener">USAFA Official Site</a></li>
-          <li><a href="https://www.usafa.edu/parents" target="_blank" rel="noopener">USAFA Parents Page</a></li>
-          <li><a href="https://www.usafa.edu/contact-us/" target="_blank" rel="noopener">USAFA Key Contacts</a></li>
-          <li><a href="https://www.usafa.org/" target="_blank" rel="noopener">Alumni Association (AOG)</a></li>
-          <li><a href="https://www.usafawebguy.com/" target="_blank" rel="noopener">Webguy</a></li>
-          <li><a href="https://www.usafa.edu/military/basic-cadet-training/" target="_blank" rel="noopener">Basic Training Info</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>Contact Us</h4>
-        <ul>
-          <li><a href="mailto:info@alabamafalcons.org">Send Email</a></li>
-        </ul>
-      </div>
-    </div>
     <div class="footer-bottom">
       <span>&copy; 2026 USAFA Parents Club of Alabama. All rights reserved.</span>
       <span>Aim High &middot; Fly &middot; Fight &middot; Win</span>
@@ -248,13 +256,20 @@
   </footer>
 
   <script>
-    // Mobile menu toggle
     document.getElementById('hamburger').addEventListener('click', function() {
       document.getElementById('nav-links').classList.toggle('open');
     });
     document.querySelectorAll('.nav-links a').forEach(function(link) {
       link.addEventListener('click', function() {
         document.getElementById('nav-links').classList.remove('open');
+      });
+    });
+    document.querySelectorAll('.nav-dropdown > a').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        if (window.innerWidth <= 768) {
+          e.preventDefault();
+          this.parentElement.classList.toggle('open');
+        }
       });
     });
   </script>
