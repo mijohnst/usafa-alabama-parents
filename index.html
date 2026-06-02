@@ -367,7 +367,13 @@
         <li><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener">Alabama Falcons Facebook</a></li>
       </ul>
     </li>
-    <li><a href="#events">Events</a></li>
+    <li class="nav-dropdown">
+      <a href="#events">Events</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="#events">Club Events</a></li>
+        <li><a href="events-calendar.html">Academy Calendar</a></li>
+      </ul>
+    </li>
     <li class="nav-dropdown">
       <a href="#usafa-news">Resources</a>
       <ul class="nav-dropdown-menu">
@@ -553,35 +559,8 @@
 
       <div class="event-card"><div class="event-date"><div class="month">Mar</div><div class="day">&#8212;</div></div><div class="event-info"><h3>Taste of Home Event</h3><p>March 2027 &middot; Details coming soon</p><span class="event-tag tag-social">Social</span></div></div>
 
-      <button class="accordion-toggle" id="academic-cal-toggle" aria-expanded="false" aria-controls="academic-cal-body" onclick="toggleAcademicCal()" style="margin-top:1rem;width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--blue);border:none;border-radius:3px;padding:.4rem .75rem;cursor:pointer;font-family:var(--font-display);font-size:.75rem;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:#fff;text-align:left;">
-        <span>USAFA Academic Calendar</span>
-        <span id="academic-cal-chevron" style="font-size:1rem;transition:transform .3s;">&#9660;</span>
-      </button>
-
-      <div id="academic-cal-body" style="display:none;margin-top:.5rem;">
-
-        <div class="event-card"><div class="event-date"><div class="month">May</div><div class="day">30</div></div><div class="event-info"><h3>1st Summer Period</h3><p>May 30 &ndash; June 20</p><span class="event-tag tag-social">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Jun</div><div class="day">20</div></div><div class="event-info"><h3>2nd Summer Period</h3><p>June 20 &ndash; July 11</p><span class="event-tag tag-social">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Jun</div><div class="day">24</div></div><div class="event-info"><h3>BCT Begins</h3><p>Basic Cadet Training starts for the Class of 2030</p><span class="event-tag tag-meeting">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Jul</div><div class="day">11</div></div><div class="event-info"><h3>3rd Summer Period</h3><p>July 11 &ndash; August 1</p><span class="event-tag tag-social">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Jul</div><div class="day">30</div></div><div class="event-info"><h3>BCT Ends</h3><p>Basic Cadet Training concludes</p><span class="event-tag tag-meeting">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Aug</div><div class="day">01</div></div><div class="event-info"><h3>Cadet Wing Returns</h3><p>Full Cadet Wing returns at 1900</p><span class="event-tag tag-social">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Sep</div><div class="day">7</div></div><div class="event-info"><h3>Labor Day &mdash; No Classes</h3><p>Holiday, no classes</p><span class="event-tag tag-meeting">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Sep</div><div class="day">18</div></div><div class="event-info"><h3>Fall Valex &mdash; No Classes</h3><p>Fall Valex, no classes</p><span class="event-tag tag-meeting">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Oct</div><div class="day">12</div></div><div class="event-info"><h3>Columbus Day &mdash; No Classes</h3><p>Holiday, no classes</p><span class="event-tag tag-meeting">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Nov</div><div class="day">11</div></div><div class="event-info"><h3>Veterans Day &mdash; No Classes</h3><p>Holiday, no classes</p><span class="event-tag tag-meeting">Academy</span></div></div>
-
-        <div class="event-card"><div class="event-date"><div class="month">Dec</div><div class="day">12&ndash;16</div></div><div class="event-info"><h3>Finals Week</h3><p>End-of-semester final examinations</p><span class="event-tag tag-meeting">Academy</span></div></div>
-
+      <div style="margin-top:1rem;text-align:center;">
+        <a href="events-calendar.html" style="display:inline-block;padding:.5rem 1.5rem;background:var(--blue);color:#fff;border-radius:3px;font-family:var(--font-display);font-size:.75rem;font-weight:400;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;">View Academy Calendar &amp; Key Dates &rarr;</a>
       </div>
 
       <!-- For Our Cadets - temporarily removed
