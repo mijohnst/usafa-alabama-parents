@@ -173,25 +173,27 @@
     .btn-dark{background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;}
     .btn-dark:hover{background:linear-gradient(180deg,#2166cc 0%,#003080 100%);box-shadow:0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2);top:2px;}
     /* COMMUNITY PHOTOS */
-    #photos{background:var(--light);}
-    #photos .section-title{color:var(--navy);}
-    #photos .divider{background:linear-gradient(90deg,var(--blue),transparent);}
+    #photos{background:#001535;padding:0;}
     .slideshow-wrap{position:relative;}
-    .slideshow-viewport{position:relative;overflow:hidden;border-radius:4px;background:#001535;aspect-ratio:16/9;max-height:520px;}
+    .slideshow-viewport{position:relative;overflow:hidden;background:#000d20;aspect-ratio:16/7;max-height:600px;box-shadow:0 8px 48px rgba(0,0,0,.5);}
     .slideshow-track{display:flex;height:100%;transition:transform .45s ease;}
     .slide{min-width:100%;height:100%;}
     .slide img{width:100%;height:100%;object-fit:cover;display:block;}
-    .slideshow-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,37,84,.75);color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:1.6rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;z-index:2;}
-    .slideshow-btn:hover{background:rgba(0,37,84,.97);}
-    .slideshow-btn.prev{left:.75rem;}
-    .slideshow-btn.next{right:.75rem;}
-    .slideshow-dots{display:flex;justify-content:center;gap:.4rem;margin-top:.75rem;flex-wrap:wrap;}
-    .slideshow-dot{width:8px;height:8px;border-radius:50%;background:rgba(0,53,148,.2);border:none;cursor:pointer;padding:0;transition:background .2s;}
-    .slideshow-dot.active{background:var(--blue);}
-    .slideshow-counter{text-align:center;font-size:.78rem;color:var(--gray);margin-top:.4rem;}
-    .photos-msg{text-align:center;color:var(--gray);padding:3rem 1rem;font-size:.95rem;}
+    .slideshow-title-bar{position:absolute;top:0;left:0;right:0;padding:1.75rem 2.5rem 3rem;background:linear-gradient(to bottom,rgba(0,13,32,.85) 0%,transparent 100%);z-index:3;pointer-events:none;}
+    .slideshow-title-bar h2{font-family:var(--font-display);font-size:clamp(1.4rem,2.5vw,2.2rem);color:#fff;margin-bottom:.5rem;}
+    .slideshow-title-bar .divider{background:linear-gradient(90deg,rgba(166,25,46,.9),transparent);}
+    .slideshow-bottom-bar{position:absolute;bottom:0;left:0;right:0;padding:2.5rem 2rem 1rem;background:linear-gradient(to top,rgba(0,13,32,.75) 0%,transparent 100%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:.3rem;pointer-events:none;}
+    .slideshow-dots{display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap;pointer-events:all;}
+    .slideshow-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);border:none;cursor:pointer;padding:0;transition:background .2s;}
+    .slideshow-dot.active{background:#fff;}
+    .slideshow-counter{font-size:.75rem;color:rgba(255,255,255,.6);letter-spacing:.1em;}
+    .slideshow-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,13,32,.6);color:#fff;border:1px solid rgba(255,255,255,.2);width:48px;height:48px;border-radius:50%;font-size:1.8rem;cursor:pointer;transition:background .2s,border-color .2s;display:flex;align-items:center;justify-content:center;z-index:4;}
+    .slideshow-btn:hover{background:rgba(0,13,32,.9);border-color:rgba(255,255,255,.5);}
+    .slideshow-btn.prev{left:1rem;}
+    .slideshow-btn.next{right:1rem;}
+    .photos-msg{text-align:center;color:rgba(255,255,255,.5);padding:3rem 1rem;font-size:.95rem;}
     /* CONTACT */
-    #contact{background:var(--white);}
+    #contact{background:var(--light);}
     .contact-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:4rem;align-items:start;}
     .contact-info h3{font-family:var(--font-display);font-size:1.1rem;color:var(--navy);margin-bottom:.75rem;}
     .contact-info p{font-size:.9rem;color:#5a6a7a;margin-bottom:1.5rem;}
@@ -248,6 +250,7 @@
         <li><a href="#about">About Us</a></li>
         <li><a href="#leadership">Leadership</a></li>
         <li><a href="president-letter.html">President's Letter</a></li>
+        <li><a href="#photos">Member Photos</a></li>
       </ul>
     </li>
     <li class="nav-dropdown">
@@ -491,19 +494,21 @@
 
 <!-- COMMUNITY PHOTOS -->
 <section id="photos">
-  <div class="container">
-    <h2 class="section-title">Member Photos</h2>
-    <div class="divider"></div>
-    <div class="slideshow-wrap" style="max-width:860px;margin:0 auto;">
-      <div class="slideshow-viewport" id="slideshow-viewport">
-        <div class="slideshow-track" id="slideshow-track"></div>
-        <button class="slideshow-btn prev" id="slide-prev" aria-label="Previous photo">&#8249;</button>
-        <button class="slideshow-btn next" id="slide-next" aria-label="Next photo">&#8250;</button>
+  <div class="slideshow-wrap">
+    <div class="slideshow-viewport" id="slideshow-viewport">
+      <div class="slideshow-track" id="slideshow-track"></div>
+      <div class="slideshow-title-bar">
+        <h2>Member Photos</h2>
+        <div class="divider"></div>
       </div>
-      <div class="slideshow-dots" id="slideshow-dots"></div>
-      <p class="slideshow-counter" id="slideshow-counter"></p>
-      <p class="photos-msg" id="photos-msg">Loading photos&#8230;</p>
+      <div class="slideshow-bottom-bar">
+        <div class="slideshow-dots" id="slideshow-dots"></div>
+        <p class="slideshow-counter" id="slideshow-counter"></p>
+      </div>
+      <button class="slideshow-btn prev" id="slide-prev" aria-label="Previous photo">&#8249;</button>
+      <button class="slideshow-btn next" id="slide-next" aria-label="Next photo">&#8250;</button>
     </div>
+    <p class="photos-msg" id="photos-msg">Loading photos&#8230;</p>
   </div>
 </section>
 
