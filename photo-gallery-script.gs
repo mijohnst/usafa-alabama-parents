@@ -54,14 +54,7 @@ function doGet(e) {
     images[j] = tmp;
   }
 
-  var json = JSON.stringify({ images: images });
-  var callback = e && e.parameter && e.parameter.callback;
-  if (callback) {
-    return ContentService
-      .createTextOutput(callback + '(' + json + ')')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
   return ContentService
-    .createTextOutput(json)
-    .setMimeType(ContentService.MimeType.JSON);
+    .createTextOutput('_photosReady(' + JSON.stringify(images) + ')')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
