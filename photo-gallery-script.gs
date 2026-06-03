@@ -30,7 +30,7 @@
 //  automatically within a few seconds of a page refresh.
 // ============================================================
 
-var FOLDER_ID = 'REPLACE_WITH_YOUR_FOLDER_ID';
+var FOLDER_ID = '1qOFC20iSxWuXPKcRNEucHsSsjc77hXve';
 
 function doGet(e) {
   var folder = DriveApp.getFolderById(FOLDER_ID);
