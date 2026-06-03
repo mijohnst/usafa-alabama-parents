@@ -770,9 +770,7 @@ function toggleAcademicCal() {
 
 <script>
 (function() {
-  // ── Replace this URL after deploying your Google Apps Script ──
-  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJgBxqksYcbPKnvCOMc7I1SZbgJbM-v6A1BaeSn0mr8aRRZMuSpJwuceOij4cAesct/exec';
-  // ─────────────────────────────────────────────────────────────
+  var SCRIPT_URL = 'photo-proxy.php';
 
   var track    = document.getElementById('slideshow-track');
   var dotsEl   = document.getElementById('slideshow-dots');
@@ -840,18 +838,10 @@ function toggleAcademicCal() {
   prevBtn.addEventListener('click', function() { goTo(current - 1); resetAuto(); });
   nextBtn.addEventListener('click', function() { goTo(current + 1); resetAuto(); });
 
-  if (SCRIPT_URL === 'REPLACE_WITH_YOUR_APPS_SCRIPT_URL') {
-    msgEl.textContent = 'Photo gallery coming soon!';
-    prevBtn.style.display = 'none';
-    nextBtn.style.display = 'none';
-    return;
-  }
-
-  window._photosReady = function(ids) { init(ids); };
-  var script = document.createElement('script');
-  script.src = SCRIPT_URL;
-  script.onerror = function() { msgEl.textContent = 'Photos unavailable — please check back later.'; };
-  document.head.appendChild(script);
+  fetch(SCRIPT_URL)
+    .then(function(r) { return r.json(); })
+    .then(function(data) { init(data.images); })
+    .catch(function() { msgEl.textContent = 'Photos unavailable — please check back later.'; });
 })();
 </script>
 
