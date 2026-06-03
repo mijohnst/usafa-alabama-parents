@@ -175,7 +175,6 @@
     /* COMMUNITY PHOTOS */
     #photos{background:var(--light);}
     #photos .section-title{color:var(--navy);}
-    #photos .section-label{color:var(--blue);}
     #photos .divider{background:linear-gradient(90deg,var(--blue),transparent);}
     .slideshow-wrap{position:relative;}
     .slideshow-viewport{position:relative;overflow:hidden;border-radius:4px;background:#001535;aspect-ratio:16/9;max-height:520px;}
@@ -493,10 +492,9 @@
 <!-- COMMUNITY PHOTOS -->
 <section id="photos">
   <div class="container">
-    <p class="section-label">Our Community</p>
-    <h2 class="section-title">Member Photos</h2>
-    <div class="divider"></div>
-    <div class="slideshow-wrap">
+    <h2 class="section-title" style="text-align:center;">Member Photos</h2>
+    <div class="divider" style="margin-left:auto;margin-right:auto;"></div>
+    <div class="slideshow-wrap" style="max-width:860px;margin:0 auto;">
       <div class="slideshow-viewport" id="slideshow-viewport">
         <div class="slideshow-track" id="slideshow-track"></div>
         <button class="slideshow-btn prev" id="slide-prev" aria-label="Previous photo">&#8249;</button>
