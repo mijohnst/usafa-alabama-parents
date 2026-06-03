@@ -847,19 +847,10 @@ function toggleAcademicCal() {
     return;
   }
 
-  // Use JSONP to avoid CORS issues with Google Apps Script
-  var cbName = '_photosCb_' + Date.now();
-  window[cbName] = function(data) {
-    delete window[cbName];
-    if (script.parentNode) script.parentNode.removeChild(script);
-    init(data.images);
-  };
+  window._photosReady = function(ids) { init(ids); };
   var script = document.createElement('script');
-  script.src = SCRIPT_URL + '?callback=' + cbName;
-  script.onerror = function() {
-    delete window[cbName];
-    msgEl.textContent = 'Photos unavailable — please check back later.';
-  };
+  script.src = SCRIPT_URL;
+  script.onerror = function() { msgEl.textContent = 'Photos unavailable — please check back later.'; };
   document.head.appendChild(script);
 })();
 </script>
