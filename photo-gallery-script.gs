@@ -32,33 +32,39 @@
 
 var FOLDER_ID = '1qOFC20iSxWuXPKcRNEucHsSsjc77hXve';
 
-// Run this once manually from Apps Script (Run > setupFolderSharing) after
-// adding new photos. Do NOT call it from doGet — it makes Drive write API
-// calls that count against daily quotas.
-function setupFolderSharing() {
-  var folder = DriveApp.getFolderById(FOLDER_ID);
-  var files = folder.getFiles();
-  while (files.hasNext()) {
-    var file = files.next();
-    if (file.getMimeType().indexOf('image/') === 0) {
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    }
-  }
-}
-
 function doGet(e) {
+  // Load the set of file IDs that have already been shared publicly.
+  // PropertiesService stores up to 500 KB — plenty for file ID lists.
+  var props = PropertiesService.getScriptProperties();
+  var sharedIds = JSON.parse(props.getProperty('sharedIds') || '[]');
+  var sharedSet = {};
+  sharedIds.forEach(function(id) { sharedSet[id] = true; });
+
   var folder = DriveApp.getFolderById(FOLDER_ID);
   var files   = folder.getFiles();
   var images  = [];
+  var hasNew  = false;
 
   while (files.hasNext()) {
     var file = files.next();
     if (file.getMimeType().indexOf('image/') === 0) {
-      images.push(file.getId());
+      var id = file.getId();
+      if (!sharedSet[id]) {
+        // New photo — share it and remember it so we don't repeat this.
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        sharedSet[id] = true;
+        hasNew = true;
+      }
+      images.push(id);
     }
   }
 
-  // Shuffle so the order is random on every page load
+  // Persist the updated set only when something actually changed.
+  if (hasNew) {
+    props.setProperty('sharedIds', JSON.stringify(Object.keys(sharedSet)));
+  }
+
+  // Shuffle so the order is random on every page load.
   for (var i = images.length - 1; i > 0; i--) {
     var j   = Math.floor(Math.random() * (i + 1));
     var tmp = images[i];
