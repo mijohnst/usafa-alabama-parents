@@ -797,6 +797,7 @@ function toggleAcademicCal() {
   }
 
   function goTo(index) {
+    if (ids.length === 0) return;
     var dots = dotsEl.querySelectorAll('.slideshow-dot');
     if (dots[current]) dots[current].classList.remove('active');
     current = (index + ids.length) % ids.length;
@@ -840,10 +841,14 @@ function toggleAcademicCal() {
   prevBtn.addEventListener('click', function() { goTo(current - 1); resetAuto(); });
   nextBtn.addEventListener('click', function() { goTo(current + 1); resetAuto(); });
 
-  window._photosReady = function(ids) { init(ids); };
+  window._photosReady = function(imageIds) { delete window._photosReady; init(imageIds); };
   var script = document.createElement('script');
   script.src = SCRIPT_URL;
-  script.onerror = function() { msgEl.textContent = 'Photos unavailable — please check back later.'; };
+  script.onerror = function() {
+    msgEl.textContent = 'Photos unavailable — please check back later.';
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+  };
   document.head.appendChild(script);
 })();
 </script>
