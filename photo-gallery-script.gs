@@ -32,6 +32,20 @@
 
 var FOLDER_ID = '1qOFC20iSxWuXPKcRNEucHsSsjc77hXve';
 
+// Run this once manually from Apps Script (Run > setupFolderSharing) after
+// adding new photos. Do NOT call it from doGet — it makes Drive write API
+// calls that count against daily quotas.
+function setupFolderSharing() {
+  var folder = DriveApp.getFolderById(FOLDER_ID);
+  var files = folder.getFiles();
+  while (files.hasNext()) {
+    var file = files.next();
+    if (file.getMimeType().indexOf('image/') === 0) {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    }
+  }
+}
+
 function doGet(e) {
   var folder = DriveApp.getFolderById(FOLDER_ID);
   var files   = folder.getFiles();
@@ -40,8 +54,6 @@ function doGet(e) {
   while (files.hasNext()) {
     var file = files.next();
     if (file.getMimeType().indexOf('image/') === 0) {
-      // Make sure the file is accessible to anyone with the link
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       images.push(file.getId());
     }
   }
