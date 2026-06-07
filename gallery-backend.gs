@@ -46,10 +46,10 @@ function listEventFolders() {
   const folders = [];
   while (subIter.hasNext()) {
     const f = subIter.next();
-    folders.push({ id: f.getId(), name: f.getName() });
+    folders.push({ id: f.getId(), name: f.getName(), created: f.getDateCreated().getTime() });
   }
-  // Newest first — relies on YYYY prefix naming (e.g. "2026 Sendoff")
-  folders.sort((a, b) => b.name.localeCompare(a.name));
+  // Newest first by Drive folder creation date
+  folders.sort((a, b) => b.created - a.created);
   return { files: folders };
 }
 
