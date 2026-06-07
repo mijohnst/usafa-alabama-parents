@@ -54,7 +54,19 @@ function listEventFolders() {
 }
 
 function listPhotos(folderId) {
-  const folder   = DriveApp.getFolderById(folderId);
+  // Verify the requested folder is a direct child of the Club Photos folder
+  const parentIter = DriveApp.getFoldersByName(PHOTOS_FOLDER_NAME);
+  if (!parentIter.hasNext()) return { error: 'Photos folder not found' };
+  const parentId = parentIter.next().getId();
+
+  let folder;
+  try { folder = DriveApp.getFolderById(folderId); } catch(e) { return { error: 'Invalid folder' }; }
+
+  const parents = folder.getParents();
+  let isChild = false;
+  while (parents.hasNext()) { if (parents.next().getId() === parentId) { isChild = true; break; } }
+  if (!isChild) return { error: 'Invalid folder' };
+
   const fileIter = folder.getFiles();
   const photos   = [];
   while (fileIter.hasNext()) {

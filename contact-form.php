@@ -37,9 +37,9 @@ foreach ($required_fields as $field) {
     }
 }
 
-// Sanitize inputs
-$name = htmlspecialchars(strip_tags(trim($data['name'])));
-$email = filter_var(trim($data['email']), FILTER_SANITIZE_EMAIL);
+// Sanitize inputs — str_replace strips CR/LF before values enter mail headers
+$name = str_replace(["\r", "\n"], '', htmlspecialchars(strip_tags(trim($data['name']))));
+$email = str_replace(["\r", "\n"], '', filter_var(trim($data['email']), FILTER_SANITIZE_EMAIL));
 $iam = isset($data['iam']) ? htmlspecialchars(strip_tags(trim($data['iam']))) : 'Not specified';
 $class_year = isset($data['classYear']) ? htmlspecialchars(strip_tags(trim($data['classYear']))) : 'N/A';
 $message = htmlspecialchars(strip_tags(trim($data['message'])));
