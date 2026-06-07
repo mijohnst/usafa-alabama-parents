@@ -34,6 +34,11 @@ if (!$payload) {
     exit();
 }
 
+// Strip CR/LF from a value before using it in a mail header
+function sanitize_header($val) {
+    return str_replace(["\r", "\n"], '', (string)$val);
+}
+
 // Google Apps Script deployment URL
 $apps_script_url = 'https://script.google.com/macros/s/AKfycbzFG0SKrECB1toC6rMckgNQxsUuc_QsCvPr1TMfWztUNM_3plG3J9XnxhTvGdq2faAc/exec';
 
@@ -64,7 +69,7 @@ curl_close($ch);
 
 // Send email notification to secretary
 $secretary_email = 'secretary@alabamafalcons.org';
-$subject = 'New Membership Application: ' . ($payload['cadetFirstName'] ?? 'N/A') . ' ' . ($payload['cadetLastName'] ?? 'N/A');
+$subject = 'New Membership Application: ' . sanitize_header($payload['cadetFirstName'] ?? 'N/A') . ' ' . sanitize_header($payload['cadetLastName'] ?? 'N/A');
 
 // Format email body
 $email_body = "New membership application received:\n\n";
@@ -95,7 +100,7 @@ $email_body .= "Directory Consent: " . ($payload['directoryConsent'] ?? 'Not spe
 
 // Set headers for email
 $headers = "From: noreply@alabamafalcons.org\r\n";
-$headers .= "Reply-To: " . ($payload['parent1Email'] ?? '') . "\r\n";
+$headers .= "Reply-To: " . sanitize_header($payload['parent1Email'] ?? '') . "\r\n";
 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
 // Send the email
@@ -103,10 +108,11 @@ mail($secretary_email, $subject, $email_body, $headers);
 
 // Handle the response from Apps Script
 if ($curl_error) {
-    http_response_code(200);
+    error_log("Membership handler: Google Sheets submission failed (cURL error): $curl_error");
+    http_response_code(500);
     echo json_encode([
-        'success' => true,
-        'message' => 'Application received! Thank you for joining the Alabama Falcons family. Redirecting to payment page...'
+        'success' => false,
+        'message' => 'There was a problem recording your application. Please email secretary@alabamafalcons.org directly.'
     ]);
     exit();
 }

@@ -697,16 +697,19 @@
     document.querySelectorAll('.faq-question').forEach(question => {
       question.addEventListener('click', function() {
         const faqItem = this.parentElement;
-        const isActive = faqItem.classList.contains('active');
+        const answer = faqItem.querySelector('.faq-answer');
+        const isOpen = answer.classList.contains('open');
 
         // Close all FAQ items
         document.querySelectorAll('.faq-item').forEach(item => {
           item.classList.remove('active');
+          item.querySelector('.faq-answer').classList.remove('open');
         });
 
-        // Open clicked item if it wasn't active
-        if (!isActive) {
+        // Open clicked item if it wasn't open
+        if (!isOpen) {
           faqItem.classList.add('active');
+          answer.classList.add('open');
         }
       });
     });
