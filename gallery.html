@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Photo Gallery - USAFA Parents Club of Alabama</title>
+  <link rel="icon" type="image/png" href="logo01.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy:#003594;
+      --topbar:#002554;
+      --silver:#8A8D8F; --silver2:#A7A9AC; --white:#f5f5f0;
+      --gray:#6B6E70; --light:#e8edf4;
+      --font-display:'Cinzel',serif; --font-body:'Source Sans 3',sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:var(--font-body);background:var(--white);color:var(--navy);line-height:1.7;overflow-x:hidden;}
+    a{color:inherit;text-decoration:none;}
+    img{max-width:100%;display:block;}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,37,84,0.98);backdrop-filter:blur(8px);border-bottom:1px solid rgba(138,141,143,0.3);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;}
+    .nav-brand{display:flex;align-items:center;gap:.75rem;font-family:var(--font-display);color:var(--white);font-size:.95rem;letter-spacing:.05em;}
+    .nav-brand img{width:38px;height:38px;object-fit:contain;border-radius:4px;padding:2px;}
+    .nav-brand span{line-height:1.2;}
+    .nav-brand small{display:block;font-size:.65rem;color:var(--silver2);letter-spacing:.1em;font-family:var(--font-body);}
+    .nav-links{display:flex;gap:1.75rem;list-style:none;}
+    .nav-links a{color:rgba(245,245,240,.8);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;transition:color .2s;}
+    .nav-links a:hover{color:var(--silver2);}
+    .nav-dropdown{position:relative;}
+    .nav-dropdown>a::after{content:' \25BE';font-size:.65rem;}
+    .nav-dropdown-menu{display:none;position:absolute;top:100%;left:0;background:#002554;border-top:2px solid #A6192E;border-radius:0 0 4px 4px;min-width:190px;list-style:none;padding:.5rem 0;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,.35);}
+    .nav-dropdown:hover .nav-dropdown-menu{display:block;}
+    .nav-dropdown-menu li a{display:block;padding:.5rem 1.25rem;white-space:nowrap;font-size:.75rem;}
+    .nav-dropdown-menu li a:hover{background:rgba(255,255,255,.07);}
+    .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px;}
+    .hamburger span{width:24px;height:2px;background:var(--white);display:block;transition:.3s;}
+    @media(max-width:768px){
+      .hamburger{display:flex;}
+      .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:1rem 0;}
+      .nav-links.open{display:flex;}
+      .nav-links a{padding:.65rem 2rem;display:block;}
+      .nav-dropdown-menu{position:static;display:none;background:rgba(0,0,0,.2);box-shadow:none;border:none;padding:0;min-width:unset;}
+      .nav-dropdown.open .nav-dropdown-menu{display:block;}
+      .nav-dropdown-menu li a{padding:.5rem 3.5rem;}
+    }
+
+    /* HERO */
+    .page-hero{min-height:22vh;background:linear-gradient(135deg,#002554 0%,#003594 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:5rem 2rem 3rem;margin-top:64px;}
+    .page-hero h1{font-family:var(--font-display);color:white;font-size:2.4rem;font-weight:700;letter-spacing:.06em;margin-bottom:.6rem;}
+    .page-hero p{color:var(--silver2);font-size:1rem;max-width:480px;}
+
+    /* GALLERY WRAP */
+    .gallery-wrap{max-width:1200px;margin:0 auto;padding:3rem 2rem 5rem;}
+
+    /* SETUP NOTICE */
+    .setup-notice{background:#fffbea;border:2px solid #e6b800;border-radius:8px;padding:1.75rem 2rem;margin-bottom:2.5rem;}
+    .setup-notice h3{font-family:var(--font-display);color:#5d4037;font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.75rem;}
+    .setup-notice ol{padding-left:1.25rem;color:#5d4037;font-size:.9rem;line-height:2.1;}
+    .setup-notice code{background:rgba(0,0,0,.07);padding:.1rem .4rem;border-radius:3px;font-family:monospace;font-size:.85rem;}
+
+    /* STATE MESSAGES */
+    .state-msg{text-align:center;padding:4rem 2rem;color:var(--gray);}
+    .spinner{width:36px;height:36px;border:3px solid var(--light);border-top-color:var(--navy);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1.25rem;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .state-msg p{font-size:.95rem;}
+
+    /* EVENT SECTIONS */
+    .event-section{background:white;border-radius:10px;box-shadow:0 2px 16px rgba(0,53,148,.07);margin-bottom:1.5rem;overflow:hidden;}
+    .event-header{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 1.75rem;cursor:pointer;user-select:none;transition:background .15s;}
+    .event-header:hover{background:var(--light);}
+    .event-header.open{border-bottom:2px solid var(--navy);}
+    .event-title{font-family:var(--font-display);font-size:1.05rem;color:var(--navy);letter-spacing:.03em;}
+    .event-meta{font-size:.8rem;color:var(--gray);margin-top:.15rem;}
+    .event-chevron{font-size:1.1rem;color:var(--navy);transition:transform .25s;flex-shrink:0;margin-left:1rem;}
+    .event-header.open .event-chevron{transform:rotate(180deg);}
+    .event-body{display:none;padding:1.5rem 1.75rem;}
+    .event-body.open{display:block;}
+
+    /* PHOTO GRID */
+    .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.65rem;}
+    @media(max-width:480px){.photo-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.45rem;}}
+    .photo-thumb{aspect-ratio:1;overflow:hidden;border-radius:6px;cursor:pointer;background:var(--light);position:relative;}
+    .photo-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .3s,opacity .3s;opacity:0;}
+    .photo-thumb img.loaded{opacity:1;}
+    .photo-thumb:hover img{transform:scale(1.06);}
+    .photo-load-bar{height:3px;background:var(--light);border-radius:2px;overflow:hidden;margin:1rem 0;}
+    .photo-load-bar span{display:block;height:100%;background:var(--navy);animation:pulse 1.4s ease-in-out infinite;}
+    @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+    .empty-event{text-align:center;padding:2rem;color:var(--gray);font-size:.9rem;}
+
+    /* LIGHTBOX */
+    .lightbox{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.93);align-items:center;justify-content:center;}
+    .lightbox.open{display:flex;}
+    .lb-inner{position:relative;display:flex;align-items:center;justify-content:center;}
+    .lb-inner img{max-width:88vw;max-height:88vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 48px rgba(0,0,0,.6);}
+    .lb-close{position:fixed;top:1.25rem;right:1.5rem;background:none;border:none;color:white;font-size:2rem;cursor:pointer;line-height:1;padding:.2rem .5rem;opacity:.75;transition:opacity .2s;}
+    .lb-close:hover{opacity:1;}
+    .lb-nav{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.13);border:none;color:white;font-size:2rem;cursor:pointer;padding:.4rem .85rem;border-radius:4px;transition:background .2s;line-height:1;}
+    .lb-nav:hover{background:rgba(255,255,255,.26);}
+    .lb-prev{left:1rem;}
+    .lb-next{right:1rem;}
+    .lb-caption{position:fixed;bottom:3.5rem;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.75);font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80vw;text-align:center;}
+    .lb-counter{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.45);font-size:.8rem;}
+
+    /* FOOTER */
+    footer{background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:2rem;}
+    .footer-bottom{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;font-size:.8rem;color:rgba(245,245,240,.35);flex-wrap:wrap;gap:.5rem;}
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-brand">
+    <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
+    <span>USAFA Parents Club<small>of Alabama</small></span>
+  </a>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <ul class="nav-links" id="nav-links">
+    <li class="nav-dropdown">
+      <a href="index.html#about">About</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#about">About Us</a></li>
+        <li><a href="index.html#leadership">Leadership</a></li>
+        <li><a href="president-letter.html">President's Letter</a></li>
+        <li><a href="index.html#photos">Member Photos</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="#">Programs</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="liaison.html">Liaison</a></li>
+        <li><a href="familyresources.html">Family Resources</a></li>
+        <li><a href="cadetconnection.html">Cadet Connection</a></li>
+        <li><a href="communitysupport.html">Community Support</a></li>
+        <li><a href="nominations.html">Alabama Delegation</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="index.html#membership">Get Involved</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#membership">Membership</a></li>
+        <li><a href="sponsorship.html">Sponsors</a></li>
+        <li><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener">Alabama Falcons Facebook</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="index.html#events">Events</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#events">Club Events</a></li>
+        <li><a href="events-calendar.html">Academy Calendar</a></li>
+        <li><a href="gallery.html">Photo Gallery</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="index.html#usafa-news">Resources</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#usafa-news">USAFA News</a></li>
+        <li><a href="https://www.usafa.edu" target="_blank" rel="noopener">USAFA Official Site</a></li>
+        <li><a href="https://www.usafa.edu/parents" target="_blank" rel="noopener">USAFA Parents Page</a></li>
+        <li><a href="https://www.usafa.edu/academics/academic-calendar/" target="_blank" rel="noopener">USAFA Calendars</a></li>
+        <li><a href="https://www.usafa.edu/contact-us/" target="_blank" rel="noopener">USAFA Key Contacts</a></li>
+        <li><a href="https://www.usafa.edu/military/basic-cadet-training/" target="_blank" rel="noopener">Basic Training Info</a></li>
+        <li><a href="https://www.usafa.org/" target="_blank" rel="noopener">Alumni Association (AOG)</a></li>
+        <li><a href="https://www.usafawebguy.com/" target="_blank" rel="noopener">Webguy</a></li>
+        <li><a href="https://shop.usafa.org/products/air-force-academy-cadet-saber-usafa" target="_blank" rel="noopener">Saber Orders</a></li>
+      </ul>
+    </li>
+    <li><a href="index.html#contact">Contact</a></li>
+    <li style="display:flex;align-items:center;padding-left:.5rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" height="20" width="30" style="border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.4);display:block;" title="Alabama" aria-hidden="true">
+        <rect width="60" height="40" fill="white"/>
+        <line x1="0" y1="0" x2="60" y2="40" stroke="#A6192E" stroke-width="9"/>
+        <line x1="60" y1="0" x2="0" y2="40" stroke="#A6192E" stroke-width="9"/>
+      </svg>
+    </li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="page-hero">
+  <h1>Photo Gallery</h1>
+  <p>Event photos from the USAFA Parents Club of Alabama</p>
+</div>
+
+<!-- GALLERY -->
+<main class="gallery-wrap">
+
+  <div id="setup-notice" class="setup-notice" style="display:none;">
+    <h3>Setup Required</h3>
+    <ol>
+      <li>Go to <code>script.google.com</code>, create a new project, and paste the Apps Script code (provided separately).</li>
+      <li>Click <strong>Deploy &rarr; New deployment</strong>, choose <strong>Web app</strong>, set <em>Execute as: Me</em> and <em>Who has access: Anyone</em>. Copy the web app URL.</li>
+      <li>In <code>gallery.html</code>, replace <code>YOUR_APPS_SCRIPT_URL</code> with that URL.</li>
+      <li>Share your "Club Photos" Drive folder as <strong>Anyone with the link &rarr; Viewer</strong>.</li>
+    </ol>
+  </div>
+
+  <div id="gallery-loading" class="state-msg">
+    <div class="spinner"></div>
+    <p>Loading event photos&hellip;</p>
+  </div>
+
+  <div id="gallery-error" class="state-msg" style="display:none;">
+    <p id="gallery-error-msg"></p>
+  </div>
+
+  <div id="gallery-content"></div>
+
+</main>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <button class="lb-close" id="lb-close" aria-label="Close">&times;</button>
+  <button class="lb-nav lb-prev" id="lb-prev" aria-label="Previous photo">&#8249;</button>
+  <div class="lb-inner">
+    <img id="lb-img" src="" alt="" />
+  </div>
+  <button class="lb-nav lb-next" id="lb-next" aria-label="Next photo">&#8250;</button>
+  <div class="lb-caption" id="lb-caption"></div>
+  <div class="lb-counter" id="lb-counter"></div>
+</div>
+
+<footer>
+  <div class="footer-bottom">
+    <span>&copy; 2026 USAFA Parents Club of Alabama. All rights reserved.</span>
+    <span>Aim High &middot; Fly &middot; Fight &middot; Win</span>
+  </div>
+</footer>
+
+<script>
+// ─── CONFIGURATION ──────────────────────────────────────────────────────────────
+//  Paste your deployed Apps Script web app URL here (see setup steps below).
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYnqvyvUy_trZ8E2ue_VRkDWn_dr5gVB5zQqBreMP6etQQjYWVB2kANlhpD_2aUs_J/exec';
+// ────────────────────────────────────────────────────────────────────────────────
+
+function thumbUrl(fileId, width) {
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${width || 400}`;
+}
+
+// ─── GALLERY LOADING ────────────────────────────────────────────────────────────
+
+async function loadGallery() {
+  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL') {
+    document.getElementById('gallery-loading').style.display = 'none';
+    document.getElementById('setup-notice').style.display = 'block';
+    return;
+  }
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=folders`);
+    if (!res.ok) throw new Error(`Script error ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const { files } = data;
+
+    document.getElementById('gallery-loading').style.display = 'none';
+
+    if (!files || files.length === 0) {
+      showError('No event folders found yet. Add subfolders to your "Club Photos" Drive folder to get started.');
+      return;
+    }
+    files.forEach((folder, i) => buildEventSection(folder, i === 0));
+  } catch (err) {
+    document.getElementById('gallery-loading').style.display = 'none';
+    showError('Could not connect to the photo service. Check your Apps Script URL and confirm the web app is deployed with "Anyone can access".');
+    console.error(err);
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('gallery-error');
+  document.getElementById('gallery-error-msg').textContent = msg;
+  el.style.display = 'block';
+}
+
+// ─── EVENT SECTIONS ─────────────────────────────────────────────────────────────
+
+function buildEventSection(folder, openByDefault) {
+  const section = document.createElement('div');
+  section.className = 'event-section';
+
+  const header = document.createElement('div');
+  header.className = 'event-header' + (openByDefault ? ' open' : '');
+  header.innerHTML = `
+    <div>
+      <div class="event-title">${esc(folder.name)}</div>
+      <div class="event-meta" id="meta-${folder.id}">Loading&hellip;</div>
+    </div>
+    <span class="event-chevron">&#9660;</span>`;
+
+  const body = document.createElement('div');
+  body.className = 'event-body' + (openByDefault ? ' open' : '');
+
+  if (openByDefault) {
+    body.innerHTML = '<div class="photo-load-bar"><span></span></div>';
+    fetchPhotos(folder.id, body);
+  }
+
+  let loaded = openByDefault;
+  header.addEventListener('click', () => {
+    const isOpen = header.classList.toggle('open');
+    body.classList.toggle('open', isOpen);
+    if (isOpen && !loaded) {
+      loaded = true;
+      body.innerHTML = '<div class="photo-load-bar"><span></span></div>';
+      fetchPhotos(folder.id, body);
+    }
+  });
+
+  section.appendChild(header);
+  section.appendChild(body);
+  document.getElementById('gallery-content').appendChild(section);
+}
+
+// ─── PHOTO FETCHING ─────────────────────────────────────────────────────────────
+
+async function fetchPhotos(folderId, bodyEl) {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=photos&folderId=${encodeURIComponent(folderId)}`);
+    if (!res.ok) throw new Error(`Script error ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const { files } = data;
+
+    const metaEl = document.getElementById(`meta-${folderId}`);
+    if (metaEl) metaEl.textContent = files.length ? `${files.length} photo${files.length !== 1 ? 's' : ''}` : 'No photos yet';
+
+    if (!files || files.length === 0) {
+      bodyEl.innerHTML = '<div class="empty-event">No photos in this folder yet.</div>';
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'photo-grid';
+
+    files.forEach((file, index) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'photo-thumb';
+      const img = document.createElement('img');
+      img.alt = file.name.replace(/\.[^.]+$/, '');
+      img.loading = 'lazy';
+      img.src = thumbUrl(file.id, 400);
+      img.onload = () => img.classList.add('loaded');
+      img.onerror = () => { wrap.style.display = 'none'; };
+      wrap.appendChild(img);
+      wrap.addEventListener('click', () => openLightbox(files, index));
+      grid.appendChild(wrap);
+    });
+
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(grid);
+  } catch (err) {
+    bodyEl.innerHTML = '<div class="empty-event">Could not load photos for this event.</div>';
+    console.error(err);
+  }
+}
+
+// ─── LIGHTBOX ───────────────────────────────────────────────────────────────────
+
+let lbPhotos = [], lbIdx = 0;
+
+function openLightbox(photos, index) {
+  lbPhotos = photos;
+  lbIdx = index;
+  showLbSlide();
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function showLbSlide() {
+  const f = lbPhotos[lbIdx];
+  const img = document.getElementById('lb-img');
+  img.src = '';
+  img.src = thumbUrl(f.id, 1600);
+  img.alt = f.name.replace(/\.[^.]+$/, '');
+  document.getElementById('lb-caption').textContent = f.name.replace(/\.[^.]+$/, '');
+  document.getElementById('lb-counter').textContent = `${lbIdx + 1} / ${lbPhotos.length}`;
+  document.getElementById('lb-prev').style.visibility = lbIdx === 0 ? 'hidden' : 'visible';
+  document.getElementById('lb-next').style.visibility = lbIdx === lbPhotos.length - 1 ? 'hidden' : 'visible';
+}
+
+document.getElementById('lb-close').addEventListener('click', closeLightbox);
+document.getElementById('lb-prev').addEventListener('click', () => { if (lbIdx > 0) { lbIdx--; showLbSlide(); } });
+document.getElementById('lb-next').addEventListener('click', () => { if (lbIdx < lbPhotos.length - 1) { lbIdx++; showLbSlide(); } });
+document.getElementById('lightbox').addEventListener('click', e => { if (e.target === e.currentTarget) closeLightbox(); });
+
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft'  && lbIdx > 0)                      { lbIdx--; showLbSlide(); }
+  if (e.key === 'ArrowRight' && lbIdx < lbPhotos.length - 1)    { lbIdx++; showLbSlide(); }
+});
+
+// ─── UTILITY ────────────────────────────────────────────────────────────────────
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── MOBILE NAV ─────────────────────────────────────────────────────────────────
+
+document.getElementById('hamburger').addEventListener('click', function() {
+  document.getElementById('nav-links').classList.toggle('open');
+});
+document.querySelectorAll('.nav-links a').forEach(function(link) {
+  link.addEventListener('click', function() {
+    document.getElementById('nav-links').classList.remove('open');
+  });
+});
+document.querySelectorAll('.nav-dropdown > a').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    if (window.innerWidth <= 768) {
+      e.preventDefault();
+      this.parentElement.classList.toggle('open');
+    }
+  });
+});
+
+// ─── INIT ────────────────────────────────────────────────────────────────────────
+
+loadGallery();
+</script>
+</body>
+</html>
