@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Appointee Sendoff 2026 - USAFA Parents Club of Alabama</title>
+  <title>Photo Gallery - USAFA Parents Club of Alabama</title>
   <link rel="icon" type="image/png" href="logo01.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -92,6 +92,17 @@
     .photo-load-bar span{display:block;height:100%;background:var(--navy);animation:pulse 1.4s ease-in-out infinite;}
     @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
     .empty-event{text-align:center;padding:2rem;color:var(--gray);font-size:.9rem;}
+
+    /* SLIDESHOW LINK */
+    .slideshow-card{background:white;border-radius:10px;box-shadow:0 2px 16px rgba(0,53,148,.07);margin-top:1.5rem;padding:1.4rem 1.75rem;display:flex;align-items:center;gap:1.25rem;}
+    .slideshow-icon{flex-shrink:0;width:42px;height:42px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+    .slideshow-icon svg{width:22px;height:22px;fill:white;}
+    .slideshow-info{flex:1;}
+    .slideshow-info strong{display:block;font-family:var(--font-display);font-size:.95rem;color:var(--navy);letter-spacing:.02em;}
+    .slideshow-info span{font-size:.8rem;color:var(--gray);}
+    .slideshow-btn{flex-shrink:0;background:var(--navy);color:white;padding:.55rem 1.25rem;border-radius:5px;font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;transition:background .2s;white-space:nowrap;}
+    .slideshow-btn:hover{background:var(--topbar);}
+    @media(max-width:560px){.slideshow-card{flex-wrap:wrap;}.slideshow-btn{width:100%;text-align:center;padding:.65rem;}}
 
     /* LIGHTBOX */
     .lightbox{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.93);align-items:center;justify-content:center;}
@@ -186,7 +197,7 @@
 
 <!-- HERO -->
 <div class="page-hero">
-  <h1>Appointee Sendoff - 2026</h1>
+  <h1>Photo Gallery</h1>
   <p>Event photos from the USAFA Parents Club of Alabama</p>
 </div>
 
@@ -213,6 +224,22 @@
   </div>
 
   <div id="gallery-content"></div>
+
+  <div class="slideshow-card">
+    <div class="slideshow-icon">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/>
+        <path d="M8 12l4 4 4-4H8z" style="fill:rgba(255,255,255,.7);"/>
+        <rect x="4" y="4" width="16" height="11" rx="1" fill="rgba(255,255,255,.15)"/>
+        <polygon points="10,8 10,14 15,11" fill="white"/>
+      </svg>
+    </div>
+    <div class="slideshow-info">
+      <strong>Appointee Sendoff - 2026</strong>
+      <span>Event slideshow presentation</span>
+    </div>
+    <a class="slideshow-btn" href="https://docs.google.com/presentation/d/1mZp_2AsctVyfW2CUyDe0s5HxtJjGuiZM/edit?slide=id.g3e4c28bb48b_0_12#slide=id.g3e4c28bb48b_0_12" target="_blank" rel="noopener">View Slideshow &rarr;</a>
+  </div>
 
 </main>
 
