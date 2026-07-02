@@ -3,17 +3,31 @@ require_once __DIR__ . '/auth.php';
 require_login();
 $pdo = get_pdo();
 
-$year   = $_POST['year']   ?? '';
-$region = $_POST['region'] ?? '';
-$type   = $_POST['type']   ?? 'emails';
+$all_years = ['2026','2027','2028','2029','2030','Prep School','Graduate'];
+
+$selected_years = $_POST['years']  ?? $all_years; // default: all checked
+$region         = $_POST['region'] ?? '';
+$type           = $_POST['type']   ?? 'emails';
 
 $results = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $where  = ['1=1'];
     $params = [];
-    if ($year   !== '') { $where[] = 'class_year = :year';   $params[':year']   = $year; }
-    if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
+
+    // Year filter — build IN (...) clause with individual placeholders
+    $selected_years = array_intersect($selected_years, $all_years); // whitelist
+    if (!empty($selected_years) && count($selected_years) < count($all_years)) {
+        $ph = [];
+        foreach (array_values($selected_years) as $i => $y) {
+            $key = ':yr' . $i;
+            $ph[]      = $key;
+            $params[$key] = $y;
+        }
+        $where[] = 'class_year IN (' . implode(', ', $ph) . ')';
+    }
+
+    if ($region !== '') { $where[] = 'al_region = :region'; $params[':region'] = $region; }
 
     $sql = 'SELECT cadet_last_name, cadet_first_middle, class_year, al_region,
                    parent1_first_name, parent1_last_name, parent1_email, parent1_cell,
@@ -55,7 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $label = ($year ?: 'All Years') . ' / ' . ($region ?: 'All Regions');
+    $year_label = empty($selected_years) ? 'No Years' :
+                  (count($selected_years) === count($all_years) ? 'All Years' :
+                   implode(', ', $selected_years));
+    $label = $year_label . ' / ' . ($region ?: 'All Regions');
     $results = ['lines' => $lines, 'count' => count($rows), 'label' => $label];
 }
 
@@ -68,16 +85,26 @@ admin_header('Lists');
 
 <div class="card">
   <form method="POST">
-    <div class="form-row col-4" style="align-items:flex-end">
+    <div class="form-row col-4" style="align-items:flex-start">
+
       <div class="form-group">
-        <label>Class Year</label>
-        <select name="year">
-          <option value="">All Years</option>
-          <?php foreach (['2026','2027','2028','2029','2030','Prep School','Graduate'] as $y): ?>
-            <option value="<?= h($y) ?>" <?= $year === $y ? 'selected' : '' ?>><?= h($y) ?></option>
+        <label>Class Years</label>
+        <div style="display:flex;flex-direction:column;gap:.4rem;margin-top:.25rem">
+          <?php foreach ($all_years as $y): ?>
+            <label style="display:flex;align-items:center;gap:.5rem;font-weight:400;font-size:.88rem;text-transform:none;letter-spacing:0;color:#1a2332;cursor:pointer">
+              <input type="checkbox" name="years[]" value="<?= h($y) ?>"
+                     <?= in_array($y, $selected_years) ? 'checked' : '' ?>
+                     style="width:auto;accent-color:#003594">
+              <?= h($y) ?>
+            </label>
           <?php endforeach; ?>
-        </select>
+          <div style="display:flex;gap:.5rem;margin-top:.25rem">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setAll(true)">All</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setAll(false)">None</button>
+          </div>
+        </div>
       </div>
+
       <div class="form-group">
         <label>AL Region</label>
         <select name="region">
@@ -87,6 +114,7 @@ admin_header('Lists');
           <?php endforeach; ?>
         </select>
       </div>
+
       <div class="form-group">
         <label>Output</label>
         <select name="type">
@@ -96,10 +124,12 @@ admin_header('Lists');
           <option value="cadet_emails" <?= $type==='cadet_emails' ? 'selected':'' ?>>Cadet Emails</option>
         </select>
       </div>
+
       <div class="form-group">
         <label>&nbsp;</label>
         <button type="submit" class="btn btn-primary" style="width:100%">Generate List</button>
       </div>
+
     </div>
   </form>
 </div>
@@ -108,7 +138,9 @@ admin_header('Lists');
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
     <h2 style="margin:0"><?= h($results['label']) ?> — <?= count($results['lines']) ?> entries from <?= $results['count'] ?> members</h2>
-    <button class="btn btn-secondary" onclick="copyList()">Copy to Clipboard</button>
+    <?php if (!empty($results['lines'])): ?>
+      <button class="btn btn-secondary" onclick="copyList(this)">Copy to Clipboard</button>
+    <?php endif; ?>
   </div>
   <?php if (empty($results['lines'])): ?>
     <p style="color:#5a6a7a;font-size:.9rem">No results for this filter combination.</p>
@@ -118,15 +150,18 @@ admin_header('Lists');
       readonly><?= h(implode("\n", $results['lines'])) ?></textarea>
   <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <script>
-function copyList() {
+function setAll(checked) {
+  document.querySelectorAll('input[name="years[]"]').forEach(function(cb){ cb.checked = checked; });
+}
+function copyList(btn) {
   var ta = document.getElementById('list-output');
   ta.select();
   ta.setSelectionRange(0, 99999);
   if (navigator.clipboard) {
     navigator.clipboard.writeText(ta.value).then(function() {
-      var btn = event.target;
       btn.textContent = '✓ Copied!';
       setTimeout(function(){ btn.textContent = 'Copy to Clipboard'; }, 2000);
     });
@@ -135,6 +170,5 @@ function copyList() {
   }
 }
 </script>
-<?php endif; ?>
 
 <?php admin_footer(); ?>
