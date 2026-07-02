@@ -74,6 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'cadet_emails':
                 if ($r['cadet_email']) $lines[] = "$cadet_last: {$r['cadet_email']}";
                 break;
+            case 'cadet_cells':
+                if ($r['cadet_cell']) $lines[] = "$cadet_last: {$r['cadet_cell']}";
+                break;
             case 'cells':
                 if ($r['parent1_cell']) {
                     $name = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
@@ -191,6 +194,7 @@ admin_header('Lists');
           </optgroup>
           <optgroup label="Phone">
             <option value="cells"        <?= $type==='cells'        ?'selected':''?>>Parent Cell Numbers</option>
+            <option value="cadet_cells"  <?= $type==='cadet_cells'  ?'selected':''?>>Cadet Cell Numbers</option>
           </optgroup>
           <optgroup label="Addresses">
             <option value="addr1"        <?= $type==='addr1'        ?'selected':''?>>Parent 1 Addresses</option>

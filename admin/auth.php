@@ -135,7 +135,7 @@ function admin_header(string $title): void {
     echo admin_css();
     echo '</head><body>';
     echo '<div class="topbar">';
-    echo '<span class="topbar-title">USAFA Parents Club of Alabama <small>Member Admin</small></span>';
+    echo '<a href="index.php" class="topbar-title" style="color:#fff;text-decoration:none">USAFA Parents Club of Alabama <small>Member Admin</small></a>';
     echo '<nav>';
     echo '<a href="index.php">Members</a>';
     echo '<a href="lists.php">Lists</a>';
