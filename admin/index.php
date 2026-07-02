@@ -5,8 +5,9 @@ $pdo = get_pdo();
 
 // ── Filters ────────────────────────────────────────────────────────────────
 $search = trim($_GET['q'] ?? '');
-$year   = $_GET['year'] ?? '';
+$year   = $_GET['year']   ?? '';
 $region = $_GET['region'] ?? '';
+$paid   = $_GET['paid']   ?? '';
 
 $where = ['1=1'];
 $params = [];
@@ -19,8 +20,10 @@ if ($search !== '') {
                  OR cadet_cell LIKE :q OR parent1_cell LIKE :q)';
     $params[':q'] = '%' . $search . '%';
 }
-if ($year !== '')   { $where[] = 'class_year = :year';   $params[':year']   = $year; }
-if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
+if ($year   !== '') { $where[] = 'class_year = :year';          $params[':year']   = $year; }
+if ($region !== '') { $where[] = 'al_region  = :region';         $params[':region'] = $region; }
+if ($paid   === '1') { $where[] = 'membership_paid = 1'; }
+if ($paid   === '0') { $where[] = 'membership_paid = 0'; }
 
 $sql = 'SELECT * FROM members WHERE ' . implode(' AND ', $where)
      . ' ORDER BY class_year, cadet_last_name, cadet_first_middle';
@@ -65,6 +68,14 @@ echo show_flash();
         <?php endforeach; ?>
       </select>
     </div>
+      <div class="form-group">
+        <label>Dues Status</label>
+        <select name="paid">
+          <option value="">All</option>
+          <option value="1" <?= $paid==='1'?'selected':''?>>Paid</option>
+          <option value="0" <?= $paid==='0'?'selected':''?>>Not Paid</option>
+        </select>
+      </div>
     <div class="form-group" style="flex:0">
       <label>&nbsp;</label>
       <div style="display:flex;gap:.5rem">
@@ -85,6 +96,7 @@ echo show_flash();
       <th>Region</th>
       <th>Parent 1</th>
       <th>Parent 2</th>
+      <th>Dues</th>
       <th>Remarks</th>
       <th>Actions</th>
     </tr>
@@ -113,6 +125,14 @@ echo show_flash();
       <td>
         <?= h(trim($m['parent2_first_name'] . ' ' . $m['parent2_last_name'])) ?><br>
         <span style="font-size:.78rem;color:#5a6a7a"><?= h($m['parent2_cell']) ?></span>
+      </td>
+      <td>
+        <?php if ($m['membership_paid']): ?>
+          <span class="badge badge-paid">✓ Paid</span><br>
+          <span style="font-size:.72rem;color:#5a6a7a"><?= h($m['membership_year']) ?></span>
+        <?php else: ?>
+          <span class="badge badge-unpaid">✗ Unpaid</span>
+        <?php endif; ?>
       </td>
       <td style="max-width:180px;font-size:.78rem;color:#5a6a7a"><?= h(mb_strimwidth($m['remarks'] ?? '', 0, 60, '…')) ?></td>
       <td class="actions">

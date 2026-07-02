@@ -120,6 +120,8 @@ legend{font-weight:700;color:#002554;font-size:.82rem;padding:0 .4rem;letter-spa
 .badge-North{background:#e3f2fd;color:#0d47a1}
 .badge-Central{background:#f3e5f5;color:#4a148c}
 .badge-South{background:#e8f5e9;color:#1b5e20}
+.badge-paid{background:#e8f5e9;color:#1b5e20}
+.badge-unpaid{background:#ffebee;color:#c62828}
 .filter-bar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem}
 .filter-bar .form-group{margin:0;flex:1;min-width:130px}
 .count{font-size:.82rem;color:#5a6a7a;margin-top:.5rem}
@@ -161,8 +163,13 @@ const FIELDS = [
     'parent1_street','parent1_city','parent1_state','parent1_zip',
     'parent2_last_name','parent2_first_name','parent2_email','parent2_cell',
     'parent2_street','parent2_city','parent2_state','parent2_zip',
-    'al_region','remarks'
+    'al_region','remarks','membership_paid','membership_year'
 ];
+
+function membership_year(): string {
+    $m = (int)date('n'); $y = (int)date('Y');
+    return $m >= 7 ? $y . '-' . ($y + 1) : ($y - 1) . '-' . $y;
+}
 
 function member_form(array $m = [], bool $is_edit = false): void {
     $v = function(string $k) use ($m): string {
@@ -231,5 +238,21 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-row col-2">';
     echo '<div class="form-group"><label>AL Region</label>' . $sel('al_region', REGIONS) . '</div>';
     echo '<div class="form-group"><label>Remarks</label><textarea name="remarks">' . $v('remarks') . '</textarea></div>';
+    echo '</div></fieldset>';
+
+    $paid     = (int)($m['membership_paid'] ?? 0);
+    $mem_year = $m['membership_year'] ?? membership_year();
+    if (!$mem_year) $mem_year = membership_year();
+    echo '<fieldset><legend>Membership Dues</legend>';
+    echo '<div class="form-row col-2">';
+    echo '<div class="form-group"><label>Dues Paid?</label>';
+    echo '<div style="display:flex;gap:1.5rem;margin-top:.4rem">';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;color:#2e7d32;cursor:pointer">'
+       . '<input type="radio" name="membership_paid" value="1" style="width:auto;accent-color:#2e7d32"' . ($paid ? ' checked' : '') . '> ✓ Paid</label>';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;color:#c62828;cursor:pointer">'
+       . '<input type="radio" name="membership_paid" value="0" style="width:auto;accent-color:#c62828"' . (!$paid ? ' checked' : '') . '> ✗ Not Paid</label>';
+    echo '</div></div>';
+    echo '<div class="form-group"><label>Membership Year</label>'
+       . '<input name="membership_year" value="' . h($mem_year) . '" placeholder="e.g. 2026-2027"></div>';
     echo '</div></fieldset>';
 }
