@@ -17,6 +17,18 @@ function require_login(): void {
     }
 }
 
+function is_viewer(): bool {
+    return ($_SESSION['role'] ?? '') === 'viewer';
+}
+
+function require_admin(): void {
+    require_login();
+    if (is_viewer()) {
+        header('Location: index.php?denied=1');
+        exit;
+    }
+}
+
 function get_pdo(): PDO {
     static $pdo = null;
     if ($pdo) return $pdo;
@@ -126,7 +138,8 @@ function admin_header(string $title): void {
     echo '<span class="topbar-title">USAFA Parents Club of Alabama <small>Member Admin</small></span>';
     echo '<nav>';
     echo '<a href="index.php">Members</a>';
-    echo '<a href="add.php">+ Add Member</a>';
+    if (!is_viewer()) echo '<a href="add.php">+ Add Member</a>';
+    else echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
     echo '<a href="logout.php">Log Out</a>';
     echo '</nav></div>';
     echo '<div class="main">';

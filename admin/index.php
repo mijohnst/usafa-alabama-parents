@@ -38,7 +38,7 @@ echo show_flash();
 
 <div class="page-head">
   <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> of <?= $total ?> total)</span></h1>
-  <a href="add.php" class="btn btn-primary">+ Add Member</a>
+  <?php if (!is_viewer()): ?><a href="add.php" class="btn btn-primary">+ Add Member</a><?php endif; ?>
 </div>
 
 <div class="card" style="padding:1rem 1.5rem">
@@ -116,6 +116,7 @@ echo show_flash();
       </td>
       <td style="max-width:180px;font-size:.78rem;color:#5a6a7a"><?= h(mb_strimwidth($m['remarks'] ?? '', 0, 60, '…')) ?></td>
       <td class="actions">
+        <?php if (!is_viewer()): ?>
         <div class="btn-group">
           <a href="edit.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
           <form method="POST" action="delete.php" onsubmit="return confirm('Delete <?= h(addslashes($m['cadet_last_name'])) ?>? This cannot be undone.')">
@@ -124,6 +125,7 @@ echo show_flash();
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
         </div>
+        <?php endif; ?>
       </td>
     </tr>
   <?php endforeach; ?>
