@@ -157,13 +157,13 @@ const REGIONS = ['', 'North', 'Central', 'South'];
 const CLASS_YEARS = ['', '2026', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
 
 const FIELDS = [
-    'class_year','cadet_last_name','cadet_first_middle','cadet_birthday','cadet_po_box',
+    'class_year','cadet_last_name','cadet_first_middle','nickname','cadet_birthday','cadet_po_box',
     'cadet_email','cadet_cell','bct_squadron','bct_flight','fall_squadron','squadron_yr2_4',
     'parent1_last_name','parent1_first_name','parent1_email','parent1_cell',
     'parent1_street','parent1_city','parent1_state','parent1_zip',
     'parent2_last_name','parent2_first_name','parent2_email','parent2_cell',
     'parent2_street','parent2_city','parent2_state','parent2_zip',
-    'al_region','remarks','membership_paid','membership_year'
+    'al_region','remarks','photo_consent','directory_consent','membership_paid','membership_year'
 ];
 
 function membership_year(): string {
@@ -191,10 +191,13 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>First / Middle Name</label><input name="cadet_first_middle" value="' . $v('cadet_first_middle') . '"></div>';
     echo '</div>';
     echo '<div class="form-row col-4">';
+    echo '<div class="form-group"><label>Nickname</label><input name="nickname" value="' . $v('nickname') . '"></div>';
     echo '<div class="form-group"><label>Birthday</label><input type="date" name="cadet_birthday" value="' . $v('cadet_birthday') . '"></div>';
     echo '<div class="form-group"><label>PO Box</label><input name="cadet_po_box" value="' . $v('cadet_po_box') . '"></div>';
-    echo '<div class="form-group"><label>Email</label><input type="email" name="cadet_email" value="' . $v('cadet_email') . '"></div>';
     echo '<div class="form-group"><label>Cell</label><input type="tel" name="cadet_cell" value="' . $v('cadet_cell') . '"></div>';
+    echo '</div>';
+    echo '<div class="form-row col-2">';
+    echo '<div class="form-group"><label>Email</label><input type="email" name="cadet_email" value="' . $v('cadet_email') . '"></div>';
     echo '</div>';
     echo '</fieldset>';
 
@@ -234,10 +237,22 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>Zip</label><input name="parent2_zip" value="' . $v('parent2_zip') . '"></div>';
     echo '</div></fieldset>';
 
-    echo '<fieldset><legend>Region &amp; Notes</legend>';
+    echo '<fieldset><legend>Region, Consents &amp; Notes</legend>';
     echo '<div class="form-row col-2">';
     echo '<div class="form-group"><label>AL Region</label>' . $sel('al_region', REGIONS) . '</div>';
     echo '<div class="form-group"><label>Remarks</label><textarea name="remarks">' . $v('remarks') . '</textarea></div>';
+    echo '</div>';
+    echo '<div class="form-row col-2" style="margin-top:.5rem">';
+    $pc = $m['photo_consent'] ?? '';
+    echo '<div class="form-group"><label>Photo Consent</label><div style="display:flex;gap:1.5rem;margin-top:.4rem">';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer"><input type="radio" name="photo_consent" value="Yes" style="width:auto" ' . ($pc==='Yes'?'checked':'') . '> Yes</label>';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer"><input type="radio" name="photo_consent" value="No" style="width:auto" ' . ($pc==='No'?'checked':'') . '> No</label>';
+    echo '</div></div>';
+    $dc = $m['directory_consent'] ?? '';
+    echo '<div class="form-group"><label>Directory Consent</label><div style="display:flex;gap:1.5rem;margin-top:.4rem">';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer"><input type="radio" name="directory_consent" value="Yes" style="width:auto" ' . ($dc==='Yes'?'checked':'') . '> Yes</label>';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer"><input type="radio" name="directory_consent" value="No" style="width:auto" ' . ($dc==='No'?'checked':'') . '> No</label>';
+    echo '</div></div>';
     echo '</div></fieldset>';
 
     $paid     = (int)($m['membership_paid'] ?? 0);
