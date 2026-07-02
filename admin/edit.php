@@ -16,6 +16,7 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     foreach (FIELDS as $f) $member[$f] = trim($_POST[$f] ?? '');
+    $member['membership_paid'] = isset($_POST['membership_paid']) ? (int)$_POST['membership_paid'] : 0;
     if ($member['cadet_birthday'] === '') $member['cadet_birthday'] = null;
 
     if ($member['class_year'] === '') $errors[] = 'Class Year is required.';
