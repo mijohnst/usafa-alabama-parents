@@ -132,10 +132,11 @@ function admin_header(string $title): void {
     echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
     echo '<meta name="viewport" content="width=device-width,initial-scale=1">';
     echo '<title>' . h($title) . ' — Members Admin</title>';
+    echo '<link rel="icon" type="image/png" href="../logo01.png" />';
     echo admin_css();
     echo '</head><body>';
     echo '<div class="topbar">';
-    echo '<a href="index.php" class="topbar-title" style="color:#fff;text-decoration:none">USAFA Parents Club of Alabama <small>Member Admin</small></a>';
+    echo '<a href="index.php" class="topbar-title" style="color:#fff;text-decoration:none;display:flex;align-items:center;gap:.65rem"><img src="../logo01.png" alt="" style="height:32px;border-radius:3px"><span>USAFA Parents Club of Alabama <small>Member Admin</small></span></a>';
     echo '<nav>';
     echo '<a href="index.php">Members</a>';
     echo '<a href="lists.php">Lists</a>';
