@@ -74,6 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'cadet_emails':
                 if ($r['cadet_email']) $lines[] = "$cadet_last: {$r['cadet_email']}";
                 break;
+            case 'cadet_emails_plain':
+                if ($r['cadet_email']) $lines[] = $r['cadet_email'];
+                break;
             case 'cadet_cells':
                 if ($r['cadet_cell']) $lines[] = "$cadet_last: {$r['cadet_cell']}";
                 break;
@@ -127,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   (count($selected_years) === count($all_years) ? 'All Years' :
                    implode(', ', $selected_years));
     $label   = $year_label . ' / ' . ($region ?: 'All Regions');
-    $results = ['lines' => $lines, 'count' => count($rows), 'label' => $label];
+    $results = ['lines' => $lines, 'rows' => $rows, 'count' => count($rows), 'label' => $label];
 }
 
 admin_header('Lists');
@@ -190,7 +193,8 @@ admin_header('Lists');
           <optgroup label="Emails">
             <option value="emails"       <?= $type==='emails'       ?'selected':''?>>Parent Emails (Name &lt;email&gt;)</option>
             <option value="emails_plain" <?= $type==='emails_plain' ?'selected':''?>>Parent Emails (plain list)</option>
-            <option value="cadet_emails" <?= $type==='cadet_emails' ?'selected':''?>>Cadet Emails</option>
+            <option value="cadet_emails"       <?= $type==='cadet_emails'       ?'selected':''?>>Cadet Emails (with name)</option>
+            <option value="cadet_emails_plain" <?= $type==='cadet_emails_plain' ?'selected':''?>>Cadet Emails (plain list)</option>
           </optgroup>
           <optgroup label="Phone">
             <option value="cells"        <?= $type==='cells'        ?'selected':''?>>Parent Cell Numbers</option>
@@ -201,6 +205,9 @@ admin_header('Lists');
             <option value="addr2"        <?= $type==='addr2'        ?'selected':''?>>Parent 2 Addresses</option>
             <option value="addr_both"    <?= $type==='addr_both'    ?'selected':''?>>Both Parent Addresses</option>
             <option value="cadet_addr"   <?= $type==='cadet_addr'   ?'selected':''?>>Cadet Address at USAFA</option>
+          </optgroup>
+          <optgroup label="Full Roster">
+            <option value="full_roster"  <?= $type==='full_roster'  ?'selected':''?>>Full Roster (all fields)</option>
           </optgroup>
         </select>
       </div>
@@ -215,6 +222,63 @@ admin_header('Lists');
 </div>
 
 <?php if ($results !== null): ?>
+<?php if ($type === 'full_roster'): ?>
+
+<?php
+// Build TSV for copy-to-spreadsheet
+$roster_cols = [
+    'Year','Last Name','First/Middle','Birthday','PO Box',
+    'BCT Sqd','BCT Flight','Fall Sqd','Yr 2-4 Sqd',
+    'Cadet Email','Cadet Cell',
+    'P1 Last','P1 First','P1 Email','P1 Cell','P1 Street','P1 City','P1 State','P1 Zip',
+    'P2 Last','P2 First','P2 Email','P2 Cell','P2 Street','P2 City','P2 State','P2 Zip',
+    'AL Region','Remarks'
+];
+$roster_fields = [
+    'class_year','cadet_last_name','cadet_first_middle','cadet_birthday','cadet_po_box',
+    'bct_squadron','bct_flight','fall_squadron','squadron_yr2_4',
+    'cadet_email','cadet_cell',
+    'parent1_last_name','parent1_first_name','parent1_email','parent1_cell',
+    'parent1_street','parent1_city','parent1_state','parent1_zip',
+    'parent2_last_name','parent2_first_name','parent2_email','parent2_cell',
+    'parent2_street','parent2_city','parent2_state','parent2_zip',
+    'al_region','remarks'
+];
+$tsv_rows = [implode("\t", $roster_cols)];
+foreach ($results['rows'] as $r) {
+    $tsv_rows[] = implode("\t", array_map(fn($f) => str_replace(["\t","\n","\r"], ' ', $r[$f] ?? ''), $roster_fields));
+}
+$tsv = implode("\n", $tsv_rows);
+?>
+
+<div class="card" style="padding:0;overflow-x:auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;flex-wrap:wrap;gap:.5rem;border-bottom:1px solid #f0f2f5">
+    <h2 style="margin:0"><?= h($results['label']) ?> — <?= $results['count'] ?> members</h2>
+    <button class="btn btn-secondary" onclick="copyTSV(this)">Copy to Clipboard (for Excel / Sheets)</button>
+  </div>
+  <textarea id="tsv-data" readonly style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true"><?= h($tsv) ?></textarea>
+  <table style="font-size:.78rem;white-space:nowrap">
+    <thead>
+      <tr>
+        <?php foreach ($roster_cols as $c): ?><th><?= h($c) ?></th><?php endforeach; ?>
+      </tr>
+    </thead>
+    <tbody>
+    <?php if (empty($results['rows'])): ?>
+      <tr><td colspan="<?= count($roster_cols) ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
+    <?php endif; ?>
+    <?php foreach ($results['rows'] as $r): ?>
+      <tr>
+        <?php foreach ($roster_fields as $f): ?>
+          <td><?= h($r[$f] ?? '') ?></td>
+        <?php endforeach; ?>
+      </tr>
+    <?php endforeach; ?>
+    </tbody>
+  </table>
+</div>
+
+<?php else: ?>
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
     <h2 style="margin:0"><?= h($results['label']) ?> — <?= count($results['lines']) ?> entries from <?= $results['count'] ?> members</h2>
@@ -230,6 +294,7 @@ admin_header('Lists');
       readonly><?= h(implode("\n", $results['lines'])) ?></textarea>
   <?php endif; ?>
 </div>
+<?php endif; ?>
 <?php endif; ?>
 
 <script>
@@ -260,6 +325,18 @@ function setYears(state) {
 }
 
 // ── Copy button ────────────────────────────────────────────────────────────
+function copyTSV(btn) {
+  var ta = document.getElementById('tsv-data');
+  ta.style.position = 'static';
+  ta.select(); ta.setSelectionRange(0, 99999);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(ta.value).then(function(){
+      btn.textContent = '✓ Copied! Paste into Excel or Sheets';
+      setTimeout(function(){ btn.textContent = 'Copy to Clipboard (for Excel / Sheets)'; }, 3000);
+    });
+  } else { document.execCommand('copy'); }
+  ta.style.position = 'absolute';
+}
 function copyList(btn) {
   var ta = document.getElementById('list-output');
   ta.select(); ta.setSelectionRange(0, 99999);
