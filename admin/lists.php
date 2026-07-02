@@ -111,12 +111,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
             case 'cadet_addr':
-                $sqd = $r['bct_squadron'] ?: ($r['fall_squadron'] ?: $r['squadron_yr2_4']);
-                $box = $r['cadet_po_box'] ? ' Unit ' . $r['cadet_po_box'] : '';
-                $lines[] = "Cadet Basic $cadet_full"
-                         . ($sqd ? "\nBCT Squadron $sqd" : '')
-                         . "\n2304 Cadet Drive$box"
-                         . "\nUSAF Academy, CO 80840\n";
+                $box = trim($r['cadet_po_box'] ?? '');
+                $lines[] = "Cadet $cadet_full"
+                         . ($box ? "\nP.O. Box $box" : '')
+                         . "\nUSAF Academy, CO 80841" . ($box ? "-$box" : '')
+                         . "\n";
                 break;
         }
     }
