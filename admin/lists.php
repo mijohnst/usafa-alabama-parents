@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($region !== '') { $where[] = 'al_region = :region'; $params[':region'] = $region; }
 
     $sql = 'SELECT cadet_last_name, cadet_first_middle, class_year, al_region,
+                   cadet_po_box, bct_squadron, fall_squadron, squadron_yr2_4,
                    parent1_first_name, parent1_last_name, parent1_email, parent1_cell,
                    parent1_street, parent1_city, parent1_state, parent1_zip,
                    parent2_first_name, parent2_last_name, parent2_email, parent2_cell,
@@ -43,17 +44,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $lines = [];
     foreach ($rows as $r) {
-        $cadet = trim($r['cadet_last_name'] . ', ' . $r['cadet_first_middle']);
+        $cadet_full = trim($r['cadet_first_middle'] . ' ' . $r['cadet_last_name']);
+        $cadet_last = trim($r['cadet_last_name'] . ', ' . $r['cadet_first_middle']);
 
-        // Helper to format a mailing address block
         $addr = function(string $prefix) use ($r): string {
             $street = trim($r[$prefix . '_street'] ?? '');
             $city   = trim($r[$prefix . '_city']   ?? '');
             $state  = trim($r[$prefix . '_state']  ?? '');
-            $zip    = trim($r[$prefix . '_zip']     ?? '');
+            $zip    = trim($r[$prefix . '_zip']    ?? '');
             if (!$street && !$city) return '';
-            $line2 = trim("$city, $state $zip");
-            return "$street\n$line2";
+            return "$street\n" . trim("$city, $state $zip");
         };
 
         switch ($type) {
@@ -71,18 +71,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($r['parent1_email']) $lines[] = $r['parent1_email'];
                 if ($r['parent2_email']) $lines[] = $r['parent2_email'];
                 break;
+            case 'cadet_emails':
+                if ($r['cadet_email']) $lines[] = "$cadet_last: {$r['cadet_email']}";
+                break;
             case 'cells':
                 if ($r['parent1_cell']) {
                     $name = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
-                    $lines[] = "$name ({$cadet}): {$r['parent1_cell']}";
+                    $lines[] = "$name ({$cadet_last}): {$r['parent1_cell']}";
                 }
                 if ($r['parent2_cell']) {
                     $name = trim($r['parent2_first_name'] . ' ' . $r['parent2_last_name']);
-                    $lines[] = "$name ({$cadet}): {$r['parent2_cell']}";
+                    $lines[] = "$name ({$cadet_last}): {$r['parent2_cell']}";
                 }
-                break;
-            case 'cadet_emails':
-                if ($r['cadet_email']) $lines[] = "$cadet: {$r['cadet_email']}";
                 break;
             case 'addr1':
                 $a = $addr('parent1');
@@ -110,6 +110,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $lines[] = "$name\n$a2\n";
                 }
                 break;
+            case 'cadet_addr':
+                $sqd = $r['bct_squadron'] ?: ($r['fall_squadron'] ?: $r['squadron_yr2_4']);
+                $box = $r['cadet_po_box'] ? ' Unit ' . $r['cadet_po_box'] : '';
+                $lines[] = "Cadet Basic $cadet_full"
+                         . ($sqd ? "\nBCT Squadron $sqd" : '')
+                         . "\n2304 Cadet Drive$box"
+                         . "\nUSAF Academy, CO 80840\n";
+                break;
         }
     }
 
@@ -122,27 +130,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 admin_header('Lists');
 ?>
+<style>
+.cd{position:relative}
+.cd-btn{width:100%;text-align:left;background:#fff;border:1px solid #d0d5dd;border-radius:4px;padding:.55rem .75rem;cursor:pointer;font-size:.9rem;color:#1a2332;display:flex;justify-content:space-between;align-items:center;font-family:inherit}
+.cd-btn::after{content:'▾';font-size:.8rem;color:#5a6a7a;flex-shrink:0}
+.cd-btn:focus{outline:none;border-color:#003594;box-shadow:0 0 0 2px rgba(0,53,148,.15)}
+.cd-panel{display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid #d0d5dd;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:200;padding:.4rem 0;min-width:160px}
+.cd.open .cd-panel{display:block}
+.cd-panel label{display:flex;align-items:center;gap:.55rem;padding:.38rem .8rem;cursor:pointer;font-size:.875rem;color:#1a2332;font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}
+.cd-panel label:hover{background:#f5f7fa}
+.cd-panel input[type=checkbox]{width:auto;accent-color:#003594;cursor:pointer}
+.cd-footer{border-top:1px solid #e1e5eb;padding:.4rem .8rem 0;display:flex;gap:.5rem;margin-top:.25rem}
+</style>
 
 <div class="page-head">
   <h1>Contact Lists</h1>
 </div>
 
 <div class="card">
-  <form method="POST">
+  <form method="POST" id="listform">
     <div class="form-row col-4" style="align-items:flex-end">
 
+      <!-- Year multi-select dropdown -->
       <div class="form-group">
-        <label>Class Years <span style="font-weight:400;font-size:.72rem;text-transform:none">(Ctrl+click to multi-select)</span></label>
-        <select name="years[]" multiple size="<?= count($all_years) ?>"
-                style="height:auto;padding:.35rem 0">
-          <?php foreach ($all_years as $y): ?>
-            <option value="<?= h($y) ?>" <?= in_array($y, $selected_years) ? 'selected' : '' ?>
-                    style="padding:.3rem .75rem"><?= h($y) ?></option>
-          <?php endforeach; ?>
-        </select>
-        <div style="display:flex;gap:.5rem;margin-top:.4rem">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setAll(true)">All</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setAll(false)">None</button>
+        <label>Class Year</label>
+        <div class="cd" id="year-cd">
+          <button type="button" class="cd-btn" id="year-btn">All Years</button>
+          <div class="cd-panel">
+            <?php foreach ($all_years as $y): ?>
+            <label>
+              <input type="checkbox" name="years[]" value="<?= h($y) ?>"
+                     <?= in_array($y, $selected_years) ? 'checked' : '' ?>>
+              <?= h($y) ?>
+            </label>
+            <?php endforeach; ?>
+            <div class="cd-footer">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setYears(true)">All</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setYears(false)">None</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -171,6 +197,7 @@ admin_header('Lists');
             <option value="addr1"        <?= $type==='addr1'        ?'selected':''?>>Parent 1 Addresses</option>
             <option value="addr2"        <?= $type==='addr2'        ?'selected':''?>>Parent 2 Addresses</option>
             <option value="addr_both"    <?= $type==='addr_both'    ?'selected':''?>>Both Parent Addresses</option>
+            <option value="cadet_addr"   <?= $type==='cadet_addr'   ?'selected':''?>>Cadet Address at USAFA</option>
           </optgroup>
         </select>
       </div>
@@ -203,21 +230,42 @@ admin_header('Lists');
 <?php endif; ?>
 
 <script>
-function setAll(checked) {
-  document.querySelectorAll('select[name="years[]"] option').forEach(function(o){ o.selected = checked; });
+// ── Year dropdown ──────────────────────────────────────────────────────────
+var cd  = document.getElementById('year-cd');
+var btn = document.getElementById('year-btn');
+var cbs = cd.querySelectorAll('input[type=checkbox]');
+
+function updateLabel() {
+  var checked = Array.from(cbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+  btn.childNodes[0].textContent = checked.length === 0         ? 'No Years'  :
+                                  checked.length === cbs.length ? 'All Years' :
+                                  checked.join(', ');
 }
+
+btn.addEventListener('click', function(e){
+  e.stopPropagation();
+  cd.classList.toggle('open');
+});
+document.addEventListener('click', function(){ cd.classList.remove('open'); });
+cd.querySelector('.cd-panel').addEventListener('click', function(e){ e.stopPropagation(); });
+cbs.forEach(function(cb){ cb.addEventListener('change', updateLabel); });
+updateLabel();
+
+function setYears(state) {
+  cbs.forEach(function(cb){ cb.checked = state; });
+  updateLabel();
+}
+
+// ── Copy button ────────────────────────────────────────────────────────────
 function copyList(btn) {
   var ta = document.getElementById('list-output');
-  ta.select();
-  ta.setSelectionRange(0, 99999);
+  ta.select(); ta.setSelectionRange(0, 99999);
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(ta.value).then(function() {
+    navigator.clipboard.writeText(ta.value).then(function(){
       btn.textContent = '✓ Copied!';
       setTimeout(function(){ btn.textContent = 'Copy to Clipboard'; }, 2000);
     });
-  } else {
-    document.execCommand('copy');
-  }
+  } else { document.execCommand('copy'); }
 }
 </script>
 
