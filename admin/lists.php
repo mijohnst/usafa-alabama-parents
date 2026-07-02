@@ -8,6 +8,7 @@ $all_years = ['2026','2027','2028','2029','2030','Prep School','Graduate'];
 $selected_years = $_POST['years']  ?? $all_years;
 $region         = $_POST['region'] ?? '';
 $type           = $_POST['type']   ?? 'emails';
+$paid           = $_POST['paid']   ?? '';
 
 $results = null;
 
@@ -27,6 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($region !== '') { $where[] = 'al_region = :region'; $params[':region'] = $region; }
+    if ($paid === '1')  { $where[] = 'membership_paid = 1'; }
+    if ($paid === '0')  { $where[] = 'membership_paid = 0'; }
 
     $sql = 'SELECT cadet_last_name, cadet_first_middle, class_year, al_region,
                    cadet_po_box, bct_squadron, fall_squadron, squadron_yr2_4,
@@ -154,7 +157,7 @@ admin_header('Lists');
 
 <div class="card">
   <form method="POST" id="listform">
-    <div class="form-row col-4" style="align-items:flex-end">
+    <div class="form-row" style="align-items:flex-end;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto">
 
       <!-- Year multi-select dropdown -->
       <div class="form-group">
@@ -184,6 +187,15 @@ admin_header('Lists');
           <?php foreach (['North','Central','South'] as $r): ?>
             <option value="<?= h($r) ?>" <?= $region === $r ? 'selected' : '' ?>><?= h($r) ?></option>
           <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Dues Status</label>
+        <select name="paid">
+          <option value="">All Members</option>
+          <option value="1" <?= $paid==='1'?'selected':''?>>Paid Only</option>
+          <option value="0" <?= $paid==='0'?'selected':''?>>Unpaid Only</option>
         </select>
       </div>
 
