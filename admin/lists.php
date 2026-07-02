@@ -5,7 +5,7 @@ $pdo = get_pdo();
 
 $all_years = ['2026','2027','2028','2029','2030','Prep School','Graduate'];
 
-$selected_years = $_POST['years']  ?? $all_years; // default: all checked
+$selected_years = $_POST['years']  ?? $all_years;
 $region         = $_POST['region'] ?? '';
 $type           = $_POST['type']   ?? 'emails';
 
@@ -15,13 +15,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $where  = ['1=1'];
     $params = [];
 
-    // Year filter — build IN (...) clause with individual placeholders
-    $selected_years = array_intersect($selected_years, $all_years); // whitelist
+    $selected_years = array_intersect((array)$selected_years, $all_years);
     if (!empty($selected_years) && count($selected_years) < count($all_years)) {
         $ph = [];
         foreach (array_values($selected_years) as $i => $y) {
             $key = ':yr' . $i;
-            $ph[]      = $key;
+            $ph[]       = $key;
             $params[$key] = $y;
         }
         $where[] = 'class_year IN (' . implode(', ', $ph) . ')';
@@ -31,7 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $sql = 'SELECT cadet_last_name, cadet_first_middle, class_year, al_region,
                    parent1_first_name, parent1_last_name, parent1_email, parent1_cell,
+                   parent1_street, parent1_city, parent1_state, parent1_zip,
                    parent2_first_name, parent2_last_name, parent2_email, parent2_cell,
+                   parent2_street, parent2_city, parent2_state, parent2_zip,
                    cadet_email, cadet_cell
             FROM members WHERE ' . implode(' AND ', $where)
          . ' ORDER BY class_year, cadet_last_name';
@@ -43,36 +44,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lines = [];
     foreach ($rows as $r) {
         $cadet = trim($r['cadet_last_name'] . ', ' . $r['cadet_first_middle']);
-        if ($type === 'emails') {
-            if ($r['parent1_email']) {
-                $name = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
-                $lines[] = "$name <{$r['parent1_email']}>";
-            }
-            if ($r['parent2_email']) {
-                $name = trim($r['parent2_first_name'] . ' ' . $r['parent2_last_name']);
-                $lines[] = "$name <{$r['parent2_email']}>";
-            }
-        } elseif ($type === 'emails_plain') {
-            if ($r['parent1_email']) $lines[] = $r['parent1_email'];
-            if ($r['parent2_email']) $lines[] = $r['parent2_email'];
-        } elseif ($type === 'cells') {
-            if ($r['parent1_cell']) {
-                $name = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
-                $lines[] = "$name ({$cadet}): {$r['parent1_cell']}";
-            }
-            if ($r['parent2_cell']) {
-                $name = trim($r['parent2_first_name'] . ' ' . $r['parent2_last_name']);
-                $lines[] = "$name ({$cadet}): {$r['parent2_cell']}";
-            }
-        } elseif ($type === 'cadet_emails') {
-            if ($r['cadet_email']) $lines[] = "$cadet: {$r['cadet_email']}";
+
+        // Helper to format a mailing address block
+        $addr = function(string $prefix) use ($r): string {
+            $street = trim($r[$prefix . '_street'] ?? '');
+            $city   = trim($r[$prefix . '_city']   ?? '');
+            $state  = trim($r[$prefix . '_state']  ?? '');
+            $zip    = trim($r[$prefix . '_zip']     ?? '');
+            if (!$street && !$city) return '';
+            $line2 = trim("$city, $state $zip");
+            return "$street\n$line2";
+        };
+
+        switch ($type) {
+            case 'emails':
+                if ($r['parent1_email']) {
+                    $name = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $lines[] = "$name <{$r['parent1_email']}>";
+                }
+                if ($r['parent2_email']) {
+                    $name = trim($r['parent2_first_name'] . ' ' . $r['parent2_last_name']);
+                    $lines[] = "$name <{$r['parent2_email']}>";
+                }
+                break;
+            case 'emails_plain':
+                if ($r['parent1_email']) $lines[] = $r['parent1_email'];
+                if ($r['parent2_email']) $lines[] = $r['parent2_email'];
+                break;
+            case 'cells':
+                if ($r['parent1_cell']) {
+                    $name = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $lines[] = "$name ({$cadet}): {$r['parent1_cell']}";
+                }
+                if ($r['parent2_cell']) {
+                    $name = trim($r['parent2_first_name'] . ' ' . $r['parent2_last_name']);
+                    $lines[] = "$name ({$cadet}): {$r['parent2_cell']}";
+                }
+                break;
+            case 'cadet_emails':
+                if ($r['cadet_email']) $lines[] = "$cadet: {$r['cadet_email']}";
+                break;
+            case 'addr1':
+                $a = $addr('parent1');
+                if ($a) {
+                    $name = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $lines[] = "$name\n$a\n";
+                }
+                break;
+            case 'addr2':
+                $a = $addr('parent2');
+                if ($a) {
+                    $name = trim($r['parent2_first_name'] . ' ' . $r['parent2_last_name']);
+                    $lines[] = "$name\n$a\n";
+                }
+                break;
+            case 'addr_both':
+                $a1 = $addr('parent1');
+                if ($a1) {
+                    $name = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $lines[] = "$name\n$a1\n";
+                }
+                $a2 = $addr('parent2');
+                if ($a2) {
+                    $name = trim($r['parent2_first_name'] . ' ' . $r['parent2_last_name']);
+                    $lines[] = "$name\n$a2\n";
+                }
+                break;
         }
     }
 
     $year_label = empty($selected_years) ? 'No Years' :
                   (count($selected_years) === count($all_years) ? 'All Years' :
                    implode(', ', $selected_years));
-    $label = $year_label . ' / ' . ($region ?: 'All Regions');
+    $label   = $year_label . ' / ' . ($region ?: 'All Regions');
     $results = ['lines' => $lines, 'count' => count($rows), 'label' => $label];
 }
 
@@ -85,23 +129,20 @@ admin_header('Lists');
 
 <div class="card">
   <form method="POST">
-    <div class="form-row col-4" style="align-items:flex-start">
+    <div class="form-row col-4" style="align-items:flex-end">
 
       <div class="form-group">
-        <label>Class Years</label>
-        <div style="display:flex;flex-direction:column;gap:.4rem;margin-top:.25rem">
+        <label>Class Years <span style="font-weight:400;font-size:.72rem;text-transform:none">(Ctrl+click to multi-select)</span></label>
+        <select name="years[]" multiple size="<?= count($all_years) ?>"
+                style="height:auto;padding:.35rem 0">
           <?php foreach ($all_years as $y): ?>
-            <label style="display:flex;align-items:center;gap:.5rem;font-weight:400;font-size:.88rem;text-transform:none;letter-spacing:0;color:#1a2332;cursor:pointer">
-              <input type="checkbox" name="years[]" value="<?= h($y) ?>"
-                     <?= in_array($y, $selected_years) ? 'checked' : '' ?>
-                     style="width:auto;accent-color:#003594">
-              <?= h($y) ?>
-            </label>
+            <option value="<?= h($y) ?>" <?= in_array($y, $selected_years) ? 'selected' : '' ?>
+                    style="padding:.3rem .75rem"><?= h($y) ?></option>
           <?php endforeach; ?>
-          <div style="display:flex;gap:.5rem;margin-top:.25rem">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="setAll(true)">All</button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="setAll(false)">None</button>
-          </div>
+        </select>
+        <div style="display:flex;gap:.5rem;margin-top:.4rem">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setAll(true)">All</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setAll(false)">None</button>
         </div>
       </div>
 
@@ -118,10 +159,19 @@ admin_header('Lists');
       <div class="form-group">
         <label>Output</label>
         <select name="type">
-          <option value="emails"       <?= $type==='emails'       ? 'selected':'' ?>>Parent Emails (Name &lt;email&gt;)</option>
-          <option value="emails_plain" <?= $type==='emails_plain' ? 'selected':'' ?>>Parent Emails (plain list)</option>
-          <option value="cells"        <?= $type==='cells'        ? 'selected':'' ?>>Parent Cell Numbers</option>
-          <option value="cadet_emails" <?= $type==='cadet_emails' ? 'selected':'' ?>>Cadet Emails</option>
+          <optgroup label="Emails">
+            <option value="emails"       <?= $type==='emails'       ?'selected':''?>>Parent Emails (Name &lt;email&gt;)</option>
+            <option value="emails_plain" <?= $type==='emails_plain' ?'selected':''?>>Parent Emails (plain list)</option>
+            <option value="cadet_emails" <?= $type==='cadet_emails' ?'selected':''?>>Cadet Emails</option>
+          </optgroup>
+          <optgroup label="Phone">
+            <option value="cells"        <?= $type==='cells'        ?'selected':''?>>Parent Cell Numbers</option>
+          </optgroup>
+          <optgroup label="Addresses">
+            <option value="addr1"        <?= $type==='addr1'        ?'selected':''?>>Parent 1 Addresses</option>
+            <option value="addr2"        <?= $type==='addr2'        ?'selected':''?>>Parent 2 Addresses</option>
+            <option value="addr_both"    <?= $type==='addr_both'    ?'selected':''?>>Both Parent Addresses</option>
+          </optgroup>
         </select>
       </div>
 
@@ -154,7 +204,7 @@ admin_header('Lists');
 
 <script>
 function setAll(checked) {
-  document.querySelectorAll('input[name="years[]"]').forEach(function(cb){ cb.checked = checked; });
+  document.querySelectorAll('select[name="years[]"] option').forEach(function(o){ o.selected = checked; });
 }
 function copyList(btn) {
   var ta = document.getElementById('list-output');
