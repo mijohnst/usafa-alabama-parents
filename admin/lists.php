@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    parent1_street, parent1_city, parent1_state, parent1_zip,
                    parent2_first_name, parent2_last_name, parent2_email, parent2_cell,
                    parent2_street, parent2_city, parent2_state, parent2_zip,
-                   cadet_email, cadet_cell
+                   cadet_email, cadet_cell, membership_paid, membership_year
             FROM members WHERE ' . implode(' AND ', $where)
          . ' ORDER BY class_year, cadet_last_name';
 
