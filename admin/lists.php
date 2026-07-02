@@ -119,6 +119,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $lines[] = "$name\n$a2\n";
                 }
                 break;
+            case 'dues_roster':
+                $status = $r['membership_paid'] ? '✓ PAID (' . $r['membership_year'] . ')' : '✗ UNPAID';
+                $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                $lines[] = $cadet_last . ' — ' . $p1 . ' — ' . $status;
+                break;
+            case 'dues_paid':
+                if ($r['membership_paid']) {
+                    $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $lines[] = $cadet_last . ' — ' . $p1 . ' (' . $r['membership_year'] . ')';
+                }
+                break;
+            case 'dues_unpaid':
+                if (!$r['membership_paid']) {
+                    $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $p1email = $r['parent1_email'] ? ' — ' . $r['parent1_email'] : '';
+                    $lines[] = $cadet_last . ' — ' . $p1 . $p1email;
+                }
+                break;
             case 'cadet_addr':
                 $box = trim($r['cadet_po_box'] ?? '');
                 $lines[] = "Cadet $cadet_full"
@@ -217,6 +235,11 @@ admin_header('Lists');
             <option value="addr2"        <?= $type==='addr2'        ?'selected':''?>>Parent 2 Addresses</option>
             <option value="addr_both"    <?= $type==='addr_both'    ?'selected':''?>>Both Parent Addresses</option>
             <option value="cadet_addr"   <?= $type==='cadet_addr'   ?'selected':''?>>Cadet Address at USAFA</option>
+          </optgroup>
+          <optgroup label="Membership">
+            <option value="dues_roster"  <?= $type==='dues_roster'  ?'selected':''?>>Paid / Unpaid Roster</option>
+            <option value="dues_paid"    <?= $type==='dues_paid'    ?'selected':''?>>Paid Members List</option>
+            <option value="dues_unpaid"  <?= $type==='dues_unpaid'  ?'selected':''?>>Unpaid Members List</option>
           </optgroup>
           <optgroup label="Full Roster">
             <option value="full_roster"  <?= $type==='full_roster'  ?'selected':''?>>Full Roster (all fields)</option>
