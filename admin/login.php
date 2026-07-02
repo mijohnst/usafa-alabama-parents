@@ -14,6 +14,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($user === ADMIN_USERNAME && password_verify($pass, ADMIN_PASSWORD_HASH)) {
         session_regenerate_id(true);
         $_SESSION['logged_in'] = true;
+        $_SESSION['role'] = 'admin';
+        header('Location: index.php'); exit;
+    }
+    if ($user === VIEWER_USERNAME && password_verify($pass, VIEWER_PASSWORD_HASH)) {
+        session_regenerate_id(true);
+        $_SESSION['logged_in'] = true;
+        $_SESSION['role'] = 'viewer';
         header('Location: index.php'); exit;
     }
     $error = 'Invalid username or password.';
