@@ -116,7 +116,7 @@ legend{font-weight:700;color:#002554;font-size:.82rem;padding:0 .4rem;letter-spa
 .alert{padding:.75rem 1rem;border-radius:4px;margin-bottom:1rem;font-size:.9rem}
 .alert-success{background:#e8f5e9;color:#2e7d32;border-left:4px solid #4caf50}
 .alert-error{background:#ffebee;color:#c62828;border-left:4px solid #f44336}
-.badge{display:inline-block;padding:.15rem .45rem;border-radius:3px;font-size:.7rem;font-weight:700}
+.badge{display:inline-block;padding:.15rem .45rem;border-radius:3px;font-size:.7rem;font-weight:700;white-space:nowrap}
 .badge-North{background:#e3f2fd;color:#0d47a1}
 .badge-Central{background:#f3e5f5;color:#4a148c}
 .badge-South{background:#e8f5e9;color:#1b5e20}
