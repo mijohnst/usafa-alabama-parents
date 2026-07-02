@@ -24,8 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         $set = implode(', ', array_map(fn($f) => "`$f` = :$f", FIELDS));
         $stmt = $pdo->prepare("UPDATE members SET $set WHERE id = :id");
-        $member['id'] = $id;
-        $stmt->execute($member);
+        $params = [];
+        foreach (FIELDS as $f) $params[$f] = $member[$f];
+        $params['id'] = $id;
+        $stmt->execute($params);
         flash('success', 'Member updated successfully.');
         header('Location: index.php'); exit;
     }
