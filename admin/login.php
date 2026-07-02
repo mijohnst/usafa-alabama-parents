@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admin Login — USAFA Parents Club of Alabama</title>
+<link rel="icon" type="image/png" href="../logo01.png" />
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Segoe UI",Arial,sans-serif;background:#002554;display:flex;justify-content:center;align-items:center;min-height:100vh}
