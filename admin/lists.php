@@ -9,6 +9,7 @@ $selected_years = $_POST['years']  ?? $all_years;
 $region         = $_POST['region'] ?? '';
 $type           = $_POST['type']   ?? 'emails';
 $paid           = $_POST['paid']   ?? '';
+$days           = in_array((int)($_POST['days'] ?? 30), [30,60,90,365]) ? (int)$_POST['days'] : 30;
 
 $results = null;
 
@@ -30,14 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($region !== '') { $where[] = 'al_region = :region'; $params[':region'] = $region; }
     if ($paid === '1')  { $where[] = 'membership_paid = 1'; }
     if ($paid === '0')  { $where[] = 'membership_paid = 0'; }
+    if ($type === 'new_members') { $where[] = "created_at >= DATE_SUB(NOW(), INTERVAL $days DAY)"; }
 
     $sql = 'SELECT cadet_last_name, cadet_first_middle, class_year, al_region,
-                   cadet_po_box, bct_squadron, fall_squadron, squadron_yr2_4,
+                   cadet_po_box, cadet_birthday, bct_squadron, fall_squadron, squadron_yr2_4,
                    parent1_first_name, parent1_last_name, parent1_email, parent1_cell,
                    parent1_street, parent1_city, parent1_state, parent1_zip,
                    parent2_first_name, parent2_last_name, parent2_email, parent2_cell,
                    parent2_street, parent2_city, parent2_state, parent2_zip,
-                   cadet_email, cadet_cell, membership_paid, membership_year
+                   cadet_email, cadet_cell, membership_paid, membership_year,
+                   created_at
             FROM members WHERE ' . implode(' AND ', $where)
          . ' ORDER BY class_year, cadet_last_name';
 
@@ -119,6 +122,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $lines[] = "$name\n$a2\n";
                 }
                 break;
+            case 'birthdays':
+                if ($r['cadet_birthday']) {
+                    $bday = date('M j', strtotime($r['cadet_birthday']));
+                    $box  = $r['cadet_po_box'] ? ' — PO Box ' . $r['cadet_po_box'] : '';
+                    $lines[] = $bday . ' — ' . $cadet_last . $box;
+                }
+                break;
+            case 'quick_contact':
+                $p1first = trim($r['parent1_first_name']);
+                $p1cell  = trim($r['parent1_cell']);
+                if ($p1cell) $lines[] = $cadet_full . ' — ' . $p1first . ': ' . $p1cell;
+                break;
+            case 'new_members':
+                $added = $r['created_at'] ? date('M j, Y', strtotime($r['created_at'])) : '';
+                $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                $lines[] = $cadet_last . ' (' . $r['class_year'] . ') — ' . $p1
+                         . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : '')
+                         . ($added ? ' — Added ' . $added : '');
+                break;
             case 'dues_roster':
                 $status = $r['membership_paid'] ? '✓ PAID (' . $r['membership_year'] . ')' : '✗ UNPAID';
                 $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
@@ -145,6 +167,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          . "\n";
                 break;
         }
+    }
+
+    // Sort birthday list by month/day
+    if ($type === 'birthdays') {
+        usort($lines, function($a, $b) {
+            return strcmp(substr($a, 0, 6), substr($b, 0, 6));
+        });
     }
 
     $year_label = empty($selected_years) ? 'No Years' :
@@ -236,6 +265,11 @@ admin_header('Lists');
             <option value="addr_both"    <?= $type==='addr_both'    ?'selected':''?>>Both Parent Addresses</option>
             <option value="cadet_addr"   <?= $type==='cadet_addr'   ?'selected':''?>>Cadet Address at USAFA</option>
           </optgroup>
+          <optgroup label="Quick Lists">
+            <option value="birthdays"     <?= $type==='birthdays'     ?'selected':''?>>Birthday List (by date)</option>
+            <option value="quick_contact" <?= $type==='quick_contact' ?'selected':''?>>Quick Contact (cadet + parent cell)</option>
+            <option value="new_members"   <?= $type==='new_members'   ?'selected':''?>>New Members</option>
+          </optgroup>
           <optgroup label="Membership">
             <option value="dues_roster"  <?= $type==='dues_roster'  ?'selected':''?>>Paid / Unpaid Roster</option>
             <option value="dues_paid"    <?= $type==='dues_paid'    ?'selected':''?>>Paid Members List</option>
@@ -244,6 +278,16 @@ admin_header('Lists');
           <optgroup label="Full Roster">
             <option value="full_roster"  <?= $type==='full_roster'  ?'selected':''?>>Full Roster (all fields)</option>
           </optgroup>
+        </select>
+      </div>
+
+      <div class="form-group" id="days-group" style="display:none">
+        <label>Added Within</label>
+        <select name="days">
+          <option value="30"  <?= $days===30 ?'selected':''?>>Last 30 days</option>
+          <option value="60"  <?= $days===60 ?'selected':''?>>Last 60 days</option>
+          <option value="90"  <?= $days===90 ?'selected':''?>>Last 90 days</option>
+          <option value="365" <?= $days===365?'selected':''?>>Last year</option>
         </select>
       </div>
 
@@ -358,6 +402,15 @@ function setYears(state) {
   cbs.forEach(function(cb){ cb.checked = state; });
   updateLabel();
 }
+
+// Show "Added within" only for new_members output
+var typeSelect = document.querySelector('select[name="type"]');
+var daysGroup  = document.getElementById('days-group');
+function toggleDays() {
+  daysGroup.style.display = typeSelect.value === 'new_members' ? 'block' : 'none';
+}
+typeSelect.addEventListener('change', toggleDays);
+toggleDays();
 
 // ── Copy button ────────────────────────────────────────────────────────────
 function copyTSV(btn) {
