@@ -55,6 +55,7 @@ foreach ($stats_rows as $s) {
     $stat_by_year[$s['class_year']] = ($stat_by_year[$s['class_year']] ?? 0) + $s['cnt'];
 }
 $stat_unpaid = $stat_total - $stat_paid;
+unset($stat_by_year['2026']);
 
 // Helper: build sort link preserving current filters
 function sort_link(string $col, string $label, string $current_sort, string $current_dir, string $next_dir, array $get): string {
@@ -84,7 +85,7 @@ echo show_flash();
     <div style="font-size:1.8rem;font-weight:700;color:#c62828"><?= $stat_unpaid ?></div>
     <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Unpaid</div>
   </div>
-  <?php foreach ($stat_by_year as $yr => $cnt): if ($yr === '2026') continue; ?>
+  <?php foreach ($stat_by_year as $yr => $cnt): ?>
   <div class="card" style="padding:1rem;text-align:center;margin:0">
     <div style="font-size:1.8rem;font-weight:700;color:#002554"><?= $cnt ?></div>
     <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em"><?= h($yr) ?></div>
