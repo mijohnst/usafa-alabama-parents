@@ -230,7 +230,7 @@ echo show_flash();
 
 <?php if (!is_viewer() && !empty($members)): ?>
 <!-- Bulk action bar -->
-<div id="bulk-bar" style="display:none;position:sticky;bottom:1rem;background:#002554;color:#fff;padding:.85rem 1.25rem;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
+<div id="bulk-bar" style="display:none;position:sticky;bottom:1rem;background:#002554;color:#fff;padding:.85rem 1.25rem;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
   <span id="bulk-count" style="font-size:.9rem;font-weight:600"></span>
   <span style="font-size:.85rem;opacity:.75">Mark selected as paid for <strong><?= h(membership_year()) ?></strong></span>
   <button type="submit" form="bulk-form" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Mark as Paid</button>
@@ -246,6 +246,7 @@ var bulkCount = document.getElementById('bulk-count');
 function updateBulkBar() {
   var checked = document.querySelectorAll('.row-cb:checked').length;
   bulkBar.style.display = checked > 0 ? 'flex' : 'none';
+  bulkBar.style.alignItems = 'center';
   bulkCount.textContent = checked + ' member' + (checked !== 1 ? 's' : '') + ' selected';
   selectAll.indeterminate = checked > 0 && checked < checkboxes.length;
   selectAll.checked = checked === checkboxes.length;
