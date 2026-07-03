@@ -20,8 +20,9 @@ if ($search !== '') {
                  OR cadet_cell LIKE :q OR parent1_cell LIKE :q)';
     $params[':q'] = '%' . $search . '%';
 }
-if ($year   !== '') { $where[] = 'class_year = :year';          $params[':year']   = $year; }
-if ($region !== '') { $where[] = 'al_region  = :region';         $params[':region'] = $region; }
+if ($year   !== '') { $where[] = 'class_year = :year';  $params[':year']   = $year; }
+elseif ($year === '') { $where[] = 'class_year != :excl'; $params[':excl'] = '2026'; }
+if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
 if ($paid   === '1') { $where[] = 'membership_paid = 1'; }
 if ($paid   === '0') { $where[] = 'membership_paid = 0'; }
 
@@ -53,7 +54,7 @@ echo show_flash();
     <div class="form-group">
       <label>Class Year</label>
       <select name="year">
-        <option value="">All years</option>
+        <option value="">All years (excl. 2026)</option>
         <?php foreach (['2026','2027','2028','2029','2030','Prep School','Graduate'] as $y): ?>
           <option value="<?= h($y) ?>" <?= $year === $y ? 'selected' : '' ?>><?= h($y) ?></option>
         <?php endforeach; ?>
