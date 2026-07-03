@@ -35,7 +35,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,37,84,0.98
   .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:1rem 0;margin-top:0;}
   .nav-links.open{display:flex;}
   .nav-links a{padding:.65rem 2rem;display:block;}
-  .nav-dropdown-menu{position:static;display:none;background:rgba(0,0,0,.2);box-shadow:none;border:none;padding:0;min-width:unset;}
+  .nav-dropdown-menu{position:static;display:none;background:rgba(0,0,0,.2);box-shadow:none;border:none;padding:0;min-width:unset;max-height:55vh;overflow-y:auto;}
   .nav-dropdown.open .nav-dropdown-menu{display:block;}
   .nav-dropdown-menu li a{padding:.5rem 3.5rem;}
+  .nav-dropdown-menu .nav-divider{border-top:1px solid rgba(255,255,255,.15);margin:.25rem 2rem;}
 }
