@@ -84,7 +84,7 @@ echo show_flash();
     <div style="font-size:1.8rem;font-weight:700;color:#c62828"><?= $stat_unpaid ?></div>
     <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Unpaid</div>
   </div>
-  <?php foreach ($stat_by_year as $yr => $cnt): ?>
+  <?php foreach ($stat_by_year as $yr => $cnt): if ($yr === '2026') continue; ?>
   <div class="card" style="padding:1rem;text-align:center;margin:0">
     <div style="font-size:1.8rem;font-weight:700;color:#002554"><?= $cnt ?></div>
     <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em"><?= h($yr) ?></div>
