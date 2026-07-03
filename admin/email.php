@@ -116,6 +116,16 @@ admin_header('Compose Email');
 .from-badge{display:inline-flex;align-items:center;gap:.5rem;background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.45rem .85rem;font-size:.9rem;color:#002554;font-weight:600}
 .recipient-count{font-size:.78rem;margin-top:.3rem}
 .char-count{font-size:.78rem;color:#5a6a7a;text-align:right;margin-top:.25rem}
+.cd{position:relative}
+.cd-btn{width:100%;text-align:left;background:#fff;border:1px solid #d0d5dd;border-radius:4px;padding:.55rem .75rem;cursor:pointer;font-size:.9rem;color:#1a2332;display:flex;justify-content:space-between;align-items:center;font-family:inherit}
+.cd-btn::after{content:'▾';font-size:.8rem;color:#5a6a7a;flex-shrink:0}
+.cd-btn:focus{outline:none;border-color:#003594;box-shadow:0 0 0 2px rgba(0,53,148,.15)}
+.cd-panel{display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid #d0d5dd;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:200;padding:.4rem 0;min-width:160px}
+.cd.open .cd-panel{display:block}
+.cd-panel label{display:flex;align-items:center;gap:.55rem;padding:.38rem .8rem;cursor:pointer;font-size:.875rem;color:#1a2332;font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}
+.cd-panel label:hover{background:#f5f7fa}
+.cd-panel input[type=checkbox]{width:auto;accent-color:#003594;cursor:pointer}
+.cd-footer{border-top:1px solid #e1e5eb;padding:.4rem .8rem 0;display:flex;gap:.5rem;margin-top:.25rem}
 </style>
 
 <div class="page-head">
@@ -147,14 +157,21 @@ admin_header('Compose Email');
 
       <div class="form-group" style="margin:0">
         <label>Class Year</label>
-        <select name="f_years[]" multiple size="<?= count($all_years) ?>" style="height:auto;padding:.3rem 0">
-          <?php foreach ($all_years as $y): ?>
-            <option value="<?= h($y) ?>" <?= in_array($y,(array)$f_years)?'selected':''?> style="padding:.25rem .6rem"><?= h($y) ?></option>
-          <?php endforeach; ?>
-        </select>
-        <div style="display:flex;gap:.4rem;margin-top:.3rem">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setYrs(true)">All</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setYrs(false)">None</button>
+        <div class="cd" id="yr-cd">
+          <button type="button" class="cd-btn" id="yr-btn">All Years</button>
+          <div class="cd-panel">
+            <?php foreach ($all_years as $y): ?>
+            <label>
+              <input type="checkbox" name="f_years[]" value="<?= h($y) ?>"
+                     <?= in_array($y,(array)$f_years)?'checked':''?>>
+              <?= h($y) ?>
+            </label>
+            <?php endforeach; ?>
+            <div class="cd-footer">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setYrs(true)">All</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setYrs(false)">None</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -241,8 +258,26 @@ admin_header('Compose Email');
 </div>
 
 <script>
+// ── Year checkbox dropdown ────────────────────────────────────────────────
+var yrCd  = document.getElementById('yr-cd');
+var yrBtn = document.getElementById('yr-btn');
+var yrCbs = yrCd.querySelectorAll('input[type=checkbox]');
+
+function updateYrLabel() {
+  var checked = Array.from(yrCbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+  yrBtn.childNodes[0].textContent = checked.length === 0          ? 'No Years'  :
+                                    checked.length === yrCbs.length ? 'All Years' :
+                                    checked.join(', ');
+}
+yrBtn.addEventListener('click', function(e){ e.stopPropagation(); yrCd.classList.toggle('open'); });
+document.addEventListener('click', function(){ yrCd.classList.remove('open'); });
+yrCd.querySelector('.cd-panel').addEventListener('click', function(e){ e.stopPropagation(); });
+yrCbs.forEach(function(cb){ cb.addEventListener('change', updateYrLabel); });
+updateYrLabel();
+
 function setYrs(state) {
-  document.querySelectorAll('select[name="f_years[]"] option').forEach(function(o){ o.selected = state; });
+  yrCbs.forEach(function(cb){ cb.checked = state; });
+  updateYrLabel();
 }
 function extract_count(text) {
   var re = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
