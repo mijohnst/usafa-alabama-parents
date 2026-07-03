@@ -4,12 +4,19 @@ require_login();
 $pdo = get_pdo();
 
 // ── Filters ────────────────────────────────────────────────────────────────
-$search = trim($_GET['q'] ?? '');
-$year   = $_GET['year']   ?? '';
-$region = $_GET['region'] ?? '';
-$paid   = $_GET['paid']   ?? '';
+$search = trim($_GET['q']      ?? '');
+$year   = $_GET['year']        ?? '';
+$region = $_GET['region']      ?? '';
+$paid   = $_GET['paid']        ?? '';
+$sort   = $_GET['sort']        ?? 'class_year';
+$dir    = $_GET['dir']         ?? 'asc';
 
-$where = ['1=1'];
+$allowed_sorts = ['class_year','cadet_last_name','al_region','membership_paid'];
+if (!in_array($sort, $allowed_sorts)) $sort = 'class_year';
+if (!in_array($dir, ['asc','desc']))  $dir  = 'asc';
+$next_dir = $dir === 'asc' ? 'desc' : 'asc';
+
+$where  = ['1=1'];
 $params = [];
 
 if ($search !== '') {
@@ -21,30 +28,76 @@ if ($search !== '') {
     $params[':q'] = '%' . $search . '%';
 }
 if ($year   !== '') { $where[] = 'class_year = :year';  $params[':year']   = $year; }
-elseif ($year === '') { $where[] = 'class_year != :excl'; $params[':excl'] = '2026'; }
+else                { $where[] = 'class_year != :excl'; $params[':excl']   = '2026'; }
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
 if ($paid   === '1') { $where[] = 'membership_paid = 1'; }
 if ($paid   === '0') { $where[] = 'membership_paid = 0'; }
 
-$sql = 'SELECT * FROM members WHERE ' . implode(' AND ', $where)
-     . ' ORDER BY class_year, cadet_last_name, cadet_first_middle';
+$order = $sort === 'cadet_last_name'
+    ? "cadet_last_name $dir, cadet_first_middle $dir"
+    : "$sort $dir, cadet_last_name asc";
 
+$sql = 'SELECT * FROM members WHERE ' . implode(' AND ', $where) . " ORDER BY $order";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $members = $stmt->fetchAll();
 
-$total_stmt = $pdo->query('SELECT COUNT(*) FROM members');
-$total = (int)$total_stmt->fetchColumn();
+// ── Dashboard stats ────────────────────────────────────────────────────────
+$stats_rows = $pdo->query(
+    'SELECT class_year, membership_paid, COUNT(*) as cnt
+     FROM members GROUP BY class_year, membership_paid ORDER BY class_year'
+)->fetchAll();
+
+$stat_total = 0; $stat_paid = 0; $stat_by_year = [];
+foreach ($stats_rows as $s) {
+    $stat_total += $s['cnt'];
+    if ($s['membership_paid']) $stat_paid += $s['cnt'];
+    $stat_by_year[$s['class_year']] = ($stat_by_year[$s['class_year']] ?? 0) + $s['cnt'];
+}
+$stat_unpaid = $stat_total - $stat_paid;
+
+// Helper: build sort link preserving current filters
+function sort_link(string $col, string $label, string $current_sort, string $current_dir, string $next_dir, array $get): string {
+    $params = array_merge($get, ['sort' => $col, 'dir' => $col === $current_sort ? $next_dir : 'asc']);
+    $arrow  = $col === $current_sort ? ($current_dir === 'asc' ? ' ↑' : ' ↓') : '';
+    return '<a href="index.php?' . http_build_query($params) . '" style="color:inherit;text-decoration:none;white-space:nowrap">'
+         . htmlspecialchars($label) . '<span style="opacity:.5">' . $arrow . '</span></a>';
+}
+
+$get_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid]);
 
 admin_header('Members');
 echo show_flash();
 ?>
 
+<!-- Dashboard stats -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1.25rem">
+  <div class="card" style="padding:1rem;text-align:center;margin:0">
+    <div style="font-size:1.8rem;font-weight:700;color:#002554"><?= $stat_total ?></div>
+    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Total</div>
+  </div>
+  <div class="card" style="padding:1rem;text-align:center;margin:0">
+    <div style="font-size:1.8rem;font-weight:700;color:#1b5e20"><?= $stat_paid ?></div>
+    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Paid</div>
+  </div>
+  <div class="card" style="padding:1rem;text-align:center;margin:0">
+    <div style="font-size:1.8rem;font-weight:700;color:#c62828"><?= $stat_unpaid ?></div>
+    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Unpaid</div>
+  </div>
+  <?php foreach ($stat_by_year as $yr => $cnt): ?>
+  <div class="card" style="padding:1rem;text-align:center;margin:0">
+    <div style="font-size:1.8rem;font-weight:700;color:#002554"><?= $cnt ?></div>
+    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em"><?= h($yr) ?></div>
+  </div>
+  <?php endforeach; ?>
+</div>
+
 <div class="page-head">
-  <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> of <?= $total ?> total)</span></h1>
+  <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown)</span></h1>
   <?php if (!is_viewer()): ?><a href="add.php" class="btn btn-primary">+ Add Member</a><?php endif; ?>
 </div>
 
+<!-- Filters -->
 <div class="card" style="padding:1rem 1.5rem">
   <form method="GET" class="filter-bar">
     <div class="form-group" style="flex:2;min-width:200px">
@@ -56,7 +109,7 @@ echo show_flash();
       <select name="year">
         <option value="">All years (excl. 2026)</option>
         <?php foreach (['2026','2027','2028','2029','2030','Prep School','Graduate'] as $y): ?>
-          <option value="<?= h($y) ?>" <?= $year === $y ? 'selected' : '' ?>><?= h($y) ?></option>
+          <option value="<?= h($y) ?>" <?= $year===$y?'selected':''?>><?= h($y) ?></option>
         <?php endforeach; ?>
       </select>
     </div>
@@ -65,18 +118,18 @@ echo show_flash();
       <select name="region">
         <option value="">All regions</option>
         <?php foreach (['North','Central','South'] as $r): ?>
-          <option value="<?= h($r) ?>" <?= $region === $r ? 'selected' : '' ?>><?= h($r) ?></option>
+          <option value="<?= h($r) ?>" <?= $region===$r?'selected':''?>><?= h($r) ?></option>
         <?php endforeach; ?>
       </select>
     </div>
-      <div class="form-group">
-        <label>Dues Status</label>
-        <select name="paid">
-          <option value="">All</option>
-          <option value="1" <?= $paid==='1'?'selected':''?>>Paid</option>
-          <option value="0" <?= $paid==='0'?'selected':''?>>Not Paid</option>
-        </select>
-      </div>
+    <div class="form-group">
+      <label>Dues Status</label>
+      <select name="paid">
+        <option value="">All</option>
+        <option value="1" <?= $paid==='1'?'selected':''?>>Paid</option>
+        <option value="0" <?= $paid==='0'?'selected':''?>>Not Paid</option>
+      </select>
+    </div>
     <div class="form-group" style="flex:0">
       <label>&nbsp;</label>
       <div style="display:flex;gap:.5rem">
@@ -87,45 +140,65 @@ echo show_flash();
   </form>
 </div>
 
+<?php if (!is_viewer()): ?>
+<!-- Bulk action form (inputs inside the table use form="bulk-form") -->
+<form id="bulk-form" method="POST" action="bulk-action.php">
+  <?= csrf_field() ?>
+  <input type="hidden" name="membership_year" value="<?= h(membership_year()) ?>">
+</form>
+<?php endif; ?>
+
 <div class="card" style="padding:0;overflow:auto">
 <table>
   <thead>
     <tr>
-      <th>Year</th>
-      <th>Cadet</th>
+      <?php if (!is_viewer()): ?>
+      <th style="width:36px"><input type="checkbox" id="select-all" style="width:auto;accent-color:#003594" title="Select all"></th>
+      <?php endif; ?>
+      <th><?= sort_link('class_year',    'Year',    $sort, $dir, $next_dir, $get_params) ?></th>
+      <th><?= sort_link('cadet_last_name','Cadet',   $sort, $dir, $next_dir, $get_params) ?></th>
       <th>Squadron</th>
-      <th>Region</th>
+      <th><?= sort_link('al_region',     'Region',  $sort, $dir, $next_dir, $get_params) ?></th>
       <th>Parent 1</th>
       <th>Parent 2</th>
-      <th>Dues</th>
+      <th><?= sort_link('membership_paid','Dues',    $sort, $dir, $next_dir, $get_params) ?></th>
       <th>Remarks</th>
       <th>Actions</th>
     </tr>
   </thead>
   <tbody>
   <?php if (empty($members)): ?>
-    <tr><td colspan="8" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
+    <tr><td colspan="<?= is_viewer()?9:10 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
   <?php endif; ?>
   <?php foreach ($members as $m): ?>
     <?php
-      $sqd = $m['squadron_yr2_4'] ?: ($m['fall_squadron'] ?: $m['bct_squadron']);
+      $sqd        = $m['squadron_yr2_4'] ?: ($m['fall_squadron'] ?: $m['bct_squadron']);
       $region_cls = $m['al_region'] ? 'badge-' . $m['al_region'] : '';
+      $p1email    = $m['parent1_email'];
+      $p1cell     = $m['parent1_cell'];
+      $p2email    = $m['parent2_email'];
+      $p2cell     = $m['parent2_cell'];
     ?>
     <tr>
+      <?php if (!is_viewer()): ?>
+      <td><input type="checkbox" name="member_ids[]" value="<?= (int)$m['id'] ?>" form="bulk-form" style="width:auto;accent-color:#003594" class="row-cb"></td>
+      <?php endif; ?>
       <td><?= h($m['class_year']) ?></td>
       <td>
-        <strong><?= h($m['cadet_last_name']) ?></strong><?= $m['cadet_first_middle'] ? ', ' . h($m['cadet_first_middle']) : '' ?><br>
-        <?php if ($m['cadet_email']): ?><span style="font-size:.78rem;color:#5a6a7a"><?= h($m['cadet_email']) ?></span><?php endif; ?>
+        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?= $m['cadet_first_middle'] ? ', ' . h($m['cadet_first_middle']) : '' ?><br>
+        <?php if ($m['cadet_email']): ?><a href="mailto:<?= h($m['cadet_email']) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($m['cadet_email']) ?></a><?php endif; ?>
       </td>
       <td><?= h($sqd) ?></td>
       <td><?php if ($m['al_region']): ?><span class="badge <?= h($region_cls) ?>"><?= h($m['al_region']) ?></span><?php endif; ?></td>
       <td>
         <?= h(trim($m['parent1_first_name'] . ' ' . $m['parent1_last_name'])) ?><br>
-        <span style="font-size:.78rem;color:#5a6a7a"><?= h($m['parent1_cell']) ?></span>
+        <?php if ($p1cell): ?><a href="tel:<?= h(preg_replace('/\D/','',$p1cell)) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($p1cell) ?></a><?php endif; ?>
+        <?php if ($p1email): ?><br><a href="mailto:<?= h($p1email) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($p1email) ?></a><?php endif; ?>
       </td>
       <td>
         <?= h(trim($m['parent2_first_name'] . ' ' . $m['parent2_last_name'])) ?><br>
-        <span style="font-size:.78rem;color:#5a6a7a"><?= h($m['parent2_cell']) ?></span>
+        <?php if ($p2cell): ?><a href="tel:<?= h(preg_replace('/\D/','',$p2cell)) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($p2cell) ?></a><?php endif; ?>
+        <?php if ($p2email): ?><br><a href="mailto:<?= h($p2email) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($p2email) ?></a><?php endif; ?>
       </td>
       <td>
         <?php if ($m['membership_paid']): ?>
@@ -137,21 +210,53 @@ echo show_flash();
       </td>
       <td style="max-width:180px;font-size:.78rem;color:#5a6a7a"><?= h(mb_strimwidth($m['remarks'] ?? '', 0, 60, '…')) ?></td>
       <td class="actions">
-        <?php if (!is_viewer()): ?>
         <div class="btn-group">
+          <a href="view.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">View</a>
+          <?php if (!is_viewer()): ?>
           <a href="edit.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
           <form method="POST" action="delete.php" onsubmit="return confirm('Delete <?= h(addslashes($m['cadet_last_name'])) ?>? This cannot be undone.')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
+          <?php endif; ?>
         </div>
-        <?php endif; ?>
       </td>
     </tr>
   <?php endforeach; ?>
   </tbody>
 </table>
 </div>
+
+<?php if (!is_viewer() && !empty($members)): ?>
+<!-- Bulk action bar -->
+<div id="bulk-bar" style="display:none;position:sticky;bottom:1rem;background:#002554;color:#fff;padding:.85rem 1.25rem;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
+  <span id="bulk-count" style="font-size:.9rem;font-weight:600"></span>
+  <span style="font-size:.85rem;opacity:.75">Mark selected as paid for <strong><?= h(membership_year()) ?></strong></span>
+  <button type="submit" form="bulk-form" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Mark as Paid</button>
+  <button type="submit" form="bulk-form" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm">✗ Mark as Unpaid</button>
+</div>
+
+<script>
+var selectAll = document.getElementById('select-all');
+var checkboxes = document.querySelectorAll('.row-cb');
+var bulkBar = document.getElementById('bulk-bar');
+var bulkCount = document.getElementById('bulk-count');
+
+function updateBulkBar() {
+  var checked = document.querySelectorAll('.row-cb:checked').length;
+  bulkBar.style.display = checked > 0 ? 'flex' : 'none';
+  bulkCount.textContent = checked + ' member' + (checked !== 1 ? 's' : '') + ' selected';
+  selectAll.indeterminate = checked > 0 && checked < checkboxes.length;
+  selectAll.checked = checked === checkboxes.length;
+}
+
+selectAll.addEventListener('change', function() {
+  checkboxes.forEach(function(cb) { cb.checked = selectAll.checked; });
+  updateBulkBar();
+});
+checkboxes.forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
+</script>
+<?php endif; ?>
 
 <?php admin_footer(); ?>
