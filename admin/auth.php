@@ -142,6 +142,7 @@ function admin_header(string $title): void {
     echo '<nav>';
     echo '<a href="index.php">Members</a>';
     echo '<a href="lists.php">Lists</a>';
+    if (!is_viewer()) echo '<a href="email.php">Email</a>';
     if (is_viewer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
     echo '<a href="logout.php">Log Out</a>';
     echo '</nav></div>';

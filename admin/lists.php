@@ -362,7 +362,16 @@ $tsv = implode("\n", $tsv_rows);
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
     <h2 style="margin:0"><?= h($results['label']) ?> — <?= count($results['lines']) ?> entries from <?= $results['count'] ?> members</h2>
     <?php if (!empty($results['lines'])): ?>
-      <button class="btn btn-secondary" onclick="copyList(this)">Copy to Clipboard</button>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="copyList(this)">Copy to Clipboard</button>
+        <?php $email_types = ['emails','emails_plain','cadet_emails','cadet_emails_plain','dues_unpaid'];
+        if (in_array($type, $email_types)): ?>
+        <form method="POST" action="email.php" style="margin:0">
+          <input type="hidden" name="recipients" value="<?= h(implode("\n", $results['lines'])) ?>">
+          <button type="submit" class="btn btn-primary">Compose Email →</button>
+        </form>
+        <?php endif; ?>
+      </div>
     <?php endif; ?>
   </div>
   <?php if (empty($results['lines'])): ?>
