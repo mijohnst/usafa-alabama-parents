@@ -294,13 +294,11 @@ echo show_flash();
               onclick="return confirm('<?= $m['archived'] ? 'Restore' : 'Archive' ?> <?= h(addslashes($m['cadet_last_name'])) ?>?')"
             ><?= $m['archived'] ? 'Restore' : 'Archive' ?></button>
           </form>
-          <?php if (!$m['archived']): ?>
           <form method="POST" action="delete.php" onsubmit="return confirm('Delete <?= h(addslashes($m['cadet_last_name'])) ?>? This cannot be undone.')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
-          <?php endif; ?>
           <?php endif; ?>
         </div>
       </td>
