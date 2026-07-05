@@ -147,7 +147,7 @@ echo show_flash();
     <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
     <a href="directory.php" class="btn btn-secondary">Directory</a>
     <?php if (!is_viewer()): ?>
-      <a href="reset-dues.php" class="btn btn-secondary">New Year</a>
+      <a href="reset-dues.php" class="btn btn-secondary">Reset Dues</a>
       <a href="add.php" class="btn btn-primary">+ Add Member</a>
     <?php endif; ?>
   </div>
