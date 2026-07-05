@@ -189,15 +189,15 @@ foreach ($stat_by_year as $yr => $cnt) {
                      'pct'=>$ypct, 'color'=>$ypct>=75?'#2e7d32':($ypct>=40?'#f57c00':'#c62828')];
 }
 ?>
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;margin-bottom:1.25rem">
+<div style="display:grid;grid-template-columns:repeat(<?= count($dash_cards) ?>,1fr);gap:.5rem;margin-bottom:1.25rem">
 <?php foreach ($dash_cards as $c): ?>
-  <div class="card" style="padding:1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.6rem">
+  <div class="card" style="padding:.7rem .85rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.5rem;min-width:0">
     <div>
-      <div style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem"><?= h($c['label']) ?></div>
-      <div style="font-size:1.6rem;font-weight:700;color:<?= $c['color'] ?>;line-height:1"><?= h((string)$c['value']) ?></div>
-      <div style="font-size:.72rem;color:#9aa5b4;margin-top:.2rem"><?= h($c['sub']) ?></div>
+      <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= h($c['label']) ?></div>
+      <div style="font-size:1.3rem;font-weight:700;color:<?= $c['color'] ?>;line-height:1;white-space:nowrap"><?= h((string)$c['value']) ?></div>
+      <div style="font-size:.65rem;color:#9aa5b4;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= h($c['sub']) ?></div>
     </div>
-    <div style="background:#e1e5eb;border-radius:99px;height:5px;overflow:hidden">
+    <div style="background:#e1e5eb;border-radius:99px;height:4px;overflow:hidden">
       <div style="height:100%;width:<?= (int)$c['pct'] ?>%;background:<?= $c['color'] ?>;border-radius:99px"></div>
     </div>
   </div>
