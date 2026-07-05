@@ -142,6 +142,22 @@ admin_header('Members');
 echo show_flash();
 ?>
 
+<div class="page-head">
+  <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown)</span></h1>
+  <div style="display:flex;gap:.5rem">
+    <?php
+    $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron]);
+    $csv_params['export'] = 'csv';
+    ?>
+    <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
+    <a href="directory.php" class="btn btn-secondary">Directory</a>
+    <?php if (!is_viewer()): ?>
+      <a href="reset-dues.php" class="btn btn-secondary">Reset Dues</a>
+      <a href="add.php" class="btn btn-primary">+ Add Member</a>
+    <?php endif; ?>
+  </div>
+</div>
+
 <!-- Dashboard stats -->
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1.25rem">
   <div class="card" style="padding:1rem;text-align:center;margin:0">
@@ -193,22 +209,6 @@ echo show_flash();
   </div>
 </div>
 <?php endif; ?>
-
-<div class="page-head">
-  <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown)</span></h1>
-  <div style="display:flex;gap:.5rem">
-    <?php
-    $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron]);
-    $csv_params['export'] = 'csv';
-    ?>
-    <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
-    <a href="directory.php" class="btn btn-secondary">Directory</a>
-    <?php if (!is_viewer()): ?>
-      <a href="reset-dues.php" class="btn btn-secondary">Reset Dues</a>
-      <a href="add.php" class="btn btn-primary">+ Add Member</a>
-    <?php endif; ?>
-  </div>
-</div>
 
 <!-- Filters -->
 <div class="card" style="padding:1rem 1.5rem">
