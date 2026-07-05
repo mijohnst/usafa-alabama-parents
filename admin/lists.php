@@ -14,7 +14,7 @@ $days           = in_array((int)($_POST['days'] ?? 30), [30,60,90,365]) ? (int)$
 $results = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $where  = ['1=1'];
+    $where  = ['archived = 0'];
     $params = [];
 
     $selected_years = array_intersect((array)$selected_years, $all_years);
