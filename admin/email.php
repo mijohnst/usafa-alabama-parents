@@ -54,10 +54,19 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     return implode("\n", array_unique($lines));
 }
 
+$from_options = [
+    'president@alabamafalcons.org' => 'President',
+    'vp@alabamafalcons.org'        => 'Vice President',
+    'secretary@alabamafalcons.org' => 'Secretary',
+    'treasurer@alabamafalcons.org' => 'Treasurer',
+];
+
 // ── State ─────────────────────────────────────────────────────────────────
 $recipients  = trim($_POST['recipients']  ?? '');
 $subject     = trim($_POST['subject']     ?? '');
 $body        = trim($_POST['body']        ?? '');
+$from_email  = $_POST['from_email'] ?? 'president@alabamafalcons.org';
+if (!array_key_exists($from_email, $from_options)) $from_email = 'president@alabamafalcons.org';
 $sent        = false;
 $errors      = [];
 $valid_count = 0;
@@ -87,8 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
             $errors[] = 'No valid email addresses found.';
         } else {
             $clean_subject = str_replace(["\r","\n"], '', $subject);
-            $headers  = "From: USAFA Parents Club of Alabama <info@alabamafalcons.org>\r\n";
-            $headers .= "Reply-To: info@alabamafalcons.org\r\n";
+            $headers  = "From: USAFA Parents Club of Alabama <{$from_email}>\r\n";
+            $headers .= "Reply-To: {$from_email}\r\n";
             $headers .= "BCC: " . implode(', ', $valid) . "\r\n";
             $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
@@ -152,6 +161,7 @@ admin_header('Compose Email');
     <input type="hidden" name="subject"    value="<?= h($subject) ?>">
     <input type="hidden" name="body"       value="<?= h($body) ?>">
     <input type="hidden" name="recipients" value="<?= h($recipients) ?>">
+    <input type="hidden" name="from_email" value="<?= h($from_email) ?>">
 
     <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr auto;align-items:flex-end;gap:.75rem">
 
@@ -221,9 +231,15 @@ admin_header('Compose Email');
     <input type="hidden" name="f_paid"    value="<?= h($f_paid) ?>">
     <input type="hidden" name="f_type"    value="<?= h($f_type) ?>">
 
-    <div class="form-group">
+    <div class="form-group" style="max-width:360px">
       <label>From</label>
-      <div class="from-badge">✉ info@alabamafalcons.org</div>
+      <select name="from_email" style="font-weight:600;color:#002554">
+        <?php foreach ($from_options as $addr => $title): ?>
+          <option value="<?= h($addr) ?>" <?= $from_email===$addr?'selected':''?>>
+            <?= h($title) ?> &lt;<?= h($addr) ?>&gt;
+          </option>
+        <?php endforeach; ?>
+      </select>
     </div>
 
     <div class="form-group">
