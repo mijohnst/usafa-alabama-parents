@@ -283,7 +283,6 @@ echo show_flash();
       <td style="max-width:180px;font-size:.78rem;color:#5a6a7a"><?= h(mb_strimwidth($m['remarks'] ?? '', 0, 60, '…')) ?></td>
       <td class="actions">
         <div class="btn-group">
-          <a href="view.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">View</a>
           <?php if (!is_viewer()): ?>
           <a href="edit.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
           <form method="POST" action="archive-member.php">
@@ -299,6 +298,8 @@ echo show_flash();
             <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
+          <?php else: ?>
+          <a href="view.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">View</a>
           <?php endif; ?>
         </div>
       </td>
