@@ -174,43 +174,34 @@ echo show_flash();
   <?php endif; ?>
 </div>
 
-<!-- Dashboard stats -->
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.75rem;margin-bottom:1.25rem">
-  <div class="card" style="padding:1rem;text-align:center;margin:0">
-    <div style="font-size:1.8rem;font-weight:700;color:#002554"><?= $stat_total ?></div>
-    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Total</div>
-  </div>
-  <div class="card" style="padding:1rem;text-align:center;margin:0">
-    <div style="font-size:1.8rem;font-weight:700;color:#1b5e20"><?= $stat_paid ?></div>
-    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Paid</div>
-  </div>
-  <div class="card" style="padding:1rem;text-align:center;margin:0">
-    <div style="font-size:1.8rem;font-weight:700;color:#c62828"><?= $stat_unpaid ?></div>
-    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Unpaid</div>
-  </div>
-  <div class="card" style="padding:1rem;text-align:center;margin:0">
-    <div style="font-size:1.8rem;font-weight:700;color:#003594"><?= $new_this_month ?></div>
-    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">New This Month</div>
-  </div>
-</div>
-
-<!-- Paid by class year -->
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.75rem;margin-bottom:1.25rem">
-  <?php foreach ($stat_by_year as $yr => $cnt):
-    $yr_paid = $stat_paid_by_year[$yr] ?? 0;
-    $yr_pct  = $cnt > 0 ? round($yr_paid / $cnt * 100) : 0;
-    $yr_color = $yr_pct >= 75 ? '#2e7d32' : ($yr_pct >= 40 ? '#f57c00' : '#c62828');
-  ?>
-  <div class="card" style="padding:.85rem 1rem;margin:0">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem">
-      <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em"><?= h($yr) ?></span>
-      <span style="font-size:.82rem;font-weight:700;color:<?= $yr_color ?>"><?= $yr_paid ?>/<?= $cnt ?> <span style="font-weight:400;color:#9aa5b4">(<?= $yr_pct ?>%)</span></span>
+<!-- Dashboard stats — all cards in one uniform grid -->
+<?php
+$dash_cards = [
+    ['label'=>'Total Members',   'value'=>$stat_total,      'sub'=>'active roster',         'pct'=>100,                                               'color'=>'#002554'],
+    ['label'=>'Dues Paid',       'value'=>$stat_paid,        'sub'=>membership_year(),        'pct'=>$dues_pct,                                         'color'=>'#1b5e20'],
+    ['label'=>'Dues Unpaid',     'value'=>$stat_unpaid,      'sub'=>'need to renew',          'pct'=>$active_total>0?round($stat_unpaid/$active_total*100):0, 'color'=>'#c62828'],
+    ['label'=>'New This Month',  'value'=>$new_this_month,   'sub'=>date('F Y'),              'pct'=>$stat_total>0?min(round($new_this_month/$stat_total*100),100):0, 'color'=>'#003594'],
+];
+foreach ($stat_by_year as $yr => $cnt) {
+    $yp  = $stat_paid_by_year[$yr] ?? 0;
+    $ypct = $cnt > 0 ? round($yp/$cnt*100) : 0;
+    $dash_cards[] = ['label'=>'Class of '.$yr, 'value'=>"$yp / $cnt", 'sub'=>"$ypct% paid",
+                     'pct'=>$ypct, 'color'=>$ypct>=75?'#2e7d32':($ypct>=40?'#f57c00':'#c62828')];
+}
+?>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;margin-bottom:1.25rem">
+<?php foreach ($dash_cards as $c): ?>
+  <div class="card" style="padding:1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.6rem">
+    <div>
+      <div style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem"><?= h($c['label']) ?></div>
+      <div style="font-size:1.6rem;font-weight:700;color:<?= $c['color'] ?>;line-height:1"><?= h((string)$c['value']) ?></div>
+      <div style="font-size:.72rem;color:#9aa5b4;margin-top:.2rem"><?= h($c['sub']) ?></div>
     </div>
-    <div style="background:#e1e5eb;border-radius:99px;height:7px;overflow:hidden">
-      <div style="height:100%;width:<?= $yr_pct ?>%;background:<?= $yr_color ?>;border-radius:99px"></div>
+    <div style="background:#e1e5eb;border-radius:99px;height:5px;overflow:hidden">
+      <div style="height:100%;width:<?= (int)$c['pct'] ?>%;background:<?= $c['color'] ?>;border-radius:99px"></div>
     </div>
   </div>
-  <?php endforeach; ?>
+<?php endforeach; ?>
 </div>
 
 <!-- Dues progress bar -->
