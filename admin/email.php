@@ -22,11 +22,10 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     $params = [];
 
     $safe_years = array_intersect($years, ['2026','2027','2028','2029','2030','Prep School','Graduate']);
-    if (!empty($safe_years)) {
-        $ph = [];
-        foreach (array_values($safe_years) as $i => $y) { $ph[] = ":yr$i"; $params[":yr$i"] = $y; }
-        $where[] = 'class_year IN (' . implode(',', $ph) . ')';
-    }
+    if (empty($safe_years)) return ''; // nothing selected → no recipients
+    $ph = [];
+    foreach (array_values($safe_years) as $i => $y) { $ph[] = ":yr$i"; $params[":yr$i"] = $y; }
+    $where[] = 'class_year IN (' . implode(',', $ph) . ')';
     if ($region !== '') { $where[] = 'al_region = :region'; $params[':region'] = $region; }
     if ($paid   === '1') $where[] = 'membership_paid = 1';
     if ($paid   === '0') $where[] = 'membership_paid = 0';
@@ -226,7 +225,7 @@ admin_header('Compose Email');
 <div class="compose-card">
   <form method="POST" id="compose-form">
     <?= csrf_field() ?>
-    <input type="hidden" name="f_years[]" value="<?= h(implode(',', (array)$f_years)) ?>">
+    <?php foreach ((array)$f_years as $fy): ?><input type="hidden" name="f_years[]" value="<?= h($fy) ?>"><?php endforeach; ?>
     <input type="hidden" name="f_region"  value="<?= h($f_region) ?>">
     <input type="hidden" name="f_paid"    value="<?= h($f_paid) ?>">
     <input type="hidden" name="f_type"    value="<?= h($f_type) ?>">
