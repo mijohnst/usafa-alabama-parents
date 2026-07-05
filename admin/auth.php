@@ -125,7 +125,9 @@ legend{font-weight:700;color:#002554;font-size:.82rem;padding:0 .4rem;letter-spa
 .filter-bar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem}
 .filter-bar .form-group{margin:0;flex:1;min-width:130px}
 .count{font-size:.82rem;color:#5a6a7a;margin-top:.5rem}
-.actions{white-space:nowrap}
+.actions{white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-3px 0 6px rgba(0,0,0,.06)}
+tbody tr:hover .actions{background:#f8f9fb}
+th.actions-head{position:sticky;right:0;background:#f5f7fa;box-shadow:-3px 0 6px rgba(0,0,0,.06)}
 @media(max-width:640px){.col-2,.col-3,.col-4{grid-template-columns:1fr}.topbar{flex-direction:column;align-items:flex-start}}
 </style>
 '; }
