@@ -275,27 +275,51 @@ foreach ($stat_by_year as $yr => $cnt) {
 </div>
 
 <?php if (!is_viewer()): ?>
-<!-- Upcoming birthdays -->
-<?php if (!empty($upcoming_bdays)): ?>
-<div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
-  <div style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">🎂 Upcoming Birthdays (next 30 days)</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem">
-    <?php foreach ($upcoming_bdays as $b): ?>
-    <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.5rem .85rem;font-size:.82rem;display:flex;justify-content:space-between;align-items:center">
-      <div>
-        <strong style="color:#002554"><?= h($b['name']) ?></strong><br>
-        <span style="color:#5a6a7a"><?= h($b['fmt']) ?></span>
-        <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?>
+<!-- Upcoming birthdays (collapsible) -->
+<?php if (!empty($upcoming_bdays)):
+  $has_soon = array_filter($upcoming_bdays, fn($b) => $b['days'] <= 7);
+  $badge_color = !empty($has_soon) ? '#f57c00' : '#5a6a7a';
+?>
+<div class="card" style="padding:0;margin-bottom:1rem;overflow:hidden">
+  <button onclick="toggleBdays(this)" style="width:100%;background:none;border:none;padding:.85rem 1.25rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:left;font-family:inherit">
+    <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">
+      🎂 Upcoming Birthdays
+      <span style="background:<?= $badge_color ?>;color:#fff;font-size:.65rem;padding:.15rem .45rem;border-radius:99px;margin-left:.4rem;vertical-align:middle"><?= count($upcoming_bdays) ?></span>
+    </span>
+    <span id="bday-chevron" style="color:#5a6a7a;font-size:.85rem">▸ Show</span>
+  </button>
+  <div id="bday-panel" style="display:none;padding:.25rem 1.25rem 1.25rem">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem">
+      <?php foreach ($upcoming_bdays as $b): ?>
+      <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.5rem .85rem;font-size:.82rem;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <strong style="color:#002554"><?= h($b['name']) ?></strong><br>
+          <span style="color:#5a6a7a"><?= h($b['fmt']) ?></span>
+          <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?>
+        </div>
+        <div style="text-align:right;white-space:nowrap;padding-left:.5rem">
+          <?php if ($b['days'] === 0): ?><span style="color:#A6192E;font-weight:700">🎉 Today!</span>
+          <?php elseif ($b['days'] <= 7): ?><span style="color:#f57c00;font-weight:700"><?= $b['days'] ?>d</span>
+          <?php else: ?><span style="color:#9aa5b4"><?= $b['days'] ?>d</span><?php endif; ?>
+        </div>
       </div>
-      <div style="text-align:right;white-space:nowrap;padding-left:.5rem">
-        <?php if ($b['days'] === 0): ?><span style="color:#A6192E;font-weight:700">🎉 Today!</span>
-        <?php elseif ($b['days'] <= 7): ?><span style="color:#f57c00;font-weight:700"><?= $b['days'] ?>d</span>
-        <?php else: ?><span style="color:#9aa5b4"><?= $b['days'] ?>d</span><?php endif; ?>
-      </div>
+      <?php endforeach; ?>
     </div>
-    <?php endforeach; ?>
   </div>
 </div>
+<script>
+function toggleBdays(btn) {
+  var panel   = document.getElementById('bday-panel');
+  var chevron = document.getElementById('bday-chevron');
+  var open    = panel.style.display === 'none';
+  panel.style.display  = open ? 'block' : 'none';
+  chevron.textContent  = open ? '▾ Hide' : '▸ Show';
+}
+<?php if (!empty($has_soon)): ?>
+// Auto-expand when a birthday is within 7 days
+document.querySelector('[onclick="toggleBdays(this)"]').click();
+<?php endif; ?>
+</script>
 <?php endif; ?>
 
 <!-- Bulk action form (inputs inside the table use form="bulk-form") -->
