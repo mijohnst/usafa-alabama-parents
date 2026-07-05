@@ -235,7 +235,7 @@ echo show_flash();
       <th>Parent 2</th>
       <th><?= sort_link('membership_paid','Dues',    $sort, $dir, $next_dir, $get_params) ?></th>
       <th>Remarks</th>
-      <th>Actions</th>
+      <th class="actions-head">Actions</th>
     </tr>
   </thead>
   <tbody>
