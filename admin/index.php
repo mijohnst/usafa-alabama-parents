@@ -8,9 +8,10 @@ $search  = trim($_GET['q']       ?? '');
 $year    = $_GET['year']         ?? '';
 $region  = $_GET['region']       ?? '';
 $paid    = $_GET['paid']         ?? '';
-$squadron = trim($_GET['squadron'] ?? '');
-$sort    = $_GET['sort']         ?? 'class_year';
-$dir     = $_GET['dir']          ?? 'asc';
+$squadron  = trim($_GET['squadron']  ?? '');
+$archived  = $_GET['archived']   ?? '0';
+$sort      = $_GET['sort']       ?? 'class_year';
+$dir       = $_GET['dir']        ?? 'asc';
 
 $allowed_sorts = ['class_year','cadet_last_name','al_region','membership_paid'];
 if (!in_array($sort, $allowed_sorts)) $sort = 'class_year';
@@ -37,6 +38,7 @@ if ($squadron !== '') {
     $where[] = '(bct_squadron = :sqd OR fall_squadron = :sqd OR squadron_yr2_4 = :sqd)';
     $params[':sqd'] = $squadron;
 }
+$where[] = $archived === '1' ? 'archived = 1' : 'archived = 0';
 
 $order = $sort === 'cadet_last_name'
     ? "cadet_last_name $dir, cadet_first_middle $dir"
@@ -83,8 +85,8 @@ $squadrons = $pdo->query(
 
 // ── Dashboard stats ────────────────────────────────────────────────────────
 $stats_rows = $pdo->query(
-    'SELECT class_year, membership_paid, COUNT(*) as cnt
-     FROM members GROUP BY class_year, membership_paid ORDER BY class_year'
+    "SELECT class_year, membership_paid, COUNT(*) as cnt
+     FROM members WHERE archived = 0 GROUP BY class_year, membership_paid ORDER BY class_year"
 )->fetchAll();
 
 $stat_total = 0; $stat_paid = 0; $stat_by_year = [];
@@ -93,7 +95,10 @@ foreach ($stats_rows as $s) {
     if ($s['membership_paid']) $stat_paid += $s['cnt'];
     $stat_by_year[$s['class_year']] = ($stat_by_year[$s['class_year']] ?? 0) + $s['cnt'];
 }
-$stat_unpaid = $stat_total - $stat_paid;
+// Unpaid only counts active years (2027-2030), not 2026 graduates
+$stat_unpaid = (int)$pdo->query(
+    "SELECT COUNT(*) FROM members WHERE archived = 0 AND membership_paid = 0 AND class_year != '2026'"
+)->fetchColumn();
 unset($stat_by_year['2026']);
 
 // Helper: build sort link preserving current filters
@@ -140,7 +145,11 @@ echo show_flash();
     $csv_params['export'] = 'csv';
     ?>
     <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
-    <?php if (!is_viewer()): ?><a href="add.php" class="btn btn-primary">+ Add Member</a><?php endif; ?>
+    <a href="directory.php" class="btn btn-secondary">Directory</a>
+    <?php if (!is_viewer()): ?>
+      <a href="reset-dues.php" class="btn btn-secondary">New Year</a>
+      <a href="add.php" class="btn btn-primary">+ Add Member</a>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -175,6 +184,13 @@ echo show_flash();
         <option value="">All</option>
         <option value="1" <?= $paid==='1'?'selected':''?>>Paid</option>
         <option value="0" <?= $paid==='0'?'selected':''?>>Not Paid</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select name="archived">
+        <option value="0" <?= $archived==='0'?'selected':''?>>Active</option>
+        <option value="1" <?= $archived==='1'?'selected':''?>>Archived</option>
       </select>
     </div>
     <div class="form-group">
@@ -270,11 +286,21 @@ echo show_flash();
           <a href="view.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">View</a>
           <?php if (!is_viewer()): ?>
           <a href="edit.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
+          <form method="POST" action="archive-member.php">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
+            <input type="hidden" name="archived" value="<?= $m['archived'] ? 0 : 1 ?>">
+            <button type="submit" class="btn btn-secondary btn-sm"
+              onclick="return confirm('<?= $m['archived'] ? 'Restore' : 'Archive' ?> <?= h(addslashes($m['cadet_last_name'])) ?>?')"
+            ><?= $m['archived'] ? 'Restore' : 'Archive' ?></button>
+          </form>
+          <?php if (!$m['archived']): ?>
           <form method="POST" action="delete.php" onsubmit="return confirm('Delete <?= h(addslashes($m['cadet_last_name'])) ?>? This cannot be undone.')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
+          <?php endif; ?>
           <?php endif; ?>
         </div>
       </td>
