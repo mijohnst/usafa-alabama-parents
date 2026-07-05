@@ -263,16 +263,6 @@ echo show_flash();
         <?php else: ?>
           <span class="badge badge-unpaid">✗ Unpaid</span>
         <?php endif; ?>
-        <?php if (!is_viewer()): ?>
-        <form method="POST" action="toggle-paid.php" style="margin-top:.3rem">
-          <?= csrf_field() ?>
-          <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
-          <input type="hidden" name="return_url" value="index.php?<?= h(http_build_query(array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron,'sort'=>$sort,'dir'=>$dir]))) ?>">
-          <button type="submit" class="btn btn-secondary btn-sm" style="font-size:.68rem;padding:.2rem .5rem">
-            <?= $m['membership_paid'] ? 'Mark Unpaid' : 'Mark Paid' ?>
-          </button>
-        </form>
-        <?php endif; ?>
       </td>
       <td style="max-width:180px;font-size:.78rem;color:#5a6a7a"><?= h(mb_strimwidth($m['remarks'] ?? '', 0, 60, '…')) ?></td>
       <td class="actions">
