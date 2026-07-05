@@ -57,6 +57,54 @@ try {
     $dob = s($payload, 'cadetDOB');
     if ($dob === '') $dob = null;
 
+    // ── Duplicate detection: update existing record if same cadet ─────────────
+    $dup = $pdo->prepare('SELECT id FROM members WHERE cadet_last_name = ? AND class_year = ? LIMIT 1');
+    $dup->execute([s($payload,'cadetLastName'), s($payload,'graduationYear')]);
+    $existing_id = $dup->fetchColumn();
+
+    if ($existing_id) {
+        // Returning member — update their record instead of inserting
+        $upd = $pdo->prepare("
+            UPDATE members SET
+                cadet_first_middle=:cadet_first_middle, nickname=:nickname,
+                cadet_birthday=:cadet_birthday, cadet_po_box=:cadet_po_box,
+                cadet_email=:cadet_email, cadet_cell=:cadet_cell,
+                bct_squadron=:bct_squadron,
+                parent1_last_name=:parent1_last_name, parent1_first_name=:parent1_first_name,
+                parent1_email=:parent1_email, parent1_cell=:parent1_cell,
+                parent1_street=:parent1_street, parent1_city=:parent1_city,
+                parent1_state=:parent1_state, parent1_zip=:parent1_zip,
+                parent2_last_name=:parent2_last_name, parent2_first_name=:parent2_first_name,
+                parent2_email=:parent2_email, parent2_cell=:parent2_cell,
+                photo_consent=:photo_consent, directory_consent=:directory_consent
+            WHERE id = :id
+        ");
+        $upd->execute([
+            'cadet_first_middle' => $first_middle,
+            'nickname'           => s($payload,'nickname'),
+            'cadet_birthday'     => $dob,
+            'cadet_po_box'       => s($payload,'poBox'),
+            'cadet_email'        => s($payload,'cadetEmail'),
+            'cadet_cell'         => s($payload,'cadetPhone'),
+            'bct_squadron'       => s($payload,'squadron'),
+            'parent1_last_name'  => s($payload,'parent1LastName'),
+            'parent1_first_name' => s($payload,'parent1FirstName'),
+            'parent1_email'      => s($payload,'parent1Email'),
+            'parent1_cell'       => s($payload,'parent1Phone'),
+            'parent1_street'     => s($payload,'streetAddress'),
+            'parent1_city'       => s($payload,'city'),
+            'parent1_state'      => s($payload,'state'),
+            'parent1_zip'        => s($payload,'zipCode'),
+            'parent2_last_name'  => s($payload,'parent2LastName'),
+            'parent2_first_name' => s($payload,'parent2FirstName'),
+            'parent2_email'      => s($payload,'parent2Email'),
+            'parent2_cell'       => s($payload,'parent2Phone'),
+            'photo_consent'      => s($payload,'photoConsent'),
+            'directory_consent'  => s($payload,'directoryConsent'),
+            'id'                 => $existing_id,
+        ]);
+        $db_success = true;
+    } else {
     $stmt = $pdo->prepare("
         INSERT INTO members (
             class_year, cadet_last_name, cadet_first_middle, nickname,
@@ -106,6 +154,7 @@ try {
     ]);
 
     $db_success = true;
+    } // end else (new member insert)
 
 } catch (PDOException $e) {
     $db_success = false;
@@ -156,7 +205,26 @@ $headers .= "Reply-To: " . sanitize_header(s($payload,'parent1Email')) . "\r\n";
 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 mail($secretary_email, $subject, $email_body, $headers);
 
-// ── 3. Forward to Google Sheets as backup (fire-and-forget) ───────────────
+// ── 3. Confirmation email to parent ──────────────────────────────────────
+$parent_email = s($payload, 'parent1Email');
+if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
+    $parent_name  = s($payload, 'parent1FirstName');
+    $cadet_name   = trim($first_middle . ' ' . s($payload, 'cadetLastName'));
+    $conf_subject = 'Membership Application Received — USAFA Parents Club of Alabama';
+    $conf_body    = "Dear $parent_name,\n\n"
+                  . "We have received your membership application for $cadet_name (Class of " . s($payload,'graduationYear') . ").\n\n"
+                  . "Your information has been recorded. You will be redirected to our payment page to complete your membership.\n\n"
+                  . "If you have any questions, please contact us at info@alabamafalcons.org.\n\n"
+                  . "Aim High · Fly · Fight · Win\n"
+                  . "USAFA Parents Club of Alabama\n"
+                  . "alabamafalcons.org";
+    $conf_headers = "From: USAFA Parents Club of Alabama <info@alabamafalcons.org>\r\n"
+                  . "Reply-To: info@alabamafalcons.org\r\n"
+                  . "Content-Type: text/plain; charset=UTF-8\r\n";
+    mail($parent_email, $conf_subject, $conf_body, $conf_headers);
+}
+
+// ── 5. Forward to Google Sheets as backup (fire-and-forget) ───────────────
 $apps_script_url = 'https://script.google.com/macros/s/AKfycbzFG0SKrECB1toC6rMckgNQxsUuc_QsCvPr1TMfWztUNM_3plG3J9XnxhTvGdq2faAc/exec';
 $json_data = json_encode($payload);
 $ch = curl_init();
@@ -176,7 +244,7 @@ if ($sheets_error) {
     error_log("Membership handler: Google Sheets backup failed: $sheets_error");
 }
 
-// ── 4. Return success (DB write already succeeded) ────────────────────────
+// ── 6. Return success (DB write already succeeded) ────────────────────────
 http_response_code(200);
 echo json_encode([
     'success' => true,
