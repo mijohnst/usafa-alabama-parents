@@ -108,7 +108,7 @@ $dues_pct     = $active_total > 0 ? round($stat_paid / $active_total * 100) : 0;
 // Upcoming birthdays (next 30 days)
 $bday_rows = $pdo->query(
     "SELECT cadet_last_name, cadet_first_middle, cadet_birthday, cadet_po_box
-     FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL AND cadet_birthday != ''"
+     FROM members WHERE archived = 0 AND class_year != '2026' AND cadet_birthday IS NOT NULL AND cadet_birthday != ''"
 )->fetchAll();
 $upcoming_bdays = [];
 $today = new DateTime('today');
