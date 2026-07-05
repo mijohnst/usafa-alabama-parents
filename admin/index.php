@@ -4,12 +4,13 @@ require_login();
 $pdo = get_pdo();
 
 // ── Filters ────────────────────────────────────────────────────────────────
-$search = trim($_GET['q']      ?? '');
-$year   = $_GET['year']        ?? '';
-$region = $_GET['region']      ?? '';
-$paid   = $_GET['paid']        ?? '';
-$sort   = $_GET['sort']        ?? 'class_year';
-$dir    = $_GET['dir']         ?? 'asc';
+$search  = trim($_GET['q']       ?? '');
+$year    = $_GET['year']         ?? '';
+$region  = $_GET['region']       ?? '';
+$paid    = $_GET['paid']         ?? '';
+$squadron = trim($_GET['squadron'] ?? '');
+$sort    = $_GET['sort']         ?? 'class_year';
+$dir     = $_GET['dir']          ?? 'asc';
 
 $allowed_sorts = ['class_year','cadet_last_name','al_region','membership_paid'];
 if (!in_array($sort, $allowed_sorts)) $sort = 'class_year';
@@ -30,8 +31,12 @@ if ($search !== '') {
 if ($year   !== '') { $where[] = 'class_year = :year';  $params[':year']   = $year; }
 else                { $where[] = 'class_year != :excl'; $params[':excl']   = '2026'; }
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
-if ($paid   === '1') { $where[] = 'membership_paid = 1'; }
-if ($paid   === '0') { $where[] = 'membership_paid = 0'; }
+if ($paid     === '1') { $where[] = 'membership_paid = 1'; }
+if ($paid     === '0') { $where[] = 'membership_paid = 0'; }
+if ($squadron !== '') {
+    $where[] = '(bct_squadron = :sqd OR fall_squadron = :sqd OR squadron_yr2_4 = :sqd)';
+    $params[':sqd'] = $squadron;
+}
 
 $order = $sort === 'cadet_last_name'
     ? "cadet_last_name $dir, cadet_first_middle $dir"
@@ -41,6 +46,40 @@ $sql = 'SELECT * FROM members WHERE ' . implode(' AND ', $where) . " ORDER BY $o
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $members = $stmt->fetchAll();
+
+// ── CSV export ─────────────────────────────────────────────────────────────
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="members-' . date('Y-m-d') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['Year','Last Name','First/Middle','Squadron','Region',
+                   'P1 Name','P1 Email','P1 Cell','P2 Name','P2 Email','P2 Cell',
+                   'Dues','Dues Year','Remarks']);
+    foreach ($members as $m) {
+        $sqd = $m['squadron_yr2_4'] ?: ($m['fall_squadron'] ?: $m['bct_squadron']);
+        fputcsv($out, [
+            $m['class_year'], $m['cadet_last_name'], $m['cadet_first_middle'],
+            $sqd, $m['al_region'],
+            trim($m['parent1_first_name'].' '.$m['parent1_last_name']),
+            $m['parent1_email'], $m['parent1_cell'],
+            trim($m['parent2_first_name'].' '.$m['parent2_last_name']),
+            $m['parent2_email'], $m['parent2_cell'],
+            $m['membership_paid'] ? 'Paid' : 'Unpaid',
+            $m['membership_year'], $m['remarks']
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
+// ── Distinct squadrons for filter dropdown ─────────────────────────────────
+$squadrons = $pdo->query(
+    "SELECT DISTINCT s FROM (
+        SELECT squadron_yr2_4 s FROM members WHERE squadron_yr2_4 != ''
+        UNION SELECT fall_squadron FROM members WHERE fall_squadron != ''
+        UNION SELECT bct_squadron  FROM members WHERE bct_squadron  != ''
+    ) sq ORDER BY s"
+)->fetchAll(PDO::FETCH_COLUMN);
 
 // ── Dashboard stats ────────────────────────────────────────────────────────
 $stats_rows = $pdo->query(
@@ -95,7 +134,14 @@ echo show_flash();
 
 <div class="page-head">
   <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown)</span></h1>
-  <?php if (!is_viewer()): ?><a href="add.php" class="btn btn-primary">+ Add Member</a><?php endif; ?>
+  <div style="display:flex;gap:.5rem">
+    <?php
+    $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron]);
+    $csv_params['export'] = 'csv';
+    ?>
+    <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
+    <?php if (!is_viewer()): ?><a href="add.php" class="btn btn-primary">+ Add Member</a><?php endif; ?>
+  </div>
 </div>
 
 <!-- Filters -->
@@ -131,9 +177,18 @@ echo show_flash();
         <option value="0" <?= $paid==='0'?'selected':''?>>Not Paid</option>
       </select>
     </div>
+    <div class="form-group">
+      <label>Squadron</label>
+      <select name="squadron">
+        <option value="">All</option>
+        <?php foreach ($squadrons as $s): ?>
+          <option value="<?= h($s) ?>" <?= $squadron===$s?'selected':''?>><?= h($s) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
     <div class="form-group" style="flex:0">
       <label>&nbsp;</label>
-      <div style="display:flex;gap:.5rem">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
         <button type="submit" class="btn btn-primary">Filter</button>
         <a href="index.php" class="btn btn-secondary">Clear</a>
       </div>
@@ -207,6 +262,16 @@ echo show_flash();
           <span style="font-size:.72rem;color:#5a6a7a"><?= h($m['membership_year']) ?></span>
         <?php else: ?>
           <span class="badge badge-unpaid">✗ Unpaid</span>
+        <?php endif; ?>
+        <?php if (!is_viewer()): ?>
+        <form method="POST" action="toggle-paid.php" style="margin-top:.3rem">
+          <?= csrf_field() ?>
+          <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
+          <input type="hidden" name="return_url" value="index.php?<?= h(http_build_query(array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron,'sort'=>$sort,'dir'=>$dir]))) ?>">
+          <button type="submit" class="btn btn-secondary btn-sm" style="font-size:.68rem;padding:.2rem .5rem">
+            <?= $m['membership_paid'] ? 'Mark Unpaid' : 'Mark Paid' ?>
+          </button>
+        </form>
         <?php endif; ?>
       </td>
       <td style="max-width:180px;font-size:.78rem;color:#5a6a7a"><?= h(mb_strimwidth($m['remarks'] ?? '', 0, 60, '…')) ?></td>

@@ -49,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rows = $stmt->fetchAll();
 
     $lines = [];
+    $sqd_groups = [];
     foreach ($rows as $r) {
         $cadet_full = trim($r['cadet_first_middle'] . ' ' . $r['cadet_last_name']);
         $cadet_last = trim($r['cadet_last_name'] . ', ' . $r['cadet_first_middle']);
@@ -141,11 +142,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : '')
                          . ($added ? ' — Added ' . $added : '');
                 break;
-            case 'dues_roster':
-                $status = $r['membership_paid'] ? '✓ PAID (' . $r['membership_year'] . ')' : '✗ UNPAID';
-                $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
-                $lines[] = $cadet_last . ' — ' . $p1 . ' — ' . $status;
-                break;
             case 'dues_paid':
                 if ($r['membership_paid']) {
                     $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
@@ -159,6 +155,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $lines[] = $cadet_last . ' — ' . $p1 . $p1email;
                 }
                 break;
+            case 'missing_data':
+                $missing = [];
+                if (!$r['parent1_email'])  $missing[] = 'P1 email';
+                if (!$r['parent1_cell'])   $missing[] = 'P1 cell';
+                if (!$r['parent1_street']) $missing[] = 'P1 address';
+                if (!$r['al_region'])      $missing[] = 'AL region';
+                if (!$r['cadet_email'])    $missing[] = 'cadet email';
+                if ($missing) $lines[] = $cadet_last . ' (' . $r['class_year'] . ') — Missing: ' . implode(', ', $missing);
+                break;
+            case 'care_labels':
+                $box = trim($r['cadet_po_box'] ?? '');
+                if ($box) {
+                    $lines[] = 'Cadet ' . $cadet_full . "\n"
+                             . 'P.O. Box ' . $box . "\n"
+                             . 'USAF Academy, CO 80841-' . $box . "\n";
+                }
+                break;
+            case 'sqd_roster':
+                $sqd = $r['squadron_yr2_4'] ?: ($r['fall_squadron'] ?: $r['bct_squadron']);
+                if (!isset($sqd_groups[$sqd])) $sqd_groups[$sqd] = [];
+                $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                $sqd_groups[$sqd][] = $cadet_last . ' — ' . $p1
+                    . ($r['parent1_cell'] ? ': ' . $r['parent1_cell'] : '')
+                    . ($r['parent1_email'] ? ' / ' . $r['parent1_email'] : '');
+                break;
             case 'cadet_addr':
                 $box = trim($r['cadet_po_box'] ?? '');
                 $lines[] = "Cadet $cadet_full"
@@ -166,6 +187,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          . "\nUSAF Academy, CO 80841" . ($box ? "-$box" : '')
                          . "\n";
                 break;
+        }
+    }
+
+    // Flatten squadron grouping
+    if ($type === 'sqd_roster') {
+        ksort($sqd_groups);
+        foreach ($sqd_groups as $sqd => $members) {
+            $lines[] = '=== Squadron ' . ($sqd ?: 'Unknown') . ' ===';
+            foreach ($members as $entry) $lines[] = $entry;
+            $lines[] = '';
         }
     }
 
@@ -271,9 +302,13 @@ admin_header('Lists');
             <option value="new_members"   <?= $type==='new_members'   ?'selected':''?>>New Members</option>
           </optgroup>
           <optgroup label="Membership">
-            <option value="dues_roster"  <?= $type==='dues_roster'  ?'selected':''?>>Paid / Unpaid Roster</option>
             <option value="dues_paid"    <?= $type==='dues_paid'    ?'selected':''?>>Paid Members List</option>
             <option value="dues_unpaid"  <?= $type==='dues_unpaid'  ?'selected':''?>>Unpaid Members List</option>
+          </optgroup>
+          <optgroup label="Data &amp; Rosters">
+            <option value="missing_data" <?= $type==='missing_data' ?'selected':''?>>Missing Data Report</option>
+            <option value="care_labels"  <?= $type==='care_labels'  ?'selected':''?>>Care Package Labels</option>
+            <option value="sqd_roster"   <?= $type==='sqd_roster'   ?'selected':''?>>Squadron Roster</option>
           </optgroup>
           <optgroup label="Full Roster">
             <option value="full_roster"  <?= $type==='full_roster'  ?'selected':''?>>Full Roster (all fields)</option>
