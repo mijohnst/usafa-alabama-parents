@@ -28,9 +28,10 @@ admin_header('Start New Membership Year');
   <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:1rem 1.25rem;margin-bottom:1.5rem">
     <strong style="color:#5f4c00">⚠️ This action cannot be undone.</strong>
     <p style="color:#5f4c00;margin-top:.4rem;font-size:.9rem">
-      This will mark <strong><?= $affected ?> member(s)</strong> as unpaid for the
-      <strong><?= h($new_year) ?></strong> membership year.
-      Only Class of 2027–2030 members are affected. Class of 2026, Prep School, and Graduate records are not changed.
+      This will reset dues for <strong><?= $affected ?> member(s)</strong>
+      (Class of 2027–2030 only) — marking them unpaid so they can renew for the
+      <strong><?= h($new_year) ?></strong> dues cycle.
+      Class of 2026, Prep School, and Graduate records are not changed.
     </p>
   </div>
   <p style="margin-bottom:1.5rem;color:#333">
