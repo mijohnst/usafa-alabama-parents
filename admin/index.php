@@ -315,10 +315,6 @@ function toggleBdays(btn) {
   panel.style.display  = open ? 'block' : 'none';
   chevron.textContent  = open ? '▾ Hide' : '▸ Show';
 }
-<?php if (!empty($has_soon)): ?>
-// Auto-expand when a birthday is within 7 days
-document.querySelector('[onclick="toggleBdays(this)"]').click();
-<?php endif; ?>
 </script>
 <?php endif; ?>
 

@@ -5,7 +5,7 @@ $pdo = get_pdo();
 
 $all_years = ['2026','2027','2028','2029','2030','Prep School','Graduate'];
 
-$selected_years = $_POST['years']  ?? $all_years;
+$selected_years = $_POST['years']  ?? [];
 $region         = $_POST['region'] ?? '';
 $type           = $_POST['type']   ?? 'emails';
 $paid           = $_POST['paid']   ?? '';
@@ -328,7 +328,10 @@ admin_header('Lists');
 
       <div class="form-group">
         <label>&nbsp;</label>
-        <button type="submit" class="btn btn-primary" style="width:100%">Generate List</button>
+        <div style="display:flex;gap:.5rem">
+          <button type="submit" class="btn btn-primary">Generate List</button>
+          <a href="lists.php" class="btn btn-secondary">Reset</a>
+        </div>
       </div>
 
     </div>
