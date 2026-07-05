@@ -225,6 +225,11 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>Zip</label><input name="parent1_zip" value="' . $v('parent1_zip') . '"></div>';
     echo '</div></fieldset>';
 
+    // Detect if parent 2 address already matches parent 1
+    $addr_same = !empty($m['parent1_street'])
+              && ($m['parent1_street'] ?? '') === ($m['parent2_street'] ?? '')
+              && ($m['parent1_city']   ?? '') === ($m['parent2_city']   ?? '');
+
     echo '<fieldset><legend>Parent / Contact 2</legend>';
     echo '<div class="form-row col-4">';
     echo '<div class="form-group"><label>Last Name</label><input name="parent2_last_name" value="' . $v('parent2_last_name') . '"></div>';
@@ -232,12 +237,37 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>Email</label><input type="email" name="parent2_email" value="' . $v('parent2_email') . '"></div>';
     echo '<div class="form-group"><label>Cell</label><input type="tel" name="parent2_cell" value="' . $v('parent2_cell') . '"></div>';
     echo '</div>';
+    echo '<div class="form-group" style="margin:.25rem 0 .75rem">';
+    echo '<label>Address</label>';
+    echo '<div style="display:flex;gap:1.5rem;margin-top:.3rem">';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.9rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+       . '<input type="radio" name="p2_addr_same" value="1" style="width:auto" onchange="syncP2Addr(this)"' . ($addr_same ? ' checked' : '') . '> Same as Parent 1</label>';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.9rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+       . '<input type="radio" name="p2_addr_same" value="0" style="width:auto" onchange="syncP2Addr(this)"' . (!$addr_same ? ' checked' : '') . '> Different address</label>';
+    echo '</div></div>';
+    echo '<div id="p2-addr-fields" style="' . ($addr_same ? 'opacity:.5;pointer-events:none' : '') . '">';
     echo '<div class="form-row col-4">';
-    echo '<div class="form-group"><label>Street</label><input name="parent2_street" value="' . $v('parent2_street') . '"></div>';
-    echo '<div class="form-group"><label>City</label><input name="parent2_city" value="' . $v('parent2_city') . '"></div>';
-    echo '<div class="form-group"><label>State</label><input name="parent2_state" maxlength="2" value="' . $v('parent2_state') . '"></div>';
-    echo '<div class="form-group"><label>Zip</label><input name="parent2_zip" value="' . $v('parent2_zip') . '"></div>';
-    echo '</div></fieldset>';
+    echo '<div class="form-group"><label>Street</label><input id="p2_street" name="parent2_street" value="' . $v('parent2_street') . '"></div>';
+    echo '<div class="form-group"><label>City</label><input id="p2_city" name="parent2_city" value="' . $v('parent2_city') . '"></div>';
+    echo '<div class="form-group"><label>State</label><input id="p2_state" name="parent2_state" maxlength="2" value="' . $v('parent2_state') . '"></div>';
+    echo '<div class="form-group"><label>Zip</label><input id="p2_zip" name="parent2_zip" value="' . $v('parent2_zip') . '"></div>';
+    echo '</div></div></fieldset>';
+    echo '<script>
+function syncP2Addr(radio) {
+  var same = radio.value === "1";
+  var wrap = document.getElementById("p2-addr-fields");
+  wrap.style.opacity = same ? ".5" : "1";
+  wrap.style.pointerEvents = same ? "none" : "auto";
+  if (same) {
+    document.getElementById("p2_street").value = document.querySelector("[name=parent1_street]").value;
+    document.getElementById("p2_city").value   = document.querySelector("[name=parent1_city]").value;
+    document.getElementById("p2_state").value  = document.querySelector("[name=parent1_state]").value;
+    document.getElementById("p2_zip").value    = document.querySelector("[name=parent1_zip]").value;
+  }
+}
+// Sync on load if "same" is pre-selected
+(function(){ var r = document.querySelector("[name=p2_addr_same]:checked"); if (r) syncP2Addr(r); })();
+</script>';
 
     echo '<fieldset><legend>Region, Consents &amp; Notes</legend>';
     echo '<div class="form-row col-2">';
