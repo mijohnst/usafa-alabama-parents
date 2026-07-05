@@ -191,25 +191,6 @@ echo show_flash();
   </div>
 </div>
 
-<!-- Upcoming birthdays -->
-<?php if (!empty($upcoming_bdays)): ?>
-<div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
-  <div style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">🎂 Upcoming Birthdays (next 30 days)</div>
-  <div style="display:flex;flex-wrap:wrap;gap:.5rem">
-    <?php foreach ($upcoming_bdays as $b): ?>
-    <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.4rem .8rem;font-size:.82rem">
-      <strong style="color:#002554"><?= h($b['name']) ?></strong>
-      <span style="color:#5a6a7a"> — <?= h($b['fmt']) ?></span>
-      <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?>
-      <?php if ($b['days'] === 0): ?><span style="color:#A6192E;font-weight:700"> 🎉 Today!</span>
-      <?php elseif ($b['days'] <= 7): ?><span style="color:#f57c00"> (<?= $b['days'] ?>d)</span>
-      <?php else: ?><span style="color:#9aa5b4"> (<?= $b['days'] ?>d)</span><?php endif; ?>
-    </div>
-    <?php endforeach; ?>
-  </div>
-</div>
-<?php endif; ?>
-
 <!-- Filters -->
 <div class="card" style="padding:1rem 1.5rem">
   <form method="GET" class="filter-bar">
@@ -270,6 +251,29 @@ echo show_flash();
 </div>
 
 <?php if (!is_viewer()): ?>
+<!-- Upcoming birthdays -->
+<?php if (!empty($upcoming_bdays)): ?>
+<div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
+  <div style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">🎂 Upcoming Birthdays (next 30 days)</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem">
+    <?php foreach ($upcoming_bdays as $b): ?>
+    <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.5rem .85rem;font-size:.82rem;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <strong style="color:#002554"><?= h($b['name']) ?></strong><br>
+        <span style="color:#5a6a7a"><?= h($b['fmt']) ?></span>
+        <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?>
+      </div>
+      <div style="text-align:right;white-space:nowrap;padding-left:.5rem">
+        <?php if ($b['days'] === 0): ?><span style="color:#A6192E;font-weight:700">🎉 Today!</span>
+        <?php elseif ($b['days'] <= 7): ?><span style="color:#f57c00;font-weight:700"><?= $b['days'] ?>d</span>
+        <?php else: ?><span style="color:#9aa5b4"><?= $b['days'] ?>d</span><?php endif; ?>
+      </div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
+
 <!-- Bulk action form (inputs inside the table use form="bulk-form") -->
 <form id="bulk-form" method="POST" action="bulk-action.php">
   <?= csrf_field() ?>
