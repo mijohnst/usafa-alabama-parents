@@ -29,6 +29,7 @@ try {
         "SELECT cadet_last_name, cadet_first_middle, cadet_birthday, cadet_po_box, class_year
          FROM members
          WHERE archived = 0
+           AND class_year != '2026'
            AND cadet_birthday IS NOT NULL
            AND cadet_birthday != ''
            AND MONTH(cadet_birthday) = ?
