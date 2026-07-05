@@ -89,17 +89,23 @@ $stats_rows = $pdo->query(
      FROM members WHERE archived = 0 GROUP BY class_year, membership_paid ORDER BY class_year"
 )->fetchAll();
 
-$stat_total = 0; $stat_paid = 0; $stat_by_year = [];
+$stat_total = 0; $stat_paid = 0; $stat_by_year = []; $stat_paid_by_year = [];
 foreach ($stats_rows as $s) {
     $stat_total += $s['cnt'];
     if ($s['membership_paid']) $stat_paid += $s['cnt'];
     $stat_by_year[$s['class_year']] = ($stat_by_year[$s['class_year']] ?? 0) + $s['cnt'];
+    if ($s['membership_paid']) $stat_paid_by_year[$s['class_year']] = ($stat_paid_by_year[$s['class_year']] ?? 0) + $s['cnt'];
 }
 // Unpaid only counts active years (2027-2030), not 2026 graduates
 $stat_unpaid = (int)$pdo->query(
     "SELECT COUNT(*) FROM members WHERE archived = 0 AND membership_paid = 0 AND class_year != '2026'"
 )->fetchColumn();
 unset($stat_by_year['2026']);
+
+// New members this month
+$new_this_month = (int)$pdo->query(
+    "SELECT COUNT(*) FROM members WHERE archived = 0 AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
+)->fetchColumn();
 
 // Dues progress bar (active years 2027-2030 only)
 $active_total = $stat_paid + $stat_unpaid;
@@ -158,8 +164,18 @@ echo show_flash();
   </div>
 </div>
 
+<!-- Quick links -->
+<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.25rem">
+  <a href="email.php" class="btn btn-secondary">✉ Compose Email</a>
+  <a href="lists.php" class="btn btn-secondary">📋 Lists</a>
+  <a href="directory.php" class="btn btn-secondary">📖 Directory</a>
+  <?php if (!is_viewer()): ?>
+  <a href="add.php" class="btn btn-secondary">+ Add Member</a>
+  <?php endif; ?>
+</div>
+
 <!-- Dashboard stats -->
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1.25rem">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.75rem;margin-bottom:1.25rem">
   <div class="card" style="padding:1rem;text-align:center;margin:0">
     <div style="font-size:1.8rem;font-weight:700;color:#002554"><?= $stat_total ?></div>
     <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Total</div>
@@ -172,10 +188,27 @@ echo show_flash();
     <div style="font-size:1.8rem;font-weight:700;color:#c62828"><?= $stat_unpaid ?></div>
     <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Unpaid</div>
   </div>
-  <?php foreach ($stat_by_year as $yr => $cnt): ?>
   <div class="card" style="padding:1rem;text-align:center;margin:0">
-    <div style="font-size:1.8rem;font-weight:700;color:#002554"><?= $cnt ?></div>
-    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em"><?= h($yr) ?></div>
+    <div style="font-size:1.8rem;font-weight:700;color:#003594"><?= $new_this_month ?></div>
+    <div style="font-size:.75rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">New This Month</div>
+  </div>
+</div>
+
+<!-- Paid by class year -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.75rem;margin-bottom:1.25rem">
+  <?php foreach ($stat_by_year as $yr => $cnt):
+    $yr_paid = $stat_paid_by_year[$yr] ?? 0;
+    $yr_pct  = $cnt > 0 ? round($yr_paid / $cnt * 100) : 0;
+    $yr_color = $yr_pct >= 75 ? '#2e7d32' : ($yr_pct >= 40 ? '#f57c00' : '#c62828');
+  ?>
+  <div class="card" style="padding:.85rem 1rem;margin:0">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem">
+      <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em"><?= h($yr) ?></span>
+      <span style="font-size:.82rem;font-weight:700;color:<?= $yr_color ?>"><?= $yr_paid ?>/<?= $cnt ?> <span style="font-weight:400;color:#9aa5b4">(<?= $yr_pct ?>%)</span></span>
+    </div>
+    <div style="background:#e1e5eb;border-radius:99px;height:7px;overflow:hidden">
+      <div style="height:100%;width:<?= $yr_pct ?>%;background:<?= $yr_color ?>;border-radius:99px"></div>
+    </div>
   </div>
   <?php endforeach; ?>
 </div>
