@@ -101,6 +101,33 @@ $stat_unpaid = (int)$pdo->query(
 )->fetchColumn();
 unset($stat_by_year['2026']);
 
+// Dues progress bar (active years 2027-2030 only)
+$active_total = $stat_paid + $stat_unpaid;
+$dues_pct     = $active_total > 0 ? round($stat_paid / $active_total * 100) : 0;
+
+// Upcoming birthdays (next 30 days)
+$bday_rows = $pdo->query(
+    "SELECT cadet_last_name, cadet_first_middle, cadet_birthday, cadet_po_box
+     FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL AND cadet_birthday != ''"
+)->fetchAll();
+$upcoming_bdays = [];
+$today = new DateTime('today');
+foreach ($bday_rows as $b) {
+    try {
+        $bday = new DateTime($b['cadet_birthday']);
+        $next = new DateTime($today->format('Y') . '-' . $bday->format('m-d'));
+        if ($next < $today) $next->modify('+1 year');
+        $days = (int)$today->diff($next)->days;
+        if ($days <= 30) {
+            $upcoming_bdays[] = ['name'  => $b['cadet_last_name'] . ', ' . $b['cadet_first_middle'],
+                                  'box'   => $b['cadet_po_box'],
+                                  'fmt'   => $next->format('M j'),
+                                  'days'  => $days];
+        }
+    } catch (Exception $e) {}
+}
+usort($upcoming_bdays, fn($a, $b) => $a['days'] - $b['days']);
+
 // Helper: build sort link preserving current filters
 function sort_link(string $col, string $label, string $current_sort, string $current_dir, string $next_dir, array $get): string {
     $params = array_merge($get, ['sort' => $col, 'dir' => $col === $current_sort ? $next_dir : 'asc']);
@@ -136,6 +163,36 @@ echo show_flash();
   </div>
   <?php endforeach; ?>
 </div>
+
+<!-- Dues progress bar -->
+<div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+    <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Dues Collection — <?= h(membership_year()) ?></span>
+    <span style="font-size:.85rem;font-weight:700;color:#002554"><?= $stat_paid ?> of <?= $active_total ?> paid (<?= $dues_pct ?>%)</span>
+  </div>
+  <div style="background:#e1e5eb;border-radius:99px;height:10px;overflow:hidden">
+    <div style="height:100%;width:<?= $dues_pct ?>%;background:<?= $dues_pct >= 75 ? '#2e7d32' : ($dues_pct >= 40 ? '#f57c00' : '#c62828') ?>;border-radius:99px;transition:width .4s"></div>
+  </div>
+</div>
+
+<!-- Upcoming birthdays -->
+<?php if (!empty($upcoming_bdays)): ?>
+<div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
+  <div style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">🎂 Upcoming Birthdays (next 30 days)</div>
+  <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+    <?php foreach ($upcoming_bdays as $b): ?>
+    <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.4rem .8rem;font-size:.82rem">
+      <strong style="color:#002554"><?= h($b['name']) ?></strong>
+      <span style="color:#5a6a7a"> — <?= h($b['fmt']) ?></span>
+      <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?>
+      <?php if ($b['days'] === 0): ?><span style="color:#A6192E;font-weight:700"> 🎉 Today!</span>
+      <?php elseif ($b['days'] <= 7): ?><span style="color:#f57c00"> (<?= $b['days'] ?>d)</span>
+      <?php else: ?><span style="color:#9aa5b4"> (<?= $b['days'] ?>d)</span><?php endif; ?>
+    </div>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
 
 <div class="page-head">
   <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown)</span></h1>
