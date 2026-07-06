@@ -24,7 +24,9 @@ function handle_receipt_upload(string $key = 'receipt'): ?string {
     $file = $_FILES[$key];
     if ($file['error'] !== UPLOAD_ERR_OK) return null;
     $allowed = ['image/jpeg','image/png','image/gif','application/pdf'];
-    $mime    = mime_content_type($file['tmp_name']);
+    $finfo   = finfo_open(FILEINFO_MIME_TYPE);
+    $mime    = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
     if (!in_array($mime, $allowed)) return null;
     if ($file['size'] > 10 * 1024 * 1024) return null; // 10MB max
     $ext      = $mime === 'application/pdf' ? 'pdf' : 'jpg';
