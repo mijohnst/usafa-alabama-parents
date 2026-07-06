@@ -111,6 +111,16 @@ $new_this_month = (int)$pdo->query(
 $active_total = $stat_paid + $stat_unpaid;
 $dues_pct     = $active_total > 0 ? round($stat_paid / $active_total * 100) : 0;
 
+// Finance widget data (for admins and treasurers)
+$fin_pending = $fin_approved = $fin_ytd = 0;
+if (can_manage_finances() && !is_member()) {
+    try {
+        $fin_pending  = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status='pending'")->fetchColumn();
+        $fin_approved = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status='approved'")->fetchColumn();
+        $fin_ytd      = (float)$pdo->query("SELECT COALESCE(SUM(amount_total),0) FROM purchases WHERE YEAR(purchase_date)=YEAR(NOW()) AND status='reimbursed'")->fetchColumn();
+    } catch (Exception $e) {}
+}
+
 // Upcoming birthdays (next 30 days)
 $bday_rows = $pdo->query(
     "SELECT cadet_last_name, cadet_first_middle, cadet_birthday, cadet_po_box
@@ -275,6 +285,27 @@ foreach ($stat_by_year as $yr => $cnt) {
 </div>
 
 <?php if (!is_viewer()): ?>
+<!-- Finance widget -->
+<?php if (can_manage_finances() && !is_member() && ($fin_pending || $fin_approved || $fin_ytd)): ?>
+<div class="card" style="padding:.9rem 1.25rem;margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center">
+  <span style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0">Finance</span>
+  <?php if ($fin_pending): ?>
+  <a href="purchases.php?status=pending" style="text-decoration:none;display:flex;align-items:center;gap:.4rem">
+    <span style="background:#fff3cd;color:#5f4c00;border:1px solid #ffc107;border-radius:99px;font-size:.75rem;font-weight:700;padding:.15rem .6rem"><?= $fin_pending ?> pending approval</span>
+  </a>
+  <?php endif; ?>
+  <?php if ($fin_approved): ?>
+  <a href="pending-reimbursements.php" style="text-decoration:none;display:flex;align-items:center;gap:.4rem">
+    <span style="background:#e3f2fd;color:#0d47a1;border:1px solid #90caf9;border-radius:99px;font-size:.75rem;font-weight:700;padding:.15rem .6rem"><?= $fin_approved ?> awaiting reimbursement</span>
+  </a>
+  <?php endif; ?>
+  <?php if ($fin_ytd): ?>
+  <span style="font-size:.82rem;color:#5a6a7a">YTD expenses: <strong style="color:#002554">$<?= number_format($fin_ytd,2) ?></strong></span>
+  <?php endif; ?>
+  <a href="purchases.php" style="margin-left:auto;font-size:.78rem;color:#003594">View Finance →</a>
+</div>
+<?php endif; ?>
+
 <!-- Upcoming birthdays (collapsible) -->
 <?php if (!empty($upcoming_bdays)):
   $has_soon = array_filter($upcoming_bdays, fn($b) => $b['days'] <= 7);

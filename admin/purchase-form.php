@@ -59,8 +59,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $total         = round($pretax + $tax + $shipping, 2);
     $status           = $_POST['status']                    ?? 'pending';
     $notes            = trim($_POST['notes']               ?? '');
+    $payment_method   = trim($_POST['payment_method']      ?? '');
     $receipt_required = isset($_POST['receipt_required'])   ? 1 : 0;
     $submitted_by     = (int)($_POST['submitted_by']        ?? $_SESSION['user_id'] ?? 0);
+    $confirmed_dup    = !empty($_POST['confirmed_duplicate']);
+
+    // Duplicate detection (same vendor, amount within 10%, within 30 days)
+    $dup_warning = null;
+    if (!$confirmed_dup && $vendor && $pretax > 0) {
+        $dup_stmt = $pdo->prepare(
+            "SELECT id, vendor, purchase_date, amount_pretax FROM purchases
+             WHERE vendor = ? AND ABS(amount_pretax - ?) / ? <= 0.10
+             AND purchase_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+             AND id != ?
+             LIMIT 1"
+        );
+        $dup_stmt->execute([$vendor, $pretax, $pretax, $id ?: 0]);
+        $dup = $dup_stmt->fetch();
+        if ($dup) {
+            $dup_warning = 'A similar purchase already exists: '
+                . h($dup['vendor']) . ' on ' . date('M j, Y', strtotime($dup['purchase_date']))
+                . ' for $' . number_format($dup['amount_pretax'], 2) . '.';
+        }
+    }
 
     if (!$vendor)      $errors[] = 'Vendor is required.';
     if (!$description) $errors[] = 'Description is required.';
@@ -74,6 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($upload_key) {
         $new_receipt = handle_receipt_upload($upload_key);
         if (!$new_receipt) $errors[] = 'Receipt upload failed. Use JPG, PNG or PDF under 10MB.';
+    }
+
+    // Block save if duplicate warning and not confirmed
+    if ($dup_warning && !$confirmed_dup) {
+        $errors[] = '__dup__'; // handled specially in template
     }
 
     if (empty($errors)) {
@@ -90,8 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $old->execute([$id]);
             $old_status = $old->fetchColumn();
 
-            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,receipt_required=?,updated_at=NOW() WHERE id=?')
-                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$receipt_required,$id]);
+            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,payment_method=?,receipt_required=?,updated_at=NOW() WHERE id=?')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$payment_method,$receipt_required,$id]);
             flash('success','Purchase updated.');
 
             // Check budget thresholds (check both old and new event if event changed)
@@ -105,8 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 notify_status_change($pdo, $updated->fetch(), $old_status, $status, current_user_name());
             }
         } else {
-            $pdo->prepare('INSERT INTO purchases (vendor,order_number,description,event,category,purchase_date,amount_pretax,amount_tax,amount_shipping,amount_total,receipt_filename,submitted_by,status,notes,receipt_required) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes,$receipt_required]);
+            $pdo->prepare('INSERT INTO purchases (vendor,order_number,description,event,category,purchase_date,amount_pretax,amount_tax,amount_shipping,amount_total,receipt_filename,submitted_by,status,notes,payment_method,receipt_required) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes,$payment_method,$receipt_required]);
             $new_id = (int)$pdo->lastInsertId();
             flash('success','Purchase added.');
 
@@ -150,8 +176,20 @@ admin_header($title);
   <a href="purchases.php" class="btn btn-secondary">← Back</a>
 </div>
 
-<?php if (!empty($errors)): ?>
-  <div class="alert alert-error"><?= implode('<br>', array_map('htmlspecialchars',$errors)) ?></div>
+<?php
+$real_errors = array_filter($errors, fn($e) => $e !== '__dup__');
+if (!empty($real_errors)): ?>
+  <div class="alert alert-error" style="max-width:700px"><?= implode('<br>', array_map('htmlspecialchars', $real_errors)) ?></div>
+<?php endif; ?>
+<?php if (!empty($dup_warning)): ?>
+  <div style="max-width:700px;background:#fff8e1;border:1px solid #ffc107;border-radius:6px;padding:1rem 1.25rem;margin-bottom:1rem">
+    <strong style="color:#5f4c00">⚠️ Possible Duplicate</strong>
+    <p style="color:#5f4c00;margin:.4rem 0 .75rem;font-size:.9rem"><?= h($dup_warning) ?></p>
+    <label style="display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0;color:#333">
+      <input type="checkbox" form="purchase-form" name="confirmed_duplicate" value="1" style="width:auto">
+      This is not a duplicate — save anyway
+    </label>
+  </div>
 <?php endif; ?>
 
 <?php if ($read_only): ?>
@@ -160,7 +198,7 @@ admin_header($title);
 </div>
 <?php endif; ?>
 <div class="card" style="max-width:700px">
-  <form method="POST" enctype="multipart/form-data"><?php if ($read_only) echo '<fieldset disabled style="border:none;padding:0;margin:0">'; ?>
+  <form method="POST" enctype="multipart/form-data" id="purchase-form"><?php if ($read_only) echo '<fieldset disabled style="border:none;padding:0;margin:0">'; ?>
     <?= csrf_field() ?>
     <?php if ($is_edit): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
 
@@ -315,6 +353,16 @@ admin_header($title);
         <label for="req_receipt" style="font-size:.85rem;text-transform:none;letter-spacing:0;font-weight:400;color:#333;cursor:pointer;margin:0">
           Receipt required before approval
         </label>
+      </div>
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select name="payment_method">
+          <?php foreach (PAYMENT_METHODS as $pm): ?>
+            <option value="<?= h($pm) ?>" <?= ($p['payment_method']??'')===$pm?'selected':''?>>
+              <?= $pm === '' ? '— select —' : h($pm) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
       </div>
     </fieldset>
 
