@@ -15,15 +15,23 @@ function send_notification(string $to, string $subject, string $body): bool {
     $headers  = "From: " . CLUB_FROM . "\r\n";
     $headers .= "Reply-To: info@alabamafalcons.org\r\n";
     $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    $clean_subject = str_replace(["\r","\n"], '', $subject);
+    // Strip all control characters from subject to prevent header injection
+    $clean_subject = preg_replace('/[\x00-\x1F\x7F]/', '', $subject);
+    $clean_subject = mb_substr($clean_subject, 0, 200); // cap length
     return mail($to, $clean_subject, $body, $headers);
 }
 
 // ── Notify all treasurers + admins of a new purchase ─────────────────────
 function notify_new_purchase(PDO $pdo, array $purchase, string $submitter_name): void {
-    $recipients = $pdo->query(
-        "SELECT name, email FROM users WHERE role IN ('treasurer','admin') AND active = 1"
-    )->fetchAll();
+    try {
+        $recipients = $pdo->query(
+            "SELECT name, email FROM users WHERE role IN ('treasurer','admin') AND active = 1"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('mailer: failed to fetch recipients — ' . $e->getMessage());
+        return;
+    }
+    if (empty($recipients)) return;
 
     $url  = ADMIN_URL . 'purchase-form.php?id=' . (int)$purchase['id'];
     $amt  = '$' . number_format($purchase['amount_total'], 2);

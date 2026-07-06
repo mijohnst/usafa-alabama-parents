@@ -3,14 +3,18 @@ require_once __DIR__ . '/auth.php';
 require_admin();
 $pdo = get_pdo();
 
-$new_year  = membership_year();
-$active_years = "('2027','2028','2029','2030')";
-$affected  = (int)$pdo->query("SELECT COUNT(*) FROM members WHERE archived = 0 AND class_year IN $active_years")->fetchColumn();
+$new_year     = membership_year();
+$active_years = ['2027','2028','2029','2030'];
+$ph           = implode(',', array_fill(0, count($active_years), '?'));
+$cnt_stmt     = $pdo->prepare("SELECT COUNT(*) FROM members WHERE archived = 0 AND class_year IN ($ph)");
+$cnt_stmt->execute($active_years);
+$affected  = (int)$cnt_stmt->fetchColumn();
 $confirmed = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
-    $pdo->query("UPDATE members SET membership_paid = 0, membership_year = '' WHERE archived = 0 AND class_year IN $active_years");
+    $upd = $pdo->prepare("UPDATE members SET membership_paid = 0, membership_year = '' WHERE archived = 0 AND class_year IN ($ph)");
+    $upd->execute($active_years);
     $confirmed = true;
     flash('success', "Dues reset. $affected member(s) marked unpaid for $new_year.");
     header('Location: index.php'); exit;

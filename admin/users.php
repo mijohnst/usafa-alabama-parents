@@ -24,6 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
         if (!$uname) $errors[] = 'Username is required.';
         if (!in_array($role, ['admin','treasurer','viewer','member'])) $errors[] = 'Invalid role.';
+
+        // Check username/email uniqueness
+        $dup_check = $pdo->prepare('SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?');
+        $dup_check->execute([$uname, $email, $id ?: 0]);
+        if ($dup_check->fetch()) $errors[] = 'That username or email is already in use by another account.';
         if ($action === 'add' && strlen($pw) < 8)  $errors[] = 'Password must be at least 8 characters.';
         if ($pw && $pw !== $pw2)                    $errors[] = 'Passwords do not match.';
 
