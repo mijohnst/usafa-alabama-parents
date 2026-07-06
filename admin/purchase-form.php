@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
 require_finance();
 $pdo = get_pdo();
 
@@ -78,13 +79,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($is_edit) {
+            // Capture old status before update for change detection
+            $old = $pdo->prepare('SELECT status FROM purchases WHERE id=?');
+            $old->execute([$id]);
+            $old_status = $old->fetchColumn();
+
             $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,updated_at=NOW() WHERE id=?')
                 ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$id]);
             flash('success','Purchase updated.');
+
+            // Notify submitter if status changed
+            if ($old_status !== $status) {
+                $updated = $pdo->prepare('SELECT * FROM purchases WHERE id=?');
+                $updated->execute([$id]);
+                notify_status_change($pdo, $updated->fetch(), $old_status, $status, current_user_name());
+            }
         } else {
             $pdo->prepare('INSERT INTO purchases (vendor,order_number,description,event,category,purchase_date,amount_pretax,amount_tax,amount_shipping,amount_total,receipt_filename,submitted_by,status,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
                 ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes]);
+            $new_id = (int)$pdo->lastInsertId();
             flash('success','Purchase added.');
+
+            // Notify treasurers/admins of new submission
+            $new_p = $pdo->prepare('SELECT * FROM purchases WHERE id=?');
+            $new_p->execute([$new_id]);
+            notify_new_purchase($pdo, $new_p->fetch(), current_user_name());
         }
         header('Location: purchases.php'); exit;
     }
