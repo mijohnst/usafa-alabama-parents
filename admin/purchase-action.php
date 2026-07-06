@@ -8,6 +8,7 @@ csrf_verify();
 
 $id     = (int)($_POST['id']     ?? 0);
 $action = trim($_POST['action']  ?? '');
+$note   = trim($_POST['note']    ?? '');
 $pdo    = get_pdo();
 
 if (!$id || !in_array($action, ['approve','reimburse'])) {
@@ -34,9 +35,15 @@ if ($action === 'approve') {
         flash('error', 'Only pending purchases can be approved.');
         header('Location: purchases.php'); exit;
     }
-    $pdo->prepare('UPDATE purchases SET status = ?, updated_at = NOW() WHERE id = ?')
-        ->execute(['approved', $id]);
+    // Warn if no receipt and receipt was marked required
+    if (!empty($p['receipt_required']) && empty($p['receipt_filename'])) {
+        // Allow but flag in note
+        $note = trim('⚠️ Approved without receipt. ' . $note);
+    }
+    $pdo->prepare('UPDATE purchases SET status = ?, approved_note = ?, updated_at = NOW() WHERE id = ?')
+        ->execute(['approved', $note, $id]);
     flash('success', 'Purchase approved. Treasurers have been notified.');
+    $p['approved_note'] = $note;
     notify_approved($pdo, $p, current_user_name());
 
 } elseif ($action === 'reimburse') {
@@ -49,9 +56,10 @@ if ($action === 'approve') {
         flash('error', 'Only approved purchases can be marked as reimbursed.');
         header('Location: purchases.php'); exit;
     }
-    $pdo->prepare('UPDATE purchases SET status = ?, updated_at = NOW() WHERE id = ?')
-        ->execute(['reimbursed', $id]);
+    $pdo->prepare('UPDATE purchases SET status = ?, reimbursed_note = ?, updated_at = NOW() WHERE id = ?')
+        ->execute(['reimbursed', $note, $id]);
     flash('success', 'Purchase marked as reimbursed. Submitter has been notified.');
+    $p['reimbursed_note'] = $note;
     notify_reimbursed($pdo, $p, current_user_name());
 }
 

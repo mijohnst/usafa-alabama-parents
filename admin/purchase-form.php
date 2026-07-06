@@ -54,9 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tax           = (float)str_replace(',','', $_POST['amount_tax']       ?? '0');
     $shipping      = (float)str_replace(',','', $_POST['amount_shipping']  ?? '0');
     $total         = round($pretax + $tax + $shipping, 2);
-    $status        = $_POST['status'] ?? 'pending';
-    $notes        = trim($_POST['notes'] ?? '');
-    $submitted_by = (int)($_POST['submitted_by'] ?? $_SESSION['user_id'] ?? 0);
+    $status           = $_POST['status']                    ?? 'pending';
+    $notes            = trim($_POST['notes']               ?? '');
+    $receipt_required = isset($_POST['receipt_required'])   ? 1 : 0;
+    $submitted_by     = (int)($_POST['submitted_by']        ?? $_SESSION['user_id'] ?? 0);
 
     if (!$vendor)      $errors[] = 'Vendor is required.';
     if (!$description) $errors[] = 'Description is required.';
@@ -86,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $old->execute([$id]);
             $old_status = $old->fetchColumn();
 
-            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,updated_at=NOW() WHERE id=?')
-                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$id]);
+            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,receipt_required=?,updated_at=NOW() WHERE id=?')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$receipt_required,$id]);
             flash('success','Purchase updated.');
 
             // Notify submitter if status changed
@@ -97,8 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 notify_status_change($pdo, $updated->fetch(), $old_status, $status, current_user_name());
             }
         } else {
-            $pdo->prepare('INSERT INTO purchases (vendor,order_number,description,event,category,purchase_date,amount_pretax,amount_tax,amount_shipping,amount_total,receipt_filename,submitted_by,status,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes]);
+            $pdo->prepare('INSERT INTO purchases (vendor,order_number,description,event,category,purchase_date,amount_pretax,amount_tax,amount_shipping,amount_total,receipt_filename,submitted_by,status,notes,receipt_required) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes,$receipt_required]);
             $new_id = (int)$pdo->lastInsertId();
             flash('success','Purchase added.');
 
@@ -298,7 +299,29 @@ admin_header($title);
         <label>Notes</label>
         <textarea name="notes" rows="3" placeholder="Any additional details…"><?= $v('notes') ?></textarea>
       </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+        <input type="checkbox" name="receipt_required" id="req_receipt" value="1" style="width:auto"
+               <?= !empty($p['receipt_required']) ? 'checked' : '' ?>>
+        <label for="req_receipt" style="font-size:.85rem;text-transform:none;letter-spacing:0;font-weight:400;color:#333;cursor:pointer;margin:0">
+          Receipt required before approval
+        </label>
+      </div>
     </fieldset>
+
+    <?php if ($is_edit && (!empty($p['approved_note']) || !empty($p['reimbursed_note']))): ?>
+    <fieldset><legend>Workflow Notes</legend>
+      <?php if (!empty($p['approved_note'])): ?>
+      <div style="background:#e8f5e9;border-left:3px solid #4caf50;padding:.6rem .9rem;border-radius:4px;margin-bottom:.5rem;font-size:.85rem">
+        <strong style="color:#1b5e20">Approval note:</strong> <?= h($p['approved_note']) ?>
+      </div>
+      <?php endif; ?>
+      <?php if (!empty($p['reimbursed_note'])): ?>
+      <div style="background:#e3f2fd;border-left:3px solid #2196f3;padding:.6rem .9rem;border-radius:4px;font-size:.85rem">
+        <strong style="color:#003594">Reimbursement note:</strong> <?= h($p['reimbursed_note']) ?>
+      </div>
+      <?php endif; ?>
+    </fieldset>
+    <?php endif; ?>
 
     <?php if ($read_only): ?>
     <?php else: ?>

@@ -8,14 +8,19 @@ $filter_category = $_GET['category'] ?? '';
 $filter_event    = $_GET['event']    ?? '';
 $filter_from     = $_GET['from']     ?? '';
 $filter_to       = $_GET['to']       ?? '';
+$filter_search   = trim($_GET['q']   ?? '');
 
 $where  = ['1=1'];
 $params = [];
-if ($filter_status   !== '') { $where[] = 'p.status = :status';      $params[':status']   = $filter_status; }
-if ($filter_category !== '') { $where[] = 'p.category = :cat';       $params[':cat']      = $filter_category; }
-if ($filter_event    !== '') { $where[] = 'p.event = :event';        $params[':event']    = $filter_event; }
-if ($filter_from     !== '') { $where[] = 'p.purchase_date >= :dfrom'; $params[':dfrom']  = $filter_from; }
-if ($filter_to       !== '') { $where[] = 'p.purchase_date <= :dto';   $params[':dto']    = $filter_to; }
+if ($filter_status   !== '') { $where[] = 'p.status = :status';        $params[':status']   = $filter_status; }
+if ($filter_category !== '') { $where[] = 'p.category = :cat';         $params[':cat']      = $filter_category; }
+if ($filter_event    !== '') { $where[] = 'p.event = :event';          $params[':event']    = $filter_event; }
+if ($filter_from     !== '') { $where[] = 'p.purchase_date >= :dfrom'; $params[':dfrom']    = $filter_from; }
+if ($filter_to       !== '') { $where[] = 'p.purchase_date <= :dto';   $params[':dto']      = $filter_to; }
+if ($filter_search   !== '') {
+    $where[] = '(p.vendor LIKE :q OR p.description LIKE :q OR p.order_number LIKE :q OR p.notes LIKE :q)';
+    $params[':q'] = '%' . $filter_search . '%';
+}
 
 $sql = 'SELECT p.*, u.name as submitted_by_name
         FROM purchases p
@@ -65,6 +70,10 @@ admin_header('Finance');
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <?php $ep = array_merge(array_filter(['status'=>$filter_status,'category'=>$filter_category,'event'=>$filter_event,'from'=>$filter_from,'to'=>$filter_to]),['export'=>1]); ?>
     <a href="purchases.php?<?= http_build_query($ep) ?>" class="btn btn-secondary">Export CSV</a>
+    <a href="report.php" class="btn btn-secondary">📊 Report</a>
+    <?php if (is_admin() || is_treasurer()): ?>
+    <a href="budgets.php" class="btn btn-secondary">🎯 Budgets</a>
+    <?php endif; ?>
     <?php if (can_manage_finances()): ?>
     <a href="purchase-form.php" class="btn btn-primary">+ Add Purchase</a>
     <?php endif; ?>
@@ -98,6 +107,10 @@ admin_header('Finance');
 <!-- Filters -->
 <div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
   <form method="GET" class="filter-bar">
+    <div class="form-group" style="flex:2;min-width:180px">
+      <label>Search vendor / description</label>
+      <input name="q" value="<?= h($filter_search) ?>" placeholder="Type to search…">
+    </div>
     <div class="form-group">
       <label>Status</label>
       <select name="status">
@@ -188,14 +201,19 @@ admin_header('Finance');
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
             <input type="hidden" name="action" value="approve">
-            <button type="submit" class="btn btn-sm" style="background:#1b5e20;color:#fff">✓ Approve</button>
+            <?php if (!$p['receipt_filename']): ?>
+              <span style="font-size:.68rem;color:#f57c00;display:block;margin-bottom:.2rem">⚠️ No receipt</span>
+            <?php endif; ?>
+            <input type="text" name="note" placeholder="Approval note (optional)" style="font-size:.72rem;padding:.25rem .5rem;margin-bottom:.3rem;width:100%">
+            <button type="submit" class="btn btn-sm" style="background:#1b5e20;color:#fff;width:100%">✓ Approve</button>
           </form>
           <?php elseif ($p['status']==='approved' && is_treasurer()): ?>
           <form method="POST" action="purchase-action.php" style="margin:0" onsubmit="return confirm('Mark this purchase as reimbursed?')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
             <input type="hidden" name="action" value="reimburse">
-            <button type="submit" class="btn btn-sm" style="background:#003594;color:#fff">💰 Reimburse</button>
+            <input type="text" name="note" placeholder="e.g. Venmo #12345 (optional)" style="font-size:.72rem;padding:.25rem .5rem;margin-bottom:.3rem;width:100%">
+            <button type="submit" class="btn btn-sm" style="background:#003594;color:#fff;width:100%">💰 Reimburse</button>
           </form>
           <?php endif; ?>
           <?php if (is_treasurer() || (is_member() && (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0))): ?>
