@@ -203,7 +203,12 @@ function admin_header(string $title): void {
     if (!is_member()) echo '<a href="index.php">Members</a>';
     if (!is_member() && !is_viewer()) echo '<a href="lists.php">Lists</a>';
     if (!is_viewer() && !is_member()) echo '<a href="email.php">Email</a>';
-    if (can_manage_finances()) echo '<a href="purchases.php">Finance</a>';
+    if (can_manage_finances()) {
+        $pending_cnt = 0;
+        try { $pending_cnt = (int)get_pdo()->query("SELECT COUNT(*) FROM purchases WHERE status='pending'")->fetchColumn(); } catch(Exception $e) {}
+        $badge = $pending_cnt > 0 ? ' <span style="background:#A6192E;color:#fff;font-size:.6rem;padding:.1rem .4rem;border-radius:99px;vertical-align:middle;font-weight:700">' . $pending_cnt . '</span>' : '';
+        echo '<a href="purchases.php">Finance' . $badge . '</a>';
+    }
     if (is_admin()) echo '<a href="users.php">Users</a>';
     if (is_viewer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
     echo '<a href="change-password.php" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none;margin-left:.25rem" title="Change password">' . h(current_user_name()) . ' 🔑</a>';
