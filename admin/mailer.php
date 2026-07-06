@@ -112,11 +112,26 @@ function notify_approved(PDO $pdo, array $purchase, string $approved_by): void {
 
 // ── Notify submitter their reimbursement has been processed ──────────────
 function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): void {
-    if (!$purchase['submitted_by']) return;
-    $submitter = $pdo->prepare('SELECT name, email FROM users WHERE id = ?');
-    $submitter->execute([$purchase['submitted_by']]);
-    $user = $submitter->fetch();
-    if (!$user || !$user['email']) return;
+    // Use email already fetched via JOIN in purchase-action.php if available
+    $email = $purchase['submitted_by_email'] ?? '';
+    $name  = $purchase['submitted_by_name']  ?? '';
+
+    // Fallback: query users table directly
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (empty($purchase['submitted_by'])) {
+            error_log('mailer: notify_reimbursed — no submitted_by on purchase ' . ($purchase['id'] ?? '?'));
+            return;
+        }
+        $submitter = $pdo->prepare('SELECT name, email FROM users WHERE id = ?');
+        $submitter->execute([$purchase['submitted_by']]);
+        $user = $submitter->fetch();
+        if (!$user || !$user['email']) {
+            error_log('mailer: notify_reimbursed — could not find user ' . $purchase['submitted_by']);
+            return;
+        }
+        $email = $user['email'];
+        $name  = $user['name'];
+    }
 
     $amt  = '$' . number_format($purchase['amount_total'], 2);
     $date = date('F j, Y', strtotime($purchase['purchase_date']));
@@ -126,7 +141,7 @@ function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): voi
     $body    = CLUB_NAME . "\n"
              . "Your Reimbursement Has Been Processed\n"
              . str_repeat('─', 48) . "\n\n"
-             . "Hi {$user['name']},\n\n"
+             . "Hi $name,\n\n"
              . "Your reimbursement has been processed by $processed_by.\n\n"
              . "Purchase Details:\n"
              . "  Date:        $date\n"
@@ -138,7 +153,7 @@ function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): voi
              . "View record:  $url\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
 
-    send_notification($user['email'], $subject, $body);
+    send_notification($email, $subject, $body);
 }
 
 // ── Notify submitter of a generic status change ───────────────────────────
