@@ -319,7 +319,6 @@ if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8'
       <?php endif; ?>
       <th><?= sort_link('class_year',    'Year',    $sort, $dir, $next_dir, $get_params) ?></th>
       <th><?= sort_link('cadet_last_name','Cadet',   $sort, $dir, $next_dir, $get_params) ?></th>
-      <th>Squadron</th>
       <th><?= sort_link('al_region',     'Region',  $sort, $dir, $next_dir, $get_params) ?></th>
       <th>Parent 1</th>
       <th>Parent 2</th>
@@ -330,7 +329,7 @@ if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8'
   </thead>
   <tbody>
   <?php if (empty($members)): ?>
-    <tr><td colspan="<?= is_viewer()?9:10 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
+    <tr><td colspan="<?= is_viewer()?8:9 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
   <?php endif; ?>
   <?php foreach ($members as $m): ?>
     <?php
@@ -350,7 +349,6 @@ if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8'
         <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?= $m['cadet_first_middle'] ? ', ' . h($m['cadet_first_middle']) : '' ?><br>
         <?php if ($m['cadet_email']): ?><a href="mailto:<?= h($m['cadet_email']) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($m['cadet_email']) ?></a><?php endif; ?>
       </td>
-      <td><?= h($sqd) ?></td>
       <td><?php if ($m['al_region']): ?><span class="badge <?= h($region_cls) ?>"><?= h($m['al_region']) ?></span><?php endif; ?></td>
       <td>
         <?= h(trim($m['parent1_first_name'] . ' ' . $m['parent1_last_name'])) ?><br>
