@@ -192,6 +192,7 @@ function admin_header(string $title): void {
     echo '<a href="index.php">Members</a>';
     echo '<a href="lists.php">Lists</a>';
     if (!is_viewer()) echo '<a href="email.php">Email</a>';
+    if (can_manage_finances()) echo '<a href="purchases.php">Finance</a>';
     if (is_admin()) echo '<a href="users.php">Users</a>';
     if (!is_admin() && !is_treasurer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
     echo '<span style="font-size:.75rem;opacity:.55;margin-left:.25rem">' . h(current_user_name()) . '</span>';
@@ -205,6 +206,9 @@ function admin_footer(): void {
 }
 
 const REGIONS = ['', 'North', 'Central', 'South'];
+const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Other'];
+const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Strong Academy Day', 'General Operations', 'Other'];
+const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'reimbursed' => 'Reimbursed'];
 const CLASS_YEARS = ['', '2026', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
 
 const FIELDS = [
