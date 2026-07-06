@@ -13,8 +13,8 @@ if ($id) {
     $stmt->execute([$id]);
     $p = $stmt->fetch();
     if (!$p) { flash('error','Purchase not found.'); header('Location: purchases.php'); exit; }
-    if (!can_edit_purchase($p)) { flash('error','You can only edit your own purchases.'); header('Location: purchases.php'); exit; }
-    $is_edit = true;
+    $is_edit     = true;
+    $read_only   = !can_edit_purchase($p);
 }
 
 // Upload helper
@@ -35,6 +35,10 @@ function handle_receipt_upload(string $key = 'receipt'): ?string {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($is_edit && ($read_only ?? false)) {
+        flash('error','You can only edit your own purchases.');
+        header('Location: purchases.php'); exit;
+    }
     csrf_verify();
 
     $vendor        = trim($_POST['vendor']        ?? '');
@@ -98,7 +102,8 @@ $v = fn(string $k) => h((string)($p[$k] ?? ''));
 // Load users for submitted_by dropdown
 $users_list = $pdo->query('SELECT id,name FROM users WHERE active=1 ORDER BY name')->fetchAll();
 
-$title = $is_edit ? 'Edit Purchase' : 'Add Purchase';
+$read_only = $read_only ?? false;
+$title = $read_only ? 'View Purchase' : ($is_edit ? 'Edit Purchase' : 'Add Purchase');
 admin_header($title);
 ?>
 <style>
@@ -117,8 +122,13 @@ admin_header($title);
   <div class="alert alert-error"><?= implode('<br>', array_map('htmlspecialchars',$errors)) ?></div>
 <?php endif; ?>
 
+<?php if ($read_only): ?>
+<div class="alert alert-error" style="max-width:700px;background:#fff8e1;border-left-color:#ffc107;color:#5f4c00">
+  👁 You are viewing this purchase in read-only mode.
+</div>
+<?php endif; ?>
 <div class="card" style="max-width:700px">
-  <form method="POST" enctype="multipart/form-data">
+  <form method="POST" enctype="multipart/form-data"><?php if ($read_only) echo '<fieldset disabled style="border:none;padding:0;margin:0">'; ?>
     <?= csrf_field() ?>
     <?php if ($is_edit): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
 
@@ -259,11 +269,20 @@ admin_header($title);
       </div>
     </fieldset>
 
+    <?php if ($read_only): ?>
+    <?php else: ?>
     <div style="display:flex;gap:.75rem;flex-wrap:wrap">
       <button type="submit" class="btn btn-primary"><?= $is_edit ? 'Save Changes' : 'Add Purchase' ?></button>
       <a href="purchases.php" class="btn btn-secondary">Cancel</a>
     </div>
+    <?php endif; ?>
+    <?php if ($read_only) echo '</fieldset>'; ?>
   </form>
+  <?php if ($read_only): ?>
+  <div style="margin-top:1rem">
+    <a href="purchases.php" class="btn btn-secondary">← Back to Finance</a>
+  </div>
+  <?php endif; ?>
 </div>
 
 <script>
