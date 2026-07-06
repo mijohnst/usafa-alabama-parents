@@ -10,7 +10,7 @@ $row->execute([$id]);
 $p = $row->fetch();
 if ($p) {
     $own = (int)($p['submitted_by'] ?? -1) === (int)($_SESSION['user_id'] ?? 0);
-    $can_delete = is_treasurer() || (is_member() && $own);
+    $can_delete = is_treasurer() || ((is_member() || is_secretary()) && $own);
     if (!$can_delete) {
         flash('error', 'Only the treasurer can delete purchases.');
     } else {

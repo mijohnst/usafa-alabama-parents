@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_admin();
+require_member_admin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: index.php'); exit; }
 csrf_verify();
