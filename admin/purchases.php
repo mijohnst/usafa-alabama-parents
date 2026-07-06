@@ -197,23 +197,22 @@ admin_header('Finance');
         <div class="btn-group">
           <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm"><?= can_edit_purchase($p) ? 'Edit' : 'View' ?></a>
           <?php if ($p['status']==='pending' && is_admin()): ?>
-          <form method="POST" action="purchase-action.php" style="margin:0" onsubmit="return confirm('Approve this purchase?')">
+          <form id="af-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
             <input type="hidden" name="action" value="approve">
-            <?php if (!$p['receipt_filename']): ?>
-              <span style="font-size:.68rem;color:#f57c00;display:block;margin-bottom:.2rem">⚠️ No receipt</span>
-            <?php endif; ?>
-            <input type="text" name="note" placeholder="Approval note (optional)" style="font-size:.72rem;padding:.25rem .5rem;margin-bottom:.3rem;width:100%">
-            <button type="submit" class="btn btn-sm" style="background:#1b5e20;color:#fff;width:100%">✓ Approve</button>
+            <input type="hidden" name="note" id="an-<?= (int)$p['id'] ?>">
+            <button type="button" class="btn btn-sm" style="background:#1b5e20;color:#fff;white-space:nowrap"
+              onclick="doAction('af-<?= (int)$p['id'] ?>','an-<?= (int)$p['id'] ?>','Approve note (optional):','Approve this purchase?'<?= !$p['receipt_filename']?", '⚠️ No receipt attached. '":'' ?>)">✓ Approve</button>
           </form>
           <?php elseif ($p['status']==='approved' && is_treasurer()): ?>
-          <form method="POST" action="purchase-action.php" style="margin:0" onsubmit="return confirm('Mark this purchase as reimbursed?')">
+          <form id="rf-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
             <input type="hidden" name="action" value="reimburse">
-            <input type="text" name="note" placeholder="e.g. Venmo #12345 (optional)" style="font-size:.72rem;padding:.25rem .5rem;margin-bottom:.3rem;width:100%">
-            <button type="submit" class="btn btn-sm" style="background:#003594;color:#fff;width:100%">💰 Reimburse</button>
+            <input type="hidden" name="note" id="rn-<?= (int)$p['id'] ?>">
+            <button type="button" class="btn btn-sm" style="background:#003594;color:#fff;white-space:nowrap"
+              onclick="doAction('rf-<?= (int)$p['id'] ?>','rn-<?= (int)$p['id'] ?>','Reimbursement method (e.g. Venmo #12345):','Mark as reimbursed?')">💰 Reimburse</button>
           </form>
           <?php endif; ?>
           <?php if (is_treasurer() || (is_member() && (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0))): ?>
@@ -243,4 +242,14 @@ admin_header('Finance');
 </table>
 </div>
 
+<script>
+function doAction(formId, noteId, notePrompt, confirmMsg, notePrefix) {
+  var note = prompt(notePrompt, '') ;
+  if (note === null) return; // cancelled
+  if (notePrefix) note = notePrefix + note;
+  document.getElementById(noteId).value = note;
+  if (!confirm(confirmMsg)) return;
+  document.getElementById(formId).submit();
+}
+</script>
 <?php admin_footer(); ?>
