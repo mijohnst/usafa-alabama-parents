@@ -30,8 +30,19 @@ function is_viewer(): bool {
     return !is_admin();
 }
 
+function is_member(): bool {
+    return ($_SESSION['role'] ?? '') === 'member';
+}
+
 function can_manage_finances(): bool {
-    return in_array($_SESSION['role'] ?? '', ['admin', 'treasurer']);
+    return in_array($_SESSION['role'] ?? '', ['admin', 'treasurer', 'member']);
+}
+
+// Admin/Treasurer can edit any purchase; Member can only edit their own
+function can_edit_purchase(array $purchase): bool {
+    if (is_admin() || is_treasurer()) return true;
+    if (is_member()) return (int)($purchase['submitted_by'] ?? -1) === (int)($_SESSION['user_id'] ?? 0);
+    return false;
 }
 
 function current_user_name(): string {
@@ -189,12 +200,12 @@ function admin_header(string $title): void {
     echo '<div class="topbar">';
     echo '<a href="index.php" class="topbar-title" style="color:#fff;text-decoration:none;display:flex;align-items:center;gap:.65rem"><img src="../logo01.png" alt="" style="height:32px;border-radius:3px"><span>USAFA Parents Club of Alabama <small>Member Admin</small></span></a>';
     echo '<nav>';
-    echo '<a href="index.php">Members</a>';
-    echo '<a href="lists.php">Lists</a>';
-    if (!is_viewer()) echo '<a href="email.php">Email</a>';
+    if (!is_member()) echo '<a href="index.php">Members</a>';
+    if (!is_member() && !is_viewer()) echo '<a href="lists.php">Lists</a>';
+    if (!is_viewer() && !is_member()) echo '<a href="email.php">Email</a>';
     if (can_manage_finances()) echo '<a href="purchases.php">Finance</a>';
     if (is_admin()) echo '<a href="users.php">Users</a>';
-    if (!is_admin() && !is_treasurer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
+    if (is_viewer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
     echo '<span style="font-size:.75rem;opacity:.55;margin-left:.25rem">' . h(current_user_name()) . '</span>';
     echo '<a href="logout.php">Log Out</a>';
     echo '</nav></div>';

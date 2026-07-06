@@ -182,8 +182,8 @@ admin_header('Finance');
       <td style="font-size:.78rem;color:#5a6a7a;white-space:nowrap"><?= h($p['submitted_by_name'] ?? '—') ?></td>
       <td class="actions">
         <div class="btn-group">
-          <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm">View</a>
-          <?php if (can_manage_finances()): ?>
+          <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm"><?= can_edit_purchase($p) ? 'Edit' : 'View' ?></a>
+          <?php if (can_edit_purchase($p)): ?>
           <form method="POST" action="purchase-delete.php" onsubmit="return confirm('Delete this purchase? This cannot be undone.')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">

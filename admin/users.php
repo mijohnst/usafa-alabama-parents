@@ -86,8 +86,8 @@ if (isset($_GET['edit'])) {
 
 $users = $pdo->query('SELECT * FROM users ORDER BY role, name')->fetchAll();
 
-$role_labels = ['admin'=>'Admin','treasurer'=>'Treasurer','viewer'=>'Viewer'];
-$role_colors = ['admin'=>'#002554','treasurer'=>'#1b5e20','viewer'=>'#5a6a7a'];
+$role_labels = ['admin'=>'Admin','treasurer'=>'Treasurer','viewer'=>'Viewer','member'=>'Member'];
+$role_colors = ['admin'=>'#002554','treasurer'=>'#1b5e20','viewer'=>'#5a6a7a','member'=>'#7b3f00'];
 
 admin_header('Users');
 echo show_flash();

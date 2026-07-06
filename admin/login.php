@@ -35,7 +35,8 @@ if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootst
         $_SESSION['user_id']    = $user['id'];
         $_SESSION['user_name']  = $user['name'];
         $_SESSION['user_email'] = $user['email'];
-        header('Location: index.php'); exit;
+        $dest = $user['role'] === 'member' ? 'purchases.php' : 'index.php';
+        header('Location: ' . $dest); exit;
     }
     $error = 'Invalid username or password.';
 }
