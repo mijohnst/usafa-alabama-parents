@@ -323,13 +323,12 @@ if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8'
       <th>Parent 1</th>
       <th>Parent 2</th>
       <th><?= sort_link('membership_paid','Dues',    $sort, $dir, $next_dir, $get_params) ?></th>
-      <th>Remarks</th>
       <th class="actions-head">Actions</th>
     </tr>
   </thead>
   <tbody>
   <?php if (empty($members)): ?>
-    <tr><td colspan="<?= is_viewer()?8:9 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
+    <tr><td colspan="<?= is_viewer()?7:8 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
   <?php endif; ?>
   <?php foreach ($members as $m): ?>
     <?php
@@ -368,7 +367,6 @@ if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8'
           <span class="badge badge-unpaid">✗ Unpaid</span>
         <?php endif; ?>
       </td>
-      <td style="max-width:180px;font-size:.78rem;color:#5a6a7a"><?= h(mb_strimwidth($m['remarks'] ?? '', 0, 60, '…')) ?></td>
       <td class="actions">
         <div class="btn-group">
           <?php if (!is_viewer()): ?>
