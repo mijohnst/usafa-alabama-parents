@@ -158,9 +158,10 @@ admin_header('Members');
 echo show_flash();
 ?>
 
-<div class="page-head">
-  <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown)</span></h1>
-  <div style="display:flex;gap:.5rem">
+<!-- ── Page header ──────────────────────────────────────────────────────── -->
+<div class="page-head" style="margin-bottom:1rem">
+  <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown of <?= $stat_total ?> total)</span></h1>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <?php
     $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron]);
     $csv_params['export'] = 'csv';
@@ -174,55 +175,73 @@ echo show_flash();
   </div>
 </div>
 
-<!-- Quick links -->
-<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.25rem">
-  <a href="email.php" class="btn btn-secondary">✉ Compose Email</a>
-  <a href="lists.php" class="btn btn-secondary">📋 Lists</a>
-  <a href="directory.php" class="btn btn-secondary">📖 Directory</a>
-  <?php if (!is_viewer()): ?>
-  <a href="add.php" class="btn btn-secondary">+ Add Member</a>
-  <?php endif; ?>
-</div>
-
-<!-- Dashboard stats — all cards in one uniform grid -->
+<!-- ── Alerts strip — things that need attention today ─────────────────── -->
 <?php
-$dash_cards = [
-    ['label'=>'Total Members',   'value'=>$stat_total,      'sub'=>'active roster',         'pct'=>100,                                               'color'=>'#002554'],
-    ['label'=>'Dues Paid',       'value'=>$stat_paid,        'sub'=>membership_year(),        'pct'=>$dues_pct,                                         'color'=>'#1b5e20'],
-    ['label'=>'Dues Unpaid',     'value'=>$stat_unpaid,      'sub'=>'need to renew',          'pct'=>$active_total>0?round($stat_unpaid/$active_total*100):0, 'color'=>'#c62828'],
-    ['label'=>'New This Month',  'value'=>$new_this_month,   'sub'=>date('F Y'),              'pct'=>$stat_total>0?min(round($new_this_month/$stat_total*100),100):0, 'color'=>'#003594'],
-];
-foreach ($stat_by_year as $yr => $cnt) {
-    $yp  = $stat_paid_by_year[$yr] ?? 0;
-    $ypct = $cnt > 0 ? round($yp/$cnt*100) : 0;
-    $dash_cards[] = ['label'=>'Class of '.$yr, 'value'=>"$yp / $cnt", 'sub'=>"$ypct% paid",
-                     'pct'=>$ypct, 'color'=>$ypct>=75?'#2e7d32':($ypct>=40?'#f57c00':'#c62828')];
-}
+$alerts = [];
+if ($fin_pending)  $alerts[] = ['color'=>'#fff3cd','border'=>'#ffc107','text'=>'#5f4c00','icon'=>'⏳','msg'=>"$fin_pending purchase".($fin_pending>1?'s':'')." need approval",'href'=>'purchases.php?status=pending'];
+if ($fin_approved) $alerts[] = ['color'=>'#e3f2fd','border'=>'#90caf9','text'=>'#0d47a1','icon'=>'💰','msg'=>"$fin_approved awaiting reimbursement",'href'=>'pending-reimbursements.php'];
+if ($new_this_month) $alerts[] = ['color'=>'#e8f5e9','border'=>'#a5d6a7','text'=>'#1b5e20','icon'=>'👤','msg'=>"$new_this_month new member".($new_this_month>1?'s':'')." this month",'href'=>'index.php?q='];
+if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8','text'=>'#4a148c','icon'=>'🎂','msg'=>count($upcoming_bdays)." birthday".( count($upcoming_bdays)>1?'s':'')." in the next 30 days",'href'=>'#bday-panel','onclick'=>'toggleBdays(document.querySelector(\"[onclick*=toggleBdays]\"))'];
 ?>
-<div style="display:grid;grid-template-columns:repeat(<?= count($dash_cards) ?>,1fr);gap:.5rem;margin-bottom:1.25rem">
-<?php foreach ($dash_cards as $c): ?>
-  <div class="card" style="padding:.7rem .85rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.5rem;min-width:0">
-    <div>
-      <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= h($c['label']) ?></div>
-      <div style="font-size:1.3rem;font-weight:700;color:<?= $c['color'] ?>;line-height:1;white-space:nowrap"><?= h((string)$c['value']) ?></div>
-      <div style="font-size:.65rem;color:#9aa5b4;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= h($c['sub']) ?></div>
-    </div>
+<?php if (!empty($alerts)): ?>
+<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem">
+  <?php foreach ($alerts as $a): ?>
+  <a href="<?= h($a['href']) ?>" <?= !empty($a['onclick'])?'onclick="'.$a['onclick'].'; return false;"':'' ?>
+     style="display:flex;align-items:center;gap:.45rem;background:<?= $a['color'] ?>;border:1px solid <?= $a['border'] ?>;border-radius:6px;padding:.5rem .9rem;text-decoration:none;font-size:.82rem;font-weight:600;color:<?= $a['text'] ?>">
+    <span><?= $a['icon'] ?></span> <?= h($a['msg']) ?>
+  </a>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<!-- ── Summary stats row ────────────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.6rem;margin-bottom:.6rem">
+  <?php
+  $summary_cards = [
+    ['label'=>'Total Members',  'value'=>$stat_total,     'sub'=>'active roster',   'pct'=>100,      'color'=>'#002554'],
+    ['label'=>'Dues Paid',      'value'=>$stat_paid,       'sub'=>membership_year(), 'pct'=>$dues_pct,'color'=>'#1b5e20'],
+    ['label'=>'Dues Unpaid',    'value'=>$stat_unpaid,     'sub'=>'need to renew',   'pct'=>$active_total>0?round($stat_unpaid/$active_total*100):0,'color'=>'#c62828'],
+    ['label'=>'New This Month', 'value'=>$new_this_month,  'sub'=>date('F Y'),       'pct'=>$stat_total>0?min(round($new_this_month/$stat_total*100),100):0,'color'=>'#003594'],
+  ];
+  foreach ($summary_cards as $c): ?>
+  <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0">
+    <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em"><?= h($c['label']) ?></div>
+    <div style="font-size:1.4rem;font-weight:700;color:<?= $c['color'] ?>;line-height:1"><?= h((string)$c['value']) ?></div>
+    <div style="font-size:.65rem;color:#9aa5b4"><?= h($c['sub']) ?></div>
     <div style="background:#e1e5eb;border-radius:99px;height:4px;overflow:hidden">
       <div style="height:100%;width:<?= (int)$c['pct'] ?>%;background:<?= $c['color'] ?>;border-radius:99px"></div>
     </div>
   </div>
-<?php endforeach; ?>
+  <?php endforeach; ?>
+  <!-- Dues progress card -->
+  <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0;grid-column:span 2">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Dues <?= h(membership_year()) ?></div>
+      <div style="font-size:.82rem;font-weight:700;color:#002554"><?= $stat_paid ?>/<?= $active_total ?> (<?= $dues_pct ?>%)</div>
+    </div>
+    <div style="background:#e1e5eb;border-radius:99px;height:10px;overflow:hidden;margin-top:.2rem">
+      <div style="height:100%;width:<?= $dues_pct ?>%;background:<?= $dues_pct>=75?'#2e7d32':($dues_pct>=40?'#f57c00':'#c62828') ?>;border-radius:99px;transition:width .4s"></div>
+    </div>
+  </div>
 </div>
 
-<!-- Dues progress bar -->
-<div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-    <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Dues Collection — <?= h(membership_year()) ?></span>
-    <span style="font-size:.85rem;font-weight:700;color:#002554"><?= $stat_paid ?> of <?= $active_total ?> paid (<?= $dues_pct ?>%)</span>
+<!-- ── Class year breakdown row ─────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:repeat(<?= count($stat_by_year) ?>,1fr);gap:.6rem;margin-bottom:1.25rem">
+  <?php foreach ($stat_by_year as $yr => $cnt):
+    $yp   = $stat_paid_by_year[$yr] ?? 0;
+    $ypct = $cnt > 0 ? round($yp/$cnt*100) : 0;
+    $col  = $ypct>=75?'#2e7d32':($ypct>=40?'#f57c00':'#c62828');
+  ?>
+  <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0;cursor:pointer"
+       onclick="document.querySelector('[name=year]').value='<?= h($yr) ?>'; document.querySelector('.filter-bar button[type=submit]').click()">
+    <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Class of <?= h($yr) ?></div>
+    <div style="font-size:1.3rem;font-weight:700;color:<?= $col ?>;line-height:1"><?= $yp ?><span style="font-size:.8rem;color:#9aa5b4"> / <?= $cnt ?></span></div>
+    <div style="font-size:.65rem;color:#9aa5b4"><?= $ypct ?>% paid</div>
+    <div style="background:#e1e5eb;border-radius:99px;height:4px;overflow:hidden">
+      <div style="height:100%;width:<?= $ypct ?>%;background:<?= $col ?>;border-radius:99px"></div>
+    </div>
   </div>
-  <div style="background:#e1e5eb;border-radius:99px;height:10px;overflow:hidden">
-    <div style="height:100%;width:<?= $dues_pct ?>%;background:<?= $dues_pct >= 75 ? '#2e7d32' : ($dues_pct >= 40 ? '#f57c00' : '#c62828') ?>;border-radius:99px;transition:width .4s"></div>
-  </div>
+  <?php endforeach; ?>
 </div>
 
 <!-- Filters -->
@@ -285,70 +304,6 @@ foreach ($stat_by_year as $yr => $cnt) {
 </div>
 
 <?php if (!is_viewer()): ?>
-<!-- Finance widget -->
-<?php if (can_manage_finances() && !is_member() && ($fin_pending || $fin_approved || $fin_ytd)): ?>
-<div class="card" style="padding:.9rem 1.25rem;margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center">
-  <span style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0">Finance</span>
-  <?php if ($fin_pending): ?>
-  <a href="purchases.php?status=pending" style="text-decoration:none;display:flex;align-items:center;gap:.4rem">
-    <span style="background:#fff3cd;color:#5f4c00;border:1px solid #ffc107;border-radius:99px;font-size:.75rem;font-weight:700;padding:.15rem .6rem"><?= $fin_pending ?> pending approval</span>
-  </a>
-  <?php endif; ?>
-  <?php if ($fin_approved): ?>
-  <a href="pending-reimbursements.php" style="text-decoration:none;display:flex;align-items:center;gap:.4rem">
-    <span style="background:#e3f2fd;color:#0d47a1;border:1px solid #90caf9;border-radius:99px;font-size:.75rem;font-weight:700;padding:.15rem .6rem"><?= $fin_approved ?> awaiting reimbursement</span>
-  </a>
-  <?php endif; ?>
-  <?php if ($fin_ytd): ?>
-  <span style="font-size:.82rem;color:#5a6a7a">YTD expenses: <strong style="color:#002554">$<?= number_format($fin_ytd,2) ?></strong></span>
-  <?php endif; ?>
-  <a href="purchases.php" style="margin-left:auto;font-size:.78rem;color:#003594">View Finance →</a>
-</div>
-<?php endif; ?>
-
-<!-- Upcoming birthdays (collapsible) -->
-<?php if (!empty($upcoming_bdays)):
-  $has_soon = array_filter($upcoming_bdays, fn($b) => $b['days'] <= 7);
-  $badge_color = !empty($has_soon) ? '#f57c00' : '#5a6a7a';
-?>
-<div class="card" style="padding:0;margin-bottom:1rem;overflow:hidden">
-  <button onclick="toggleBdays(this)" style="width:100%;background:none;border:none;padding:.85rem 1.25rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:left;font-family:inherit">
-    <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">
-      🎂 Upcoming Birthdays
-      <span style="background:<?= $badge_color ?>;color:#fff;font-size:.65rem;padding:.15rem .45rem;border-radius:99px;margin-left:.4rem;vertical-align:middle"><?= count($upcoming_bdays) ?></span>
-    </span>
-    <span id="bday-chevron" style="color:#5a6a7a;font-size:.85rem">▸ Show</span>
-  </button>
-  <div id="bday-panel" style="display:none;padding:.25rem 1.25rem 1.25rem">
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem">
-      <?php foreach ($upcoming_bdays as $b): ?>
-      <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.5rem .85rem;font-size:.82rem;display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <strong style="color:#002554"><?= h($b['name']) ?></strong><br>
-          <span style="color:#5a6a7a"><?= h($b['fmt']) ?></span>
-          <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?>
-        </div>
-        <div style="text-align:right;white-space:nowrap;padding-left:.5rem">
-          <?php if ($b['days'] === 0): ?><span style="color:#A6192E;font-weight:700">🎉 Today!</span>
-          <?php elseif ($b['days'] <= 7): ?><span style="color:#f57c00;font-weight:700"><?= $b['days'] ?>d</span>
-          <?php else: ?><span style="color:#9aa5b4"><?= $b['days'] ?>d</span><?php endif; ?>
-        </div>
-      </div>
-      <?php endforeach; ?>
-    </div>
-  </div>
-</div>
-<script>
-function toggleBdays(btn) {
-  var panel   = document.getElementById('bday-panel');
-  var chevron = document.getElementById('bday-chevron');
-  var open    = panel.style.display === 'none';
-  panel.style.display  = open ? 'block' : 'none';
-  chevron.textContent  = open ? '▾ Hide' : '▸ Show';
-}
-</script>
-<?php endif; ?>
-
 <!-- Bulk action form (inputs inside the table use form="bulk-form") -->
 <form id="bulk-form" method="POST" action="bulk-action.php">
   <?= csrf_field() ?>
@@ -474,6 +429,42 @@ selectAll.addEventListener('change', function() {
   updateBulkBar();
 });
 checkboxes.forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
+</script>
+<?php endif; ?>
+
+<?php if (!empty($upcoming_bdays)): ?>
+<div class="card" style="padding:0;margin-top:1rem;overflow:hidden">
+  <button onclick="toggleBdays(this)" style="width:100%;background:none;border:none;padding:.85rem 1.25rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:left;font-family:inherit">
+    <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">
+      🎂 Upcoming Birthdays
+      <span style="background:<?= !empty(array_filter($upcoming_bdays,fn($b)=>$b['days']<=7))?'#f57c00':'#5a6a7a' ?>;color:#fff;font-size:.65rem;padding:.15rem .45rem;border-radius:99px;margin-left:.4rem;vertical-align:middle"><?= count($upcoming_bdays) ?></span>
+    </span>
+    <span id="bday-chevron" style="color:#5a6a7a;font-size:.85rem">▸ Show</span>
+  </button>
+  <div id="bday-panel" style="display:none;padding:.25rem 1.25rem 1.25rem">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem">
+      <?php foreach ($upcoming_bdays as $b): ?>
+      <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.5rem .85rem;font-size:.82rem;display:flex;justify-content:space-between;align-items:center">
+        <div><strong style="color:#002554"><?= h($b['name']) ?></strong><br>
+          <span style="color:#5a6a7a"><?= h($b['fmt']) ?></span>
+          <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?></div>
+        <div style="white-space:nowrap;padding-left:.5rem">
+          <?php if ($b['days']===0): ?><span style="color:#A6192E;font-weight:700">🎉 Today!</span>
+          <?php elseif($b['days']<=7): ?><span style="color:#f57c00;font-weight:700"><?= $b['days'] ?>d</span>
+          <?php else: ?><span style="color:#9aa5b4"><?= $b['days'] ?>d</span><?php endif; ?>
+        </div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</div>
+<script>
+function toggleBdays(btn) {
+  var panel=document.getElementById('bday-panel'), chev=document.getElementById('bday-chevron');
+  var open=panel.style.display==='none';
+  panel.style.display=open?'block':'none';
+  chev.textContent=open?'▾ Hide':'▸ Show';
+}
 </script>
 <?php endif; ?>
 
