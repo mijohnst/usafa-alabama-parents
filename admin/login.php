@@ -56,6 +56,9 @@ body{font-family:"Segoe UI",Arial,sans-serif;background:#002554;display:flex;jus
 h2{font-size:1rem;color:#002554;margin-bottom:1.25rem;text-align:center}
 label{display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem}
 input{width:100%;padding:.65rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-size:.95rem;margin-bottom:1rem;font-family:inherit}
+.pw-wrap{position:relative;margin-bottom:1rem}
+.pw-wrap input{margin-bottom:0;padding-right:2.75rem}
+.pw-toggle{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9aa5b4;font-size:1.1rem;padding:0;width:auto;line-height:1}
 input:focus{outline:none;border-color:#003594;box-shadow:0 0 0 2px rgba(0,53,148,.15)}
 button{width:100%;padding:.75rem;background:#003594;color:#fff;border:none;border-radius:4px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit}
 button:hover{background:#002268}
@@ -95,9 +98,20 @@ button:hover{background:#002268}
       <label>Username or Email</label>
       <input type="text" name="username" required autocomplete="username">
       <label>Password</label>
-      <input type="password" name="password" required autocomplete="current-password">
+      <div class="pw-wrap">
+        <input type="password" id="pw-login" name="password" required autocomplete="current-password">
+        <button type="button" class="pw-toggle" onclick="togglePw('pw-login',this)" title="Show/hide password">👁</button>
+      </div>
       <button type="submit">Log In</button>
     </form>
   <?php endif; ?>
 </div>
+<script>
+function togglePw(id, btn) {
+  var inp = document.getElementById(id);
+  var show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.style.opacity = show ? '1' : '0.4';
+}
+</script>
 </body></html>

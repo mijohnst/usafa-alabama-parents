@@ -206,7 +206,7 @@ function admin_header(string $title): void {
     if (can_manage_finances()) echo '<a href="purchases.php">Finance</a>';
     if (is_admin()) echo '<a href="users.php">Users</a>';
     if (is_viewer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
-    echo '<span style="font-size:.75rem;opacity:.55;margin-left:.25rem">' . h(current_user_name()) . '</span>';
+    echo '<a href="change-password.php" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none;margin-left:.25rem" title="Change password">' . h(current_user_name()) . ' 🔑</a>';
     echo '<a href="logout.php">Log Out</a>';
     echo '</nav></div>';
     echo '<div class="main">';
