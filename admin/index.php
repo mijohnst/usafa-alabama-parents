@@ -184,10 +184,10 @@ if ($new_this_month) $alerts[] = ['color'=>'#e8f5e9','border'=>'#a5d6a7','text'=
 if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8','text'=>'#4a148c','icon'=>'🎂','msg'=>count($upcoming_bdays)." birthday".( count($upcoming_bdays)>1?'s':'')." in the next 30 days",'href'=>'#bday-panel','onclick'=>'toggleBdays(document.querySelector(\"[onclick*=toggleBdays]\"))'];
 ?>
 <?php if (!empty($alerts)): ?>
-<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem">
+<div style="display:grid;grid-template-columns:repeat(<?= count($alerts) ?>,1fr);gap:.6rem;margin-bottom:1.25rem">
   <?php foreach ($alerts as $a): ?>
   <a href="<?= h($a['href']) ?>" <?= !empty($a['onclick'])?'onclick="'.$a['onclick'].'; return false;"':'' ?>
-     style="display:flex;align-items:center;gap:.45rem;background:<?= $a['color'] ?>;border:1px solid <?= $a['border'] ?>;border-radius:6px;padding:.5rem .9rem;text-decoration:none;font-size:.82rem;font-weight:600;color:<?= $a['text'] ?>">
+     style="display:flex;align-items:center;justify-content:center;gap:.45rem;background:<?= $a['color'] ?>;border:1px solid <?= $a['border'] ?>;border-radius:6px;padding:.6rem .9rem;text-decoration:none;font-size:.82rem;font-weight:600;color:<?= $a['text'] ?>;text-align:center">
     <span><?= $a['icon'] ?></span> <?= h($a['msg']) ?>
   </a>
   <?php endforeach; ?>
@@ -195,7 +195,7 @@ if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8'
 <?php endif; ?>
 
 <!-- ── Summary stats row ────────────────────────────────────────────────── -->
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.6rem;margin-bottom:.6rem">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem;margin-bottom:.6rem">
   <?php
   $summary_cards = [
     ['label'=>'Total Members',  'value'=>$stat_total,     'sub'=>'active roster',   'pct'=>100,      'color'=>'#002554'],
@@ -214,13 +214,12 @@ if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8'
   </div>
   <?php endforeach; ?>
   <!-- Dues progress card -->
-  <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0;grid-column:span 2">
-    <div style="display:flex;justify-content:space-between;align-items:baseline">
-      <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Dues <?= h(membership_year()) ?></div>
-      <div style="font-size:.82rem;font-weight:700;color:#002554"><?= $stat_paid ?>/<?= $active_total ?> (<?= $dues_pct ?>%)</div>
-    </div>
-    <div style="background:#e1e5eb;border-radius:99px;height:10px;overflow:hidden;margin-top:.2rem">
-      <div style="height:100%;width:<?= $dues_pct ?>%;background:<?= $dues_pct>=75?'#2e7d32':($dues_pct>=40?'#f57c00':'#c62828') ?>;border-radius:99px;transition:width .4s"></div>
+  <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0">
+    <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Dues <?= h(membership_year()) ?></div>
+    <div style="font-size:1.3rem;font-weight:700;color:<?= $dues_pct>=75?'#2e7d32':($dues_pct>=40?'#f57c00':'#c62828') ?>;line-height:1"><?= $dues_pct ?>%</div>
+    <div style="font-size:.65rem;color:#9aa5b4"><?= $stat_paid ?> of <?= $active_total ?></div>
+    <div style="background:#e1e5eb;border-radius:99px;height:4px;overflow:hidden">
+      <div style="height:100%;width:<?= $dues_pct ?>%;background:<?= $dues_pct>=75?'#2e7d32':($dues_pct>=40?'#f57c00':'#c62828') ?>;border-radius:99px"></div>
     </div>
   </div>
 </div>
