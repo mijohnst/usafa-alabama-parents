@@ -190,7 +190,7 @@ admin_header('Finance');
             <input type="hidden" name="action" value="approve">
             <button type="submit" class="btn btn-sm" style="background:#1b5e20;color:#fff">✓ Approve</button>
           </form>
-          <?php elseif ($p['status']==='approved' && (is_admin()||is_treasurer())): ?>
+          <?php elseif ($p['status']==='approved' && is_treasurer()): ?>
           <form method="POST" action="purchase-action.php" style="margin:0" onsubmit="return confirm('Mark this purchase as reimbursed?')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">

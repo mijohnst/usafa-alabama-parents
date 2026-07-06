@@ -40,9 +40,9 @@ if ($action === 'approve') {
     notify_approved($pdo, $p, current_user_name());
 
 } elseif ($action === 'reimburse') {
-    // Admin or Treasurer can mark reimbursed
-    if (!is_admin() && !is_treasurer()) {
-        flash('error', 'Only admins and treasurers can mark purchases as reimbursed.');
+    // Treasurer only can mark reimbursed
+    if (!is_treasurer()) {
+        flash('error', 'Only the treasurer can mark purchases as reimbursed.');
         header('Location: purchases.php'); exit;
     }
     if ($p['status'] !== 'approved') {
