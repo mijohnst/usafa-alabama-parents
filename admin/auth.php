@@ -26,22 +26,39 @@ function is_treasurer(): bool {
 }
 
 function is_viewer(): bool {
-    // "viewer" for member editing purposes means anyone who is not admin
-    return !is_admin();
+    // "viewer" for member editing purposes: cannot edit members
+    return !can_manage_members();
+}
+
+function require_member_admin(): void {
+    require_login();
+    if (!can_manage_members()) {
+        header('Location: index.php?denied=1');
+        exit;
+    }
 }
 
 function is_member(): bool {
     return ($_SESSION['role'] ?? '') === 'member';
 }
 
-function can_manage_finances(): bool {
-    return in_array($_SESSION['role'] ?? '', ['admin', 'treasurer', 'member']);
+function is_secretary(): bool {
+    return ($_SESSION['role'] ?? '') === 'secretary';
 }
 
-// Admin/Treasurer can edit any purchase; Member can only edit their own
+// Admin or Secretary can fully manage cadet/member records
+function can_manage_members(): bool {
+    return is_admin() || is_secretary();
+}
+
+function can_manage_finances(): bool {
+    return in_array($_SESSION['role'] ?? '', ['admin', 'treasurer', 'member', 'secretary']);
+}
+
+// Admin/Treasurer can edit any purchase; Member/Secretary can only edit their own
 function can_edit_purchase(array $purchase): bool {
     if (is_admin() || is_treasurer()) return true;
-    if (is_member()) return (int)($purchase['submitted_by'] ?? -1) === (int)($_SESSION['user_id'] ?? 0);
+    if (is_member() || is_secretary()) return (int)($purchase['submitted_by'] ?? -1) === (int)($_SESSION['user_id'] ?? 0);
     return false;
 }
 
@@ -201,8 +218,8 @@ function admin_header(string $title): void {
     echo '<a href="index.php" class="topbar-title" style="color:#fff;text-decoration:none;display:flex;align-items:center;gap:.65rem"><img src="../logo01.png" alt="" style="height:32px;border-radius:3px"><span>USAFA Parents Club of Alabama <small>Member Admin</small></span></a>';
     echo '<nav>';
     if (!is_member()) echo '<a href="index.php">Members</a>';
-    if (!is_member() && !is_viewer()) echo '<a href="lists.php">Lists</a>';
-    if (is_admin()) echo '<a href="email.php">Email</a>';
+    if (can_manage_members()) echo '<a href="lists.php">Lists</a>';
+    if (can_manage_members()) echo '<a href="email.php">Email</a>';
     if (can_manage_finances()) {
         $pending_cnt = 0;
         try { $pending_cnt = (int)get_pdo()->query("SELECT COUNT(*) FROM purchases WHERE status='pending'")->fetchColumn(); } catch(Exception $e) {}

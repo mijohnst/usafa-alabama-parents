@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_admin();
+require_member_admin();
 $pdo = get_pdo();
 
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
