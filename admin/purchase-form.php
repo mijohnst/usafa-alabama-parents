@@ -242,12 +242,22 @@ admin_header($title);
       </div>
       <div class="form-row col-2">
         <div class="form-group">
-          <label>Set Status</label>
-          <select name="status" onchange="updateFlow(this.value)">
-            <?php foreach (PURCHASE_STATUSES as $k => $v2): ?>
+          <label>Status</label>
+          <?php
+          // Restrict status options by role — use workflow buttons for transitions
+          $allowed_statuses = PURCHASE_STATUSES;
+          if (!is_admin()) unset($allowed_statuses['approved']); // only admins can approve
+          if (is_member())  $allowed_statuses = [$cur_status => PURCHASE_STATUSES[$cur_status]]; // members can't change status
+          ?>
+          <select name="status" onchange="updateFlow(this.value)" <?= is_member()?'disabled':'' ?>>
+            <?php foreach ($allowed_statuses as $k => $v2): ?>
               <option value="<?= h($k) ?>" <?= $cur_status===$k?'selected':''?>><?= h($v2) ?></option>
             <?php endforeach; ?>
           </select>
+          <?php if (is_member()): ?>
+            <input type="hidden" name="status" value="<?= h($cur_status) ?>">
+            <p style="font-size:.75rem;color:#9aa5b4;margin-top:.25rem">Status changes are handled by the admin workflow.</p>
+          <?php endif; ?>
         </div>
         <div class="form-group">
           <label>Submitted By</label>

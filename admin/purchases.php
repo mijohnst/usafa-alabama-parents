@@ -183,6 +183,21 @@ admin_header('Finance');
       <td class="actions">
         <div class="btn-group">
           <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm"><?= can_edit_purchase($p) ? 'Edit' : 'View' ?></a>
+          <?php if ($p['status']==='pending' && is_admin()): ?>
+          <form method="POST" action="purchase-action.php" style="margin:0" onsubmit="return confirm('Approve this purchase?')">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="approve">
+            <button type="submit" class="btn btn-sm" style="background:#1b5e20;color:#fff">✓ Approve</button>
+          </form>
+          <?php elseif ($p['status']==='approved' && (is_admin()||is_treasurer())): ?>
+          <form method="POST" action="purchase-action.php" style="margin:0" onsubmit="return confirm('Mark this purchase as reimbursed?')">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="reimburse">
+            <button type="submit" class="btn btn-sm" style="background:#003594;color:#fff">💰 Reimburse</button>
+          </form>
+          <?php endif; ?>
           <?php if (can_edit_purchase($p)): ?>
           <form method="POST" action="purchase-delete.php" onsubmit="return confirm('Delete this purchase? This cannot be undone.')">
             <?= csrf_field() ?>
