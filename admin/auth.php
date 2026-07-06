@@ -17,15 +17,62 @@ function require_login(): void {
     }
 }
 
+function is_admin(): bool {
+    return ($_SESSION['role'] ?? '') === 'admin';
+}
+
+function is_treasurer(): bool {
+    return ($_SESSION['role'] ?? '') === 'treasurer';
+}
+
 function is_viewer(): bool {
-    return ($_SESSION['role'] ?? '') === 'viewer';
+    // "viewer" for member editing purposes means anyone who is not admin
+    return !is_admin();
+}
+
+function can_manage_finances(): bool {
+    return in_array($_SESSION['role'] ?? '', ['admin', 'treasurer']);
+}
+
+function current_user_name(): string {
+    return $_SESSION['user_name'] ?? 'Unknown';
 }
 
 function require_admin(): void {
     require_login();
-    if (is_viewer()) {
+    if (!is_admin()) {
         header('Location: index.php?denied=1');
         exit;
+    }
+}
+
+function require_finance(): void {
+    require_login();
+    if (!can_manage_finances()) {
+        header('Location: index.php?denied=1');
+        exit;
+    }
+}
+
+// Verify credentials against the users table
+function verify_login(PDO $pdo, string $username, string $password): ?array {
+    $stmt = $pdo->prepare(
+        'SELECT * FROM users WHERE (username = :u OR email = :u) AND active = 1 LIMIT 1'
+    );
+    $stmt->execute([':u' => $username]);
+    $user = $stmt->fetch();
+    if ($user && $user['password_hash'] && password_verify($password, $user['password_hash'])) {
+        return $user;
+    }
+    return null;
+}
+
+// Check if the users table exists and has at least one user
+function users_table_empty(PDO $pdo): bool {
+    try {
+        return (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() === 0;
+    } catch (Exception $e) {
+        return true;
     }
 }
 
@@ -145,7 +192,9 @@ function admin_header(string $title): void {
     echo '<a href="index.php">Members</a>';
     echo '<a href="lists.php">Lists</a>';
     if (!is_viewer()) echo '<a href="email.php">Email</a>';
-    if (is_viewer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
+    if (is_admin()) echo '<a href="users.php">Users</a>';
+    if (!is_admin() && !is_treasurer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
+    echo '<span style="font-size:.75rem;opacity:.55;margin-left:.25rem">' . h(current_user_name()) . '</span>';
     echo '<a href="logout.php">Log Out</a>';
     echo '</nav></div>';
     echo '<div class="main">';
