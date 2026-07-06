@@ -3,6 +3,7 @@ require_once __DIR__ . '/auth.php';
 require_finance();
 $pdo = get_pdo();
 
+$pending_count = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status='approved'")->fetchColumn();
 $filter_status   = $_GET['status']   ?? '';
 $filter_category = $_GET['category'] ?? '';
 $filter_event    = $_GET['event']    ?? '';
@@ -71,6 +72,12 @@ admin_header('Finance');
     <?php $ep = array_merge(array_filter(['status'=>$filter_status,'category'=>$filter_category,'event'=>$filter_event,'from'=>$filter_from,'to'=>$filter_to]),['export'=>1]); ?>
     <a href="purchases.php?<?= http_build_query($ep) ?>" class="btn btn-secondary">Export CSV</a>
     <a href="report.php" class="btn btn-secondary">📊 Report</a>
+    <a href="year-end.php" class="btn btn-secondary">📋 Year-End</a>
+    <?php if (is_treasurer()): ?>
+    <a href="pending-reimbursements.php" class="btn btn-secondary" style="<?= $pending_count>0?'background:#e3f2fd;border-color:#90caf9':'' ?>">
+      💰 Reimburse<?= $pending_count>0?" ($pending_count)":" (0)" ?>
+    </a>
+    <?php endif; ?>
     <?php if (is_admin() || is_treasurer()): ?>
     <a href="budgets.php" class="btn btn-secondary">🎯 Budgets</a>
     <?php endif; ?>
