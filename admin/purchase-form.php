@@ -2,6 +2,7 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/mailer.php';
 require_finance();
+$old_event = ''; // track event before edit for threshold check
 $pdo = get_pdo();
 
 $id      = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
@@ -14,6 +15,7 @@ if ($id) {
     $stmt->execute([$id]);
     $p = $stmt->fetch();
     if (!$p) { flash('error','Purchase not found.'); header('Location: purchases.php'); exit; }
+    $old_event   = $p['event'] ?? '';
     $is_edit     = true;
     $read_only   = !can_edit_purchase($p);
 }
@@ -91,6 +93,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$receipt_required,$id]);
             flash('success','Purchase updated.');
 
+            // Check budget thresholds (check both old and new event if event changed)
+            check_budget_thresholds($pdo, $event);
+            if ($old_event && $old_event !== $event) check_budget_thresholds($pdo, $old_event);
+
             // Notify submitter if status changed
             if ($old_status !== $status) {
                 $updated = $pdo->prepare('SELECT * FROM purchases WHERE id=?');
@@ -102,6 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes,$receipt_required]);
             $new_id = (int)$pdo->lastInsertId();
             flash('success','Purchase added.');
+
+            // Check budget threshold for this event
+            check_budget_thresholds($pdo, $event);
 
             // Notify treasurers/admins of new submission
             $new_p = $pdo->prepare('SELECT * FROM purchases WHERE id=?');
