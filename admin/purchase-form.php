@@ -13,6 +13,7 @@ if ($id) {
     $stmt->execute([$id]);
     $p = $stmt->fetch();
     if (!$p) { flash('error','Purchase not found.'); header('Location: purchases.php'); exit; }
+    if (!can_edit_purchase($p)) { flash('error','You can only edit your own purchases.'); header('Location: purchases.php'); exit; }
     $is_edit = true;
 }
 
