@@ -202,7 +202,7 @@ function admin_header(string $title): void {
     echo '<nav>';
     if (!is_member()) echo '<a href="index.php">Members</a>';
     if (!is_member() && !is_viewer()) echo '<a href="lists.php">Lists</a>';
-    if (!is_viewer() && !is_member()) echo '<a href="email.php">Email</a>';
+    if (is_admin()) echo '<a href="email.php">Email</a>';
     if (can_manage_finances()) {
         $pending_cnt = 0;
         try { $pending_cnt = (int)get_pdo()->query("SELECT COUNT(*) FROM purchases WHERE status='pending'")->fetchColumn(); } catch(Exception $e) {}
