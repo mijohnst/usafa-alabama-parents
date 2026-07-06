@@ -17,9 +17,9 @@ if ($id) {
 }
 
 // Upload helper
-function handle_receipt_upload(): ?string {
-    if (empty($_FILES['receipt']['name'])) return null;
-    $file = $_FILES['receipt'];
+function handle_receipt_upload(string $key = 'receipt'): ?string {
+    if (empty($_FILES[$key]['name'])) return null;
+    $file = $_FILES[$key];
     if ($file['error'] !== UPLOAD_ERR_OK) return null;
     $allowed = ['image/jpeg','image/png','image/gif','application/pdf'];
     $mime    = mime_content_type($file['tmp_name']);
@@ -54,9 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($pretax < 0)   $errors[] = 'Pre-tax amount cannot be negative.';
     if (!in_array($status, array_keys(PURCHASE_STATUSES))) $status = 'pending';
 
+    // Accept from either camera or file picker input
     $new_receipt = null;
-    if (!empty($_FILES['receipt']['name'])) {
-        $new_receipt = handle_receipt_upload();
+    $upload_key  = !empty($_FILES['receipt']['name']) ? 'receipt' : (!empty($_FILES['receipt_file']['name']) ? 'receipt_file' : null);
+    if ($upload_key) {
+        $new_receipt = handle_receipt_upload($upload_key);
         if (!$new_receipt) $errors[] = 'Receipt upload failed. Use JPG, PNG or PDF under 10MB.';
     }
 
@@ -193,13 +195,28 @@ admin_header($title);
         </div>
       </div>
       <div class="form-group">
-        <label>Receipt Photo or PDF <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.75rem;color:#5a6a7a">— tap to photograph with phone camera</span></label>
-        <input type="file" name="receipt" accept="image/*,application/pdf" capture="environment"
-               style="padding:.5rem;font-size:.9rem">
+        <label>Receipt</label>
+        <!-- Hidden inputs: camera (photo only) and file picker (photo or PDF) -->
+        <input type="file" id="receipt-camera" name="receipt" accept="image/*" capture="environment" style="display:none" onchange="previewReceipt(this)">
+        <input type="file" id="receipt-file"   name="receipt_file" accept="image/*,application/pdf" style="display:none" onchange="previewReceipt(this)">
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.25rem">
+          <button type="button" onclick="document.getElementById('receipt-camera').click()"
+            style="flex:1;min-width:140px;padding:.75rem;background:#003594;color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem">
+            📷 Take Photo
+          </button>
+          <button type="button" onclick="document.getElementById('receipt-file').click()"
+            style="flex:1;min-width:140px;padding:.75rem;background:#f0f2f5;color:#333;border:1px solid #d0d5dd;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem">
+            📁 Upload File
+          </button>
+        </div>
+        <div id="receipt-preview-wrap" style="margin-top:.75rem;display:none">
+          <img id="receipt-img-preview" src="" alt="Receipt preview" style="max-width:100%;max-height:240px;border-radius:4px;border:1px solid #e1e5eb;display:none">
+          <div id="receipt-file-name" style="font-size:.82rem;color:#1b5e20;padding:.5rem;background:#e8f5e9;border-radius:4px;display:none">✓ File selected: <span></span></div>
+        </div>
         <?php if ($is_edit && !empty($p['receipt_filename'])): ?>
           <div style="margin-top:.5rem;font-size:.82rem">
-            Current: <a href="receipt-view.php?id=<?= $id ?>" target="_blank" style="color:#003594">View Receipt</a>
-            <span style="color:#9aa5b4"> — upload a new file to replace it</span>
+            Current receipt: <a href="receipt-view.php?id=<?= $id ?>" target="_blank" style="color:#003594">View</a>
+            <span style="color:#9aa5b4"> — use buttons above to replace it</span>
           </div>
         <?php endif; ?>
       </div>
@@ -221,6 +238,24 @@ function calcTotal() {
   var pre = parseFloat(document.getElementById('pretax').value)   || 0;
   var tax = parseFloat(document.getElementById('tax_amt').value) || 0;
   document.getElementById('total-display').textContent = '$' + (pre + tax).toFixed(2);
+}
+
+function previewReceipt(input) {
+  var wrap = document.getElementById('receipt-preview-wrap');
+  var img  = document.getElementById('receipt-img-preview');
+  var fn   = document.getElementById('receipt-file-name');
+  wrap.style.display = 'block';
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  fn.querySelector('span').textContent = file.name;
+  if (file.type.startsWith('image/')) {
+    var reader = new FileReader();
+    reader.onload = function(e) { img.src = e.target.result; img.style.display='block'; fn.style.display='none'; };
+    reader.readAsDataURL(file);
+  } else {
+    img.style.display = 'none';
+    fn.style.display  = 'block';
+  }
 }
 </script>
 
