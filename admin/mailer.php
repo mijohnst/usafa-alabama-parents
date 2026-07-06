@@ -156,6 +156,86 @@ function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): voi
     send_notification($email, $subject, $body);
 }
 
+// ── Check event budget thresholds after a purchase is saved ─────────────
+function check_budget_thresholds(PDO $pdo, string $event): void {
+    if (!$event) return;
+    try {
+        $b_stmt = $pdo->prepare('SELECT * FROM event_budgets WHERE event = ? LIMIT 1');
+        $b_stmt->execute([$event]);
+        $budget = $b_stmt->fetch();
+        if (!$budget || $budget['budget'] <= 0) return;
+
+        // Count all purchases (all statuses) towards budget
+        $s_stmt = $pdo->prepare('SELECT COALESCE(SUM(amount_total),0) FROM purchases WHERE event = ?');
+        $s_stmt->execute([$event]);
+        $spent = (float)$s_stmt->fetchColumn();
+
+        $pct  = (int)round($spent / $budget['budget'] * 100);
+        $last = (int)$budget['last_notified_pct'];
+
+        // Determine if a new threshold has been crossed: 75, 90, 100+
+        $crossed = null;
+        foreach ([75, 90] as $t) {
+            if ($pct >= $t && $last < $t) $crossed = $t;
+        }
+        if ($pct >= 100 && $last < 100) $crossed = $pct; // show exact % when over
+
+        if ($crossed !== null) {
+            notify_budget_alert($pdo, $budget, $spent, $pct);
+            $pdo->prepare('UPDATE event_budgets SET last_notified_pct = ? WHERE id = ?')
+                ->execute([$pct, $budget['id']]);
+        }
+    } catch (PDOException $e) {
+        error_log('mailer: check_budget_thresholds failed — ' . $e->getMessage());
+    }
+}
+
+// ── Send budget threshold alert to all admins and treasurers ─────────────
+function notify_budget_alert(PDO $pdo, array $budget, float $spent, int $pct): void {
+    try {
+        $recipients = $pdo->query(
+            "SELECT name, email FROM users WHERE role IN ('admin','treasurer') AND active = 1"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('mailer: notify_budget_alert query failed — ' . $e->getMessage());
+        return;
+    }
+    if (empty($recipients)) return;
+
+    $budget_amt = '$' . number_format($budget['budget'], 2);
+    $spent_amt  = '$' . number_format($spent, 2);
+    $remaining  = $budget['budget'] - $spent;
+
+    if ($pct >= 100) {
+        $over    = '$' . number_format(abs($remaining), 2);
+        $subject = "⚠️ Budget Exceeded: {$budget['event']} at {$pct}% — $over over budget";
+        $level   = "OVER BUDGET ({$pct}%)";
+    } elseif ($pct >= 90) {
+        $subject = "Budget Alert — 90%: {$budget['event']} ($spent_amt of $budget_amt)";
+        $level   = "90% THRESHOLD REACHED";
+    } else {
+        $subject = "Budget Alert — 75%: {$budget['event']} ($spent_amt of $budget_amt)";
+        $level   = "75% THRESHOLD REACHED";
+    }
+
+    $body  = CLUB_NAME . "\n"
+           . "Event Budget Alert — $level\n"
+           . str_repeat('─', 48) . "\n\n"
+           . "Event:     {$budget['event']}\n"
+           . "Budget:    $budget_amt\n"
+           . "Spent:     $spent_amt ($pct%)\n"
+           . "Remaining: " . ($remaining >= 0 ? '$' . number_format($remaining,2) : '⚠️ -$' . number_format(abs($remaining),2)) . "\n\n";
+    if ($pct >= 100)
+        $body .= "This event has exceeded its budget by " . '$' . number_format(abs($remaining),2) . ".\n\n";
+    $body .= "Review purchases:  " . ADMIN_URL . "purchases.php?event=" . urlencode($budget['event']) . "\n"
+           . "Manage budgets:    " . ADMIN_URL . "budgets.php\n\n"
+           . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
+
+    foreach ($recipients as $r) {
+        send_notification($r['email'], $subject, $body);
+    }
+}
+
 // ── Notify submitter of a generic status change ───────────────────────────
 function notify_status_change(PDO $pdo, array $purchase, string $old_status, string $new_status, string $changed_by_name): void {
     if (!$purchase['submitted_by']) return;

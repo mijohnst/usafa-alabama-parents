@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($errors)) {
             if ($id) {
-                $pdo->prepare('UPDATE event_budgets SET event=?,budget=?,fiscal_year=?,notes=?,updated_at=NOW() WHERE id=?')
+                $pdo->prepare('UPDATE event_budgets SET event=?,budget=?,fiscal_year=?,notes=?,last_notified_pct=0,updated_at=NOW() WHERE id=?')
                     ->execute([$event,$budget,$fyear,$notes,$id]);
                 flash('success','Budget updated.');
             } else {
