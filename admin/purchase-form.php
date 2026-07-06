@@ -5,10 +5,11 @@ require_finance();
 $old_event = ''; // track event before edit for threshold check
 $pdo = get_pdo();
 
-$id      = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
-$p       = [];
-$errors  = [];
-$is_edit = false;
+$id        = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
+$p         = [];
+$errors    = [];
+$is_edit   = false;
+$read_only = false;
 
 if ($id) {
     $stmt = $pdo->prepare('SELECT p.*, u.name as submitted_by_name FROM purchases p LEFT JOIN users u ON p.submitted_by=u.id WHERE p.id=?');

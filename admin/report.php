@@ -4,6 +4,7 @@ require_finance();
 $pdo = get_pdo();
 
 $year = (int)($_GET['year'] ?? date('Y'));
+if ($year < 2020 || $year > 2100) $year = (int)date('Y'); // sanity clamp
 $years_avail = $pdo->query("SELECT DISTINCT YEAR(purchase_date) y FROM purchases ORDER BY y DESC")->fetchAll(PDO::FETCH_COLUMN);
 if (empty($years_avail)) $years_avail = [date('Y')];
 
@@ -30,7 +31,9 @@ $max_month = max($by_month) ?: 1;
 
 // Budgets
 $budgets = [];
-$brows = $pdo->query("SELECT event, budget FROM event_budgets WHERE fiscal_year = '' OR fiscal_year = '$year'")->fetchAll();
+$bstmt = $pdo->prepare("SELECT event, budget FROM event_budgets WHERE fiscal_year = '' OR fiscal_year = ?");
+$bstmt->execute([(string)$year]);
+$brows = $bstmt->fetchAll();
 foreach ($brows as $b) $budgets[$b['event']] = (float)$b['budget'];
 
 $months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
