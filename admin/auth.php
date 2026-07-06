@@ -206,8 +206,8 @@ function admin_footer(): void {
 }
 
 const REGIONS = ['', 'North', 'Central', 'South'];
-const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Other'];
-const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Strong Academy Day', 'General Operations', 'Other'];
+const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
+const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Birthday / Gift', 'General Operations', 'Other'];
 const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'reimbursed' => 'Reimbursed'];
 const CLASS_YEARS = ['', '2026', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
 

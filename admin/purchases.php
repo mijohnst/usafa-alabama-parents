@@ -28,9 +28,10 @@ $stmt->execute($params);
 $purchases = $stmt->fetchAll();
 
 // Totals
-$total_pretax = array_sum(array_column($purchases, 'amount_pretax'));
-$total_tax    = array_sum(array_column($purchases, 'amount_tax'));
-$total_all    = array_sum(array_column($purchases, 'amount_total'));
+$total_pretax  = array_sum(array_column($purchases, 'amount_pretax'));
+$total_tax     = array_sum(array_column($purchases, 'amount_tax'));
+$total_shipping= array_sum(array_column($purchases, 'amount_shipping'));
+$total_all     = array_sum(array_column($purchases, 'amount_total'));
 
 // CSV export
 if (isset($_GET['export'])) {
@@ -83,6 +84,10 @@ admin_header('Finance');
   <div class="fin-card">
     <div class="fin-amount">$<?= number_format($total_tax, 2) ?></div>
     <div class="fin-label">Tax Paid</div>
+  </div>
+  <div class="fin-card">
+    <div class="fin-amount">$<?= number_format($total_shipping, 2) ?></div>
+    <div class="fin-label">Shipping</div>
   </div>
   <div class="fin-card" style="border:2px solid #003594">
     <div class="fin-amount" style="color:#A6192E">$<?= number_format($total_all, 2) ?></div>
@@ -147,6 +152,7 @@ admin_header('Finance');
       <th>Category</th>
       <th style="text-align:right">Pre-Tax</th>
       <th style="text-align:right">Tax</th>
+      <th style="text-align:right">Ship</th>
       <th style="text-align:right">Total</th>
       <th>Status</th>
       <th>By</th>
@@ -166,6 +172,7 @@ admin_header('Finance');
       <td style="font-size:.8rem;color:#5a6a7a"><?= h($p['category']) ?></td>
       <td style="text-align:right;white-space:nowrap">$<?= number_format($p['amount_pretax'],2) ?></td>
       <td style="text-align:right;white-space:nowrap;color:#5a6a7a">$<?= number_format($p['amount_tax'],2) ?></td>
+      <td style="text-align:right;white-space:nowrap;color:#5a6a7a">$<?= number_format($p['amount_shipping'],2) ?></td>
       <td style="text-align:right;white-space:nowrap;font-weight:700">$<?= number_format($p['amount_total'],2) ?></td>
       <td>
         <span class="status-badge" style="background:<?= $status_colors[$p['status']] ?>22;color:<?= $status_colors[$p['status']] ?>">
@@ -194,6 +201,7 @@ admin_header('Finance');
       <td colspan="5" style="text-align:right;font-size:.8rem;color:#5a6a7a;padding:.75rem">TOTALS</td>
       <td style="text-align:right">$<?= number_format($total_pretax,2) ?></td>
       <td style="text-align:right;color:#5a6a7a">$<?= number_format($total_tax,2) ?></td>
+      <td style="text-align:right;color:#5a6a7a">$<?= number_format($total_shipping,2) ?></td>
       <td style="text-align:right;color:#A6192E">$<?= number_format($total_all,2) ?></td>
       <td colspan="3"></td>
     </tr>
