@@ -36,15 +36,17 @@ function handle_receipt_upload(string $key = 'receipt'): ?string {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
 
-    $vendor       = trim($_POST['vendor']      ?? '');
-    $description  = trim($_POST['description'] ?? '');
-    $event        = trim($_POST['event']       ?? '');
-    $category     = trim($_POST['category']    ?? '');
-    $date         = trim($_POST['purchase_date'] ?? '');
-    $pretax       = (float)str_replace(',','', $_POST['amount_pretax'] ?? '0');
-    $tax          = (float)str_replace(',','', $_POST['amount_tax']    ?? '0');
-    $total        = round($pretax + $tax, 2);
-    $status       = $_POST['status'] ?? 'pending';
+    $vendor        = trim($_POST['vendor']        ?? '');
+    $order_number  = trim($_POST['order_number']  ?? '');
+    $description   = trim($_POST['description']   ?? '');
+    $event         = trim($_POST['event']         ?? '');
+    $category      = trim($_POST['category']      ?? '');
+    $date          = trim($_POST['purchase_date'] ?? '');
+    $pretax        = (float)str_replace(',','', $_POST['amount_pretax']    ?? '0');
+    $tax           = (float)str_replace(',','', $_POST['amount_tax']       ?? '0');
+    $shipping      = (float)str_replace(',','', $_POST['amount_shipping']  ?? '0');
+    $total         = round($pretax + $tax + $shipping, 2);
+    $status        = $_POST['status'] ?? 'pending';
     $notes        = trim($_POST['notes'] ?? '');
     $submitted_by = (int)($_POST['submitted_by'] ?? $_SESSION['user_id'] ?? 0);
 
@@ -71,12 +73,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($is_edit) {
-            $pdo->prepare('UPDATE purchases SET vendor=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,updated_at=NOW() WHERE id=?')
-                ->execute([$vendor,$description,$event,$category,$date,$pretax,$tax,$total,$receipt_filename,$submitted_by,$status,$notes,$id]);
+            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,updated_at=NOW() WHERE id=?')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$id]);
             flash('success','Purchase updated.');
         } else {
-            $pdo->prepare('INSERT INTO purchases (vendor,description,event,category,purchase_date,amount_pretax,amount_tax,amount_total,receipt_filename,submitted_by,status,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
-                ->execute([$vendor,$description,$event,$category,$date,$pretax,$tax,$total,$receipt_filename,$submitted_by ?: null,$status,$notes]);
+            $pdo->prepare('INSERT INTO purchases (vendor,order_number,description,event,category,purchase_date,amount_pretax,amount_tax,amount_shipping,amount_total,receipt_filename,submitted_by,status,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes]);
             flash('success','Purchase added.');
         }
         header('Location: purchases.php'); exit;
@@ -130,6 +132,12 @@ admin_header($title);
           <input type="date" name="purchase_date" value="<?= $v('purchase_date') ?>" required>
         </div>
       </div>
+      <div class="form-row col-2">
+        <div class="form-group">
+          <label>Order Number <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
+          <input name="order_number" value="<?= $v('order_number') ?>" placeholder="e.g. 123-4567890-1234567">
+        </div>
+      </div>
       <div class="form-group">
         <label>Description *</label>
         <input name="description" value="<?= $v('description') ?>" required placeholder="What was purchased">
@@ -162,26 +170,50 @@ admin_header($title);
                  step="0.01" min="0" required placeholder="0.00" oninput="calcTotal()">
         </div>
         <div class="form-group">
-          <label>Tax</label>
+          <label>Tax <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
           <input type="number" name="amount_tax" id="tax_amt" value="<?= $v('amount_tax') ?>"
                  step="0.01" min="0" placeholder="0.00" oninput="calcTotal()">
         </div>
         <div class="form-group">
-          <label>Total</label>
-          <div class="total-display" id="total-display">
-            $<?= number_format((float)($p['amount_total'] ?? 0), 2) ?>
-          </div>
+          <label>Shipping <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
+          <input type="number" name="amount_shipping" id="shipping_amt" value="<?= $v('amount_shipping') ?>"
+                 step="0.01" min="0" placeholder="0.00" oninput="calcTotal()">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:.25rem">
+        <label>Total</label>
+        <div class="total-display" id="total-display">
+          $<?= number_format((float)($p['amount_total'] ?? 0), 2) ?>
         </div>
       </div>
     </fieldset>
 
     <fieldset><legend>Receipt &amp; Status</legend>
+      <?php $cur_status = $p['status'] ?? 'pending';
+            $status_steps = ['pending'=>0,'approved'=>1,'reimbursed'=>2]; ?>
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+        <?php foreach (PURCHASE_STATUSES as $k => $label):
+          $step = $status_steps[$k];
+          $cur  = $status_steps[$cur_status];
+          $done = $step < $cur; $active = $step === $cur;
+          $col  = $done||$active ? '#003594' : '#d0d5dd';
+          $bg   = $active ? '#003594' : ($done ? '#e8f0fe' : '#f5f7fa');
+          $tc   = $active ? '#fff' : ($done ? '#003594' : '#9aa5b4');
+        ?>
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <?php if ($step > 0): ?><span style="color:<?= $col ?>;font-size:1rem">→</span><?php endif; ?>
+          <span style="background:<?= $bg ?>;color:<?= $tc ?>;border:2px solid <?= $col ?>;border-radius:99px;padding:.25rem .85rem;font-size:.78rem;font-weight:700;white-space:nowrap">
+            <?php if ($done): ?>✓ <?php endif; ?><?= h($label) ?>
+          </span>
+        </div>
+        <?php endforeach; ?>
+      </div>
       <div class="form-row col-2">
         <div class="form-group">
-          <label>Status</label>
-          <select name="status">
+          <label>Set Status</label>
+          <select name="status" onchange="updateFlow(this.value)">
             <?php foreach (PURCHASE_STATUSES as $k => $v2): ?>
-              <option value="<?= h($k) ?>" <?= ($p['status']??'pending')===$k?'selected':''?>><?= h($v2) ?></option>
+              <option value="<?= h($k) ?>" <?= $cur_status===$k?'selected':''?>><?= h($v2) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -235,9 +267,18 @@ admin_header($title);
 
 <script>
 function calcTotal() {
-  var pre = parseFloat(document.getElementById('pretax').value)   || 0;
-  var tax = parseFloat(document.getElementById('tax_amt').value) || 0;
-  document.getElementById('total-display').textContent = '$' + (pre + tax).toFixed(2);
+  var pre  = parseFloat(document.getElementById('pretax').value)       || 0;
+  var tax  = parseFloat(document.getElementById('tax_amt').value)      || 0;
+  var ship = parseFloat(document.getElementById('shipping_amt').value) || 0;
+  document.getElementById('total-display').textContent = '$' + (pre + tax + ship).toFixed(2);
+}
+function updateFlow(val) {
+  // Reload page with new status to refresh flow indicator
+  var form = document.querySelector('form');
+  var hidden = document.createElement('input');
+  hidden.type='hidden'; hidden.name='_preview_status'; hidden.value=val;
+  form.appendChild(hidden);
+  // Just let the select change reflect visually on submit
 }
 
 function previewReceipt(input) {
