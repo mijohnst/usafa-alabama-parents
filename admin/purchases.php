@@ -215,7 +215,9 @@ admin_header('Finance');
               onclick="doAction('rf-<?= (int)$p['id'] ?>','rn-<?= (int)$p['id'] ?>','Reimbursement method (e.g. Venmo #12345):','Mark as reimbursed?')">💰 Reimburse</button>
           </form>
           <?php endif; ?>
-          <?php if (is_treasurer() || (is_member() && (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0))): ?>
+          <?php
+            $own_purchase = (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0);
+            if (is_treasurer() || ((is_member()||is_secretary()) && $own_purchase)): ?>
           <form method="POST" action="purchase-delete.php" onsubmit="return confirm('Delete this purchase? This cannot be undone.')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
