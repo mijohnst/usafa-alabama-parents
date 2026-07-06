@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$name)  $errors[] = 'Name is required.';
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
         if (!$uname) $errors[] = 'Username is required.';
-        if (!in_array($role, ['admin','treasurer','viewer'])) $errors[] = 'Invalid role.';
+        if (!in_array($role, ['admin','treasurer','viewer','member'])) $errors[] = 'Invalid role.';
         if ($action === 'add' && strlen($pw) < 8)  $errors[] = 'Password must be at least 8 characters.';
         if ($pw && $pw !== $pw2)                    $errors[] = 'Passwords do not match.';
 
