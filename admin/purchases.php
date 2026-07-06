@@ -198,7 +198,7 @@ admin_header('Finance');
             <button type="submit" class="btn btn-sm" style="background:#003594;color:#fff">💰 Reimburse</button>
           </form>
           <?php endif; ?>
-          <?php if (can_edit_purchase($p)): ?>
+          <?php if (is_treasurer() || (is_member() && (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0))): ?>
           <form method="POST" action="purchase-delete.php" onsubmit="return confirm('Delete this purchase? This cannot be undone.')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
