@@ -115,6 +115,7 @@ if (can_manage_finances()) {
     if (is_treasurer()) {
         $actions[] = ['icon'=>'💳','label'=>'Reimburse','sub'=>$approved>0?"$approved approved":'Nothing pending','href'=>'pending-reimbursements.php','color'=>$approved>0?'#003594':'#5a6a7a','badge'=>$approved>0?$approved:0];
         $actions[] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end & budgets','href'=>'report.php','color'=>'#37474f'];
+        $actions[] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
     }
 }
 

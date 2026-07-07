@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_member_admin();
+// Admins, officers, secretaries, and treasurer can manage sponsors
+if (!can_manage_members() && !is_treasurer()) {
+    require_login();
+    header('Location: dashboard.php?denied=1'); exit;
+}
+require_login();
 $pdo = get_pdo(); $errors = []; $edit = null;
 
 function save_logo(string $key): ?string {
