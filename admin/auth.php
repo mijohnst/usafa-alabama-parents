@@ -74,6 +74,11 @@ function can_manage_tickets(): bool {
     return is_super_admin();
 }
 
+// Treasurer (and anyone who can manage members) can toggle dues paid/unpaid
+function can_mark_dues(): bool {
+    return can_manage_members() || is_treasurer();
+}
+
 function can_manage_finances(): bool {
     return in_array($_SESSION['role'] ?? '', ['admin', 'tech', 'officer', 'treasurer', 'member', 'secretary']);
 }

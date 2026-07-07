@@ -168,7 +168,7 @@ echo show_flash();
     ?>
     <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
     <a href="directory.php" class="btn btn-secondary">Directory</a>
-    <?php if (!is_viewer()): ?>
+    <?php if (can_manage_members()): ?>
       <a href="reset-dues.php" class="btn btn-secondary">Reset Dues</a>
       <a href="add.php" class="btn btn-primary">+ Add Member</a>
     <?php endif; ?>
@@ -343,7 +343,7 @@ function openBirthdays() {
   </form>
 </div>
 
-<?php if (!is_viewer()): ?>
+<?php if (can_mark_dues()): ?>
 <!-- Bulk action form (inputs inside the table use form="bulk-form") -->
 <form id="bulk-form" method="POST" action="bulk-action.php">
   <?= csrf_field() ?>
@@ -355,7 +355,7 @@ function openBirthdays() {
 <table>
   <thead>
     <tr>
-      <?php if (!is_viewer()): ?>
+      <?php if (can_mark_dues()): ?>
       <th style="width:36px"><input type="checkbox" id="select-all" style="width:auto;accent-color:#003594" title="Select all"></th>
       <?php endif; ?>
       <th><?= sort_link('class_year',    'Year',    $sort, $dir, $next_dir, $get_params) ?></th>
@@ -369,7 +369,7 @@ function openBirthdays() {
   </thead>
   <tbody>
   <?php if (empty($members)): ?>
-    <tr><td colspan="<?= is_viewer()?7:8 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
+    <tr><td colspan="<?= can_mark_dues()?8:7 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
   <?php endif; ?>
   <?php foreach ($members as $m): ?>
     <?php
@@ -381,7 +381,7 @@ function openBirthdays() {
       $p2cell     = $m['parent2_cell'];
     ?>
     <tr>
-      <?php if (!is_viewer()): ?>
+      <?php if (can_mark_dues()): ?>
       <td><input type="checkbox" name="member_ids[]" value="<?= (int)$m['id'] ?>" form="bulk-form" style="width:auto;accent-color:#003594" class="row-cb"></td>
       <?php endif; ?>
       <td><?= h($m['class_year']) ?></td>
@@ -410,7 +410,7 @@ function openBirthdays() {
       </td>
       <td class="actions">
         <div class="btn-group">
-          <?php if (!is_viewer()): ?>
+          <?php if (can_manage_members()): ?>
           <a href="edit.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
           <form method="POST" action="archive-member.php">
             <?= csrf_field() ?>
@@ -425,6 +425,17 @@ function openBirthdays() {
             <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
+          <?php elseif (can_mark_dues()): ?>
+          <form method="POST" action="bulk-action.php">
+            <?= csrf_field() ?>
+            <input type="hidden" name="member_ids[]" value="<?= (int)$m['id'] ?>">
+            <input type="hidden" name="membership_year" value="<?= h(membership_year()) ?>">
+            <?php if ($m['membership_paid']): ?>
+              <button type="submit" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm">✗ Unpaid</button>
+            <?php else: ?>
+              <button type="submit" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Mark Paid</button>
+            <?php endif; ?>
+          </form>
           <?php else: ?>
           <a href="view.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">View</a>
           <?php endif; ?>
@@ -436,7 +447,7 @@ function openBirthdays() {
 </table>
 </div>
 
-<?php if (!is_viewer() && !empty($members)): ?>
+<?php if (can_mark_dues() && !empty($members)): ?>
 <!-- Bulk action bar -->
 <div id="bulk-bar" style="display:none;position:sticky;bottom:1rem;background:#002554;color:#fff;padding:.85rem 1.25rem;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
   <span id="bulk-count" style="font-size:.9rem;font-weight:600"></span>
