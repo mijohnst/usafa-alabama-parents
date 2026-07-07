@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$name)  $errors[] = 'Name is required.';
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
         if (!$uname) $errors[] = 'Username is required.';
-        if (!in_array($role, ['admin','tech','officer','secretary','treasurer','viewer','member'])) $errors[] = 'Invalid role.';
+        if (!in_array($role, ['admin','tech','officer','secretary','treasurer','member'])) $errors[] = 'Invalid role.';
 
         // Check username/email uniqueness
         $dup_check = $pdo->prepare('SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?');
@@ -91,8 +91,8 @@ if (isset($_GET['edit'])) {
 
 $users = $pdo->query('SELECT * FROM users ORDER BY role, name')->fetchAll();
 
-$role_labels = ['admin'=>'Admin','tech'=>'Tech Support','officer'=>'Officer','secretary'=>'Secretary','treasurer'=>'Treasurer','viewer'=>'Viewer','member'=>'Member'];
-$role_colors = ['admin'=>'#002554','tech'=>'#bf360c','officer'=>'#1a237e','secretary'=>'#5c007a','treasurer'=>'#1b5e20','viewer'=>'#5a6a7a','member'=>'#7b3f00'];
+$role_labels = ['admin'=>'Admin','tech'=>'Tech Support','officer'=>'Officer','secretary'=>'Secretary','treasurer'=>'Treasurer','member'=>'Member'];
+$role_colors = ['admin'=>'#002554','tech'=>'#bf360c','officer'=>'#1a237e','secretary'=>'#5c007a','treasurer'=>'#1b5e20','member'=>'#7b3f00'];
 
 admin_header('Users');
 echo show_flash();

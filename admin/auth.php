@@ -255,7 +255,6 @@ function admin_header(string $title): void {
     $tbadge = (can_manage_tickets() && $open_tickets > 0) ? ' <span style="background:#f57c00;color:#fff;font-size:.6rem;padding:.1rem .4rem;border-radius:99px;vertical-align:middle;font-weight:700">' . $open_tickets . '</span>' : '';
     echo '<a href="helpdesk.php">🎫 Support' . $tbadge . '</a>';
     if (is_super_admin()) echo '<a href="users.php">Users</a>';
-    if (is_viewer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
     echo '<a href="change-password.php" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none;margin-left:.25rem" title="Change password">' . h(current_user_name()) . ' 🔑</a>';
     echo '<a href="logout.php">Log Out</a>';
     echo '</nav></div>';
