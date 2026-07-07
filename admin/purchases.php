@@ -260,14 +260,22 @@ admin_header('Finance');
     <p id="reimburse-modal-desc" style="font-size:.85rem;color:#5a6a7a;margin-bottom:1.25rem"></p>
     <div class="form-group">
       <label>Payment Method *</label>
-      <select id="modal-payment-method" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+      <select id="modal-payment-method" onchange="updateModalFields()" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
         <?php foreach (PAYMENT_METHODS as $pm): ?>
           <option value="<?= h($pm) ?>"><?= $pm === '' ? '— select method —' : h($pm) ?></option>
         <?php endforeach; ?>
       </select>
     </div>
+    <div id="modal-check-row" style="display:none;margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Check Number *</label>
+      <input type="text" id="modal-check-number" placeholder="e.g. 1042" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    </div>
+    <div id="modal-other-row" style="display:none;margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Explanation *</label>
+      <input type="text" id="modal-other-text" placeholder="Describe the payment method…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    </div>
     <div class="form-group">
-      <label>Note <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional — e.g. Venmo #12345, Check #1042</span></label>
+      <label>Note <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
       <input type="text" id="modal-note" placeholder="Optional note…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
     <div style="display:flex;gap:.75rem;margin-top:1.25rem">
@@ -280,13 +288,21 @@ admin_header('Finance');
 <script>
 var _reimburseId = null;
 
+function updateModalFields() {
+  var m = document.getElementById('modal-payment-method').value;
+  document.getElementById('modal-check-row').style.display = m === 'Check' ? 'block' : 'none';
+  document.getElementById('modal-other-row').style.display = m === 'Other' ? 'block' : 'none';
+}
+
 function openReimburseModal(id, vendor, amount) {
   _reimburseId = id;
   document.getElementById('reimburse-modal-desc').textContent = vendor + ' — ' + amount;
   document.getElementById('modal-payment-method').value = '';
+  document.getElementById('modal-check-number').value = '';
+  document.getElementById('modal-other-text').value = '';
   document.getElementById('modal-note').value = '';
-  var m = document.getElementById('reimburse-modal');
-  m.style.display = 'flex';
+  updateModalFields();
+  document.getElementById('reimburse-modal').style.display = 'flex';
 }
 
 function closeReimburseModal() {
@@ -297,8 +313,18 @@ function closeReimburseModal() {
 function confirmReimburse() {
   var method = document.getElementById('modal-payment-method').value;
   if (!method) { alert('Please select a payment method.'); return; }
+  var fullMethod = method;
+  if (method === 'Check') {
+    var num = document.getElementById('modal-check-number').value.trim();
+    if (!num) { alert('Please enter the check number.'); return; }
+    fullMethod = 'Check #' + num;
+  } else if (method === 'Other') {
+    var expl = document.getElementById('modal-other-text').value.trim();
+    if (!expl) { alert('Please explain the payment method.'); return; }
+    fullMethod = 'Other: ' + expl;
+  }
   var note = document.getElementById('modal-note').value;
-  document.getElementById('rpm-' + _reimburseId).value = method;
+  document.getElementById('rpm-' + _reimburseId).value = fullMethod;
   document.getElementById('rn-'  + _reimburseId).value = note;
   closeReimburseModal();
   document.getElementById('rf-' + _reimburseId).submit();

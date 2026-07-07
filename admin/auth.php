@@ -239,7 +239,7 @@ function admin_footer(): void {
 }
 
 const REGIONS = ['', 'North', 'Central', 'South'];
-const PAYMENT_METHODS = ['', 'Club Card', 'Personal Card (Reimbursable)', 'Check', 'PayPal / Venmo', 'Other'];
+const PAYMENT_METHODS = ['', 'Check', 'Internet Transfer', 'Other'];
 const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
 const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Birthday / Gift', 'General Operations', 'Other'];
 const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'reimbursed' => 'Reimbursed'];

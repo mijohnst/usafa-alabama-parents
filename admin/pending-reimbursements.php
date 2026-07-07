@@ -107,15 +107,23 @@ echo show_flash();
     <p id="pr-modal-desc" style="font-size:.85rem;color:#5a6a7a;margin-bottom:1.25rem"></p>
     <div style="margin-bottom:.9rem">
       <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Payment Method *</label>
-      <select id="pr-modal-method" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+      <select id="pr-modal-method" onchange="updatePrFields()" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
         <?php foreach (PAYMENT_METHODS as $pm): ?>
           <option value="<?= h($pm) ?>"><?= $pm === '' ? '— select method —' : h($pm) ?></option>
         <?php endforeach; ?>
       </select>
     </div>
+    <div id="pr-check-row" style="display:none;margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Check Number *</label>
+      <input type="text" id="pr-check-number" placeholder="e.g. 1042" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    </div>
+    <div id="pr-other-row" style="display:none;margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Explanation *</label>
+      <input type="text" id="pr-other-text" placeholder="Describe the payment method…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    </div>
     <div style="margin-bottom:.9rem">
       <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Note <span style="font-weight:400;text-transform:none;font-size:.72rem;color:#9aa5b4">optional</span></label>
-      <input type="text" id="pr-modal-note" placeholder="e.g. Venmo #12345, Check #1042" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+      <input type="text" id="pr-modal-note" placeholder="Optional note…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
     <div style="display:flex;gap:.75rem;margin-top:1.25rem">
       <button onclick="confirmPrReimburse()" style="flex:1;padding:.7rem;background:#003594;color:#fff;border:none;border-radius:4px;font-size:.9rem;font-weight:700;cursor:pointer">Confirm Reimbursement</button>
@@ -125,17 +133,35 @@ echo show_flash();
 </div>
 <script>
 var _prId = null;
+function updatePrFields() {
+  var m = document.getElementById('pr-modal-method').value;
+  document.getElementById('pr-check-row').style.display = m === 'Check' ? 'block' : 'none';
+  document.getElementById('pr-other-row').style.display = m === 'Other' ? 'block' : 'none';
+}
 function openPrModal(id, vendor, amount) {
   _prId = id;
   document.getElementById('pr-modal-desc').textContent = vendor + ' — ' + amount;
   document.getElementById('pr-modal-method').value = '';
+  document.getElementById('pr-check-number').value = '';
+  document.getElementById('pr-other-text').value = '';
   document.getElementById('pr-modal-note').value = '';
+  updatePrFields();
   document.getElementById('pr-modal').style.display = 'flex';
 }
 function confirmPrReimburse() {
   var method = document.getElementById('pr-modal-method').value;
   if (!method) { alert('Please select a payment method.'); return; }
-  document.getElementById('rpm-pr-' + _prId).value = method;
+  var fullMethod = method;
+  if (method === 'Check') {
+    var num = document.getElementById('pr-check-number').value.trim();
+    if (!num) { alert('Please enter the check number.'); return; }
+    fullMethod = 'Check #' + num;
+  } else if (method === 'Other') {
+    var expl = document.getElementById('pr-other-text').value.trim();
+    if (!expl) { alert('Please explain the payment method.'); return; }
+    fullMethod = 'Other: ' + expl;
+  }
+  document.getElementById('rpm-pr-' + _prId).value = fullMethod;
   document.getElementById('rn-pr-'  + _prId).value = document.getElementById('pr-modal-note').value;
   document.getElementById('pr-modal').style.display = 'none';
   document.getElementById('rf-pr-' + _prId).submit();
