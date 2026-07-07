@@ -239,6 +239,37 @@ function notify_budget_alert(PDO $pdo, array $budget, float $spent, int $pct): v
     }
 }
 
+// ── Notify tech/admin when a submitter adds details to their ticket ──────
+function notify_tech_of_comment(PDO $pdo, array $ticket, string $comment, string $from_name): void {
+    try {
+        $recipients = $pdo->query(
+            "SELECT name, email FROM users WHERE role IN ('admin','tech') AND active = 1"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('mailer: notify_tech_of_comment failed — ' . $e->getMessage());
+        return;
+    }
+    if (empty($recipients)) return;
+
+    $url     = ADMIN_URL . 'ticket-view.php?id=' . (int)$ticket['id'];
+    $subject = preg_replace('/[\x00-\x1F\x7F]/', '',
+               "Ticket Update — {$ticket['ticket_number']}: {$ticket['subject']}");
+    $body    = CLUB_NAME . "\n"
+             . "Ticket Update from Submitter\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "Ticket:   {$ticket['ticket_number']}\n"
+             . "Subject:  {$ticket['subject']}\n"
+             . "Status:   " . (TICKET_STATUSES[$ticket['status']] ?? $ticket['status']) . "\n"
+             . "From:     $from_name\n\n"
+             . "Added details:\n$comment\n\n"
+             . "Respond: $url\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
+
+    foreach ($recipients as $r) {
+        send_notification($r['email'], $subject, $body);
+    }
+}
+
 // ── Notify submitter of a generic status change ───────────────────────────
 function notify_status_change(PDO $pdo, array $purchase, string $old_status, string $new_status, string $changed_by_name): void {
     if (!$purchase['submitted_by']) return;

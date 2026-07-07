@@ -5,6 +5,7 @@ $pdo = get_pdo();
 
 $filter_status   = $_GET['status']   ?? '';
 $filter_category = $_GET['category'] ?? '';
+$filter_search   = trim($_GET['q']   ?? '');
 $mine            = isset($_GET['mine']);
 
 $where  = ['1=1'];
@@ -12,11 +13,16 @@ $params = [];
 if ($filter_status   !== '') { $where[] = 't.status = :status';   $params[':status']   = $filter_status; }
 if ($filter_category !== '') { $where[] = 't.category = :cat';    $params[':cat']      = $filter_category; }
 if ($mine)                   { $where[] = 't.submitted_by = :me'; $params[':me']       = $_SESSION['user_id'] ?? 0; }
+if ($filter_search   !== '') {
+    $where[] = '(t.subject LIKE :q OR t.ticket_number LIKE :q OR t.description LIKE :q)';
+    $params[':q'] = '%' . $filter_search . '%';
+}
 
-$sql = 'SELECT t.*, u.name as submitter_name,
+$sql = 'SELECT t.*, u.name as submitter_name, a.name as assigned_name,
                (SELECT COUNT(*) FROM ticket_comments c WHERE c.ticket_id=t.id AND c.is_internal=0) as comment_count
         FROM tickets t
         LEFT JOIN users u ON t.submitted_by = u.id
+        LEFT JOIN users a ON t.assigned_to  = a.id
         WHERE ' . implode(' AND ', $where) . '
         ORDER BY FIELD(t.status,"open","in_progress","resolved"), t.created_at DESC';
 $stmt = $pdo->prepare($sql);
@@ -44,6 +50,10 @@ echo show_flash();
 
 <div class="card" style="padding:1rem 1.5rem;margin-bottom:1rem">
   <form method="GET" class="filter-bar">
+    <div class="form-group" style="flex:2;min-width:180px">
+      <label>Search subject / ticket #</label>
+      <input name="q" value="<?= h($filter_search) ?>" placeholder="Type to search…">
+    </div>
     <div class="form-group">
       <label>Status</label>
       <select name="status">
@@ -85,19 +95,23 @@ echo show_flash();
       <th>Subject</th>
       <th>Status</th>
       <th>Priority</th>
+      <th>Age</th>
       <th>Submitted By</th>
-      <th>Date</th>
+      <th>Assigned To</th>
       <th>Comments</th>
       <th class="actions-head">Action</th>
     </tr>
   </thead>
   <tbody>
   <?php if (empty($tickets)): ?>
-    <tr><td colspan="9" style="text-align:center;padding:2rem;color:#5a6a7a">No tickets found.</td></tr>
+    <tr><td colspan="10" style="text-align:center;padding:2rem;color:#5a6a7a">No tickets found.</td></tr>
   <?php endif; ?>
   <?php foreach ($tickets as $t):
-    $sc = $status_colors[$t['status']] ?? $status_colors['open'];
+    $sc       = $status_colors[$t['status']] ?? $status_colors['open'];
     $mine_row = (int)($t['submitted_by']??-1) === (int)($_SESSION['user_id']??0);
+    $days_open = (int)floor((time() - strtotime($t['created_at'])) / 86400);
+    $age_color = $t['status']==='resolved' ? '#9aa5b4' : ($days_open >= 7 ? '#A6192E' : ($days_open >= 3 ? '#f57c00' : '#1b5e20'));
+    $age_label = $days_open === 0 ? 'Today' : $days_open . 'd';
   ?>
     <tr class="ticket-row" style="<?= $mine_row?'background:#fafbff':'' ?>">
       <td style="font-family:monospace;font-weight:700;color:#002554"><?= h($t['ticket_number']) ?></td>
@@ -105,11 +119,25 @@ echo show_flash();
       <td><strong><?= h($t['subject']) ?></strong></td>
       <td><span class="t-badge" style="background:<?= $sc['bg'] ?>;color:<?= $sc['text'] ?>;border:1px solid <?= $sc['border'] ?>"><?= TICKET_STATUSES[$t['status']] ?></span></td>
       <td><span style="font-size:.75rem;font-weight:700;color:<?= $priority_colors[$t['priority']] ?>"><?= ucfirst($t['priority']) ?></span></td>
+      <td style="font-size:.8rem;font-weight:700;color:<?= $age_color ?>;white-space:nowrap"><?= $age_label ?></td>
       <td style="font-size:.78rem"><?= h($t['submitter_name'] ?? '—') ?><?= $mine_row?' <span style="color:#003594;font-size:.68rem">(you)</span>':'' ?></td>
-      <td style="font-size:.78rem;white-space:nowrap;color:#5a6a7a"><?= h(date('M j, Y', strtotime($t['created_at']))) ?></td>
+      <td style="font-size:.78rem;color:#5a6a7a"><?= h($t['assigned_name'] ?? '—') ?></td>
       <td style="text-align:center;color:#5a6a7a"><?= $t['comment_count'] ?: '—' ?></td>
       <td class="actions">
-        <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="btn btn-secondary btn-sm">View</a>
+        <div class="btn-group">
+          <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="btn btn-secondary btn-sm">View</a>
+          <?php if ($t['status']==='resolved' && can_manage_tickets()): ?>
+          <form method="POST" action="ticket-view.php" style="margin:0">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="update_status">
+            <input type="hidden" name="new_status" value="open">
+            <input type="hidden" name="assigned_to" value="">
+            <input type="hidden" name="id_override" value="<?= (int)$t['id'] ?>">
+            <button type="submit" class="btn btn-secondary btn-sm"
+              onclick="return confirm('Reopen ticket <?= h(addslashes($t['ticket_number'])) ?>?')">↩ Reopen</button>
+          </form>
+          <?php endif; ?>
+        </div>
       </td>
     </tr>
   <?php endforeach; ?>

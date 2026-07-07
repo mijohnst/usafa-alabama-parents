@@ -3,7 +3,7 @@ require_once __DIR__ . '/auth.php';
 require_login();
 $pdo = get_pdo();
 
-$id = (int)($_GET['id'] ?? 0);
+$id = (int)($_GET['id'] ?? $_POST['id_override'] ?? 0);
 if (!$id) { header('Location: helpdesk.php'); exit; }
 
 $stmt = $pdo->prepare(
@@ -72,10 +72,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('INSERT INTO ticket_comments (ticket_id,user_id,comment,is_internal) VALUES (?,?,?,?)')
                 ->execute([$id, $_SESSION['user_id']??null, $comment, $is_internal]);
 
-            // Send full history to submitter on any public comment
+            // Route notifications correctly
             if (!$is_internal) {
                 $who = current_user_name();
-                send_to_submitter($pdo, $ticket, 'New Reply on Ticket', "$who added a reply");
+                if (can_manage_tickets()) {
+                    // Tech/admin replied — notify submitter
+                    send_to_submitter($pdo, $ticket, 'New Reply on Ticket', "$who added a reply");
+                } else {
+                    // Submitter added details — notify tech/admin
+                    notify_tech_of_comment($pdo, $ticket, $comment, $who);
+                }
             }
             flash('success', 'Comment added.');
         }
@@ -228,6 +234,16 @@ echo show_flash();
       </div>
       <button type="submit" class="btn btn-primary" style="width:100%">Update</button>
     </form>
+    <?php if ($ticket['status'] === 'resolved'): ?>
+    <form method="POST" style="margin-top:.75rem">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="update_status">
+      <input type="hidden" name="new_status" value="open">
+      <input type="hidden" name="assigned_to" value="<?= (int)($ticket['assigned_to']??0) ?>">
+      <button type="submit" class="btn btn-secondary" style="width:100%"
+        onclick="return confirm('Reopen this ticket?')">↩ Reopen Ticket</button>
+    </form>
+    <?php endif; ?>
   </div>
   <?php endif; ?>
 
