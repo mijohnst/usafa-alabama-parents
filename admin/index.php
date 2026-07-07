@@ -243,6 +243,47 @@ if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8'
   <?php endforeach; ?>
 </div>
 
+<?php if (!empty($upcoming_bdays)): ?>
+<div class="card" style="padding:0;margin-bottom:1.25rem;overflow:hidden">
+  <button onclick="toggleBdays(this)" style="width:100%;background:none;border:none;padding:.85rem 1.25rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:left;font-family:inherit">
+    <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">
+      🎂 Upcoming Birthdays
+      <span style="background:<?= !empty(array_filter($upcoming_bdays,fn($b)=>$b['days']<=7))?'#f57c00':'#5a6a7a' ?>;color:#fff;font-size:.65rem;padding:.15rem .45rem;border-radius:99px;margin-left:.4rem;vertical-align:middle"><?= count($upcoming_bdays) ?></span>
+    </span>
+    <span id="bday-chevron" style="color:#5a6a7a;font-size:.85rem">▸ Show</span>
+  </button>
+  <div id="bday-panel" style="display:none;padding:.25rem 1.25rem 1.25rem">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem">
+      <?php foreach ($upcoming_bdays as $b): ?>
+      <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.5rem .85rem;font-size:.82rem;display:flex;justify-content:space-between;align-items:center">
+        <div><strong style="color:#002554"><?= h($b['name']) ?></strong><br>
+          <span style="color:#5a6a7a"><?= h($b['fmt']) ?></span>
+          <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?></div>
+        <div style="white-space:nowrap;padding-left:.5rem">
+          <?php if ($b['days']===0): ?><span style="color:#A6192E;font-weight:700">🎉 Today!</span>
+          <?php elseif($b['days']<=7): ?><span style="color:#f57c00;font-weight:700"><?= $b['days'] ?>d</span>
+          <?php else: ?><span style="color:#9aa5b4"><?= $b['days'] ?>d</span><?php endif; ?>
+        </div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</div>
+<script>
+function toggleBdays(btn) {
+  var panel=document.getElementById('bday-panel'), chev=document.getElementById('bday-chevron');
+  var open=panel.style.display==='none';
+  panel.style.display=open?'block':'none';
+  chev.textContent=open?'▾ Hide':'▸ Show';
+}
+function openBirthdays() {
+  var panel=document.getElementById('bday-panel'), chev=document.getElementById('bday-chevron');
+  panel.style.display='block';
+  chev.textContent='▾ Hide';
+}
+</script>
+<?php endif; ?>
+
 <!-- Filters -->
 <div class="card" style="padding:1rem 1.5rem">
   <form method="GET" class="filter-bar">
@@ -424,48 +465,6 @@ selectAll.addEventListener('change', function() {
   updateBulkBar();
 });
 checkboxes.forEach(function(cb) { cb.addEventListener('change', updateBulkBar); });
-</script>
-<?php endif; ?>
-
-<?php if (!empty($upcoming_bdays)): ?>
-<div class="card" style="padding:0;margin-top:1rem;overflow:hidden">
-  <button onclick="toggleBdays(this)" style="width:100%;background:none;border:none;padding:.85rem 1.25rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:left;font-family:inherit">
-    <span style="font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">
-      🎂 Upcoming Birthdays
-      <span style="background:<?= !empty(array_filter($upcoming_bdays,fn($b)=>$b['days']<=7))?'#f57c00':'#5a6a7a' ?>;color:#fff;font-size:.65rem;padding:.15rem .45rem;border-radius:99px;margin-left:.4rem;vertical-align:middle"><?= count($upcoming_bdays) ?></span>
-    </span>
-    <span id="bday-chevron" style="color:#5a6a7a;font-size:.85rem">▸ Show</span>
-  </button>
-  <div id="bday-panel" style="display:none;padding:.25rem 1.25rem 1.25rem">
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem">
-      <?php foreach ($upcoming_bdays as $b): ?>
-      <div style="background:#f0f4ff;border:1px solid #c7d4f5;border-radius:4px;padding:.5rem .85rem;font-size:.82rem;display:flex;justify-content:space-between;align-items:center">
-        <div><strong style="color:#002554"><?= h($b['name']) ?></strong><br>
-          <span style="color:#5a6a7a"><?= h($b['fmt']) ?></span>
-          <?php if ($b['box']): ?><span style="color:#9aa5b4"> · PO <?= h($b['box']) ?></span><?php endif; ?></div>
-        <div style="white-space:nowrap;padding-left:.5rem">
-          <?php if ($b['days']===0): ?><span style="color:#A6192E;font-weight:700">🎉 Today!</span>
-          <?php elseif($b['days']<=7): ?><span style="color:#f57c00;font-weight:700"><?= $b['days'] ?>d</span>
-          <?php else: ?><span style="color:#9aa5b4"><?= $b['days'] ?>d</span><?php endif; ?>
-        </div>
-      </div>
-      <?php endforeach; ?>
-    </div>
-  </div>
-</div>
-<script>
-function toggleBdays(btn) {
-  var panel=document.getElementById('bday-panel'), chev=document.getElementById('bday-chevron');
-  var open=panel.style.display==='none';
-  panel.style.display=open?'block':'none';
-  chev.textContent=open?'▾ Hide':'▸ Show';
-}
-function openBirthdays() {
-  var panel=document.getElementById('bday-panel'), chev=document.getElementById('bday-chevron');
-  panel.style.display='block';
-  chev.textContent='▾ Hide';
-  panel.scrollIntoView({behavior:'smooth'});
-}
 </script>
 <?php endif; ?>
 
