@@ -8,8 +8,8 @@ $name = current_user_name();
 // ── Gather data for alerts and stats ──────────────────────────────────────
 $stats = [];
 
-// Member stats (for roles that manage members)
-if (can_manage_members() || is_secretary()) {
+// Member stats — load for all roles (Members tile shown to everyone)
+if (true) {
     $ms = $pdo->query("SELECT COUNT(*) as total,
                               SUM(membership_paid) as paid,
                               SUM(CASE WHEN class_year!='2026' AND membership_paid=0 THEN 1 ELSE 0 END) as unpaid,
@@ -91,8 +91,11 @@ $role_color = $role_colors[$role] ?? '#5a6a7a';
 // ── Quick action definitions by role ──────────────────────────────────────
 $actions = [];
 
+// Members tile for all roles
+$mem_total = $stats['members']['total'] ?? null;
+$actions[] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_total.' active':'View roster','href'=>'index.php','color'=>'#002554'];
+
 if (can_manage_members()) {
-    $actions[] = ['icon'=>'👥','label'=>'Members','sub'=>$stats['members']['total'].' active','href'=>'index.php','color'=>'#002554'];
     $actions[] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
     $actions[] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
     $actions[] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
