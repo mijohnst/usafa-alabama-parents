@@ -620,6 +620,7 @@ function renderNews(items, isLive) {
     container.innerHTML = '<p class="news-loading">No news items available at this time.</p>';
     return;
   }
+  items = items.slice(0, 3); // show 3 articles for a clean grid
   if (ts) {
     var now = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
     ts.textContent = isLive ? 'Live feed · Updated ' + now : 'Showing cached news · Last checked ' + now;
