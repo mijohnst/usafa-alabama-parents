@@ -251,7 +251,7 @@
         <li><a href="https://shop.usafa.org/products/air-force-academy-cadet-saber-usafa" target="_blank" rel="noopener">Saber Orders</a></li>
       </ul>
     </li>
-    <li><a href="#contact">Contact</a></li>
+    <li><a href="#volunteer">Contact</a></li>
     <li style="display:flex;align-items:center;padding-left:.5rem;">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" height="20" width="30" style="border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,.4);display:block;" title="Alabama" aria-hidden="true">
         <rect width="60" height="40" fill="white"/>
@@ -393,47 +393,49 @@
 </section>
 
 <!-- CONTACT -->
-<section id="contact">
+<section id="volunteer">
   <div class="container">
-    <p class="section-label">Get In Touch</p>
-    <h2 class="section-title">Contact</h2>
+    <p class="section-label">Get Involved</p>
+    <h2 class="section-title">Volunteer with Us</h2>
     <div class="divider"></div>
     <div class="contact-grid">
       <div class="contact-info">
-        <h3>We'd love to hear from you</h3>
-        <p>Whether you're a newly-appointed family, a current cadet parent, or someone interested in supporting our mission &mdash; fill out the form and a club officer will follow up shortly.</p>
-        <div class="contact-detail"><span class="icon">&#9993;&#65039;</span><span><a href="mailto:info@alabamafalcons.org">Send Email</a></span></div>
+        <h3>Support our cadets &amp; families</h3>
+        <p>Our club runs on the energy of dedicated volunteers. Whether you can help at events, coordinate care packages, support families, or lend your professional skills &mdash; we'd love to have you.</p>
+        <div class="contact-detail"><span class="icon">&#9993;&#65039;</span><span><a href="mailto:info@alabamafalcons.org">Email Us Directly</a></span></div>
         <div class="contact-detail"><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener" class="fb-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg><span>Alabama Falcons Facebook Group</span></a></div>
-        <p style="margin-top:.5rem;font-size:.8rem;color:var(--gray);font-style:italic;">Note: Our Facebook group is private. You'll need to request access and be approved by a group admin.</p>
+        <p style="margin-top:.5rem;font-size:.8rem;color:var(--gray);font-style:italic;">Note: Our Facebook group is private. Request access to connect with other Alabama families.</p>
         <p style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #d0d8e4;font-size:.8rem;color:var(--gray);">
-          Having website issues? Contact the
-          <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue);">Site Administrator</a>.
+          Having website issues? Contact the <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue);">Site Administrator</a>.
         </p>
       </div>
       <div class="contact-form">
-        <form id="contact-form">
+        <form id="volunteer-form">
           <div class="form-row">
-            <div class="form-group"><label for="name">Your Name</label><input type="text" id="name" name="name" required placeholder="First Last" /></div>
-            <div class="form-group"><label for="email">Email Address</label><input type="email" id="email" name="email" required placeholder="you@example.com" /></div>
+            <div class="form-group"><label for="vol-name">Your Name *</label><input type="text" id="vol-name" name="name" required placeholder="First Last" /></div>
+            <div class="form-group"><label for="vol-email">Email Address *</label><input type="email" id="vol-email" name="email" required placeholder="you@example.com" /></div>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label for="role">I am a...</label>
-              <select id="role" name="role">
-                <option value="">-- Select One --</option>
-                <option value="current-parent">Parent of a current USAFA Cadet</option>
-                <option value="new-appointee">Parent of a new Appointee</option>
-                <option value="prospective">Parent of a prospective applicant</option>
-                <option value="alumnus">USAFA Alumnus / Alumna</option>
-                <option value="supporter">Community Supporter</option>
-                <option value="other">Other – Describe in Message</option>
-              </select>
+            <div class="form-group"><label for="vol-phone">Phone</label><input type="tel" id="vol-phone" name="phone" placeholder="555-555-5555" /></div>
+            <div class="form-group"><label for="vol-cadet">Cadet Name &amp; Class Year</label><input type="text" id="vol-cadet" name="cadetInfo" placeholder="e.g. Hunter Johnston, Class of 2028" /></div>
+          </div>
+          <div class="form-group">
+            <label>Areas of Interest <span style="font-weight:300;font-size:.85rem">(select all that apply)</span></label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem .75rem;margin-top:.4rem">
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.88rem;cursor:pointer"><input type="checkbox" name="areas" value="Events" style="width:auto"> Events &amp; Socials</label>
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.88rem;cursor:pointer"><input type="checkbox" name="areas" value="Care Packages" style="width:auto"> Care Packages</label>
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.88rem;cursor:pointer"><input type="checkbox" name="areas" value="Mentorship" style="width:auto"> Mentorship Program</label>
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.88rem;cursor:pointer"><input type="checkbox" name="areas" value="Cadet Support" style="width:auto"> Cadet Support</label>
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.88rem;cursor:pointer"><input type="checkbox" name="areas" value="Communications" style="width:auto"> Communications</label>
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.88rem;cursor:pointer"><input type="checkbox" name="areas" value="Fundraising" style="width:auto"> Fundraising</label>
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.88rem;cursor:pointer"><input type="checkbox" name="areas" value="Leadership" style="width:auto"> Club Leadership</label>
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.88rem;cursor:pointer"><input type="checkbox" name="areas" value="Other" style="width:auto"> Other</label>
             </div>
-            <div class="form-group"><label for="class-year">Cadet's Class Year (if applicable)</label><input type="text" id="class-year" name="class_year" placeholder="e.g. 2027" /></div>
           </div>
-          <div class="form-group"><label for="message">Message</label><textarea id="message" name="message" required placeholder="How can we help you?"></textarea></div>
-          <button type="submit" class="btn btn-dark" style="width:100%;">Send Message</button>
-          <div id="form-status"></div>
+          <div class="form-group"><label for="vol-avail">Availability</label><input type="text" id="vol-avail" name="availability" placeholder="e.g. Weekends, occasional weeknights" /></div>
+          <div class="form-group"><label for="vol-comments">Additional Comments</label><textarea id="vol-comments" name="comments" placeholder="Tell us a bit about yourself or how you'd like to help…"></textarea></div>
+          <button type="submit" class="btn btn-dark" style="width:100%;">Submit Volunteer Interest</button>
+          <div id="volunteer-status"></div>
         </form>
       </div>
     </div>
@@ -458,7 +460,7 @@
         <li><a href="#membership">Membership</a></li>
         <li><a href="#events">Events</a></li>
         <li><a href="sponsorship.html">Sponsors</a></li>
-        <li><a href="#contact">Contact</a></li>
+        <li><a href="#volunteer">Volunteer</a></li>
       </ul>
     </div>
     <div class="footer-col">
@@ -489,45 +491,45 @@
 </footer>
 
 <script>
-var form = document.getElementById('contact-form');
-var statusEl = document.getElementById('form-status');
-form.addEventListener('submit', async function(e) {
-  e.preventDefault();
-  var btn = form.querySelector('button[type="submit"]');
-  btn.textContent = 'Sending...';
-  btn.disabled = true;
-  statusEl.className = '';
-  statusEl.style.display = 'none';
-  try {
-    var payload = {
-      name:      form.querySelector('#name').value.trim(),
-      email:     form.querySelector('#email').value.trim(),
-      iam:       form.querySelector('#role').value,
-      classYear: form.querySelector('#class-year').value.trim(),
-      message:   form.querySelector('#message').value.trim()
-    };
-    var resp = await fetch('contact-form.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    var data = await resp.json();
-    if (resp.ok && data.success) {
-      statusEl.textContent = data.message || 'Message sent! A club officer will follow up shortly.';
-      statusEl.className = 'success';
-      form.reset();
-      setTimeout(function() { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 2000);
-    } else {
-      throw new Error(data.message || 'Submission failed');
+// ── Volunteer form ────────────────────────────────────────────────────────
+var volForm   = document.getElementById('volunteer-form');
+var volStatus = document.getElementById('volunteer-status');
+if (volForm) {
+  volForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var btn = volForm.querySelector('button[type="submit"]');
+    btn.textContent = 'Submitting…'; btn.disabled = true;
+    volStatus.className = ''; volStatus.style.display = 'none';
+    var areas = Array.from(volForm.querySelectorAll('input[name="areas"]:checked')).map(function(c){ return c.value; });
+    try {
+      var payload = {
+        name:         document.getElementById('vol-name').value.trim(),
+        email:        document.getElementById('vol-email').value.trim(),
+        phone:        document.getElementById('vol-phone').value.trim(),
+        cadetInfo:    document.getElementById('vol-cadet').value.trim(),
+        areas:        areas,
+        availability: document.getElementById('vol-avail').value.trim(),
+        comments:     document.getElementById('vol-comments').value.trim()
+      };
+      var resp = await fetch('volunteer-handler.php', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      var data = await resp.json();
+      if (resp.ok && data.success) {
+        volStatus.textContent = data.message || 'Thank you! We\'ll be in touch soon.';
+        volStatus.className = 'success'; volStatus.style.display = 'block';
+        volForm.reset();
+      } else { throw new Error(data.error || 'Submission failed'); }
+    } catch(err) {
+      volStatus.textContent = err.message || 'Something went wrong. Please email info@alabamafalcons.org';
+      volStatus.className = 'error'; volStatus.style.display = 'block';
+    } finally {
+      btn.textContent = 'Submit Volunteer Interest'; btn.disabled = false;
     }
-  } catch(err) {
-    statusEl.textContent = err.message || 'Something went wrong. Please email us directly at info@alabamafalcons.org';
-    statusEl.className = 'error';
-  } finally {
-    btn.textContent = 'Send Message';
-    btn.disabled = false;
-  }
-});
+  });
+}
 
 function fetchWithTimeout(url, ms) {
   var ctrl = new AbortController();

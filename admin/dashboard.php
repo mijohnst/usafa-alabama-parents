@@ -98,6 +98,8 @@ $actions[] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_to
 if (can_manage_members()) {
     $actions[] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
     $actions[] = ['icon'=>'📅','label'=>'Events','sub'=>'Manage site events','href'=>'events.php','color'=>'#1565c0'];
+    try { $vcount_v = (int)get_pdo()->query('SELECT COUNT(*) FROM volunteers')->fetchColumn(); } catch(Exception $e) { $vcount_v=0; }
+    $actions[] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vcount_v>0?"$vcount_v submission".($vcount_v>1?'s':''):'View signups','href'=>'volunteers.php','color'=>'#1b5e20','badge'=>$vcount_v>0?$vcount_v:0];
     $actions[] = ['icon'=>'👥','label'=>'Leadership','sub'=>'Update officer profiles','href'=>'leadership.php','color'=>'#002554'];
     $actions[] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
     $actions[] = ['icon'=>'🖼️','label'=>'Gallery','sub'=>'Upload event photos','href'=>'gallery.php','color'=>'#1b5e20'];
@@ -128,6 +130,10 @@ if (can_manage_tickets()) {
     $actions[] = ['icon'=>'🎫','label'=>'Support','sub'=>$my_open>0?"$my_open open ticket".($my_open>1?'s':''):'Submit a ticket','href'=>'helpdesk.php','color'=>$my_open>0?'#f57c00':'#5a6a7a','badge'=>$my_open>0?$my_open:0];
 }
 
+if (can_manage_members() || is_treasurer()) {
+    try { $vcount = (int)get_pdo()->query('SELECT COUNT(*) FROM vault_documents')->fetchColumn(); } catch(Exception $e) { $vcount = 0; }
+    $actions[] = ['icon'=>'🔒','label'=>'Document Vault','sub'=>$vcount>0?"$vcount document".($vcount>1?'s':''):'Secure file storage','href'=>'vault.php','color'=>'#37474f'];
+}
 $actions[] = ['icon'=>'🔑','label'=>'My Password','sub'=>'Change password','href'=>'change-password.php','color'=>'#546e7a'];
 
 if (is_super_admin()) {
