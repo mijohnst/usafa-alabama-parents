@@ -765,23 +765,11 @@ function renderEvents(events) {
       if (e.location)   meta += (meta?' &bull; ':'') + escHtml(e.location);
       if (meta) info += '<p>' + meta + '</p>';
       if (e.description) info += '<p' + (meta?' style="margin-top:.4rem"':'') + '>' + escHtml(e.description) + '</p>';
-      // Countdown timer if deadline is set and in the future
+      // Countdown timer — store deadline in data attribute, started after DOM insertion
       if (e.cta_deadline) {
         var dl = new Date(e.cta_deadline);
         if (dl > new Date()) {
-          var cdId = 'countdown-' + e.id;
-          info += '<div id="' + cdId + '" style="display:inline-flex;align-items:center;gap:.5rem;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.4rem .8rem;margin:.5rem 0;font-size:.85rem;font-weight:700;color:#5f4c00"></div>';
-          // Start countdown for this element
-          (function(id, deadline) {
-            function tick() {
-              var el = document.getElementById(id); if (!el) return;
-              var diff = deadline - Date.now();
-              if (diff <= 0) { el.style.display='none'; return; }
-              var d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), m=Math.floor((diff%3600000)/60000);
-              el.innerHTML = '⏰ Discount ends in <strong style="margin-left:.25rem">' + d + 'd ' + h + 'h ' + m + 'm</strong>';
-            }
-            tick(); setInterval(tick, 60000);
-          })(cdId, dl.getTime());
+          info += '<div class="ev-countdown" data-deadline="' + dl.getTime() + '" style="display:inline-flex;align-items:center;gap:.5rem;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.4rem .8rem;margin:.5rem 0;font-size:.85rem;font-weight:700;color:#5f4c00">Loading…</div>';
         }
       }
       if (e.cta_text && e.cta_url) {
@@ -796,6 +784,18 @@ function renderEvents(events) {
   });
   html += '<div style="margin-top:1rem;text-align:center"><a href="events-calendar.html" style="display:inline-block;padding:.5rem 1.5rem;background:var(--blue);color:#fff;border-radius:3px;font-family:var(--font-display);font-size:.75rem;font-weight:400;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;">View Academy Calendar &amp; Key Dates &rarr;</a></div>';
   list.innerHTML = html;
+
+  // Start countdowns now that divs are in the DOM
+  list.querySelectorAll('.ev-countdown').forEach(function(el) {
+    var deadline = parseInt(el.getAttribute('data-deadline'), 10);
+    function tick() {
+      var diff = deadline - Date.now();
+      if (diff <= 0) { el.style.display = 'none'; return; }
+      var d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), m=Math.floor((diff%3600000)/60000);
+      el.innerHTML = '⏰ Discount ends in <strong style="margin-left:.25rem">' + d + 'd ' + h + 'h ' + m + 'm</strong>';
+    }
+    tick(); setInterval(tick, 60000);
+  });
 }
 
 async function loadEvents() {
