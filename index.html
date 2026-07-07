@@ -192,6 +192,9 @@
 <body>
 
 <!-- NAV -->
+<!-- ANNOUNCEMENT BANNER — populated by JS from announcements-feed.php -->
+<div id="site-announcement" style="display:none"></div>
+
 <nav>
   <a href="#" class="nav-brand">
     <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
@@ -339,62 +342,8 @@
     <h2 class="section-title">Club Leadership</h2>
     <div class="divider"></div>
     <p style="color:#5a6a7a;margin-bottom:2rem;">Your club officers are fellow USAFA parents who have walked the same path and are honored to serve Alabama's cadet families.</p>
-    <div class="leadership-grid">
-      <div class="officer-card">
-        <div class="officer-bio-tooltip">
-          <strong>Kari Johnston</strong> &mdash; President<br><br>
-          Kari is the proud mother of three, including Cadet Hunter Johnston, Class of 2028, and lives in Madison, Alabama. She has been a nurse for 27 years and currently serves as a NICU nurse at Huntsville Hospital, bringing the same dedication and compassion to cadet families that she provides to her patients.<br><br>
-          Outside of work, Kari enjoys hiking local trails and giving back through her church and community. She is honored to serve as President of the USAFA Parents Club of Alabama.
-        </div>
-        <div class="officer-photo"><img src="officer-kari.jpg" alt="Kari Johnston" /></div>
-        <h3>Kari Johnston</h3>
-        <p class="officer-role">President</p>
-        <a href="mailto:president@alabamafalcons.org" class="send-email">Send Email</a>
-      </div>
-      <div class="officer-card">
-        <div class="officer-bio-tooltip">
-          <strong>Susan Jackson</strong><br>Susan Jackson is a mother of four whose youngest son, Logan, is a member of the United States Military Academy Class of 2029. An Army brat who graduated from the University of Alabama, Susan grew up with a strong appreciation for military service, further strengthened by her husband Mark&rsquo;s service in the U.S. Army. She lives in Madison, Alabama and continues to volunteer her time supporting the BJHS JROTC program, even though she no longer has children attending the school.
-        </div>
-        <div class="officer-photo"><img src="officer-susan.jpg" alt="Susan Jackson" /></div>
-        <h3>Susan Jackson</h3>
-        <p class="officer-role">Vice President</p>
-        <a href="mailto:vp@alabamafalcons.org" class="send-email">Send Email</a>
-      </div>
-      <div class="officer-card">
-        <div class="officer-bio-tooltip">
-          <strong>Shelley Kavlick</strong><br>Secretary. Maintains club records, meeting minutes, and member communications. Ensures smooth coordination across club activities.
-        </div>
-        <div class="officer-bio-tooltip">
-          <strong>Shelley Bischoff Kavlick</strong> &mdash; Secretary<br><br>
-          Colonel (ret) Shelley Bischoff Kavlick served in the United States Air Force Regular and Reserve components, encompassing 25 years of commissioned service. Her career highlights include serving as an Aircraft Maintenance Officer for the F-16 and KC-135 programs, various assignments in the Pentagon, Vice Commandant of Officer Training School and faculty on the Air War College. She now calls Montgomery, AL her home and is the proud mother of C2C Adam &ldquo;AJ&rdquo; Kavlick (USAFA 2027) majoring in Aerospace Engineering with a minor in Russian.
-        </div>
-        <div class="officer-photo"><img src="officer-kavlick.jpg" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #FFC72C;display:block;margin:0 auto .75rem;" alt="Shelley Kavlick" /></div>
-        <h3>Shelley Kavlick</h3>
-        <p class="officer-role">Secretary</p>
-        <a href="mailto:secretary@alabamafalcons.org" class="send-email">Send Email</a>
-      </div>
-      <div class="officer-card">
-        <div class="officer-bio-tooltip">
-          <strong>Mike Sheehy</strong><br>Treasurer. Manages club finances, membership dues, and budgeting for events and cadet support activities.
-        </div>
-        <div class="officer-bio-tooltip">
-          <strong>Mike Sheehy</strong> &mdash; Treasurer<br><br>
-          Mike is a retired Army officer and federal civil servant who resides in Madison with his wife Dew. Their greatest joy is in their daughter, Lauren, USAFA class of 2028, and their son, Tevin, Auburn University class of 2029. As Treasurer, Mike manages the club's finances, including dues, budgeting, accounting, and tax filings. In his spare time, Mike enjoys golf and travel.
-        </div>
-        <div class="officer-photo"><img src="officer-mike.jpg" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #FFC72C;display:block;margin:0 auto .75rem;" alt="Mike Sheehy" /></div>
-        <h3>Mike Sheehy</h3>
-        <p class="officer-role">Treasurer</p>
-        <a href="mailto:treasurer@alabamafalcons.org" class="send-email">Send Email</a>
-      </div>
-      <div class="officer-card">
-        <div class="officer-bio-tooltip">
-          <strong>Tony Kim</strong><br>Retired Air Force officer and civil servant at Maxwell Air Force Base. Proud parent of a Navy officer and Cadet 3/C Ian Kim of the 26 Cadet Squadron "Barons" at USAFA.
-        </div>
-<div class="officer-photo"><img src="officer-tony.jpg" alt="Tony Kim"></div>
-        <h3>Tony Kim</h3>
-        <p class="officer-role">Member at Large</p>
-        <a href="mailto:atlarge@alabamafalcons.org" class="send-email">Send Email</a>
-      </div>
+    <div class="leadership-grid" id="leadership-grid">
+      <p class="news-loading">Loading leadership&hellip;</p>
     </div>
   </div>
 </section>
@@ -721,6 +670,60 @@ if (document.readyState === 'loading') {
   loadNews();
 }
 
+// ── Announcement banner ────────────────────────────────────────────────────
+async function loadAnnouncements() {
+  try {
+    var r = await fetchWithTimeout('/announcements-feed.php', 4000);
+    if (!r.ok) return;
+    var data = await r.json();
+    if (!data.success || !data.announcements || !data.announcements.length) return;
+    var banner = document.getElementById('site-announcement');
+    var ann    = data.announcements[0];
+    var colors = {info:['#e3f2fd','#003594'],warning:['#fff8e1','#5f4c00'],urgent:['#ffebee','#b71c1c']};
+    var c = colors[ann.type] || colors.info;
+    var html = '<div style="background:' + c[0] + ';color:' + c[1] + ';padding:.65rem 1.5rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;font-size:.88rem;font-weight:600">'
+             + '<span>' + escHtml(ann.message)
+             + (ann.link_text && ann.link_url ? ' <a href="' + escHtml(ann.link_url) + '" style="color:' + c[1] + ';text-decoration:underline;margin-left:.5rem">' + escHtml(ann.link_text) + ' →</a>' : '')
+             + '</span>'
+             + '<button onclick="this.parentElement.parentElement.style.display=\'none\'" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:' + c[1] + ';opacity:.6;line-height:1;padding:0">&times;</button>'
+             + '</div>';
+    banner.innerHTML = html;
+    banner.style.display = 'block';
+  } catch(e) {}
+}
+loadAnnouncements();
+
+// ── Leadership section ─────────────────────────────────────────────────────
+async function loadLeadership() {
+  var grid = document.getElementById('leadership-grid');
+  if (!grid) return;
+  try {
+    var r = await fetchWithTimeout('/leadership-feed.php', 6000);
+    if (!r.ok) throw new Error();
+    var data = await r.json();
+    if (!data.success || !data.officers || !data.officers.length) throw new Error();
+    var html = '';
+    data.officers.forEach(function(o) {
+      var photoSrc = o.photo_filename
+        ? (o.photo_filename.startsWith('officer-') ? '/' + o.photo_filename : '/leadership-photos/' + o.photo_filename)
+        : '';
+      var photoHtml = photoSrc
+        ? '<div class="officer-photo"><img src="' + escHtml(photoSrc) + '" alt="' + escHtml(o.name) + '" /></div>'
+        : '<div class="officer-photo" style="background:#003594;display:flex;align-items:center;justify-content:center;font-size:2rem">👤</div>';
+      var emailHtml = o.email ? '<a href="mailto:' + escHtml(o.email) + '" class="send-email">Send Email</a>' : '';
+      var bioHtml   = o.bio   ? '<div class="officer-bio-tooltip"><strong>' + escHtml(o.name) + '</strong> &mdash; ' + escHtml(o.role_title) + '<br><br>' + escHtml(o.bio) + '</div>' : '';
+      html += '<div class="officer-card">' + bioHtml + photoHtml
+            + '<h3>' + escHtml(o.name) + '</h3>'
+            + '<p class="officer-role">' + escHtml(o.role_title) + '</p>'
+            + emailHtml + '</div>';
+    });
+    grid.innerHTML = html;
+  } catch(e) {
+    grid.innerHTML = '<p style="color:#5a6a7a">Leadership information loading&hellip;</p>';
+  }
+}
+loadLeadership();
+
 // ── Events loader ─────────────────────────────────────────────────────────
 var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -914,15 +917,39 @@ if (document.readyState === 'loading') {
   prevBtn.addEventListener('click', function() { goTo(current - 1); resetAuto(); });
   nextBtn.addEventListener('click', function() { goTo(current + 1); resetAuto(); });
 
-  window._photosReady = function(imageIds) { delete window._photosReady; init(imageIds); };
-  var script = document.createElement('script');
-  script.src = SCRIPT_URL;
-  script.onerror = function() {
-    msgEl.textContent = 'Photos unavailable — please check back later.';
-    prevBtn.style.display = 'none';
-    nextBtn.style.display = 'none';
-  };
-  document.head.appendChild(script);
+  // Try server photos first; fall back to Google Drive
+  fetch('/photos-feed.php').then(function(r){ return r.json(); }).then(function(data){
+    if (data.success && data.photos && data.photos.length > 0) {
+      // Use server-stored photos
+      var serverIds = data.photos.map(function(p){ return '__server__' + p.filename; });
+      // Override buildSlide to serve from /site-photos/ for server photos
+      var origBuild = buildSlide;
+      buildSlide = function(id) {
+        if (id.startsWith('__server__')) {
+          var slide = document.createElement('div'); slide.className = 'slide';
+          var img   = document.createElement('img');
+          img.src = '/site-photos/' + id.replace('__server__','');
+          img.alt = 'Club community photo'; img.loading = 'lazy';
+          slide.appendChild(img); return slide;
+        }
+        return origBuild(id);
+      };
+      init(serverIds);
+    } else {
+      // Fall back to Google Drive
+      window._photosReady = function(imageIds) { delete window._photosReady; init(imageIds); };
+      var script = document.createElement('script');
+      script.src = SCRIPT_URL;
+      script.onerror = function() { msgEl.textContent='Photos unavailable — please check back later.'; prevBtn.style.display='none'; nextBtn.style.display='none'; };
+      document.head.appendChild(script);
+    }
+  }).catch(function() {
+    window._photosReady = function(imageIds) { delete window._photosReady; init(imageIds); };
+    var script = document.createElement('script');
+    script.src = SCRIPT_URL;
+    script.onerror = function() { msgEl.textContent='Photos unavailable.'; prevBtn.style.display='none'; nextBtn.style.display='none'; };
+    document.head.appendChild(script);
+  });
 })();
 </script>
 </body>
