@@ -43,6 +43,26 @@ $hd = $pdo->query("SELECT
     FROM tickets")->fetch();
 $stats['tickets'] = $hd;
 
+// Extra treasurer finance breakdown
+if (is_treasurer()) {
+    $tfin = $pdo->query("SELECT
+        SUM(CASE WHEN status='pending'    THEN amount_total ELSE 0 END) as pending_amt,
+        SUM(CASE WHEN status='approved'   THEN amount_total ELSE 0 END) as approved_amt,
+        SUM(CASE WHEN status='reimbursed' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as reimbursed_ytd,
+        SUM(CASE WHEN status='reimbursed' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_tax    ELSE 0 END) as tax_ytd,
+        SUM(CASE WHEN YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as all_ytd,
+        COUNT(CASE WHEN status='reimbursed' AND YEAR(purchase_date)=YEAR(NOW()) THEN 1 END) as reimbursed_count
+        FROM purchases")->fetch();
+    $stats['tfin'] = $tfin;
+
+    // Budget utilization
+    $budgets_row = $pdo->query("SELECT COUNT(*) as cnt,
+        SUM(b.budget) as total_budget,
+        SUM((SELECT COALESCE(SUM(p.amount_total),0) FROM purchases p WHERE p.event=b.event)) as total_spent
+        FROM event_budgets b")->fetch();
+    $stats['budgets'] = $budgets_row;
+}
+
 // My tickets
 $mt_stmt = $pdo->prepare("SELECT COUNT(*) FROM tickets WHERE submitted_by=? AND status!='resolved'");
 $mt_stmt->execute([$_SESSION['user_id']??0]);
@@ -93,14 +113,13 @@ if (can_manage_finances()) {
     }
 }
 
-// Helpdesk for all roles
+// Helpdesk — one card for all roles
 $open = ($stats['tickets']['open_count'] ?? 0) + ($stats['tickets']['inprog_count'] ?? 0);
 if (can_manage_tickets()) {
     $actions[] = ['icon'=>'🎫','label'=>'Support Tickets','sub'=>$open>0?"$open open":'All clear','href'=>'helpdesk.php','color'=>$open>0?'#f57c00':'#1b5e20','badge'=>$open>0?$open:0];
 } else {
     $my_open = $stats['my_open_tickets'];
-    $actions[] = ['icon'=>'🎫','label'=>'Support','sub'=>$my_open>0?"$my_open open ticket".($my_open>1?'s':''):'Submit a ticket','href'=>$my_open>0?'helpdesk.php?mine=1':'ticket-new.php','color'=>$my_open>0?'#f57c00':'#5a6a7a'];
-    $actions[] = ['icon'=>'📝','label'=>'New Ticket','sub'=>'Report an issue','href'=>'ticket-new.php','color'=>'#003594'];
+    $actions[] = ['icon'=>'🎫','label'=>'Support','sub'=>$my_open>0?"$my_open open ticket".($my_open>1?'s':''):'Submit a ticket','href'=>'helpdesk.php','color'=>$my_open>0?'#f57c00':'#5a6a7a','badge'=>$my_open>0?$my_open:0];
 }
 
 $actions[] = ['icon'=>'🔑','label'=>'My Password','sub'=>'Change password','href'=>'change-password.php','color'=>'#546e7a'];
@@ -213,6 +232,47 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
     <div class="mini-stat-lbl">Open Tickets</div>
   </div>
   <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php if (is_treasurer() && !empty($stats['tfin'])): $tf = $stats['tfin']; ?>
+<p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">Finance — <?= date('Y') ?> Detail</p>
+<div class="mini-stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+  <div class="mini-stat" style="border-left:3px solid #A6192E">
+    <div class="mini-stat-val" style="color:#A6192E">$<?= number_format($tf['all_ytd']??0,2) ?></div>
+    <div class="mini-stat-lbl">All Purchases YTD</div>
+  </div>
+  <div class="mini-stat" style="border-left:3px solid #1b5e20">
+    <div class="mini-stat-val" style="color:#1b5e20">$<?= number_format($tf['reimbursed_ytd']??0,2) ?></div>
+    <div class="mini-stat-lbl">Reimbursed YTD (<?= (int)($tf['reimbursed_count']??0) ?>)</div>
+  </div>
+  <div class="mini-stat" style="border-left:3px solid #003594">
+    <div class="mini-stat-val" style="color:#003594">$<?= number_format($tf['approved_amt']??0,2) ?></div>
+    <div class="mini-stat-lbl">Approved — Unpaid</div>
+  </div>
+  <div class="mini-stat" style="border-left:3px solid #f57c00">
+    <div class="mini-stat-val" style="color:#f57c00">$<?= number_format($tf['pending_amt']??0,2) ?></div>
+    <div class="mini-stat-lbl">Pending Approval</div>
+  </div>
+  <div class="mini-stat" style="border-left:3px solid #5a6a7a">
+    <div class="mini-stat-val" style="color:#5a6a7a">$<?= number_format($tf['tax_ytd']??0,2) ?></div>
+    <div class="mini-stat-lbl">Tax Paid YTD</div>
+  </div>
+  <?php if (!empty($stats['budgets']) && $stats['budgets']['total_budget'] > 0):
+    $bu = $stats['budgets'];
+    $bpct = round($bu['total_spent']/$bu['total_budget']*100);
+    $bcol = $bpct>=100?'#A6192E':($bpct>=75?'#f57c00':'#1b5e20');
+  ?>
+  <div class="mini-stat" style="border-left:3px solid <?= $bcol ?>">
+    <div class="mini-stat-val" style="color:<?= $bcol ?>"><?= $bpct ?>%</div>
+    <div class="mini-stat-lbl">Budget Used (<?= (int)$bu['cnt'] ?> events)</div>
+  </div>
+  <?php endif; ?>
+</div>
+<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.5rem">
+  <a href="year-end.php" class="btn btn-secondary btn-sm">📋 Year-End Report</a>
+  <a href="budgets.php" class="btn btn-secondary btn-sm">🎯 Manage Budgets</a>
+  <a href="report.php" class="btn btn-secondary btn-sm">📊 Spending Report</a>
 </div>
 <?php endif; ?>
 
