@@ -6,17 +6,37 @@ $pdo = get_pdo();
 $new_year     = membership_year();
 $active_years = ['2027','2028','2029','2030'];
 $ph           = implode(',', array_fill(0, count($active_years), '?'));
-$cnt_stmt     = $pdo->prepare("SELECT COUNT(*) FROM members WHERE archived = 0 AND class_year IN ($ph)");
-$cnt_stmt->execute($active_years);
-$affected  = (int)$cnt_stmt->fetchColumn();
+
+// Members that WILL be reset (annual, or 4-year coverage expired)
+$cnt_stmt = $pdo->prepare(
+    "SELECT COUNT(*) FROM members WHERE archived = 0 AND class_year IN ($ph)
+     AND (membership_type = 'annual' OR membership_paid_through < ? OR membership_paid_through = '')"
+);
+$cnt_stmt->execute(array_merge($active_years, [$new_year]));
+$affected = (int)$cnt_stmt->fetchColumn();
+
+// Members that will be SKIPPED (4-year plan still active)
+$skip_stmt = $pdo->prepare(
+    "SELECT COUNT(*) FROM members WHERE archived = 0 AND class_year IN ($ph)
+     AND membership_type = '4year' AND membership_paid_through >= ?"
+);
+$skip_stmt->execute(array_merge($active_years, [$new_year]));
+$skipped = (int)$skip_stmt->fetchColumn();
+
 $confirmed = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
-    $upd = $pdo->prepare("UPDATE members SET membership_paid = 0, membership_year = '' WHERE archived = 0 AND class_year IN ($ph)");
-    $upd->execute($active_years);
+    $upd = $pdo->prepare(
+        "UPDATE members SET membership_paid = 0, membership_year = ''
+         WHERE archived = 0 AND class_year IN ($ph)
+         AND (membership_type = 'annual' OR membership_paid_through < ? OR membership_paid_through = '')"
+    );
+    $upd->execute(array_merge($active_years, [$new_year]));
     $confirmed = true;
-    flash('success', "Dues reset. $affected member(s) marked unpaid for $new_year.");
+    $msg = "$affected member(s) marked unpaid for $new_year.";
+    if ($skipped) $msg .= " $skipped 4-year member(s) kept as paid (coverage active).";
+    flash('success', $msg);
     header('Location: index.php'); exit;
 }
 
@@ -36,6 +56,9 @@ admin_header('Start New Membership Year');
       (Class of 2027–2030 only) — marking them unpaid so they can renew for the
       <strong><?= h($new_year) ?></strong> dues cycle.
       Class of 2026, Prep School, and Graduate records are not changed.
+      <?php if ($skipped): ?>
+        <br><strong><?= $skipped ?> member(s) on the 4-year plan with active coverage will be skipped</strong> and kept as paid.
+      <?php endif; ?>
     </p>
   </div>
   <p style="margin-bottom:1.5rem;color:#333">

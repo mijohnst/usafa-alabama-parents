@@ -9,6 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     foreach (FIELDS as $f) $m[$f] = trim($_POST[$f] ?? '');
     $m['membership_paid'] = isset($_POST['membership_paid']) ? (int)$_POST['membership_paid'] : 0;
+    if (!in_array($m['membership_type'], ['annual','4year'])) $m['membership_type'] = 'annual';
+    $m['membership_paid_through'] = calc_paid_through($m['membership_year'], $m['membership_type'], (bool)$m['membership_paid']);
 
     if ($m['class_year'] === '') $errors[] = 'Class Year is required.';
     if ($m['cadet_last_name'] === '') $errors[] = 'Cadet Last Name is required.';

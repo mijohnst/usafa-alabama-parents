@@ -284,8 +284,21 @@ const FIELDS = [
     'parent1_street','parent1_city','parent1_state','parent1_zip',
     'parent2_last_name','parent2_first_name','parent2_email','parent2_cell',
     'parent2_street','parent2_city','parent2_state','parent2_zip',
-    'al_region','remarks','photo_consent','directory_consent','membership_paid','membership_year'
+    'al_region','remarks','photo_consent','directory_consent',
+    'membership_paid','membership_year','membership_type','membership_paid_through'
 ];
+
+function calc_paid_through(string $mem_year, string $type, bool $paid): string {
+    if (!$paid) return '';
+    if ($type === '4year') {
+        $parts = explode('-', $mem_year);
+        if (count($parts) === 2 && is_numeric($parts[0])) {
+            $s = (int)$parts[0] + 3;
+            return $s . '-' . ($s + 1);
+        }
+    }
+    return $mem_year;
+}
 
 function membership_year(): string {
     $m = (int)date('n'); $y = (int)date('Y');
@@ -406,9 +419,13 @@ function syncP2Addr(radio) {
     echo '</div></div>';
     echo '</div></fieldset>';
 
-    $paid     = (int)($m['membership_paid'] ?? 0);
-    $mem_year = $m['membership_year'] ?? membership_year();
+    $paid        = (int)($m['membership_paid'] ?? 0);
+    $mem_year    = $m['membership_year'] ?? membership_year();
     if (!$mem_year) $mem_year = membership_year();
+    $mem_type    = $m['membership_type'] ?? 'annual';
+    $mem_through = $m['membership_paid_through'] ?? '';
+    if (!$mem_through) $mem_through = $mem_year;
+
     echo '<fieldset><legend>Membership Dues</legend>';
     echo '<div class="form-row col-2">';
     echo '<div class="form-group"><label>Dues Paid?</label>';
@@ -419,6 +436,37 @@ function syncP2Addr(radio) {
        . '<input type="radio" name="membership_paid" value="0" style="width:auto;accent-color:#c62828"' . (!$paid ? ' checked' : '') . '> ✗ Not Paid</label>';
     echo '</div></div>';
     echo '<div class="form-group"><label>Membership Year</label>'
-       . '<input name="membership_year" value="' . h($mem_year) . '" placeholder="e.g. 2026-2027"></div>';
+       . '<input name="membership_year" id="dues_mem_year" value="' . h($mem_year) . '" placeholder="e.g. 2026-2027" oninput="calcDuesPaidThrough()"></div>';
+    echo '</div>';
+    echo '<div class="form-row col-2">';
+    echo '<div class="form-group"><label>Dues Plan</label>';
+    echo '<div style="display:flex;gap:1.5rem;margin-top:.4rem">';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+       . '<input type="radio" name="membership_type" value="annual" style="width:auto"' . ($mem_type !== '4year' ? ' checked' : '') . ' onchange="calcDuesPaidThrough()"> Annual &nbsp;($75)</label>';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+       . '<input type="radio" name="membership_type" value="4year" style="width:auto"' . ($mem_type === '4year' ? ' checked' : '') . ' onchange="calcDuesPaidThrough()"> 4-Year ($275)</label>';
+    echo '</div></div>';
+    echo '<div class="form-group"><label>Paid Through</label>'
+       . '<input name="membership_paid_through" id="dues_paid_through" value="' . h($mem_through) . '" placeholder="e.g. 2026-2027">'
+       . '<p style="font-size:.72rem;color:#9aa5b4;margin-top:.25rem">Auto-fills based on plan. Edit manually if needed.</p>'
+       . '</div>';
     echo '</div></fieldset>';
+    echo '<script>
+function calcDuesPaidThrough() {
+  var typeEl = document.querySelector("input[name=membership_type]:checked");
+  var yr     = (document.getElementById("dues_mem_year") || {}).value || "";
+  var thru   = document.getElementById("dues_paid_through");
+  if (!typeEl || !thru) return;
+  if (typeEl.value === "4year") {
+    var parts = yr.split("-");
+    if (parts.length === 2 && !isNaN(parseInt(parts[0]))) {
+      var s = parseInt(parts[0]) + 3;
+      thru.value = s + "-" + (s + 1);
+    }
+  } else {
+    thru.value = yr;
+  }
+}
+calcDuesPaidThrough();
+</script>';
 }

@@ -403,7 +403,11 @@ function openBirthdays() {
       <td>
         <?php if ($m['membership_paid']): ?>
           <span class="badge badge-paid">✓ Paid</span><br>
-          <span style="font-size:.72rem;color:#5a6a7a"><?= h($m['membership_year']) ?></span>
+          <?php if (($m['membership_type'] ?? '') === '4year'): ?>
+            <span style="font-size:.7rem;color:#2e7d32;font-weight:700">4-yr thru <?= h($m['membership_paid_through']) ?></span>
+          <?php else: ?>
+            <span style="font-size:.72rem;color:#5a6a7a"><?= h($m['membership_year']) ?></span>
+          <?php endif; ?>
         <?php else: ?>
           <span class="badge badge-unpaid">✗ Unpaid</span>
         <?php endif; ?>
@@ -426,14 +430,18 @@ function openBirthdays() {
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
           <?php elseif (can_mark_dues()): ?>
-          <form method="POST" action="bulk-action.php">
+          <form method="POST" action="bulk-action.php" style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
             <?= csrf_field() ?>
             <input type="hidden" name="member_ids[]" value="<?= (int)$m['id'] ?>">
             <input type="hidden" name="membership_year" value="<?= h(membership_year()) ?>">
             <?php if ($m['membership_paid']): ?>
               <button type="submit" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm">✗ Unpaid</button>
             <?php else: ?>
-              <button type="submit" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Mark Paid</button>
+              <select name="membership_type" style="padding:.22rem .4rem;font-size:.72rem;width:auto;min-width:0">
+                <option value="annual">Annual $75</option>
+                <option value="4year">4-Year $275</option>
+              </select>
+              <button type="submit" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Paid</button>
             <?php endif; ?>
           </form>
           <?php else: ?>
@@ -452,6 +460,10 @@ function openBirthdays() {
 <div id="bulk-bar" style="display:none;position:sticky;bottom:1rem;background:#002554;color:#fff;padding:.85rem 1.25rem;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
   <span id="bulk-count" style="font-size:.9rem;font-weight:600"></span>
   <span style="font-size:.85rem;opacity:.75">Mark selected as paid for <strong><?= h(membership_year()) ?></strong></span>
+  <select name="membership_type" form="bulk-form" style="padding:.28rem .55rem;font-size:.78rem;width:auto;background:#fff;color:#1a2332;border-radius:4px;border:1px solid #d0d5dd">
+    <option value="annual">Annual ($75)</option>
+    <option value="4year">4-Year ($275)</option>
+  </select>
   <button type="submit" form="bulk-form" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Mark as Paid</button>
   <button type="submit" form="bulk-form" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm">✗ Mark as Unpaid</button>
 </div>

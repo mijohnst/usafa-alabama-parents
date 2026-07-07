@@ -52,7 +52,12 @@ a.vf-val{color:#003594}
 <!-- Dues status banner -->
 <div style="margin-bottom:1.25rem">
   <?php if ($m['membership_paid']): ?>
-    <span class="paid-badge" style="background:#e8f5e9;color:#1b5e20">✓ Dues Paid — <?= h($m['membership_year']) ?></span>
+    <?php
+      $plan = ($m['membership_type'] ?? '') === '4year'
+          ? '4-Year Plan · paid through ' . $m['membership_paid_through']
+          : 'Annual · ' . $m['membership_year'];
+    ?>
+    <span class="paid-badge" style="background:#e8f5e9;color:#1b5e20">✓ Dues Paid — <?= h($plan) ?></span>
   <?php else: ?>
     <span class="paid-badge" style="background:#ffebee;color:#c62828">✗ Dues Not Paid</span>
   <?php endif; ?>
