@@ -55,6 +55,20 @@ if (is_treasurer()) {
         FROM purchases")->fetch();
     $stats['tfin'] = $tfin;
 
+    // Dues collected for current membership year
+    $cur_year = membership_year();
+    $dues_stmt = $pdo->prepare("SELECT
+        COUNT(CASE WHEN membership_type='annual' AND membership_paid=1 AND membership_year=? THEN 1 END) as annual_count,
+        COUNT(CASE WHEN membership_type='4year'  AND membership_paid=1 AND membership_year=? THEN 1 END) as fouryear_count
+        FROM members WHERE archived=0");
+    $dues_stmt->execute([$cur_year, $cur_year]);
+    $dues_row = $dues_stmt->fetch();
+    $dues_row['annual_total']   = (int)$dues_row['annual_count']   * 75;
+    $dues_row['fouryear_total'] = (int)$dues_row['fouryear_count'] * 275;
+    $dues_row['grand_total']    = $dues_row['annual_total'] + $dues_row['fouryear_total'];
+    $dues_row['year']           = $cur_year;
+    $stats['dues'] = $dues_row;
+
     // Budget utilization
     $budgets_row = $pdo->query("SELECT COUNT(*) as cnt,
         SUM(b.budget) as total_budget,
@@ -220,6 +234,21 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
 <?php if (is_treasurer() && !empty($stats['tfin'])): $tf = $stats['tfin']; ?>
 <p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">Finance — <?= date('Y') ?> Detail</p>
 <div class="mini-stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+  <?php if (!empty($stats['dues'])): $d = $stats['dues']; ?>
+  <div class="mini-stat" style="border-left:3px solid #003594">
+    <div class="mini-stat-val" style="color:#003594">$<?= number_format($d['grand_total'], 2) ?></div>
+    <div class="mini-stat-lbl">Dues Collected <?= h($d['year']) ?></div>
+  </div>
+  <div class="mini-stat" style="border-left:3px solid #003594">
+    <div class="mini-stat-val" style="color:#003594;font-size:1.1rem;line-height:1.4">
+      <?= (int)$d['annual_count'] ?> / <?= (int)$d['fouryear_count'] ?>
+    </div>
+    <div class="mini-stat-lbl">Annual / 4-Year Paid</div>
+    <div style="font-size:.65rem;color:#9aa5b4;margin-top:.2rem">
+      $<?= number_format($d['annual_total']) ?> + $<?= number_format($d['fouryear_total']) ?>
+    </div>
+  </div>
+  <?php endif; ?>
   <div class="mini-stat" style="border-left:3px solid #A6192E">
     <div class="mini-stat-val" style="color:#A6192E">$<?= number_format($tf['all_ytd']??0,2) ?></div>
     <div class="mini-stat-lbl">All Purchases YTD</div>
