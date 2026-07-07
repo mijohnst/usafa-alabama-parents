@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
 require_login();
 $pdo = get_pdo();
 
