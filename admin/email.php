@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_admin();
+require_member_admin(); // admin, tech, officer, secretary
 
 $all_years = ['2026','2027','2028','2029','2030','Prep School','Graduate'];
 
