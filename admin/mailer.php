@@ -153,7 +153,12 @@ function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): voi
              . "View record:  $url\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
 
-    send_notification($email, $subject, $body);
+    $sent = send_notification($email, $subject, $body);
+    if (!$sent) {
+        error_log("mailer: notify_reimbursed — mail() returned false for email='$email' purchase_id=" . ($purchase['id'] ?? '?'));
+    } else {
+        error_log("mailer: notify_reimbursed — sent OK to '$email' for purchase_id=" . ($purchase['id'] ?? '?'));
+    }
 }
 
 // ── Check event budget thresholds after a purchase is saved ─────────────
