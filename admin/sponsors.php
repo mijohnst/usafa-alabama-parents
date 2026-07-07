@@ -1,11 +1,9 @@
 <?php
 require_once __DIR__ . '/auth.php';
-// Admins, officers, secretaries, and treasurer can manage sponsors
+require_login(); // must come first to start session
 if (!can_manage_members() && !is_treasurer()) {
-    require_login();
     header('Location: dashboard.php?denied=1'); exit;
 }
-require_login();
 $pdo = get_pdo(); $errors = []; $edit = null;
 
 function save_logo(string $key): ?string {
