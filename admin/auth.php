@@ -238,7 +238,7 @@ function admin_header(string $title): void {
     echo admin_css();
     echo '</head><body>';
     echo '<div class="topbar">';
-    echo '<a href="index.php" class="topbar-title" style="color:#fff;text-decoration:none;display:flex;align-items:center;gap:.65rem"><img src="../logo01.png" alt="" style="height:32px;border-radius:3px"><span>USAFA Parents Club of Alabama <small>Member Admin</small></span></a>';
+    echo '<a href="dashboard.php" class="topbar-title" style="color:#fff;text-decoration:none;display:flex;align-items:center;gap:.65rem"><img src="../logo01.png" alt="" style="height:32px;border-radius:3px"><span>USAFA Parents Club of Alabama <small>Member Admin</small></span></a>';
     echo '<nav>';
     echo '<a href="dashboard.php" title="Dashboard">🏠</a>';
     if (!is_member()) echo '<a href="index.php">Members</a>';

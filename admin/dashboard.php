@@ -203,37 +203,6 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
 </div>
 
 <!-- Mini stats -->
-<?php if (!empty($stats['members']) || !empty($stats['finance'])): ?>
-<p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">At a Glance</p>
-<div class="mini-stats">
-  <?php if (!empty($stats['members'])): ?>
-  <div class="mini-stat">
-    <div class="mini-stat-val" style="color:#002554"><?= $stats['members']['total'] ?></div>
-    <div class="mini-stat-lbl">Active Members</div>
-  </div>
-  <div class="mini-stat">
-    <div class="mini-stat-val" style="color:#1b5e20"><?= $stats['members']['paid'] ?></div>
-    <div class="mini-stat-lbl">Dues Paid</div>
-  </div>
-  <div class="mini-stat">
-    <div class="mini-stat-val" style="color:#c62828"><?= $stats['members']['unpaid'] ?></div>
-    <div class="mini-stat-lbl">Dues Unpaid</div>
-  </div>
-  <?php endif; ?>
-  <?php if (!empty($stats['finance'])): ?>
-  <div class="mini-stat">
-    <div class="mini-stat-val" style="color:#A6192E">$<?= number_format($stats['finance']['ytd'] ?? 0, 0) ?></div>
-    <div class="mini-stat-lbl">YTD Expenses</div>
-  </div>
-  <?php endif; ?>
-  <?php if (($stats['tickets']['open_count'] ?? 0) + ($stats['tickets']['inprog_count'] ?? 0) > 0): ?>
-  <div class="mini-stat">
-    <div class="mini-stat-val" style="color:#f57c00"><?= ($stats['tickets']['open_count']??0)+($stats['tickets']['inprog_count']??0) ?></div>
-    <div class="mini-stat-lbl">Open Tickets</div>
-  </div>
-  <?php endif; ?>
-</div>
-<?php endif; ?>
 
 <?php if (is_treasurer() && !empty($stats['tfin'])): $tf = $stats['tfin']; ?>
 <p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">Finance — <?= date('Y') ?> Detail</p>
