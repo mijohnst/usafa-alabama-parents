@@ -9,7 +9,8 @@ $selected_years = $_POST['years']  ?? [];
 $region         = $_POST['region'] ?? '';
 $type           = $_POST['type']   ?? 'emails';
 $paid           = $_POST['paid']   ?? '';
-$days           = in_array((int)($_POST['days'] ?? 30), [30,60,90,365]) ? (int)$_POST['days'] : 30;
+$days_raw       = (int)($_POST['days'] ?? 30);
+$days           = in_array($days_raw, [30,60,90,365]) ? $days_raw : 30;
 
 $results = null;
 
