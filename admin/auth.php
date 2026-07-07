@@ -50,23 +50,32 @@ function is_tech(): bool {
     return ($_SESSION['role'] ?? '') === 'tech';
 }
 
-// Admin or Tech have full admin-level access everywhere
+function is_officer(): bool {
+    return ($_SESSION['role'] ?? '') === 'officer';
+}
+
+// Admin or Tech have full super-admin access (users mgmt + helpdesk mgmt)
 function is_super_admin(): bool {
     return is_admin() || is_tech();
 }
 
-// Admin, Tech, or Secretary can fully manage cadet/member records
-function can_manage_members(): bool {
-    return is_super_admin() || is_secretary();
+// Admin, Tech, Officer — full club officer-level access
+function is_club_officer(): bool {
+    return is_super_admin() || is_officer();
 }
 
-// Admin or Tech can manage helpdesk tickets
+// Admin, Tech, Officer, or Secretary can fully manage cadet/member records
+function can_manage_members(): bool {
+    return is_club_officer() || is_secretary();
+}
+
+// Admin and Tech only can manage helpdesk tickets
 function can_manage_tickets(): bool {
     return is_super_admin();
 }
 
 function can_manage_finances(): bool {
-    return in_array($_SESSION['role'] ?? '', ['admin', 'treasurer', 'member', 'secretary']);
+    return in_array($_SESSION['role'] ?? '', ['admin', 'tech', 'officer', 'treasurer', 'member', 'secretary']);
 }
 
 // Admin/Treasurer can edit any purchase; Member/Secretary can only edit their own

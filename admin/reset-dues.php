@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_admin();
+require_member_admin(); // officers and admins can reset dues
 $pdo = get_pdo();
 
 $new_year     = membership_year();
