@@ -20,7 +20,46 @@ if (!$ticket) { flash('error','Ticket not found.'); header('Location: helpdesk.p
 
 $is_mine = (int)($ticket['submitted_by']??-1) === (int)($_SESSION['user_id']??0);
 
-// Handle POST actions
+// ── Helper: build full ticket history for email ───────────────────────────
+function build_ticket_email(PDO $pdo, array $ticket, string $event_line): string {
+    $url  = 'https://alabamafalcons.org/admin/ticket-view.php?id=' . (int)$ticket['id'];
+    $sep  = str_repeat('─', 48);
+    $body = "USAFA Parents Club of Alabama\n"
+          . "Support Ticket: {$ticket['ticket_number']}\n$sep\n\n"
+          . "Event:     $event_line\n"
+          . "Ticket:    {$ticket['ticket_number']}\n"
+          . "Subject:   {$ticket['subject']}\n"
+          . "Category:  {$ticket['category']}\n"
+          . "Status:    " . (TICKET_STATUSES[$ticket['status']] ?? $ticket['status']) . "\n"
+          . "Priority:  " . ucfirst($ticket['priority']) . "\n\n"
+          . "Original Issue:\n{$ticket['description']}\n\n$sep\n"
+          . "FULL TICKET HISTORY\n$sep\n\n";
+
+    $c_stmt = $pdo->prepare(
+        'SELECT c.*, u.name as author_name FROM ticket_comments c
+         LEFT JOIN users u ON c.user_id=u.id
+         WHERE c.ticket_id=? AND c.is_internal=0 ORDER BY c.created_at ASC'
+    );
+    $c_stmt->execute([(int)$ticket['id']]);
+    foreach ($c_stmt->fetchAll() as $c) {
+        $when = date('M j, Y g:ia', strtotime($c['created_at']));
+        $who  = $c['author_name'] ?? 'Unknown';
+        $body .= "[$when] $who:\n{$c['comment']}\n\n";
+    }
+    $body .= "$sep\nView ticket: $url\n\nalabamafalcons.org/admin/";
+    return $body;
+}
+
+function send_to_submitter(PDO $pdo, array $ticket, string $subject_prefix, string $event_line): void {
+    $email = $ticket['submitter_email'] ?? '';
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return;
+    $subject = $subject_prefix . ' — ' . $ticket['ticket_number'] . ': ' . $ticket['subject'];
+    $body    = build_ticket_email($pdo, $ticket, $event_line);
+    mail($email, $subject, $body,
+         "From: USAFA Parents Club <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n");
+}
+
+// ── Handle POST actions ───────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
@@ -32,16 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('INSERT INTO ticket_comments (ticket_id,user_id,comment,is_internal) VALUES (?,?,?,?)')
                 ->execute([$id, $_SESSION['user_id']??null, $comment, $is_internal]);
 
-            // Notify if tech replied to user's ticket or user replied
-            if (can_manage_tickets() && !$is_internal && !empty($ticket['submitter_email'])) {
-                $body = "USAFA Parents Club of Alabama\nSupport Ticket Update — {$ticket['ticket_number']}\n" . str_repeat('─',48) . "\n\n"
-                      . "A reply has been added to your ticket:\n\n"
-                      . "Ticket: {$ticket['ticket_number']}\nSubject: {$ticket['subject']}\n\n"
-                      . "Reply:\n$comment\n\n"
-                      . "View ticket: https://alabamafalcons.org/admin/ticket-view.php?id=$id\n\n"
-                      . str_repeat('─',48) . "\nalabamafalcons.org/admin/";
-                mail($ticket['submitter_email'], "Reply on Ticket {$ticket['ticket_number']}: {$ticket['subject']}", $body,
-                     "From: USAFA Parents Club <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n");
+            // Send full history to submitter on any public comment
+            if (!$is_internal) {
+                $who = current_user_name();
+                send_to_submitter($pdo, $ticket, 'New Reply on Ticket', "$who added a reply");
             }
             flash('success', 'Comment added.');
         }
@@ -51,19 +84,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_status  = $_POST['new_status']  ?? '';
         $assigned_to = (int)($_POST['assigned_to'] ?? 0) ?: null;
         if (in_array($new_status, array_keys(TICKET_STATUSES))) {
+            $old_label = TICKET_STATUSES[$ticket['status']] ?? $ticket['status'];
+            $new_label = TICKET_STATUSES[$new_status];
             $pdo->prepare('UPDATE tickets SET status=?,assigned_to=?,updated_at=NOW() WHERE id=?')
                 ->execute([$new_status, $assigned_to, $id]);
-            // Log status change
+            // Log status change as internal comment
             $pdo->prepare('INSERT INTO ticket_comments (ticket_id,user_id,comment,is_internal) VALUES (?,?,?,1)')
                 ->execute([$id, $_SESSION['user_id']??null,
-                           'Status changed to: ' . TICKET_STATUSES[$new_status] . ($assigned_to ? ' · Assigned to user #'.$assigned_to : '')]);
-            // Notify submitter
-            if (!empty($ticket['submitter_email'])) {
-                $body = "Your support ticket {$ticket['ticket_number']} status has been updated to: " . TICKET_STATUSES[$new_status] . "\n\n"
-                      . "View ticket: https://alabamafalcons.org/admin/ticket-view.php?id=$id\n\nalabamafalcons.org/admin/";
-                mail($ticket['submitter_email'], "Ticket {$ticket['ticket_number']} Updated: " . TICKET_STATUSES[$new_status],
-                     $body, "From: USAFA Parents Club <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n");
-            }
+                           'Status changed: ' . $old_label . ' → ' . $new_label
+                           . ($assigned_to ? ' · Assigned to user #'.$assigned_to : '')]);
+            // Reload ticket so history email has updated status
+            $stmt->execute([$id]);
+            $ticket = $stmt->fetch();
+            $prefix  = $new_status === 'resolved' ? 'Ticket Resolved' : 'Ticket Status Updated';
+            send_to_submitter($pdo, $ticket, $prefix, "Status changed to: $new_label by " . current_user_name());
             flash('success', 'Ticket updated.');
         }
     }

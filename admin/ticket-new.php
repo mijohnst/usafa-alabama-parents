@@ -25,22 +25,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ->execute([$ticket_num, $category, $subject, $description, $priority, 'open', $_SESSION['user_id'] ?? null]);
         $ticket_id = (int)$pdo->lastInsertId();
 
-        // Notify tech support and admins
+        $url     = 'https://alabamafalcons.org/admin/ticket-view.php?id=' . $ticket_id;
+        $headers = "From: USAFA Parents Club of Alabama <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n";
+
+        // Notify all Tech Support and Admin users
         try {
             $techs = $pdo->query("SELECT name,email FROM users WHERE role IN ('admin','tech') AND active=1")->fetchAll();
             foreach ($techs as $t) {
-                $sub  = "New Support Ticket $ticket_num: $subject";
-                $body = "USAFA Parents Club of Alabama\nNew Support Ticket\n" . str_repeat('─',48) . "\n\n"
+                $body = "USAFA Parents Club of Alabama\nNew Support Ticket — $ticket_num\n" . str_repeat('─',48) . "\n\n"
                       . "Ticket:    $ticket_num\n"
                       . "Category:  $category\n"
                       . "Priority:  " . ucfirst($priority) . "\n"
-                      . "From:      " . ($t['name'] ?? 'Unknown') . "\n\n"
+                      . "From:      " . current_user_name() . "\n\n"
                       . "Issue:\n$description\n\n"
-                      . "View ticket: https://alabamafalcons.org/admin/ticket-view.php?id=$ticket_id\n\n"
+                      . "Respond here: $url\n\n"
                       . str_repeat('─',48) . "\nalabamafalcons.org/admin/";
-                mail($t['email'], $sub, $body, "From: USAFA Parents Club of Alabama <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n");
+                mail($t['email'], "New Support Ticket $ticket_num: $subject", $body, $headers);
             }
         } catch (Exception $e) { error_log('ticket-new: notify failed — ' . $e->getMessage()); }
+
+        // Confirm receipt to submitter
+        $submitter_email = $pdo->query("SELECT email FROM users WHERE id=" . (int)($_SESSION['user_id']??0))->fetchColumn();
+        if (filter_var($submitter_email, FILTER_VALIDATE_EMAIL)) {
+            $body = "USAFA Parents Club of Alabama\nSupport Ticket Received — $ticket_num\n" . str_repeat('─',48) . "\n\n"
+                  . "Your support ticket has been submitted. Our tech team has been notified and will respond shortly.\n\n"
+                  . "Ticket:    $ticket_num\n"
+                  . "Category:  $category\n"
+                  . "Priority:  " . ucfirst($priority) . "\n"
+                  . "Subject:   $subject\n\n"
+                  . "Your Issue:\n$description\n\n"
+                  . "Track your ticket: $url\n\n"
+                  . str_repeat('─',48) . "\nalabamafalcons.org/admin/";
+            mail($submitter_email, "Support Ticket $ticket_num Received: $subject", $body, $headers);
+        }
 
         flash('success', "Ticket $ticket_num submitted. Tech support has been notified.");
         header('Location: ticket-view.php?id=' . $ticket_id); exit;
