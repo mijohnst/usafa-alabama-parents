@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $group_label = $_POST['group_label'] ?? 'upcoming';
         $cta_text    = trim($_POST['cta_text']    ?? '');
         $cta_url     = trim($_POST['cta_url']     ?? '');
-        $cta_note    = trim($_POST['cta_note']    ?? '');
+        $cta_note     = trim($_POST['cta_note']     ?? '');
+        $cta_deadline = $_POST['cta_deadline'] ?: null;
         $sort_order  = (int)($_POST['sort_order'] ?? 0);
         $visible     = isset($_POST['visible']) ? 1 : 0;
 
@@ -29,13 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($group_label, ['past','upcoming','planning'])) $group_label = 'upcoming';
 
         if (empty($errors)) {
-            $fields = [$title,$event_date,$event_date_end,$event_time,$location,$description,$tag,$group_label,$cta_text,$cta_url,$cta_note,$sort_order,$visible];
+            $fields = [$title,$event_date,$event_date_end,$event_time,$location,$description,$tag,$group_label,$cta_text,$cta_url,$cta_note,$sort_order,$visible,$cta_deadline];
             if ($id) {
-                $pdo->prepare('UPDATE events SET title=?,event_date=?,event_date_end=?,event_time=?,location=?,description=?,tag=?,group_label=?,cta_text=?,cta_url=?,cta_note=?,sort_order=?,visible=?,updated_at=NOW() WHERE id=?')
+                $pdo->prepare('UPDATE events SET title=?,event_date=?,event_date_end=?,event_time=?,location=?,description=?,tag=?,group_label=?,cta_text=?,cta_url=?,cta_note=?,sort_order=?,visible=?,cta_deadline=?,updated_at=NOW() WHERE id=?')
                     ->execute(array_merge($fields, [$id]));
                 flash('success','Event updated.');
             } else {
-                $pdo->prepare('INSERT INTO events (title,event_date,event_date_end,event_time,location,description,tag,group_label,cta_text,cta_url,cta_note,sort_order,visible) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                $pdo->prepare('INSERT INTO events (title,event_date,event_date_end,event_time,location,description,tag,group_label,cta_text,cta_url,cta_note,sort_order,visible,cta_deadline) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
                     ->execute($fields);
                 flash('success','Event added.');
             }
@@ -154,9 +155,15 @@ echo show_flash();
         <input name="cta_url" value="<?= h($edit['cta_url']??'') ?>" placeholder="https://…">
       </div>
     </div>
-    <div class="form-group">
-      <label>Button Note <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">small text below button</span></label>
-      <input name="cta_note" value="<?= h($edit['cta_note']??'') ?>" placeholder="e.g. Questions? email@example.com">
+    <div class="form-row col-2">
+      <div class="form-group">
+        <label>Button Note <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">small text below button</span></label>
+        <input name="cta_note" value="<?= h($edit['cta_note']??'') ?>" placeholder="e.g. Questions? email@example.com">
+      </div>
+      <div class="form-group">
+        <label>Countdown Deadline <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">shows timer before this date</span></label>
+        <input type="datetime-local" name="cta_deadline" value="<?= h(isset($edit['cta_deadline'])&&$edit['cta_deadline'] ? str_replace(' ','T',substr($edit['cta_deadline'],0,16)) : '') ?>">
+      </div>
     </div>
     <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
       <input type="checkbox" name="visible" id="ev_visible" value="1" style="width:auto" <?= ($edit['visible']??1)?'checked':'' ?>>
