@@ -97,6 +97,7 @@ $actions[] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_to
 
 if (can_manage_members()) {
     $actions[] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
+    $actions[] = ['icon'=>'⚙️','label'=>'Site Settings','sub'=>'Hero, dues, letter, links','href'=>'settings.php','color'=>'#37474f'];
     $actions[] = ['icon'=>'📅','label'=>'Events','sub'=>'Manage site events','href'=>'events.php','color'=>'#1565c0'];
     try { $vcount_v = (int)get_pdo()->query('SELECT COUNT(*) FROM volunteers')->fetchColumn(); } catch(Exception $e) { $vcount_v=0; }
     $actions[] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vcount_v>0?"$vcount_v submission".($vcount_v>1?'s':''):'View signups','href'=>'volunteers.php','color'=>'#1b5e20','badge'=>$vcount_v>0?$vcount_v:0];

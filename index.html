@@ -269,9 +269,9 @@
 <section class="hero" id="home">
   <p class="hero-motto">Integrity First &middot; Service Before Self &middot; Excellence in All We Do</p>
   <h1>USAFA Parents Club<span>of Alabama</span></h1>
-  <p class="hero-sub">Uniting current, incoming, and alumni families of United States Air Force Academy cadets across the great state of Alabama &mdash; offering support, community, and connection from appointment through graduation and beyond.</p>
+  <p class="hero-sub" id="hero-subtitle">Uniting current, incoming, and alumni families of United States Air Force Academy cadets across the great state of Alabama &mdash; offering support, community, and connection from appointment through graduation and beyond.</p>
   <div class="hero-cta">
-    <a href="#membership" class="btn btn-gold">Join Our Club</a>
+    <a href="#membership" class="btn btn-gold" id="hero-cta">Join Our Club</a>
     <a href="#about" class="btn btn-outline">Learn More</a>
   </div>
   <div class="hero-stats">
@@ -308,9 +308,11 @@
     <div class="membership-grid">
       <div class="membership-card">
         <h3>Annual Membership</h3>
-        <div class="price-tag">$75 <span>/ year</span></div>
+        <div class="price-tag" id="membership-dues">$75 <span>/ year</span></div>
+        <div id="membership-description">
         <p>Membership dues cover cadet support activities, club operations, and care packages for Alabama cadets throughout their Academy journey.</p>
         <p style="margin-top:.75rem;">As a member, you'll be part of a community of Alabama families who share the unique experience of having a son or daughter at the Academy &mdash; with access to resources and a network of parents who understand the journey firsthand.</p>
+        </div>
         <p style="margin-top:.75rem;">🎖️ <strong>Paid members will receive a club identification badge</strong></p>
         <div class="payment-portal" style="margin-top:auto;">
           <p>Secure online payment.</p>
@@ -491,7 +493,7 @@
     <div class="footer-brand">
       <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
       <p>Supporting Alabama families and their cadets at the United States Air Force Academy.</p>
-      <a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener" class="footer-fb" style="margin-top:.75rem">
+      <a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener" class="footer-fb" id="footer-fb-link" style="margin-top:.75rem">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
         Alabama Falcons Facebook
       </a>
@@ -517,7 +519,7 @@
     </div>
     <div class="footer-col">
       <h4>USAFA Resources</h4>
-      <ul>
+      <ul id="footer-resources">
         <li><a href="https://www.usafa.edu" target="_blank" rel="noopener">USAFA Official Site</a></li>
         <li><a href="https://www.usafa.edu/parents" target="_blank" rel="noopener">Parents Page</a></li>
         <li><a href="https://www.usafa.edu/academics/academic-calendar/" target="_blank" rel="noopener">Academy Calendar</a></li>
@@ -713,6 +715,43 @@ if (document.readyState === 'loading') {
 } else {
   loadNews();
 }
+
+// ── Site settings loader ───────────────────────────────────────────────────
+fetch('/settings-feed.php').then(function(r){return r.json();}).then(function(data){
+  if (!data.success || !data.settings) return;
+  var s = data.settings;
+  // Hero
+  if (s.hero_subtitle) document.getElementById('hero-subtitle').textContent = s.hero_subtitle;
+  if (s.hero_cta_text || s.hero_cta_url) {
+    var cta = document.getElementById('hero-cta');
+    if (cta) { if (s.hero_cta_text) cta.textContent = s.hero_cta_text; if (s.hero_cta_url) cta.href = s.hero_cta_url; }
+  }
+  // Membership
+  if (s.membership_dues) {
+    var dt = document.getElementById('membership-dues');
+    if (dt) dt.innerHTML = escHtml(s.membership_dues) + ' <span>/ year</span>';
+  }
+  if (s.membership_description) {
+    var md = document.getElementById('membership-description');
+    if (md) md.innerHTML = s.membership_description.split('\n\n').map(function(p){ return '<p>' + escHtml(p.trim()) + '</p>'; }).join('');
+  }
+  // Facebook
+  if (s.facebook_url) {
+    document.querySelectorAll('a[id="footer-fb-link"], a.fb-icon, a.footer-fb').forEach(function(el){ el.href = s.facebook_url; });
+  }
+  // Footer resources
+  if (s.footer_resources) {
+    var ul = document.getElementById('footer-resources');
+    if (ul) {
+      var lines = s.footer_resources.split('\n').filter(function(l){ return l.trim(); });
+      ul.innerHTML = lines.map(function(l){
+        var parts = l.split('|');
+        if (parts.length < 2) return '';
+        return '<li><a href="' + escHtml(parts[1].trim()) + '" target="_blank" rel="noopener">' + escHtml(parts[0].trim()) + '</a></li>';
+      }).join('');
+    }
+  }
+}).catch(function(){});
 
 // ── Announcement banner ────────────────────────────────────────────────────
 async function loadAnnouncements() {

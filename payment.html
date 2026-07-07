@@ -398,12 +398,19 @@
     <h2>Payment Information</h2>
     <p>Select your payment method below and complete your dues to activate your membership.</p>
 
-    <div class="info-box">
+    <div class="info-box" id="dues-info-box">
       <h3>&#128197; Membership Dues</h3>
-      <p><strong>Prep School</strong> &mdash; $75/year &mdash; For families with cadets at the USAFA Preparatory School.</p>
-      <p><strong>1-Year</strong> &mdash; $75 &mdash; Annual membership for one year.</p>
+      <p><strong>Prep School</strong> &mdash; <span class="dues-amount">$75</span>/year &mdash; For families with cadets at the USAFA Preparatory School.</p>
+      <p><strong>1-Year</strong> &mdash; <span class="dues-amount">$75</span> &mdash; Annual membership for one year.</p>
       <p><strong>4-Year</strong> &mdash; $275 &mdash; Full Academy membership covering all four years.</p>
     </div>
+    <script>
+    fetch('/settings-feed.php').then(function(r){return r.json();}).then(function(d){
+      if (d.success && d.settings && d.settings.membership_dues) {
+        document.querySelectorAll('.dues-amount').forEach(function(el){ el.textContent = d.settings.membership_dues; });
+      }
+    }).catch(function(){});
+    </script>
   </section>
 
   <!-- PAYMENT METHODS SECTION -->

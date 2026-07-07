@@ -157,51 +157,39 @@
   <!-- LETTER -->
   <section class="letter-section">
     <p class="letter-intro">Dear USAFA Alabama Families,</p>
-    
-    <div class="letter-body">
-      <p>I am absolutely thrilled to connect with you today! As we look toward the future of our club, I am filled with pride for the young men and women we represent—our incredible cadets who are working so hard at the Academy. While they are far from home, our mission is to ensure they always feel the support of their Alabama roots, and we have some exciting new ways to make that happen!</p>
-
-      <p>First, I want to give a massive shout-out to our dedicated team of volunteer officers. Vice President Susan Jackson, Secretary Shelley Kavlick, and Treasurer Mike Sheehy have been working tirelessly behind the scenes for months, meeting as often as once a week to move our club forward. I also want to extend a special thank you to our web designer, Mike Johnston, for his incredible vision and hard work.</p>
-
-      <h2>The Wait is Over: Revealing Our New Website!</h2>
-      <p>We are so excited to officially reveal our brand-new website! This was designed specifically to help us connect with you and for you to connect with us. It is your one-stop shop for upcoming events, the latest news from USAFA, and so much more. Our big plans to support our amazing cadets start right here!</p>
-      
-      <p style="text-align:center;margin:2rem 0;">
-        <a href="index.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Explore Our New Website →</a>
-      </p>
-
-      <h2>Investing in Our Cadets</h2>
-      <p>To continue our mission of supporting our future officers, we need your help. We are asking all families to get current on their parent dues. These funds go directly toward the programs and initiatives that celebrate our cadets' milestones.</p>
-      
-      <ul>
-        <li><strong>Annual Dues:</strong> $75 per year</li>
-        <li><strong>Four-Year Discount:</strong> $275 (covers your cadet's entire journey!)</li>
-      </ul>
-      
-      <p>Our new website makes this easier than ever with multiple payment options available.</p>
-      
-      <p style="text-align:center;margin:2rem 0;">
-        <a href="membership.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Pay Dues Online →</a>
-      </p>
-
-      <h2>Get Involved</h2>
-      <p>We want you to be a part of your cadet's journey! Whether you have a little time to give or a lot, there are many ways to get involved. We are actively looking for members to help with care packages, event planning, cadet recognition, communications, and mentorship programs. Your involvement directly supports our Alabama cadets!</p>
-
-      <p>We hold regular meetings via Zoom throughout the year to keep members informed and connected. To find out about upcoming meetings and events, reach out to us at <a href="mailto:info@alabamafalcons.org" style="color:var(--blue);font-weight:600;">info@alabamafalcons.org</a> or check the <a href="index.html#events" style="color:var(--blue);font-weight:600;">Events section</a> of our website.</p>
-
-      <p><strong>This is only the beginning!</strong> We have lots of ambition for what this club can accomplish—from expanding our care package program to creating mentorship connections to hosting regional events across Alabama. But it all depends on club support. When members pay their dues, volunteer their time, and stay engaged, we can do incredible things for our cadets. Together, we can build something truly special.</p>
-
-      <p>It is truly my pleasure to serve alongside such a dedicated group of parents. Together, we are supporting the future leaders of this great nation.</p>
-
-      <p><strong>God bless each of your families.</strong></p>
-
+    <div class="letter-body" id="letter-body">
+      <p>Loading letter&hellip;</p>
+    </div>
+    <div class="letter-body" style="margin-top:2rem">
       <div class="signature">
         <p>Sincerely,</p>
-        <p class="name">Kari Johnston</p>
-        <p>President, USAFA Alabama Parents Club</p>
+        <p class="name" id="president-name">Kari Johnston</p>
+        <p id="president-title">President, USAFA Parents Club of Alabama</p>
       </div>
     </div>
+    <div style="text-align:center;margin:2rem 0;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <a href="index.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Back to Homepage →</a>
+      <a href="membership.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;">Pay Dues Online →</a>
+    </div>
   </section>
+
+  <script>
+  fetch('/settings-feed.php').then(function(r){return r.json();}).then(function(data){
+    if (!data.success || !data.settings) return;
+    var s = data.settings;
+    if (s.president_letter) {
+      var body = document.getElementById('letter-body');
+      body.innerHTML = s.president_letter.split('\n\n').map(function(p){
+        p = p.trim();
+        return p ? '<p>' + p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>' : '';
+      }).filter(Boolean).join('');
+    }
+    if (s.president_name)  document.getElementById('president-name').textContent  = s.president_name;
+    if (s.president_title) document.getElementById('president-title').textContent = s.president_title;
+  }).catch(function(){
+    document.getElementById('letter-body').innerHTML = '<p>Letter content unavailable. Please check back later.</p>';
+  });
+  </script>
 
   <!-- FOOTER -->
   <footer>
