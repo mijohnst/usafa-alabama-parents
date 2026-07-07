@@ -10,6 +10,7 @@ $bootstrap = users_table_empty($pdo);
 
 // ── Bootstrap: create first admin user ────────────────────────────────────
 if ($bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['bootstrap'])) {
+    csrf_verify();
     $name  = trim($_POST['name']  ?? '');
     $email = trim($_POST['email'] ?? '');
     $uname = trim($_POST['username'] ?? '');
@@ -79,6 +80,7 @@ button:hover{background:#002268}
     <div class="setup-note">No admin accounts exist yet. Create the first admin user below.</div>
     <h2>Create First Admin</h2>
     <form method="POST">
+      <?= csrf_field() ?>
       <input type="hidden" name="bootstrap" value="1">
       <label>Full Name</label>
       <input type="text" name="name" required placeholder="e.g. Kari Johnston" autocomplete="name">

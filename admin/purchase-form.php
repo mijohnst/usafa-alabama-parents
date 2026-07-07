@@ -88,6 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$date)        $errors[] = 'Date is required.';
     if ($pretax < 0)   $errors[] = 'Pre-tax amount cannot be negative.';
     if (!in_array($status, array_keys(PURCHASE_STATUSES))) $status = 'pending';
+    // Only treasurer or admin can mark reimbursed — block server-side regardless of form
+    if ($status === 'reimbursed' && !is_treasurer() && !is_admin()) {
+        $status = $is_edit ? ($p['status'] ?? 'pending') : 'approved';
+    }
 
     // Accept from either camera or file picker input
     $new_receipt = null;
