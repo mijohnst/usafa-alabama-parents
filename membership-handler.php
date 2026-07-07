@@ -76,6 +76,8 @@ try {
                 parent1_state=:parent1_state, parent1_zip=:parent1_zip,
                 parent2_last_name=:parent2_last_name, parent2_first_name=:parent2_first_name,
                 parent2_email=:parent2_email, parent2_cell=:parent2_cell,
+                parent2_street=:parent2_street, parent2_city=:parent2_city,
+                parent2_state=:parent2_state, parent2_zip=:parent2_zip,
                 photo_consent=:photo_consent, directory_consent=:directory_consent
             WHERE id = :id
         ");
@@ -117,6 +119,7 @@ try {
             parent1_last_name, parent1_first_name, parent1_email, parent1_cell,
             parent1_street, parent1_city, parent1_state, parent1_zip,
             parent2_last_name, parent2_first_name, parent2_email, parent2_cell,
+            parent2_street, parent2_city, parent2_state, parent2_zip,
             photo_consent, directory_consent,
             membership_paid, membership_year
         ) VALUES (
@@ -126,6 +129,7 @@ try {
             :parent1_last_name, :parent1_first_name, :parent1_email, :parent1_cell,
             :parent1_street, :parent1_city, :parent1_state, :parent1_zip,
             :parent2_last_name, :parent2_first_name, :parent2_email, :parent2_cell,
+            :parent2_street, :parent2_city, :parent2_state, :parent2_zip,
             :photo_consent, :directory_consent,
             0, ''
         )
