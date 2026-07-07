@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
-header('Cache-Control: public, max-age=300');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
 require_once __DIR__ . '/admin/config.php';
 try {
     $pdo  = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS,

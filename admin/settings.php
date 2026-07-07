@@ -99,7 +99,15 @@ var quill = new Quill('#quill-editor', {
   }
 });
 
-// Before submit, copy Quill HTML into hidden input
+// Populate hidden input initially so a save without editing still works
+document.getElementById('president_letter_input').value = quill.root.innerHTML;
+
+// Update hidden input whenever content changes
+quill.on('text-change', function() {
+  document.getElementById('president_letter_input').value = quill.root.innerHTML;
+});
+
+// Also update on submit as a safety net
 document.getElementById('settings-form').addEventListener('submit', function() {
   document.getElementById('president_letter_input').value = quill.root.innerHTML;
 });
