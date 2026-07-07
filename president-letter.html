@@ -179,11 +179,8 @@
     var s = data.settings;
     if (s.president_letter) {
       var body = document.getElementById('letter-body');
-      function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-      body.innerHTML = s.president_letter.split('\n\n').map(function(p){
-        p = p.trim();
-        return p ? '<p>' + esc(p) + '</p>' : '';
-      }).filter(Boolean).join('');
+      // Render rich HTML from editor directly
+      body.innerHTML = s.president_letter;
     }
     if (s.president_name)  document.getElementById('president-name').textContent  = s.president_name;
     if (s.president_title) document.getElementById('president-title').textContent = s.president_title;

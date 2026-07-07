@@ -15,9 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Location: settings.php'); exit;
 }
 
-$settings = [];
-$labels   = [];
-$types    = [];
+$settings = []; $labels = []; $types = [];
 $rows = $pdo->query('SELECT * FROM site_settings ORDER BY id')->fetchAll();
 foreach ($rows as $r) {
     $settings[$r['setting_key']] = $r['setting_value'];
@@ -26,26 +24,35 @@ foreach ($rows as $r) {
 }
 
 $sections = [
-    'Homepage Hero' => ['hero_subtitle','hero_cta_text','hero_cta_url'],
-    'Membership'    => ['membership_dues','membership_description'],
+    'Homepage Hero'       => ['hero_subtitle','hero_cta_text','hero_cta_url'],
+    'Membership'          => ['membership_dues','membership_description'],
     'President\'s Letter' => ['president_letter','president_name','president_title'],
-    'Social & Links'=> ['facebook_url'],
-    'Footer Resources' => ['footer_resources'],
+    'Social & Links'      => ['facebook_url'],
+    'Footer Resources'    => ['footer_resources'],
 ];
 
 admin_header('Site Settings');
 echo show_flash();
 ?>
+<!-- Quill rich text editor (CDN) -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<style>
+.ql-editor{min-height:300px;font-family:"Segoe UI",Arial,sans-serif;font-size:1rem}
+.ql-toolbar{border-radius:4px 4px 0 0}
+.ql-container{border-radius:0 0 4px 4px;background:#fff}
+</style>
+
 <div class="page-head">
   <h1>Site Settings</h1>
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.5rem">
-  Changes here update the main website automatically within a few minutes.
-  <strong>Footer Resources</strong> format: one per line as <code>Title|URL</code>
+  Changes here update the main website automatically.
+  <strong>Footer Resources:</strong> one per line as <code>Title|URL</code>
 </p>
 
-<form method="POST">
+<form method="POST" id="settings-form">
   <?= csrf_field() ?>
   <?php foreach ($sections as $section => $keys): ?>
   <div class="card" style="margin-bottom:1.25rem">
@@ -57,8 +64,13 @@ echo show_flash();
     ?>
     <div class="form-group">
       <label><?= h($label) ?></label>
-      <?php if ($type === 'textarea'): ?>
-        <textarea name="<?= h($key) ?>" rows="<?= $key==='president_letter'?12:4 ?>"><?= h($val) ?></textarea>
+      <?php if ($key === 'president_letter'): ?>
+        <!-- Rich text editor for president's letter -->
+        <div id="quill-editor" style="margin-bottom:.5rem"><?= $val ?></div>
+        <input type="hidden" name="president_letter" id="president_letter_input">
+        <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">Use the toolbar above to format text, add links, or insert images. Looks the same as it will on the website.</p>
+      <?php elseif ($type === 'textarea'): ?>
+        <textarea name="<?= h($key) ?>" rows="<?= $key==='membership_description'?5:4 ?>"><?= h($val) ?></textarea>
       <?php else: ?>
         <input type="<?= $type==='url'?'url':'text' ?>" name="<?= h($key) ?>" value="<?= h($val) ?>">
       <?php endif; ?>
@@ -68,5 +80,29 @@ echo show_flash();
   <?php endforeach; ?>
   <button type="submit" class="btn btn-primary" style="min-width:180px">Save All Settings</button>
 </form>
+
+<script>
+// Initialise Quill rich text editor
+var quill = new Quill('#quill-editor', {
+  theme: 'snow',
+  modules: {
+    toolbar: [
+      [{ 'header': [1,2,3,false] }],
+      ['bold','italic','underline','strike'],
+      [{ 'color': [] },{ 'background': [] }],
+      [{ 'size': ['small',false,'large','huge'] }],
+      [{ 'align': [] }],
+      [{ 'list': 'ordered' },{ 'list': 'bullet' }],
+      ['link','image'],
+      ['clean']
+    ]
+  }
+});
+
+// Before submit, copy Quill HTML into hidden input
+document.getElementById('settings-form').addEventListener('submit', function() {
+  document.getElementById('president_letter_input').value = quill.root.innerHTML;
+});
+</script>
 
 <?php admin_footer(); ?>
