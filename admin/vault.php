@@ -14,6 +14,7 @@ if (!is_dir($vault_dir)) mkdir($vault_dir, 0755, true);
 const VAULT_CATEGORIES = ['Non-Profit Formation','Tax Filings','Bank Statements','Meeting Minutes','Policies & Bylaws','Correspondence','Other'];
 const VAULT_TYPES      = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                            'application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                           'application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation',
                            'image/jpeg','image/png','image/gif','text/plain'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_upload) {
@@ -35,12 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_upload) {
                 $finfo = finfo_open(FILEINFO_MIME_TYPE);
                 $mime  = finfo_file($finfo, $file['tmp_name']); finfo_close($finfo);
                 if (!in_array($mime, VAULT_TYPES) || $file['size'] > 25*1024*1024) {
-                    $errors[] = 'Invalid file type or size exceeds 25MB. Accepted: PDF, Word, Excel, images, text.';
+                    $errors[] = 'Invalid file type or size exceeds 25MB. Accepted: PDF, Word, Excel, PowerPoint, images, text.';
                 } else {
                     $ext_map = ['application/pdf'=>'pdf','application/msword'=>'doc',
                         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx',
                         'application/vnd.ms-excel'=>'xls',
                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'=>'xlsx',
+                        'application/vnd.ms-powerpoint'=>'ppt',
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation'=>'pptx',
                         'image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','text/plain'=>'txt'];
                     $ext  = $ext_map[$mime] ?? 'bin';
                     $name = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
@@ -81,6 +84,7 @@ $get_icon  = fn($mime) => match(true) {
     str_contains($mime,'pdf')    => '📄',
     str_contains($mime,'word')   => '📝',
     str_contains($mime,'excel') || str_contains($mime,'spreadsheet') => '📊',
+    str_contains($mime,'powerpoint') || str_contains($mime,'presentation') => '📊',
     str_contains($mime,'image')  => '🖼️',
     default => '📁'
 };
@@ -126,8 +130,8 @@ echo show_flash();
       <div class="form-group"><label>Description <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label><input name="description" placeholder="Brief description"></div>
     </div>
     <div class="form-group">
-      <label>File <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">PDF, Word, Excel, images · max 25MB</span></label>
-      <input type="file" name="document" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt" style="padding:.5rem;font-size:.9rem">
+      <label>File <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">PDF, Word, Excel, PowerPoint, images · max 25MB</span></label>
+      <input type="file" name="document" required accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.txt" style="padding:.5rem;font-size:.9rem">
     </div>
     <button type="submit" class="btn btn-primary">Upload Document</button>
   </form>
