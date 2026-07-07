@@ -156,8 +156,6 @@ function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): voi
     $sent = send_notification($email, $subject, $body);
     if (!$sent) {
         error_log("mailer: notify_reimbursed — mail() returned false for email='$email' purchase_id=" . ($purchase['id'] ?? '?'));
-    } else {
-        error_log("mailer: notify_reimbursed — sent OK to '$email' for purchase_id=" . ($purchase['id'] ?? '?'));
     }
 }
 

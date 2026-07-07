@@ -40,12 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       . "Issue:\n$description\n\n"
                       . "Respond here: $url\n\n"
                       . str_repeat('─',48) . "\nalabamafalcons.org/admin/";
-                mail($t['email'], "New Support Ticket $ticket_num: $subject", $body, $headers);
+                $clean_sub = preg_replace('/[\x00-\x1F\x7F]/', '', "New Support Ticket $ticket_num: $subject");
+                mail($t['email'], $clean_sub, $body, $headers);
             }
         } catch (Exception $e) { error_log('ticket-new: notify failed — ' . $e->getMessage()); }
 
-        // Confirm receipt to submitter
-        $submitter_email = $pdo->query("SELECT email FROM users WHERE id=" . (int)($_SESSION['user_id']??0))->fetchColumn();
+        // Confirm receipt to submitter (prepared statement, not string concat)
+        $se_stmt = $pdo->prepare('SELECT email FROM users WHERE id = ?');
+        $se_stmt->execute([(int)($_SESSION['user_id'] ?? 0)]);
+        $submitter_email = $se_stmt->fetchColumn();
         if (filter_var($submitter_email, FILTER_VALIDATE_EMAIL)) {
             $body = "USAFA Parents Club of Alabama\nSupport Ticket Received — $ticket_num\n" . str_repeat('─',48) . "\n\n"
                   . "Your support ticket has been submitted. Our tech team has been notified and will respond shortly.\n\n"
@@ -56,7 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   . "Your Issue:\n$description\n\n"
                   . "Track your ticket: $url\n\n"
                   . str_repeat('─',48) . "\nalabamafalcons.org/admin/";
-            mail($submitter_email, "Support Ticket $ticket_num Received: $subject", $body, $headers);
+            $clean_sub = preg_replace('/[\x00-\x1F\x7F]/', '', "Support Ticket $ticket_num Received: $subject");
+            mail($submitter_email, $clean_sub, $body, $headers);
         }
 
         flash('success', "Ticket $ticket_num submitted. Tech support has been notified.");

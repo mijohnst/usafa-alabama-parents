@@ -53,8 +53,9 @@ function build_ticket_email(PDO $pdo, array $ticket, string $event_line): string
 function send_to_submitter(PDO $pdo, array $ticket, string $subject_prefix, string $event_line): void {
     $email = $ticket['submitter_email'] ?? '';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return;
-    $subject = $subject_prefix . ' — ' . $ticket['ticket_number'] . ': ' . $ticket['subject'];
-    $body    = build_ticket_email($pdo, $ticket, $event_line);
+    $raw_subject = $subject_prefix . ' — ' . $ticket['ticket_number'] . ': ' . $ticket['subject'];
+    $subject     = preg_replace('/[\x00-\x1F\x7F]/', '', $raw_subject); // prevent header injection
+    $body        = build_ticket_email($pdo, $ticket, $event_line);
     mail($email, $subject, $body,
          "From: USAFA Parents Club <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n");
 }
@@ -93,9 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$id, $_SESSION['user_id']??null,
                            'Status changed: ' . $old_label . ' → ' . $new_label
                            . ($assigned_to ? ' · Assigned to user #'.$assigned_to : '')]);
-            // Reload ticket so history email has updated status
-            $stmt->execute([$id]);
-            $ticket = $stmt->fetch();
+            // Reload ticket with fresh query so history email has updated status
+            $reload = $pdo->prepare(
+                'SELECT t.*, u.name as submitter_name, u.email as submitter_email, a.name as assigned_name
+                 FROM tickets t LEFT JOIN users u ON t.submitted_by=u.id LEFT JOIN users a ON t.assigned_to=a.id WHERE t.id=?'
+            );
+            $reload->execute([$id]);
+            $ticket = $reload->fetch();
             $prefix  = $new_status === 'resolved' ? 'Ticket Resolved' : 'Ticket Status Updated';
             send_to_submitter($pdo, $ticket, $prefix, "Status changed to: $new_label by " . current_user_name());
             flash('success', 'Ticket updated.');
