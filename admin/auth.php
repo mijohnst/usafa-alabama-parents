@@ -268,7 +268,7 @@ function admin_footer(): void {
 
 const REGIONS = ['', 'North', 'Central', 'South'];
 const PAYMENT_METHODS   = ['', 'Check', 'Internet Transfer', 'Other'];
-const TICKET_CATEGORIES = ['', 'Website - Main Site', 'Admin Portal - Member Management', 'Admin Portal - Finance', 'Admin Portal - Lists / Email', 'Google Workspace / Gmail', 'Domain / Hosting', 'User Account / Password', 'Other'];
+const TICKET_CATEGORIES = ['', 'Website Issue', 'Admin Portal Issue', 'Email / Google Workspace', 'Login / Password Help', 'Add Event to Calendar', 'Site Suggestion', 'Other'];
 const TICKET_STATUSES   = ['open'=>'Open','in_progress'=>'In Progress','resolved'=>'Resolved'];
 const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];
 const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
