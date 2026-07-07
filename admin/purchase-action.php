@@ -28,7 +28,7 @@ if (!$p) { flash('error', 'Purchase not found.'); header('Location: purchases.ph
 
 if ($action === 'approve') {
     // Only admins can approve
-    if (!is_admin()) {
+    if (!is_super_admin()) {
         flash('error', 'Only admins can approve purchases.');
         header('Location: purchases.php'); exit;
     }

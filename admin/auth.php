@@ -46,9 +46,23 @@ function is_secretary(): bool {
     return ($_SESSION['role'] ?? '') === 'secretary';
 }
 
-// Admin or Secretary can fully manage cadet/member records
+function is_tech(): bool {
+    return ($_SESSION['role'] ?? '') === 'tech';
+}
+
+// Admin or Tech have full admin-level access everywhere
+function is_super_admin(): bool {
+    return is_admin() || is_tech();
+}
+
+// Admin, Tech, or Secretary can fully manage cadet/member records
 function can_manage_members(): bool {
-    return is_admin() || is_secretary();
+    return is_super_admin() || is_secretary();
+}
+
+// Admin or Tech can manage helpdesk tickets
+function can_manage_tickets(): bool {
+    return is_super_admin();
 }
 
 function can_manage_finances(): bool {
@@ -68,7 +82,7 @@ function current_user_name(): string {
 
 function require_admin(): void {
     require_login();
-    if (!is_admin()) {
+    if (!is_super_admin()) {
         header('Location: index.php?denied=1');
         exit;
     }
@@ -226,7 +240,12 @@ function admin_header(string $title): void {
         $badge = $pending_cnt > 0 ? ' <span style="background:#A6192E;color:#fff;font-size:.6rem;padding:.1rem .4rem;border-radius:99px;vertical-align:middle;font-weight:700">' . $pending_cnt . '</span>' : '';
         echo '<a href="purchases.php">Finance' . $badge . '</a>';
     }
-    if (is_admin()) echo '<a href="users.php">Users</a>';
+    // Support ticket link — all users
+    $open_tickets = 0;
+    try { $open_tickets = (int)get_pdo()->query("SELECT COUNT(*) FROM tickets WHERE status != 'resolved'")->fetchColumn(); } catch(Exception $e) {}
+    $tbadge = (can_manage_tickets() && $open_tickets > 0) ? ' <span style="background:#f57c00;color:#fff;font-size:.6rem;padding:.1rem .4rem;border-radius:99px;vertical-align:middle;font-weight:700">' . $open_tickets . '</span>' : '';
+    echo '<a href="helpdesk.php">🎫 Support' . $tbadge . '</a>';
+    if (is_super_admin()) echo '<a href="users.php">Users</a>';
     if (is_viewer()) echo '<span style="font-size:.75rem;background:rgba(255,255,255,.15);padding:.2rem .6rem;border-radius:3px;color:rgba(255,255,255,.7)">View Only</span>';
     echo '<a href="change-password.php" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none;margin-left:.25rem" title="Change password">' . h(current_user_name()) . ' 🔑</a>';
     echo '<a href="logout.php">Log Out</a>';
@@ -239,7 +258,10 @@ function admin_footer(): void {
 }
 
 const REGIONS = ['', 'North', 'Central', 'South'];
-const PAYMENT_METHODS = ['', 'Check', 'Internet Transfer', 'Other'];
+const PAYMENT_METHODS   = ['', 'Check', 'Internet Transfer', 'Other'];
+const TICKET_CATEGORIES = ['', 'Website - Main Site', 'Admin Portal - Member Management', 'Admin Portal - Finance', 'Admin Portal - Lists / Email', 'Google Workspace / Gmail', 'Domain / Hosting', 'User Account / Password', 'Other'];
+const TICKET_STATUSES   = ['open'=>'Open','in_progress'=>'In Progress','resolved'=>'Resolved'];
+const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];
 const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
 const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Birthday / Gift', 'General Operations', 'Other'];
 const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'reimbursed' => 'Reimbursed'];

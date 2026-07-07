@@ -203,7 +203,7 @@ admin_header('Finance');
       <td class="actions">
         <div class="btn-group">
           <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm"><?= can_edit_purchase($p) ? 'Edit' : 'View' ?></a>
-          <?php if ($p['status']==='pending' && is_admin()): ?>
+          <?php if ($p['status']==='pending' && is_super_admin()): ?>
           <form id="af-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
