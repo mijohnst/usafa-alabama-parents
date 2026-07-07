@@ -192,9 +192,6 @@
 <body>
 
 <!-- NAV -->
-<!-- ANNOUNCEMENT BANNER — populated by JS from announcements-feed.php -->
-<div id="site-announcement" style="display:none"></div>
-
 <nav>
   <a href="#" class="nav-brand">
     <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
@@ -264,6 +261,8 @@
     </li>
   </ul>
 </nav>
+<!-- ANNOUNCEMENT BANNER — sticky below the fixed nav -->
+<div id="site-announcement" style="display:none;position:sticky;top:64px;z-index:99;width:100%"></div>
 
 <!-- HERO -->
 <section class="hero" id="home">
@@ -689,6 +688,9 @@ async function loadAnnouncements() {
              + '</div>';
     banner.innerHTML = html;
     banner.style.display = 'block';
+    banner.style.position = 'sticky';
+    banner.style.top = '64px';
+    banner.style.zIndex = '99';
   } catch(e) {}
 }
 loadAnnouncements();
