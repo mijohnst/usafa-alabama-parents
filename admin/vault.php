@@ -11,7 +11,7 @@ $can_upload = can_manage_members() || is_treasurer();
 $vault_dir  = __DIR__ . '/vault/';
 if (!is_dir($vault_dir)) mkdir($vault_dir, 0755, true);
 
-const VAULT_CATEGORIES = ['Non-Profit Formation','Tax Filings','Bank Statements','Meeting Minutes','Policies & Bylaws','Correspondence','Other'];
+const VAULT_CATEGORIES = ['Non-Profit Formation','Tax Filings','Bank Statements','Meeting Minutes','Policies & Bylaws','Correspondence','Events','Insurance','Contracts & Agreements','Other'];
 const VAULT_TYPES      = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                            'application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                            'application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation',
