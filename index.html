@@ -747,7 +747,9 @@ fetch('/settings-feed.php').then(function(r){return r.json();}).then(function(da
       ul.innerHTML = lines.map(function(l){
         var parts = l.split('|');
         if (parts.length < 2) return '';
-        return '<li><a href="' + escHtml(parts[1].trim()) + '" target="_blank" rel="noopener">' + escHtml(parts[0].trim()) + '</a></li>';
+        var url = parts[1].trim();
+        if (!/^https?:\/\/|^\//i.test(url)) return ''; // block non-http URLs
+        return '<li><a href="' + escHtml(url) + '" target="_blank" rel="noopener">' + escHtml(parts[0].trim()) + '</a></li>';
       }).join('');
     }
   }
