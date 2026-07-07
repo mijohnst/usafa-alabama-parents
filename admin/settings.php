@@ -72,7 +72,7 @@ echo show_flash();
       <?php elseif ($type === 'textarea'): ?>
         <textarea name="<?= h($key) ?>" rows="<?= $key==='membership_description'?5:4 ?>"><?= h($val) ?></textarea>
       <?php else: ?>
-        <input type="<?= $type==='url'?'url':'text' ?>" name="<?= h($key) ?>" value="<?= h($val) ?>">
+        <input type="text" name="<?= h($key) ?>" value="<?= h($val) ?>" placeholder="<?= $type==='url'?'e.g. https://... or #section':'' ?>">
       <?php endif; ?>
     </div>
     <?php endforeach; ?>
