@@ -168,10 +168,12 @@ function confirmPrReimburse() {
   }
   var prNote = document.getElementById('pr-modal-note').value.trim();
   if (method === 'Internet Transfer' && !prNote) { alert('Please enter the transfer reference or details.'); return; }
-  document.getElementById('rpm-pr-' + _prId).value = fullMethod;
-  document.getElementById('rn-pr-'  + _prId).value = prNote;
+  var submitId = _prId;
+  document.getElementById('rpm-pr-' + submitId).value = fullMethod;
+  document.getElementById('rn-pr-'  + submitId).value = prNote;
   document.getElementById('pr-modal').style.display = 'none';
-  document.getElementById('rf-pr-' + _prId).submit();
+  _prId = null;
+  document.getElementById('rf-pr-' + submitId).submit();
 }
 document.getElementById('pr-modal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
 </script>

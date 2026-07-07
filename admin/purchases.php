@@ -330,10 +330,11 @@ function confirmReimburse() {
   }
   var note = document.getElementById('modal-note').value.trim();
   if (method === 'Internet Transfer' && !note) { alert('Please enter the transfer reference or details.'); return; }
-  document.getElementById('rpm-' + _reimburseId).value = fullMethod;
-  document.getElementById('rn-'  + _reimburseId).value = note;
+  var submitId = _reimburseId;
+  document.getElementById('rpm-' + submitId).value = fullMethod;
+  document.getElementById('rn-'  + submitId).value = note;
   closeReimburseModal();
-  document.getElementById('rf-' + _reimburseId).submit();
+  document.getElementById('rf-' + submitId).submit();
 }
 
 // Close on backdrop click
