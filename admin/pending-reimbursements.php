@@ -138,8 +138,10 @@ function updatePrFields() {
   document.getElementById('pr-check-row').style.display = m === 'Check' ? 'block' : 'none';
   document.getElementById('pr-other-row').style.display = m === 'Other' ? 'block' : 'none';
   var lbl = document.getElementById('pr-note-label');
+  var inp = document.getElementById('pr-modal-note');
   lbl.textContent = m === 'Internet Transfer' ? 'Transfer Reference / Details *' : 'Note (optional)';
-  lbl.style.color = m === 'Internet Transfer' ? '#002554' : '';
+  lbl.style.color = m === 'Internet Transfer' ? '#002554' : '#5a6a7a';
+  inp.placeholder = m === 'Internet Transfer' ? 'e.g. Confirmation #12345, bank reference…' : 'Optional note…';
 }
 function openPrModal(id, vendor, amount) {
   _prId = id;

@@ -293,8 +293,10 @@ function updateModalFields() {
   document.getElementById('modal-check-row').style.display = m === 'Check' ? 'block' : 'none';
   document.getElementById('modal-other-row').style.display = m === 'Other' ? 'block' : 'none';
   var noteLabel = document.getElementById('modal-note-label');
-  noteLabel.textContent = m === 'Internet Transfer' ? 'Transfer Reference / Details *' : 'Note';
-  noteLabel.style.color = m === 'Internet Transfer' ? '#002554' : '';
+  var noteInput = document.getElementById('modal-note');
+  noteLabel.textContent = m === 'Internet Transfer' ? 'Transfer Reference / Details *' : 'Note (optional)';
+  noteLabel.style.color = m === 'Internet Transfer' ? '#002554' : '#5a6a7a';
+  noteInput.placeholder = m === 'Internet Transfer' ? 'e.g. Confirmation #12345, bank reference…' : 'Optional note…';
 }
 
 function openReimburseModal(id, vendor, amount) {
