@@ -214,7 +214,10 @@ admin_header('Compose Email');
 
       <div class="form-group" style="margin:0">
         <label>&nbsp;</label>
-        <button type="submit" name="load" value="1" class="btn btn-primary">Load →</button>
+        <div style="display:flex;gap:.5rem">
+          <button type="submit" name="load" value="1" class="btn btn-primary">Load →</button>
+          <button type="button" class="btn btn-secondary" onclick="resetFilter()">Reset</button>
+        </div>
       </div>
 
     </div>
@@ -293,6 +296,12 @@ updateYrLabel();
 function setYrs(state) {
   yrCbs.forEach(function(cb){ cb.checked = state; });
   updateYrLabel();
+}
+function resetFilter() {
+  setYrs(false);
+  document.querySelector('select[name=f_region]').value = '';
+  document.querySelector('select[name=f_paid]').value   = '';
+  document.querySelector('select[name=f_type]').value   = 'parent_both';
 }
 function extract_count(text) {
   var re = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
