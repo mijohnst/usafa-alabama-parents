@@ -22,7 +22,10 @@ function sanitize_hdr(string $v): string { return str_replace(["\r","\n"], '', $
 $name         = s($data, 'name');
 $email        = s($data, 'email');
 $phone        = s($data, 'phone');
-$areas        = is_array($data['areas'] ?? null) ? implode(', ', array_map('trim', $data['areas'])) : s($data, 'areas');
+$areas_raw    = $data['areas'] ?? null;
+$areas        = is_array($areas_raw)
+    ? implode(', ', array_filter(array_map(fn($v) => is_string($v) ? trim($v) : '', $areas_raw)))
+    : s($data, 'areas');
 $availability = s($data, 'availability');
 $cadet_info   = s($data, 'cadetInfo');
 $comments     = s($data, 'comments');
@@ -40,7 +43,7 @@ try {
 } catch (Exception $e) { error_log('volunteer-handler DB error: '.$e->getMessage()); }
 
 // Email notification
-$subject  = sanitize_hdr("New Volunteer Interest: $name");
+$subject  = sanitize_hdr('New Volunteer Interest: ' . $name);
 $body     = "USAFA Parents Club of Alabama\nNew Volunteer Interest Submission\n" . str_repeat('─',48) . "\n\n"
            . "Name:         $name\n"
            . "Email:        $email\n"

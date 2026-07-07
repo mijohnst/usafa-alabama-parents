@@ -14,7 +14,7 @@ function gallery_cleanup(PDO $pdo, string $dir): void {
     // Enforce 20-photo limit — delete oldest beyond limit
     $count = (int)$pdo->query('SELECT COUNT(*) FROM site_photos')->fetchColumn();
     if ($count > 20) {
-        $excess = $pdo->query("SELECT id, filename FROM site_photos ORDER BY id ASC LIMIT " . ($count - 20))->fetchAll();
+        $excess = $pdo->query("SELECT id, filename FROM site_photos ORDER BY id ASC LIMIT " . (int)($count - 20))->fetchAll();
         foreach ($excess as $p) {
             if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) @unlink($dir . $p['filename']);
             $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$p['id']]);

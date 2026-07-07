@@ -69,7 +69,7 @@ $filter_cat = $_GET['cat'] ?? '';
 $search     = trim($_GET['q'] ?? '');
 $where = ['1=1']; $params = [];
 if ($filter_cat) { $where[] = 'v.category=:cat'; $params[':cat']=$filter_cat; }
-if ($search)     { $where[] = '(v.title LIKE :q OR v.description LIKE :q)'; $params[':q']="%$search%"; }
+if ($search)     { $se = str_replace(['%','_'],['\%','\_'],$search); $where[] = '(v.title LIKE :q OR v.description LIKE :q)'; $params[':q']="%$se%"; }
 
 $docs = $pdo->prepare('SELECT v.*, u.name as uploader_name FROM vault_documents v LEFT JOIN users u ON v.uploaded_by=u.id WHERE '.implode(' AND ',$where).' ORDER BY v.category, v.created_at DESC');
 $docs->execute($params);

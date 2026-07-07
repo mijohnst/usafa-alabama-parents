@@ -3,6 +3,13 @@ require_once __DIR__ . '/auth.php';
 require_member_admin();
 $pdo = get_pdo();
 
+// Handle POST before any output
+if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='delete') {
+    csrf_verify();
+    $pdo->prepare('DELETE FROM volunteers WHERE id=?')->execute([(int)$_POST['id']]);
+    flash('success','Submission deleted.'); header('Location: volunteers.php'); exit;
+}
+
 $search = trim($_GET['q'] ?? '');
 $where  = ['1=1']; $params = [];
 if ($search) { $where[] = '(name LIKE :q OR email LIKE :q OR areas LIKE :q)'; $params[':q']="%$search%"; }
@@ -56,10 +63,4 @@ echo show_flash();
 </table>
 </div>
 
-<?php
-if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='delete') {
-    csrf_verify();
-    $pdo->prepare('DELETE FROM volunteers WHERE id=?')->execute([(int)$_POST['id']]);
-    flash('success','Submission deleted.'); header('Location: volunteers.php'); exit;
-}
-admin_footer(); ?>
+<?php admin_footer(); ?>

@@ -11,6 +11,7 @@ function save_officer_photo(string $key): ?string {
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mime  = finfo_file($finfo, $file['tmp_name']); finfo_close($finfo);
     if (!in_array($mime, ['image/jpeg','image/png','image/gif','image/webp'])) return null;
+    if ($file['size'] > 10*1024*1024) return null; // 10MB limit
     $ext  = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'][$mime];
     $name = 'officer-' . bin2hex(random_bytes(4)) . '.' . $ext;
     $dir  = __DIR__ . '/../leadership-photos/';
