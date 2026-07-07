@@ -122,7 +122,7 @@ echo show_flash();
       <input type="text" id="pr-other-text" placeholder="Describe the payment method…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
     <div style="margin-bottom:.9rem">
-      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Note <span style="font-weight:400;text-transform:none;font-size:.72rem;color:#9aa5b4">optional</span></label>
+      <label id="pr-note-label" style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Note (optional)</label>
       <input type="text" id="pr-modal-note" placeholder="Optional note…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
     <div style="display:flex;gap:.75rem;margin-top:1.25rem">
@@ -137,6 +137,9 @@ function updatePrFields() {
   var m = document.getElementById('pr-modal-method').value;
   document.getElementById('pr-check-row').style.display = m === 'Check' ? 'block' : 'none';
   document.getElementById('pr-other-row').style.display = m === 'Other' ? 'block' : 'none';
+  var lbl = document.getElementById('pr-note-label');
+  lbl.textContent = m === 'Internet Transfer' ? 'Transfer Reference / Details *' : 'Note (optional)';
+  lbl.style.color = m === 'Internet Transfer' ? '#002554' : '';
 }
 function openPrModal(id, vendor, amount) {
   _prId = id;
@@ -161,8 +164,10 @@ function confirmPrReimburse() {
     if (!expl) { alert('Please explain the payment method.'); return; }
     fullMethod = 'Other: ' + expl;
   }
+  var prNote = document.getElementById('pr-modal-note').value.trim();
+  if (method === 'Internet Transfer' && !prNote) { alert('Please enter the transfer reference or details.'); return; }
   document.getElementById('rpm-pr-' + _prId).value = fullMethod;
-  document.getElementById('rn-pr-'  + _prId).value = document.getElementById('pr-modal-note').value;
+  document.getElementById('rn-pr-'  + _prId).value = prNote;
   document.getElementById('pr-modal').style.display = 'none';
   document.getElementById('rf-pr-' + _prId).submit();
 }

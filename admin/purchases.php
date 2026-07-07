@@ -275,7 +275,7 @@ admin_header('Finance');
       <input type="text" id="modal-other-text" placeholder="Describe the payment method…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
     <div class="form-group">
-      <label>Note <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
+      <label id="modal-note-label">Note <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
       <input type="text" id="modal-note" placeholder="Optional note…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
     <div style="display:flex;gap:.75rem;margin-top:1.25rem">
@@ -292,6 +292,9 @@ function updateModalFields() {
   var m = document.getElementById('modal-payment-method').value;
   document.getElementById('modal-check-row').style.display = m === 'Check' ? 'block' : 'none';
   document.getElementById('modal-other-row').style.display = m === 'Other' ? 'block' : 'none';
+  var noteLabel = document.getElementById('modal-note-label');
+  noteLabel.textContent = m === 'Internet Transfer' ? 'Transfer Reference / Details *' : 'Note';
+  noteLabel.style.color = m === 'Internet Transfer' ? '#002554' : '';
 }
 
 function openReimburseModal(id, vendor, amount) {
@@ -323,7 +326,8 @@ function confirmReimburse() {
     if (!expl) { alert('Please explain the payment method.'); return; }
     fullMethod = 'Other: ' + expl;
   }
-  var note = document.getElementById('modal-note').value;
+  var note = document.getElementById('modal-note').value.trim();
+  if (method === 'Internet Transfer' && !note) { alert('Please enter the transfer reference or details.'); return; }
   document.getElementById('rpm-' + _reimburseId).value = fullMethod;
   document.getElementById('rn-'  + _reimburseId).value = note;
   closeReimburseModal();
