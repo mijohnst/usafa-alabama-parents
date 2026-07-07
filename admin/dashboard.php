@@ -97,6 +97,7 @@ $actions[] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_to
 
 if (can_manage_members()) {
     $actions[] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
+    $actions[] = ['icon'=>'📅','label'=>'Events','sub'=>'Manage site events','href'=>'events.php','color'=>'#1565c0'];
     $actions[] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
     $actions[] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
     $actions[] = ['icon'=>'📖','label'=>'Directory','sub'=>'Printable roster','href'=>'directory.php','color'=>'#1b5e20'];

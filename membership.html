@@ -167,10 +167,24 @@
     <div class="form-section">
       <h3>Member Information</h3>
       <p>Please fill in the information below to complete your membership application.</p>
-      
+
+      <!-- Progress indicator -->
+      <div style="display:flex;gap:0;margin-bottom:1.75rem;overflow:hidden;border-radius:4px">
+        <?php /* JS updates active step */ ?>
+        <?php $steps = ['Cadet','Consent','Parents','Address','Contact']; ?>
+        <script>var _formSteps=['Cadet','Consent','Parents','Address','Contact'];</script>
+        <div id="form-progress" style="display:flex;width:100%">
+          <div style="flex:1;padding:.45rem .5rem;text-align:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:#003594;color:#fff;border-right:1px solid rgba(255,255,255,.2)">① Cadet</div>
+          <div style="flex:1;padding:.45rem .5rem;text-align:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:#e1e5eb;color:#5a6a7a;border-right:1px solid rgba(255,255,255,.4)">② Consent</div>
+          <div style="flex:1;padding:.45rem .5rem;text-align:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:#e1e5eb;color:#5a6a7a;border-right:1px solid rgba(255,255,255,.4)">③ Parents</div>
+          <div style="flex:1;padding:.45rem .5rem;text-align:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:#e1e5eb;color:#5a6a7a;border-right:1px solid rgba(255,255,255,.4)">④ Address</div>
+          <div style="flex:1;padding:.45rem .5rem;text-align:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:#e1e5eb;color:#5a6a7a">⑤ Contact</div>
+        </div>
+      </div>
+
       <form id="membershipForm">
         <!-- CADET INFORMATION -->
-        <div class="form-divider-label">Cadet Information</div>
+        <div class="form-divider-label" id="fs-cadet">Cadet Information</div>
 
         <div class="form-row-3">
           <div class="form-group">
@@ -235,7 +249,7 @@
 
         <!-- CONSENT -->
         <hr class="form-divider" />
-        <div class="form-divider-label">Photo & Directory Consent</div>
+        <div class="form-divider-label" id="fs-consent">Photo &amp; Directory Consent</div>
 
         <div class="form-group">
           <label>May we use cadet photos on our website and publications?</label>
@@ -255,7 +269,7 @@
 
         <!-- PARENT/FAMILY INFORMATION -->
         <hr class="form-divider" />
-        <div class="form-divider-label">Parent/Family Information</div>
+        <div class="form-divider-label" id="fs-parents">Parent/Family Information</div>
 
         <div class="form-row">
           <div class="form-group">
@@ -281,7 +295,7 @@
 
         <!-- ADDRESS INFORMATION -->
         <hr class="form-divider" />
-        <div class="form-divider-label">Primary Contact Address</div>
+        <div class="form-divider-label" id="fs-address">Primary Contact Address</div>
 
         <div class="form-group">
           <label for="streetAddress">Street Address *</label>
@@ -337,7 +351,7 @@
 
         <!-- CONTACT INFORMATION -->
         <hr class="form-divider" />
-        <div class="form-divider-label">Contact Information</div>
+        <div class="form-divider-label" id="fs-contact">Contact Information</div>
 
         <div class="form-row">
           <div class="form-group">
@@ -398,6 +412,31 @@
       // Must be at least 3 characters
       return squadron.trim().length >= 3;
     }
+
+    // Progress indicator — highlight active step on scroll
+    (function() {
+      var steps = [
+        {id:'fs-cadet',   idx:0},
+        {id:'fs-consent', idx:1},
+        {id:'fs-parents', idx:2},
+        {id:'fs-address', idx:3},
+        {id:'fs-contact', idx:4}
+      ];
+      var bars = document.querySelectorAll('#form-progress > div');
+      function updateProgress() {
+        var active = 0;
+        steps.forEach(function(s) {
+          var el = document.getElementById(s.id);
+          if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.6) active = s.idx;
+        });
+        bars.forEach(function(b, i) {
+          b.style.background = i <= active ? '#003594' : '#e1e5eb';
+          b.style.color      = i <= active ? '#fff'    : '#5a6a7a';
+        });
+      }
+      window.addEventListener('scroll', updateProgress, {passive:true});
+      updateProgress();
+    })();
 
     function toggleParent2Address(radio) {
       document.getElementById('parent2-address').style.display =
