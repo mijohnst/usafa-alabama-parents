@@ -164,8 +164,73 @@
   </div>
 
   <!-- MAIN CONTENT -->
-  <div class="main-content">
+  <div class="main-content" id="sponsors-container">
+    <p style="text-align:center;color:#5a6a7a;padding:3rem 0">Loading sponsors&hellip;</p>
+  </div>
 
+  <script>
+  function escH(s) { var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  function renderSponsors(sponsors) {
+    var c = document.getElementById('sponsors-container');
+    if (!sponsors || !sponsors.length) {
+      c.innerHTML = '<p style="text-align:center;color:#5a6a7a;padding:3rem 0">No sponsors listed at this time.</p>';
+      return;
+    }
+    var html = '';
+    sponsors.forEach(function(s, idx) {
+      var logoHtml = s.logo_filename
+        ? '<img src="' + (s.logo_filename.match(/^[a-zA-Z0-9._-]+$/) ? '/' + escH(s.logo_filename) : '') + '" alt="' + escH(s.name) + ' Logo" class="sponsor-logo-large" />'
+        : '';
+      var locationHtml = s.location ? '<p class="company-location">' + escH(s.location) + '</p>' : '';
+      var aboutParas = s.about_text
+        ? s.about_text.split('\n\n').map(function(p){ return '<p class="about-text">' + escH(p.trim()) + '</p>'; }).join('')
+        : '';
+      var quoteHtml = s.gratitude_quote
+        ? '<div class="gratitude-section"><p class="gratitude-quote">&ldquo;' + escH(s.gratitude_quote) + '&rdquo;</p><p class="signature">&mdash; USAFA Parents Club of Alabama Leadership</p></div>'
+        : '';
+      var visitHtml = s.website_url && s.visit_link_text
+        ? '<div style="text-align:center"><a href="' + escH(s.website_url) + '" target="_blank" rel="noopener" class="visit-link">' + escH(s.visit_link_text) + ' &rarr;</a></div>'
+        : '';
+
+      var wrapper = idx === 0 ? '<div class="sponsor-showcase">' : '<section class="individual-sponsor-section"><div class="container"><div class="sponsor-showcase">';
+      var wrapClose = idx === 0 ? '</div>' : '</div></div></section>';
+      if (idx > 0) html += '<div class="section-divider"></div>';
+
+      html += wrapper;
+      html += '<div class="sponsor-header">' + logoHtml;
+      if (s.logo_filename) html += '<div class="sponsor-header-content">';
+      html += '<h2 class="company-name">' + escH(s.name) + '</h2>' + locationHtml;
+      if (s.logo_filename) html += '</div>';
+      html += '</div>';
+      html += '<div class="sponsor-body">';
+      if (s.contribution_type || s.contribution_amount) {
+        html += '<div class="contribution-banner"><h2>' + escH(s.contribution_type) + '</h2>'
+              + '<div class="contribution-amount">' + escH(s.contribution_amount) + '</div>'
+              + (s.contribution_purpose ? '<p class="contribution-purpose">' + escH(s.contribution_purpose) + '</p>' : '')
+              + '</div>';
+      }
+      if (aboutParas) html += '<div class="about-section"><h3 class="section-heading">About ' + escH(s.name) + '</h3>' + aboutParas + '</div>';
+      html += quoteHtml + visitHtml;
+      html += '</div>' + wrapClose;
+    });
+
+    c.innerHTML = html;
+  }
+
+  fetch('/sponsors-feed.php')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.success && data.sponsors && data.sponsors.length) renderSponsors(data.sponsors);
+      else document.getElementById('sponsors-container').innerHTML = '<p style="text-align:center;color:#5a6a7a;padding:3rem 0">No sponsors listed at this time.</p>';
+    })
+    .catch(function(){
+      document.getElementById('sponsors-container').innerHTML = '<p style="text-align:center;color:#5a6a7a;padding:3rem 0">Unable to load sponsors. Please check back later.</p>';
+    });
+  </script>
+
+  <!-- FOOTER (old hardcoded content removed — now dynamic) -->
+  <div style="display:none">
     <!-- HOLTZ LEATHER SECTION -->
     <div class="sponsor-showcase">
 
@@ -333,6 +398,8 @@
       </div>
     </div>
   </section>
+
+  </div><!-- end hidden old content -->
 
   <!-- FOOTER -->
 <footer>

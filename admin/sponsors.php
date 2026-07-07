@@ -26,20 +26,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $level       = $_POST['level']            ?? 'individual';
         $description = trim($_POST['description'] ?? '');
         $website_url = trim($_POST['website_url'] ?? '');
-        $sort_order  = (int)($_POST['sort_order'] ?? 0);
-        $active      = isset($_POST['active']) ? 1 : 0;
-        $new_logo    = save_logo('logo');
+        $location             = trim($_POST['location']             ?? '');
+        $contribution_type    = trim($_POST['contribution_type']    ?? '');
+        $contribution_amount  = trim($_POST['contribution_amount']  ?? '');
+        $contribution_purpose = trim($_POST['contribution_purpose'] ?? '');
+        $about_text           = trim($_POST['about_text']           ?? '');
+        $gratitude_quote      = trim($_POST['gratitude_quote']      ?? '');
+        $visit_link_text      = trim($_POST['visit_link_text']      ?? '');
+        $sort_order           = (int)($_POST['sort_order']          ?? 0);
+        $active               = isset($_POST['active'])             ? 1 : 0;
+        $new_logo             = save_logo('logo');
         if (!$name) $errors[] = 'Sponsor name is required.';
         if (empty($errors)) {
             if ($id) {
                 $cur = $pdo->prepare('SELECT logo_filename FROM sponsors WHERE id=?'); $cur->execute([$id]); $existing=$cur->fetchColumn();
                 $logo = $new_logo ?? $existing;
-                $pdo->prepare('UPDATE sponsors SET name=?,level=?,description=?,website_url=?,logo_filename=?,sort_order=?,active=?,updated_at=NOW() WHERE id=?')
-                    ->execute([$name,$level,$description,$website_url,$logo,$sort_order,$active,$id]);
+                $pdo->prepare('UPDATE sponsors SET name=?,level=?,description=?,location=?,contribution_type=?,contribution_amount=?,contribution_purpose=?,about_text=?,gratitude_quote=?,visit_link_text=?,website_url=?,logo_filename=?,sort_order=?,active=?,updated_at=NOW() WHERE id=?')
+                    ->execute([$name,$level,$description,$location,$contribution_type,$contribution_amount,$contribution_purpose,$about_text,$gratitude_quote,$visit_link_text,$website_url,$logo,$sort_order,$active,$id]);
                 flash('success','Sponsor updated.');
             } else {
-                $pdo->prepare('INSERT INTO sponsors (name,level,description,website_url,logo_filename,sort_order,active) VALUES (?,?,?,?,?,?,?)')
-                    ->execute([$name,$level,$description,$website_url,$new_logo,$sort_order,$active]);
+                $pdo->prepare('INSERT INTO sponsors (name,level,description,location,contribution_type,contribution_amount,contribution_purpose,about_text,gratitude_quote,visit_link_text,website_url,logo_filename,sort_order,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                    ->execute([$name,$level,$description,$location,$contribution_type,$contribution_amount,$contribution_purpose,$about_text,$gratitude_quote,$visit_link_text,$website_url,$new_logo,$sort_order,$active]);
                 flash('success','Sponsor added.');
             }
             header('Location: sponsors.php'); exit;
@@ -81,11 +88,22 @@ echo show_flash();
         <?php endforeach; ?></select>
       </div>
     </div>
-    <div class="form-group"><label>Description</label><textarea name="description" rows="3"><?= h($edit['description']??'') ?></textarea></div>
+    <div class="form-row col-2">
+      <div class="form-group"><label>Location</label><input name="location" value="<?= h($edit['location']??'') ?>" placeholder="e.g. Huntsville, Alabama"></div>
+      <div class="form-group"><label>Contribution Type</label><input name="contribution_type" value="<?= h($edit['contribution_type']??'') ?>" placeholder="e.g. 2026 Graduate Sponsor"></div>
+    </div>
+    <div class="form-row col-2">
+      <div class="form-group"><label>Contribution Amount</label><input name="contribution_amount" value="<?= h($edit['contribution_amount']??'') ?>" placeholder="e.g. Generous Gift or $500"></div>
+      <div class="form-group"><label>Contribution Purpose</label><input name="contribution_purpose" value="<?= h($edit['contribution_purpose']??'') ?>" placeholder="Short tagline"></div>
+    </div>
+    <div class="form-group"><label>About Text <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">separate paragraphs with blank line</span></label><textarea name="about_text" rows="5"><?= h($edit['about_text']??'') ?></textarea></div>
+    <div class="form-group"><label>Gratitude Quote</label><textarea name="gratitude_quote" rows="3" placeholder="Quote from club leadership…"><?= h($edit['gratitude_quote']??'') ?></textarea></div>
     <div class="form-row col-2">
       <div class="form-group"><label>Website URL</label><input name="website_url" value="<?= h($edit['website_url']??'') ?>" placeholder="https://…"></div>
-      <div class="form-group"><label>Sort Order</label><input type="number" name="sort_order" value="<?= h($edit['sort_order']??'0') ?>"></div>
+      <div class="form-group"><label>Visit Link Text</label><input name="visit_link_text" value="<?= h($edit['visit_link_text']??'') ?>" placeholder="e.g. Learn More About Holtz Leather"></div>
     </div>
+    <div class="form-group"><label>Short Description <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">internal notes only</span></label><textarea name="description" rows="2"><?= h($edit['description']??'') ?></textarea></div>
+    <div class="form-group"><label>Sort Order</label><input type="number" name="sort_order" value="<?= h($edit['sort_order']??'0') ?>" style="max-width:100px"></div>
     <div class="form-group">
       <label>Logo <?= $edit?'(upload to replace)':'' ?></label>
       <input type="file" name="logo" accept="image/*,.svg" style="padding:.5rem;font-size:.9rem">
