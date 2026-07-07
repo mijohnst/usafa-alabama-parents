@@ -83,14 +83,14 @@ echo show_flash();
     <div class="reimb-actions" style="margin-top:.6rem">
       <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm">View</a>
       <?php if (is_treasurer()): ?>
-      <form method="POST" action="purchase-action.php" style="margin:0"
-            onsubmit="return confirm('Mark this purchase as reimbursed?')">
+      <form id="rf-pr-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
         <input type="hidden" name="action" value="reimburse">
         <input type="hidden" name="note" id="rn-pr-<?= (int)$p['id'] ?>">
+            <input type="hidden" name="payment_method" id="rpm-pr-<?= (int)$p['id'] ?>">
         <button type="button" class="btn btn-sm" style="background:#003594;color:#fff"
-          onclick="prReimburse(<?= (int)$p['id'] ?>, this.closest('form'))">
+          onclick="openPrModal(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['vendor'])) ?>', '$<?= number_format($p['amount_total'],2) ?>')">
           💰 Reimburse
         </button>
       </form>
@@ -100,13 +100,47 @@ echo show_flash();
 </div>
 <?php endforeach; ?>
 
+<!-- Reimburse modal (reused from purchases.php) -->
+<div id="pr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);padding:1.75rem;max-width:420px;width:90%;margin:1rem">
+    <h2 style="font-size:1rem;color:#002554;margin-bottom:.25rem">Mark as Reimbursed</h2>
+    <p id="pr-modal-desc" style="font-size:.85rem;color:#5a6a7a;margin-bottom:1.25rem"></p>
+    <div style="margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Payment Method *</label>
+      <select id="pr-modal-method" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+        <?php foreach (PAYMENT_METHODS as $pm): ?>
+          <option value="<?= h($pm) ?>"><?= $pm === '' ? '— select method —' : h($pm) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div style="margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Note <span style="font-weight:400;text-transform:none;font-size:.72rem;color:#9aa5b4">optional</span></label>
+      <input type="text" id="pr-modal-note" placeholder="e.g. Venmo #12345, Check #1042" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem">
+      <button onclick="confirmPrReimburse()" style="flex:1;padding:.7rem;background:#003594;color:#fff;border:none;border-radius:4px;font-size:.9rem;font-weight:700;cursor:pointer">Confirm Reimbursement</button>
+      <button onclick="document.getElementById('pr-modal').style.display='none'" style="padding:.7rem 1.25rem;background:#f0f2f5;color:#333;border:1px solid #d0d5dd;border-radius:4px;font-size:.9rem;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
 <script>
-function prReimburse(id, form) {
-  var note = prompt('Reimbursement method (e.g. Venmo #12345):', '');
-  if (note === null) return;
-  document.getElementById('rn-pr-' + id).value = note;
-  form.submit();
+var _prId = null;
+function openPrModal(id, vendor, amount) {
+  _prId = id;
+  document.getElementById('pr-modal-desc').textContent = vendor + ' — ' + amount;
+  document.getElementById('pr-modal-method').value = '';
+  document.getElementById('pr-modal-note').value = '';
+  document.getElementById('pr-modal').style.display = 'flex';
 }
+function confirmPrReimburse() {
+  var method = document.getElementById('pr-modal-method').value;
+  if (!method) { alert('Please select a payment method.'); return; }
+  document.getElementById('rpm-pr-' + _prId).value = method;
+  document.getElementById('rn-pr-'  + _prId).value = document.getElementById('pr-modal-note').value;
+  document.getElementById('pr-modal').style.display = 'none';
+  document.getElementById('rf-pr-' + _prId).submit();
+}
+document.getElementById('pr-modal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
 </script>
 <?php endif; ?>
 

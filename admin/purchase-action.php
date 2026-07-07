@@ -6,9 +6,10 @@ require_finance();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: purchases.php'); exit; }
 csrf_verify();
 
-$id     = (int)($_POST['id']     ?? 0);
-$action = trim($_POST['action']  ?? '');
-$note   = trim($_POST['note']    ?? '');
+$id             = (int)($_POST['id']             ?? 0);
+$action         = trim($_POST['action']          ?? '');
+$note           = trim($_POST['note']            ?? '');
+$payment_method = trim($_POST['payment_method']  ?? '');
 $pdo    = get_pdo();
 
 if (!$id || !in_array($action, ['approve','reimburse'])) {
@@ -56,8 +57,8 @@ if ($action === 'approve') {
         flash('error', 'Only approved purchases can be marked as reimbursed.');
         header('Location: purchases.php'); exit;
     }
-    $pdo->prepare('UPDATE purchases SET status = ?, reimbursed_note = ?, updated_at = NOW() WHERE id = ?')
-        ->execute(['reimbursed', $note, $id]);
+    $pdo->prepare('UPDATE purchases SET status = ?, reimbursed_note = ?, payment_method = ?, updated_at = NOW() WHERE id = ?')
+        ->execute(['reimbursed', $note, $payment_method, $id]);
     flash('success', 'Purchase marked as reimbursed. Submitter has been notified.');
     $p['reimbursed_note'] = $note;
     notify_reimbursed($pdo, $p, current_user_name());

@@ -218,8 +218,10 @@ admin_header('Finance');
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
             <input type="hidden" name="action" value="reimburse">
             <input type="hidden" name="note" id="rn-<?= (int)$p['id'] ?>">
+            <input type="hidden" name="payment_method" id="rpm-<?= (int)$p['id'] ?>">
             <button type="button" class="btn btn-sm" style="background:#003594;color:#fff;white-space:nowrap"
-              onclick="doAction('rf-<?= (int)$p['id'] ?>','rn-<?= (int)$p['id'] ?>','Reimbursement method (e.g. Venmo #12345):','Mark as reimbursed?')">💰 Reimburse</button>
+              onclick="openReimburseModal(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['vendor'])) ?>', '$<?= number_format($p['amount_total'],2) ?>')">
+              💰 Reimburse</button>
           </form>
           <?php endif; ?>
           <?php
@@ -251,10 +253,65 @@ admin_header('Finance');
 </table>
 </div>
 
+<!-- Reimburse modal -->
+<div id="reimburse-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);padding:1.75rem;max-width:420px;width:90%;margin:1rem">
+    <h2 style="font-size:1rem;color:#002554;margin-bottom:.25rem">Mark as Reimbursed</h2>
+    <p id="reimburse-modal-desc" style="font-size:.85rem;color:#5a6a7a;margin-bottom:1.25rem"></p>
+    <div class="form-group">
+      <label>Payment Method *</label>
+      <select id="modal-payment-method" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+        <?php foreach (PAYMENT_METHODS as $pm): ?>
+          <option value="<?= h($pm) ?>"><?= $pm === '' ? '— select method —' : h($pm) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Note <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional — e.g. Venmo #12345, Check #1042</span></label>
+      <input type="text" id="modal-note" placeholder="Optional note…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem">
+      <button onclick="confirmReimburse()" class="btn btn-primary" style="flex:1">Confirm Reimbursement</button>
+      <button onclick="closeReimburseModal()" class="btn btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
+var _reimburseId = null;
+
+function openReimburseModal(id, vendor, amount) {
+  _reimburseId = id;
+  document.getElementById('reimburse-modal-desc').textContent = vendor + ' — ' + amount;
+  document.getElementById('modal-payment-method').value = '';
+  document.getElementById('modal-note').value = '';
+  var m = document.getElementById('reimburse-modal');
+  m.style.display = 'flex';
+}
+
+function closeReimburseModal() {
+  document.getElementById('reimburse-modal').style.display = 'none';
+  _reimburseId = null;
+}
+
+function confirmReimburse() {
+  var method = document.getElementById('modal-payment-method').value;
+  if (!method) { alert('Please select a payment method.'); return; }
+  var note = document.getElementById('modal-note').value;
+  document.getElementById('rpm-' + _reimburseId).value = method;
+  document.getElementById('rn-'  + _reimburseId).value = note;
+  closeReimburseModal();
+  document.getElementById('rf-' + _reimburseId).submit();
+}
+
+// Close on backdrop click
+document.getElementById('reimburse-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeReimburseModal();
+});
+
 function doAction(formId, noteId, notePrompt, confirmMsg, notePrefix) {
-  var note = prompt(notePrompt, '') ;
-  if (note === null) return; // cancelled
+  var note = prompt(notePrompt, '');
+  if (note === null) return;
   if (notePrefix) note = notePrefix + note;
   document.getElementById(noteId).value = note;
   if (!confirm(confirmMsg)) return;
