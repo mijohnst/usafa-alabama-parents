@@ -32,7 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
         $row = $pdo->prepare('SELECT filename FROM site_photos WHERE id=?'); $row->execute([$id]); $p = $row->fetch();
-        if ($p) { @unlink(__DIR__.'/../site-photos/'.$p['filename']); $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$id]); }
+        if ($p && preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) {
+            @unlink(__DIR__.'/../site-photos/'.$p['filename']);
+            $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$id]);
+        }
         flash('success','Photo deleted.'); header('Location: gallery.php'); exit;
     }
 }

@@ -109,7 +109,8 @@ echo show_flash();
 <table><thead><tr><th>Photo</th><th>Name</th><th>Role</th><th>Email</th><th>Order</th><th>Visible</th><th class="actions-head">Actions</th></tr></thead><tbody>
 <?php foreach ($officers as $o): ?>
 <tr>
-  <td><?php if ($o['photo_filename']): $src = file_exists(__DIR__.'/../leadership-photos/'.$o['photo_filename']) ? '/leadership-photos/'.h($o['photo_filename']) : '/'.h($o['photo_filename']); ?>
+  <td><?php if ($o['photo_filename'] && preg_match('/^[a-zA-Z0-9._-]+$/', $o['photo_filename'])):
+    $src = file_exists(__DIR__.'/../leadership-photos/'.$o['photo_filename']) ? '/leadership-photos/'.h($o['photo_filename']) : '/'.h($o['photo_filename']); ?>
     <img src="<?= $src ?>" style="width:40px;height:40px;border-radius:50%;object-fit:cover">
   <?php endif; ?></td>
   <td><strong><?= h($o['name']) ?></strong></td>

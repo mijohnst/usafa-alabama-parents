@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify(); $action = $_POST['action'] ?? '';
     if ($action === 'save') {
         $id         = (int)($_POST['id'] ?? 0);
-        $message    = trim($_POST['message']   ?? '');
+        $message    = strip_tags(trim($_POST['message'] ?? ''));
         $type       = $_POST['type']           ?? 'info';
         $link_text  = trim($_POST['link_text'] ?? '');
         $link_url   = trim($_POST['link_url']  ?? '');
