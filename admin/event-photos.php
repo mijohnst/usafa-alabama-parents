@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $ext  = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'][$mime];
                 $name = 'ev_' . $album_id . '_' . date('Ymd') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                move_uploaded_file($files['tmp_name'][$i], $photo_dir . $name);
+                if (!move_uploaded_file($files['tmp_name'][$i], $photo_dir . $name)) { $skipped++; continue; }
                 $pdo->prepare('INSERT INTO event_photos (album_id,filename,caption,sort_order) VALUES (?,?,?,?)')
                     ->execute([$album_id, $name, $caption, $next_sort + $i]);
                 $uploaded++;
@@ -59,12 +59,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
-        $row = $pdo->prepare('SELECT filename FROM event_photos WHERE id=?');
-        $row->execute([$id]); $p = $row->fetch();
+        $row = $pdo->prepare('SELECT filename FROM event_photos WHERE id=? AND album_id=?');
+        $row->execute([$id, $album_id]); $p = $row->fetch(PDO::FETCH_ASSOC);
         if ($p && preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) {
             @unlink($photo_dir . $p['filename']);
-            $pdo->prepare('DELETE FROM event_photos WHERE id=?')->execute([$id]);
-            // Clear cover if this was it
+            $pdo->prepare('DELETE FROM event_photos WHERE id=? AND album_id=?')->execute([$id, $album_id]);
             $pdo->prepare('UPDATE event_albums SET cover_photo_id=NULL WHERE cover_photo_id=?')->execute([$id]);
         }
         flash('success','Photo deleted.');
@@ -74,11 +73,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ids = array_filter(array_map('intval', $_POST['ids'] ?? []));
         $deleted = 0;
         foreach ($ids as $id) {
-            $row = $pdo->prepare('SELECT filename FROM event_photos WHERE id=?');
-            $row->execute([$id]); $p = $row->fetch();
+            $row = $pdo->prepare('SELECT filename FROM event_photos WHERE id=? AND album_id=?');
+            $row->execute([$id, $album_id]); $p = $row->fetch(PDO::FETCH_ASSOC);
             if ($p && preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) {
                 @unlink($photo_dir . $p['filename']);
-                $pdo->prepare('DELETE FROM event_photos WHERE id=?')->execute([$id]);
+                $pdo->prepare('DELETE FROM event_photos WHERE id=? AND album_id=?')->execute([$id, $album_id]);
                 $pdo->prepare('UPDATE event_albums SET cover_photo_id=NULL WHERE cover_photo_id=?')->execute([$id]);
                 $deleted++;
             }

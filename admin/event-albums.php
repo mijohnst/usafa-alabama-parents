@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Delete all photo files in album first
         $photos = $pdo->prepare('SELECT filename FROM event_photos WHERE album_id=?');
         $photos->execute([$id]);
-        foreach ($photos->fetchAll() as $p) {
+        foreach ($photos->fetchAll(PDO::FETCH_ASSOC) as $p) {
             if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) @unlink($photo_dir . $p['filename']);
         }
         $pdo->prepare('DELETE FROM event_albums WHERE id=?')->execute([$id]);
@@ -66,15 +66,16 @@ if ($edit_id) {
     $s->execute([$edit_id]);
     $editing = $s->fetch(PDO::FETCH_ASSOC);
     if ($editing) {
-        $s2 = $pdo->prepare('SELECT * FROM event_photos WHERE album_id=? ORDER BY sort_order ASC, id ASC');
+        $s2 = $pdo->prepare('SELECT id, album_id, filename, caption, sort_order, created_at FROM event_photos WHERE album_id=? ORDER BY sort_order ASC, id ASC');
         $s2->execute([$edit_id]);
-        $edit_photos = $s2->fetchAll();
+        $edit_photos = $s2->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 
 $albums = $pdo->query('SELECT a.id, a.name, a.event_date, a.description, a.cover_photo_id,
     a.sort_order, a.visible, a.created_at,
-    (SELECT COUNT(*) FROM event_photos WHERE album_id=a.id) AS photo_count
+    (SELECT COUNT(*) FROM event_photos WHERE album_id=a.id) AS photo_count,
+    (SELECT filename FROM event_photos WHERE id=a.cover_photo_id LIMIT 1) AS cover_filename
     FROM event_albums a
     ORDER BY a.sort_order ASC, a.id DESC')->fetchAll(PDO::FETCH_ASSOC);
 
@@ -164,15 +165,8 @@ echo show_flash();
 <div style="display:grid;gap:1rem">
   <?php foreach ($albums as $a): ?>
   <div class="card" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;flex-wrap:wrap">
-    <?php if ($a['cover_photo_id']): ?>
-    <?php
-      $cs = $pdo->prepare('SELECT filename FROM event_photos WHERE id=?');
-      $cs->execute([$a['cover_photo_id']]);
-      $cf = $cs->fetchColumn();
-    ?>
-    <?php if ($cf): ?>
-    <img src="/event-photos/<?= h($cf) ?>" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;flex-shrink:0">
-    <?php endif; ?>
+    <?php if (!empty($a['cover_filename'])): ?>
+    <img src="/event-photos/<?= h($a['cover_filename']) ?>" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;flex-shrink:0">
     <?php else: ?>
     <div style="width:72px;height:72px;background:var(--light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.75rem;flex-shrink:0">📷</div>
     <?php endif; ?>

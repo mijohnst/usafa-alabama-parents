@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_finance();
+if (!is_treasurer() && !is_super_admin() && !is_officer()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 $by     = ($_GET['by']     ?? 'event') === 'vendor' ? 'vendor' : 'event';

@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $original_name = basename($files['name'][$i]);
                 $safe_name     = 'doc_' . $album_id . '_' . date('Ymd') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
 
-                move_uploaded_file($files['tmp_name'][$i], $doc_dir . $safe_name);
+                if (!move_uploaded_file($files['tmp_name'][$i], $doc_dir . $safe_name)) { $skipped++; continue; }
                 $pdo->prepare('INSERT INTO event_documents (album_id,filename,original_name,type,sort_order) VALUES (?,?,?,\'file\',?)')
                     ->execute([$album_id, $safe_name, $original_name, $next_sort + $i]);
                 $uploaded++;
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $label = trim($_POST['link_label'] ?? '');
         $url   = trim($_POST['link_url']   ?? '');
         if (!$label || !$url) { flash('error','Label and URL are both required.'); header('Location: event-docs.php?album_id='.$album_id); exit; }
-        if (!filter_var($url, FILTER_VALIDATE_URL)) { flash('error','That doesn\'t look like a valid URL.'); header('Location: event-docs.php?album_id='.$album_id); exit; }
+        if (!preg_match('/^https?:\/\//i', $url)) { flash('error','URL must start with https:// or http://'); header('Location: event-docs.php?album_id='.$album_id); exit; }
         $max_sort_row = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0) FROM event_documents WHERE album_id=?');
         $max_sort_row->execute([$album_id]);
         $next_sort = (int)$max_sort_row->fetchColumn() + 10;
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $row->execute([$id]); $d = $row->fetch(PDO::FETCH_ASSOC);
         if ($d && $d['type'] === 'link') {
             $url = trim($_POST['url'] ?? '');
-            if ($url && !filter_var($url, FILTER_VALIDATE_URL)) { flash('error','Invalid URL.'); header('Location: event-docs.php?album_id='.$album_id); exit; }
+            if ($url && !preg_match('/^https?:\/\//i', $url)) { flash('error','URL must start with https:// or http://'); header('Location: event-docs.php?album_id='.$album_id); exit; }
             $pdo->prepare('UPDATE event_documents SET label=?,url=?,sort_order=? WHERE id=?')
                 ->execute([trim($_POST['label']??''), $url ?: null, (int)$_POST['sort_order'], $id]);
         } else {
@@ -97,13 +97,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif ($action === 'delete') {
         $id  = (int)($_POST['id'] ?? 0);
-        $row = $pdo->prepare('SELECT filename, type FROM event_documents WHERE id=?');
-        $row->execute([$id]); $d = $row->fetch(PDO::FETCH_ASSOC);
+        $row = $pdo->prepare('SELECT filename, type FROM event_documents WHERE id=? AND album_id=?');
+        $row->execute([$id, $album_id]); $d = $row->fetch(PDO::FETCH_ASSOC);
         if ($d) {
             if ($d['type'] === 'file' && preg_match('/^[a-zA-Z0-9._-]+$/', $d['filename'])) {
                 @unlink($doc_dir . $d['filename']);
             }
-            $pdo->prepare('DELETE FROM event_documents WHERE id=?')->execute([$id]);
+            $pdo->prepare('DELETE FROM event_documents WHERE id=? AND album_id=?')->execute([$id, $album_id]);
         }
         flash('success','Deleted.');
         header('Location: event-docs.php?album_id=' . $album_id); exit;
@@ -112,13 +112,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ids     = array_filter(array_map('intval', $_POST['ids'] ?? []));
         $deleted = 0;
         foreach ($ids as $id) {
-            $row = $pdo->prepare('SELECT filename, type FROM event_documents WHERE id=?');
-            $row->execute([$id]); $d = $row->fetch(PDO::FETCH_ASSOC);
+            $row = $pdo->prepare('SELECT filename, type FROM event_documents WHERE id=? AND album_id=?');
+            $row->execute([$id, $album_id]); $d = $row->fetch(PDO::FETCH_ASSOC);
             if ($d) {
                 if ($d['type'] === 'file' && preg_match('/^[a-zA-Z0-9._-]+$/', $d['filename'])) {
                     @unlink($doc_dir . $d['filename']);
                 }
-                $pdo->prepare('DELETE FROM event_documents WHERE id=?')->execute([$id]);
+                $pdo->prepare('DELETE FROM event_documents WHERE id=? AND album_id=?')->execute([$id, $album_id]);
                 $deleted++;
             }
         }
@@ -286,7 +286,7 @@ uploadForm.addEventListener('submit', function(e) {
     $is_link      = ($d['type'] === 'link');
     $icon         = $is_link ? '🔗' : doc_icon($d['filename']);
     $display_name = $d['label'] !== '' ? $d['label'] : $d['original_name'];
-    $view_href    = $is_link ? $d['url'] : '/event-docs/' . h($d['filename']);
+    $view_href    = $is_link ? h($d['url']) : '/event-docs/' . h($d['filename']);
     $meta         = $is_link
         ? 'External link · added ' . date('M j, Y', strtotime($d['created_at']))
         : h($d['original_name']) . ' · ' . (file_exists($doc_dir.$d['filename']) ? format_bytes(filesize($doc_dir.$d['filename'])) : '?') . ' · uploaded ' . date('M j, Y', strtotime($d['created_at']));

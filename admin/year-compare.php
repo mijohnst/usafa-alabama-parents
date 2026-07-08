@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_finance();
+if (!is_treasurer() && !is_super_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 $all_years = $pdo->query("SELECT DISTINCT YEAR(purchase_date) y FROM purchases ORDER BY y DESC")->fetchAll(PDO::FETCH_COLUMN);
@@ -8,8 +9,12 @@ if (empty($all_years)) $all_years = [(int)date('Y')];
 
 // Default: up to 3 most recent years, user can pick any 2-3
 $max_cols = 3;
-$selected_years_raw = $_GET['years'] ?? implode(',', array_slice($all_years, 0, $max_cols));
-$selected_years = array_unique(array_map('intval', explode(',', $selected_years_raw)));
+$years_input = $_GET['years'] ?? [];
+if (is_array($years_input)) {
+    $selected_years = array_values(array_unique(array_filter(array_map('intval', $years_input))));
+} else {
+    $selected_years = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$years_input)))));
+}
 sort($selected_years);
 if (count($selected_years) > $max_cols) $selected_years = array_slice($selected_years, -$max_cols);
 if (empty($selected_years)) $selected_years = array_slice($all_years, 0, $max_cols);
@@ -37,11 +42,9 @@ foreach ($rows as $r) {
     $year_totals[$yr]   += (float)$r['total'];
 }
 
-// Sort each by total across all selected years (desc)
-$total_by_cat   = array_map(fn($v) => array_sum($v), $by_cat);
-$total_by_event = array_map(fn($v) => array_sum($v), $by_event);
-arsort($by_cat);   arsort($total_by_cat);
-arsort($by_event); arsort($total_by_event);
+// Sort by total spend across all selected years, descending
+uasort($by_cat,   fn($a, $b) => array_sum($b) <=> array_sum($a));
+uasort($by_event, fn($a, $b) => array_sum($b) <=> array_sum($a));
 
 // Max bar reference (across all rows/years)
 $max_cat   = max(array_merge([1], ...array_values(array_map(fn($v) => array_values($v), $by_cat))));
@@ -97,7 +100,6 @@ admin_header('Multi-Year Spending Comparison');
     </select>
   </div>
   <?php endfor; ?>
-  <input type="hidden" name="years" value=""> <?php // handled by array above, this is a fallback ?>
   <button type="submit" class="btn btn-secondary">Compare</button>
 </form>
 

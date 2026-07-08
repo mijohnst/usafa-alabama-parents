@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_finance();
+if (!is_treasurer() && !is_super_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 $can_edit = is_treasurer() || is_super_admin();
@@ -35,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
         $desc    = trim($_POST['description']    ?? '');
         $notes   = trim($_POST['notes']          ?? '');
         if (!in_array($type, array_keys($SOURCE_TYPES))) $type = 'other';
-        if (!$date || !$source || $amount <= 0) {
+        if (!$date || !$source || $amount <= 0 || $amount > 99999.99) {
             flash('error','Date, source, and a positive amount are required.');
             header('Location: income.php'); exit;
         }
