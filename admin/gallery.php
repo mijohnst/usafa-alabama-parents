@@ -95,6 +95,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$id]);
         }
         flash('success','Photo deleted.'); header('Location: gallery.php'); exit;
+
+    } elseif ($action === 'bulk_delete') {
+        $ids = array_filter(array_map('intval', $_POST['ids'] ?? []));
+        $deleted = 0;
+        foreach ($ids as $id) {
+            $row = $pdo->prepare('SELECT filename FROM site_photos WHERE id=?'); $row->execute([$id]); $p = $row->fetch();
+            if ($p && preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) {
+                @unlink($dir . $p['filename']);
+                $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$id]);
+                $deleted++;
+            }
+        }
+        flash('success', "$deleted photo" . ($deleted!==1?'s':'') . " deleted.");
+        header('Location: gallery.php'); exit;
+
+    } elseif ($action === 'bulk_caption') {
+        $ids     = array_filter(array_map('intval', $_POST['ids'] ?? []));
+        $caption = trim($_POST['bulk_caption'] ?? '');
+        if ($ids) {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $params = array_merge([$caption], array_values($ids));
+            $pdo->prepare("UPDATE site_photos SET caption=? WHERE id IN ($placeholders)")->execute($params);
+            flash('success', count($ids) . " photo" . (count($ids)!==1?'s':'') . " updated.");
+        }
+        header('Location: gallery.php'); exit;
     }
 }
 
@@ -155,14 +180,46 @@ echo show_flash();
   </form>
 </div>
 
+<!-- Bulk action bar -->
+<?php if (!empty($photos)): ?>
+<div id="bulk-bar" style="display:none;position:sticky;top:0;z-index:100;background:#003594;color:white;padding:.75rem 1rem;border-radius:6px;margin-bottom:1rem;display:none;align-items:center;gap:.75rem;flex-wrap:wrap">
+  <span id="bulk-count" style="font-size:.85rem;font-weight:600;min-width:80px"></span>
+  <input id="bulk-caption-input" type="text" placeholder="Caption to apply…" style="flex:1;min-width:160px;padding:.4rem .6rem;border-radius:4px;border:none;font-size:.85rem;color:#111">
+  <button onclick="bulkCaption()" class="btn btn-secondary btn-sm" style="background:white;color:#003594">Apply Caption</button>
+  <button onclick="bulkDelete()" class="btn btn-danger btn-sm">Delete Selected</button>
+  <button onclick="clearSelection()" style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:.85rem;margin-left:auto">✕ Clear</button>
+</div>
+<div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;font-size:.82rem">
+  <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-weight:600;text-transform:none;letter-spacing:0;margin:0">
+    <input type="checkbox" id="select-all" style="width:auto" onchange="toggleAll(this.checked)"> Select all
+  </label>
+</div>
+<?php endif; ?>
+
+<!-- Bulk forms (hidden, submitted by JS) -->
+<form id="bulk-delete-form" method="POST" style="display:none">
+  <?= csrf_field() ?><input type="hidden" name="action" value="bulk_delete">
+  <div id="bulk-delete-ids"></div>
+</form>
+<form id="bulk-caption-form" method="POST" style="display:none">
+  <?= csrf_field() ?><input type="hidden" name="action" value="bulk_caption">
+  <input type="hidden" name="bulk_caption" id="bulk-caption-value">
+  <div id="bulk-caption-ids"></div>
+</form>
+
 <!-- Photo grid -->
 <?php if (empty($photos)): ?>
   <p style="color:#9aa5b4">No photos uploaded yet. The Google Drive slideshow is being used.</p>
 <?php else: ?>
 <div class="photo-grid">
   <?php foreach ($photos as $p): $age_color = $p['days_old'] >= 25 ? '#A6192E' : ($p['days_old'] >= 20 ? '#f57c00' : '#9aa5b4'); ?>
-  <div class="photo-card" style="<?= $p['active']?'':'opacity:.5' ?>">
-    <img src="/site-photos/<?= h($p['filename']) ?>" alt="<?= h($p['caption']) ?>">
+  <div class="photo-card" style="<?= $p['active']?'':'opacity:.5' ?>" data-id="<?= $p['id'] ?>">
+    <div style="position:relative">
+      <img src="/site-photos/<?= h($p['filename']) ?>" alt="<?= h($p['caption']) ?>">
+      <label style="position:absolute;top:.4rem;left:.4rem;background:rgba(0,0,0,.5);border-radius:3px;padding:.2rem .3rem;cursor:pointer;margin:0">
+        <input type="checkbox" class="photo-cb" value="<?= $p['id'] ?>" style="width:auto;cursor:pointer" onchange="updateBulkBar()">
+      </label>
+    </div>
     <div class="photo-card-body">
       <div style="font-size:.7rem;color:<?= $age_color ?>;margin-bottom:.4rem;font-weight:700">
         <?= $p['days_old'] === '0' ? 'Added today' : $p['days_old'] . 'd old' ?> · expires in <?= max(0,30-(int)$p['days_old']) ?>d
@@ -187,4 +244,50 @@ echo show_flash();
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
+<script>
+function getChecked() {
+  return Array.from(document.querySelectorAll('.photo-cb:checked')).map(cb => cb.value);
+}
+function updateBulkBar() {
+  var ids = getChecked();
+  var bar = document.getElementById('bulk-bar');
+  bar.style.display = ids.length ? 'flex' : 'none';
+  document.getElementById('bulk-count').textContent = ids.length + ' selected';
+  document.getElementById('select-all').checked = ids.length === document.querySelectorAll('.photo-cb').length;
+}
+function toggleAll(checked) {
+  document.querySelectorAll('.photo-cb').forEach(cb => { cb.checked = checked; });
+  updateBulkBar();
+}
+function clearSelection() {
+  document.querySelectorAll('.photo-cb').forEach(cb => { cb.checked = false; });
+  document.getElementById('select-all').checked = false;
+  updateBulkBar();
+}
+function buildIdInputs(containerId, ids) {
+  var c = document.getElementById(containerId);
+  c.innerHTML = '';
+  ids.forEach(function(id) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'ids[]'; inp.value = id;
+    c.appendChild(inp);
+  });
+}
+function bulkDelete() {
+  var ids = getChecked();
+  if (!ids.length) return;
+  if (!confirm('Delete ' + ids.length + ' photo' + (ids.length !== 1 ? 's' : '') + '? This cannot be undone.')) return;
+  buildIdInputs('bulk-delete-ids', ids);
+  document.getElementById('bulk-delete-form').submit();
+}
+function bulkCaption() {
+  var ids = getChecked();
+  var caption = document.getElementById('bulk-caption-input').value.trim();
+  if (!ids.length) return;
+  if (!confirm('Apply caption "' + (caption || '(blank)') + '" to ' + ids.length + ' photo' + (ids.length !== 1 ? 's' : '') + '?')) return;
+  document.getElementById('bulk-caption-value').value = caption;
+  buildIdInputs('bulk-caption-ids', ids);
+  document.getElementById('bulk-caption-form').submit();
+}
+</script>
 <?php admin_footer(); ?>
