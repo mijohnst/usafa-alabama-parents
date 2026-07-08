@@ -10,9 +10,8 @@ CREATE TABLE IF NOT EXISTS income_entries (
     amount         DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     payment_method VARCHAR(60)   DEFAULT '',
     notes          TEXT          DEFAULT '',
-    received_by    INT UNSIGNED  DEFAULT NULL,
+    received_by    INT           DEFAULT NULL,
     created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (received_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_ie_date (entry_date),
     INDEX idx_ie_type (source_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
