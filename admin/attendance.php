@@ -145,7 +145,9 @@ $meeting = $mq->fetch(PDO::FETCH_ASSOC);
 if (!$meeting) { header('Location: attendance.php'); exit; }
 
 // Load members
-$members = $pdo->query("SELECT id, parent1_first_name, parent1_last_name, cadet_first_middle, cadet_last_name FROM members WHERE archived=0 ORDER BY parent1_last_name ASC, parent1_first_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$members = $pdo->query("SELECT id, parent1_first_name, parent1_last_name, cadet_first_middle, cadet_last_name, is_board_member FROM members WHERE archived=0 ORDER BY parent1_last_name ASC, parent1_first_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$board_members  = array_values(array_filter($members, fn($mem) => !empty($mem['is_board_member'])));
+$cadet_members  = array_values(array_filter($members, fn($mem) => empty($mem['is_board_member'])));
 
 // Load who already attended
 $aq = $pdo->prepare("SELECT member_id FROM meeting_attendance WHERE meeting_id=?");
@@ -200,11 +202,11 @@ admin_header('Take Attendance — ' . h($meeting['title']));
     </div>
   </div>
 
-  <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem">
-    <?php foreach ($members as $mem):
+  <?php
+  $att_row = function(array $mem) use ($attended_ids): void {
       $is_checked = isset($attended_ids[$mem['id']]);
       $cadet = trim(($mem['cadet_first_middle']??'') . ' ' . ($mem['cadet_last_name']??''));
-    ?>
+      ?>
     <label class="att-row <?= $is_checked ? 'checked' : '' ?>" onclick="toggleRow(this)">
       <input type="checkbox" name="attended[]" value="<?= (int)$mem['id'] ?>"
              class="att-cb" <?= $is_checked ? 'checked' : '' ?> onclick="event.stopPropagation()">
@@ -213,8 +215,23 @@ admin_header('Take Attendance — ' . h($meeting['title']));
         <?php if ($cadet): ?><div class="att-cadet">Cadet: <?= h($cadet) ?></div><?php endif; ?>
       </div>
     </label>
-    <?php endforeach; ?>
+      <?php
+  };
+  ?>
+
+  <?php if ($board_members): ?>
+  <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a7a;margin-bottom:.4rem">Board Members</div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem">
+    <?php foreach ($board_members as $mem) $att_row($mem); ?>
   </div>
+  <?php endif; ?>
+
+  <?php if ($cadet_members): ?>
+  <?php if ($board_members): ?><div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a7a;margin-bottom:.4rem">Members</div><?php endif; ?>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem">
+    <?php foreach ($cadet_members as $mem) $att_row($mem); ?>
+  </div>
+  <?php endif; ?>
 
   <button type="submit" class="btn btn-primary">Save Attendance</button>
   <a href="attendance.php" class="btn btn-secondary" style="margin-left:.5rem">Cancel</a>

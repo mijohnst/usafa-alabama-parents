@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     foreach (FIELDS as $f) $member[$f] = trim($_POST[$f] ?? '');
     $member['membership_paid'] = isset($_POST['membership_paid']) ? (int)$_POST['membership_paid'] : 0;
+    $member['is_board_member'] = isset($_POST['is_board_member']) ? 1 : 0;
     if (!in_array($member['membership_type'], ['annual','4year'])) $member['membership_type'] = 'annual';
     $member['membership_paid_through'] = calc_paid_through($member['membership_year'], $member['membership_type'], (bool)$member['membership_paid']);
     if ($member['cadet_birthday'] === '') $member['cadet_birthday'] = null;
