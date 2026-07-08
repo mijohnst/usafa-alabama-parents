@@ -145,7 +145,7 @@ $meeting = $mq->fetch(PDO::FETCH_ASSOC);
 if (!$meeting) { header('Location: attendance.php'); exit; }
 
 // Load members
-$members = $pdo->query("SELECT id, first_name, last_name, cadet_first_name, cadet_last_name FROM members WHERE archived=0 ORDER BY last_name ASC, first_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$members = $pdo->query("SELECT id, parent1_first_name, parent1_last_name, cadet_first_middle, cadet_last_name FROM members WHERE archived=0 ORDER BY parent1_last_name ASC, parent1_first_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Load who already attended
 $aq = $pdo->prepare("SELECT member_id FROM meeting_attendance WHERE meeting_id=?");
@@ -203,13 +203,13 @@ admin_header('Take Attendance — ' . h($meeting['title']));
   <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem">
     <?php foreach ($members as $mem):
       $is_checked = isset($attended_ids[$mem['id']]);
-      $cadet = trim(($mem['cadet_first_name']??'') . ' ' . ($mem['cadet_last_name']??''));
+      $cadet = trim(($mem['cadet_first_middle']??'') . ' ' . ($mem['cadet_last_name']??''));
     ?>
     <label class="att-row <?= $is_checked ? 'checked' : '' ?>" onclick="toggleRow(this)">
       <input type="checkbox" name="attended[]" value="<?= (int)$mem['id'] ?>"
              class="att-cb" <?= $is_checked ? 'checked' : '' ?> onclick="event.stopPropagation()">
       <div>
-        <div class="att-name"><?= h($mem['first_name'] . ' ' . $mem['last_name']) ?></div>
+        <div class="att-name"><?= h($mem['parent1_first_name'] . ' ' . $mem['parent1_last_name']) ?></div>
         <?php if ($cadet): ?><div class="att-cadet">Cadet: <?= h($cadet) ?></div><?php endif; ?>
       </div>
     </label>
