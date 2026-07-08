@@ -91,18 +91,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ── Data ─────────────────────────────────────────────────────────────────────
 $album_id = (int)($_GET['album_id'] ?? 0);
 
-$albums = $pdo->query('SELECT id, name FROM event_albums ORDER BY sort_order ASC, id DESC')->fetchAll();
+$albums = $pdo->query('SELECT id, name FROM event_albums ORDER BY sort_order ASC, id DESC')->fetchAll(PDO::FETCH_ASSOC);
 
 $current_album = null;
 $photos        = [];
 if ($album_id) {
-    $s = $pdo->prepare('SELECT * FROM event_albums WHERE id=?');
+    $s = $pdo->prepare('SELECT id, name, event_date, description, cover_photo_id, sort_order, visible, created_at FROM event_albums WHERE id=?');
     $s->execute([$album_id]);
-    $current_album = $s->fetch();
+    $current_album = $s->fetch(PDO::FETCH_ASSOC);
     if ($current_album) {
-        $s2 = $pdo->prepare('SELECT * FROM event_photos WHERE album_id=? ORDER BY sort_order ASC, id ASC');
+        $s2 = $pdo->prepare('SELECT id, album_id, filename, caption, sort_order, created_at FROM event_photos WHERE album_id=? ORDER BY sort_order ASC, id ASC');
         $s2->execute([$album_id]);
-        $photos = $s2->fetchAll();
+        $photos = $s2->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 
