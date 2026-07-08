@@ -157,12 +157,15 @@ echo show_flash();
     <input type="hidden" name="action" value="upload">
     <input type="hidden" name="album_id" value="<?= $album_id ?>">
     <div class="form-group">
-      <label>Photos — select multiple at once (JPG, PNG, WebP · max 10MB each)</label>
+      <label>Photos — JPG, PNG, WebP · max 10MB each · <strong>upload 10 at a time max</strong></label>
       <input type="file" name="photo[]" accept="image/*" multiple required style="padding:.5rem;font-size:.9rem">
     </div>
     <div class="form-group">
       <label>Caption <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional — applies to all selected photos</span></label>
       <input name="caption" placeholder="Caption for these photos">
+    </div>
+    <div id="count-warn" style="display:none;margin-bottom:.75rem;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.6rem .8rem;font-size:.82rem;color:#5f4c00">
+      ⚠ <span id="count-warn-msg"></span> Please select 10 or fewer at a time and upload in batches.
     </div>
     <div id="size-warn" style="display:none;margin-bottom:.75rem;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.6rem .8rem;font-size:.82rem;color:#5f4c00">
       ⚠ Large selection — consider uploading in batches under 200 MB to avoid server limits.
@@ -176,13 +179,27 @@ echo show_flash();
 <script>
 var uploadForm = document.getElementById('upload-btn').closest('form');
 uploadForm.querySelector('input[type=file]').addEventListener('change', function() {
-  var total = Array.from(this.files).reduce(function(s,f){return s+f.size;}, 0);
-  var warn = document.getElementById('size-warn');
-  warn.style.display = total > 200*1024*1024 ? 'block' : 'none';
+  var files = Array.from(this.files);
+  var total = files.reduce(function(s,f){return s+f.size;}, 0);
+  var countWarn = document.getElementById('count-warn');
+  var sizeWarn  = document.getElementById('size-warn');
+  if (files.length > 10) {
+    document.getElementById('count-warn-msg').textContent = 'You selected ' + files.length + ' photos.';
+    countWarn.style.display = 'block';
+  } else {
+    countWarn.style.display = 'none';
+  }
+  sizeWarn.style.display = total > 200*1024*1024 ? 'block' : 'none';
 });
 uploadForm.addEventListener('submit', function(e) {
   var input = this.querySelector('input[type=file]');
-  var total = Array.from(input.files).reduce(function(s,f){return s+f.size;}, 0);
+  var files = Array.from(input.files);
+  var total = files.reduce(function(s,f){return s+f.size;}, 0);
+  if (files.length > 10) {
+    e.preventDefault();
+    alert('You selected ' + files.length + ' photos. Please select 10 or fewer at a time and upload in batches.');
+    return;
+  }
   if (total > 240*1024*1024) {
     e.preventDefault();
     alert('Total selected size (' + Math.round(total/1024/1024) + ' MB) is too large. Please select fewer photos and upload in batches under 200 MB.');
