@@ -134,6 +134,9 @@ if (can_manage_finances()) {
         $actions[] = ['icon'=>'💳','label'=>'Reimburse','sub'=>$approved>0?"$approved approved":'Nothing pending','href'=>'pending-reimbursements.php','color'=>$approved>0?'#003594':'#5a6a7a','badge'=>$approved>0?$approved:0];
         $actions[] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end & budgets','href'=>'report.php','color'=>'#37474f'];
         $actions[] = ['icon'=>'🗂️','label'=>'Receipts','sub'=>'Browse by event or vendor','href'=>'receipts-by.php','color'=>'#37474f'];
+        $actions[] = ['icon'=>'📥','label'=>'Income','sub'=>'Record & review income','href'=>'income.php','color'=>'#1b5e20'];
+        $actions[] = ['icon'=>'🏭','label'=>'Vendors','sub'=>'Spend by vendor + 1099','href'=>'vendor-summary.php','color'=>'#1565c0'];
+        $actions[] = ['icon'=>'📈','label'=>'Year Compare','sub'=>'Multi-year spending','href'=>'year-compare.php','color'=>'#6a1b9a'];
         $actions[] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
     }
 }
@@ -287,6 +290,9 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
   <a href="year-end.php" class="btn btn-secondary btn-sm">📋 Year-End Report</a>
   <a href="budgets.php" class="btn btn-secondary btn-sm">🎯 Manage Budgets</a>
   <a href="report.php" class="btn btn-secondary btn-sm">📊 Spending Report</a>
+  <a href="income.php" class="btn btn-secondary btn-sm">📥 Income Ledger</a>
+  <a href="vendor-summary.php" class="btn btn-secondary btn-sm">🏭 Vendor Summary</a>
+  <a href="year-compare.php" class="btn btn-secondary btn-sm">📈 Year Compare</a>
 </div>
 <?php endif; ?>
 

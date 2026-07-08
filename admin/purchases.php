@@ -224,6 +224,9 @@ admin_header('Finance');
               💰 Reimburse</button>
           </form>
           <?php endif; ?>
+          <?php if (is_treasurer()): ?>
+          <a href="check-request.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm" title="Print check/reimbursement request">🖨️</a>
+          <?php endif; ?>
           <?php
             $own_purchase = (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0);
             if (is_treasurer() || ((is_member()||is_secretary()) && $own_purchase)): ?>
