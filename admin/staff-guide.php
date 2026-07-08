@@ -236,7 +236,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     </div>
     <div class="card">
       <h3><span class="pill pill-secretary">Secretary</span></h3>
-      <p>Full member roster access, email compose, helpdesk management, directory. Does not manage website content or finances.</p>
+      <p>Full member roster access, email compose, and website content management (events, announcements, gallery, settings). Can submit own purchases. Can only view own helpdesk tickets.</p>
     </div>
     <div class="card">
       <h3><span class="pill pill-treasurer">Treasurer</span></h3>
@@ -271,7 +271,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <ul>
           <li><strong>All roles</strong> — Member counts and birthdays</li>
           <li><strong>Treasurer +</strong> — Finance stats and dues collected</li>
-          <li><strong>Tech Support/Officer</strong> — Full dashboard including pending helpdesk tickets</li>
+          <li><strong>Tech Support</strong> — Full dashboard including helpdesk ticket management</li>
         </ul>
       </div>
       <div class="hbox mt1">
@@ -595,10 +595,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <h3>Helpdesk</h3>
       <ul>
         <li>Internal support ticket system for member inquiries</li>
-        <li>Members submit tickets; officers respond and track status</li>
-        <li>Statuses: <strong>Open, Pending, Closed</strong></li>
-        <li>Secretary and Officers manage tickets</li>
-        <li>Members see only their own tickets</li>
+        <li>Statuses: <strong>Open, In Progress, Resolved</strong></li>
+        <li><strong>Tech Support only</strong> can manage all tickets — view, respond, assign, and close</li>
+        <li>All other roles can submit tickets and view their own only</li>
       </ul>
     </div>
     <div class="card">
@@ -617,7 +616,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Searchable roster of all active members</li>
         <li>Filter by class year or Alabama region</li>
         <li>View contact info for any member</li>
-        <li>Access: Secretary, Treasurer, Officers, Admin</li>
+        <li>Access: All logged-in roles, including Members</li>
         <li>Shows active members only (archived members not listed)</li>
       </ul>
     </div>
@@ -657,7 +656,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <ul>
           <li>Submissions from the <em>Volunteer with Us</em> form on the main site</li>
           <li>View name, contact, availability, and areas of interest</li>
-          <li>Admin/Officer access only</li>
+          <li>Tech Support, Officer, and Secretary access</li>
         </ul>
       </div>
     </div>
@@ -685,16 +684,16 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <tr><td>Dashboard</td><td class="y">Full</td><td class="y">Full</td><td class="y">Full</td><td class="p">Dues &amp; Finance</td><td class="p">Basic</td></tr>
       <tr><td>Members — View &amp; Edit</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="p">Dues only</td><td class="n">—</td></tr>
       <tr><td>Members — Archive / Delete</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Purchases</td><td class="y">Full</td><td class="p">Submit</td><td class="p">Submit</td><td class="y">Full</td><td class="p">Own only</td></tr>
-      <tr><td>Photo Gallery</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Announcements</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Events</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Leadership</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Purchases</td><td class="y">Full</td><td class="p">Submit / Approve</td><td class="p">Submit</td><td class="y">Full</td><td class="p">Own only</td></tr>
+      <tr><td>Photo Gallery</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Announcements</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Events</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Leadership</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Email / Compose</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Helpdesk</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="p">Own only</td></tr>
-      <tr><td>Document Vault</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="y">✓</td><td class="n">—</td></tr>
-      <tr><td>Directory</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
-      <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Helpdesk</td><td class="y">Full</td><td class="p">Own only</td><td class="p">Own only</td><td class="n">—</td><td class="p">Own only</td></tr>
+      <tr><td>Document Vault</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
+      <tr><td>Directory</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>User Management</td><td class="y">Tech only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
     </tbody>
   </table>
