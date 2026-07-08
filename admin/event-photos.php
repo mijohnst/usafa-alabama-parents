@@ -164,6 +164,9 @@ echo show_flash();
       <label>Caption <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional — applies to all selected photos</span></label>
       <input name="caption" placeholder="Caption for these photos">
     </div>
+    <div id="size-warn" style="display:none;margin-bottom:.75rem;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.6rem .8rem;font-size:.82rem;color:#5f4c00">
+      ⚠ Large selection — consider uploading in batches under 200 MB to avoid server limits.
+    </div>
     <button type="submit" class="btn btn-primary" id="upload-btn">Upload Photos</button>
     <div id="upload-notice" style="display:none;margin-top:.75rem;background:#e8f0fb;border:1px solid #b3caf5;border-radius:4px;padding:.6rem .8rem;font-size:.82rem;color:#003594">
       ⏳ Uploading — please wait and do not click again.
@@ -171,7 +174,20 @@ echo show_flash();
   </form>
 </div>
 <script>
-document.getElementById('upload-btn').closest('form').addEventListener('submit', function() {
+var uploadForm = document.getElementById('upload-btn').closest('form');
+uploadForm.querySelector('input[type=file]').addEventListener('change', function() {
+  var total = Array.from(this.files).reduce(function(s,f){return s+f.size;}, 0);
+  var warn = document.getElementById('size-warn');
+  warn.style.display = total > 200*1024*1024 ? 'block' : 'none';
+});
+uploadForm.addEventListener('submit', function(e) {
+  var input = this.querySelector('input[type=file]');
+  var total = Array.from(input.files).reduce(function(s,f){return s+f.size;}, 0);
+  if (total > 240*1024*1024) {
+    e.preventDefault();
+    alert('Total selected size (' + Math.round(total/1024/1024) + ' MB) is too large. Please select fewer photos and upload in batches under 200 MB.');
+    return;
+  }
   document.getElementById('upload-notice').style.display = 'block';
   setTimeout(function() {
     var btn = document.getElementById('upload-btn');
