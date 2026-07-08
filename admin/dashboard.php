@@ -123,6 +123,11 @@ if (can_manage_members()) {
     $actions[] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
     $actions[] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
     $actions[] = ['icon'=>'📖','label'=>'Directory','sub'=>'Printable roster','href'=>'directory.php','color'=>'#1b5e20'];
+    // Secretary tools
+    $actions[] = ['icon'=>'📝','label'=>'Minutes','sub'=>'Meeting minutes & files','href'=>'minutes.php','color'=>'#5c007a'];
+    $actions[] = ['icon'=>'✅','label'=>'Attendance','sub'=>'Track who attended','href'=>'attendance.php','color'=>'#5c007a'];
+    $actions[] = ['icon'=>'📬','label'=>'Correspondence','sub'=>'Log official comms','href'=>'correspondence.php','color'=>'#5c007a'];
+    $actions[] = ['icon'=>'🖊️','label'=>'Member Letter','sub'=>'Print status letter','href'=>'member-letter.php','color'=>'#5c007a'];
 }
 
 if (can_manage_finances()) {
@@ -293,6 +298,45 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
   <a href="income.php" class="btn btn-secondary btn-sm">📥 Income Ledger</a>
   <a href="vendor-summary.php" class="btn btn-secondary btn-sm">🏭 Vendor Summary</a>
   <a href="year-compare.php" class="btn btn-secondary btn-sm">📈 Year Compare</a>
+</div>
+<?php endif; ?>
+
+<?php if (is_secretary() || is_officer() || is_super_admin()):
+    try {
+        $mtg_count  = (int)$pdo->query("SELECT COUNT(*) FROM club_meetings WHERE YEAR(meeting_date)=YEAR(NOW())")->fetchColumn();
+        $corr_count = (int)$pdo->query("SELECT COUNT(*) FROM correspondence_log WHERE YEAR(log_date)=YEAR(NOW())")->fetchColumn();
+        $att_pct    = null;
+        if ($mtg_count > 0) {
+            $total_mem_att = (int)$pdo->query("SELECT COUNT(*) FROM members WHERE archived=0")->fetchColumn();
+            $avg_att_row   = $pdo->query("SELECT AVG(cnt) as a FROM (SELECT meeting_id, COUNT(*) as cnt FROM meeting_attendance ma JOIN club_meetings cm ON ma.meeting_id=cm.id WHERE YEAR(cm.meeting_date)=YEAR(NOW()) GROUP BY meeting_id) x")->fetch(PDO::FETCH_ASSOC);
+            if ($total_mem_att > 0 && $avg_att_row['a'] !== null) {
+                $att_pct = round((float)$avg_att_row['a'] / $total_mem_att * 100);
+            }
+        }
+    } catch(Exception $e) { $mtg_count=0; $corr_count=0; $att_pct=null; }
+?>
+<p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem;margin-top:1.25rem">Secretary — <?= date('Y') ?></p>
+<div class="mini-stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+  <div class="mini-stat" style="border-left:3px solid #5c007a">
+    <div class="mini-stat-val" style="color:#5c007a"><?= $mtg_count ?></div>
+    <div class="mini-stat-lbl">Meetings This Year</div>
+  </div>
+  <?php if ($att_pct !== null): ?>
+  <div class="mini-stat" style="border-left:3px solid #5c007a">
+    <div class="mini-stat-val" style="color:#5c007a"><?= $att_pct ?>%</div>
+    <div class="mini-stat-lbl">Avg Attendance Rate</div>
+  </div>
+  <?php endif; ?>
+  <div class="mini-stat" style="border-left:3px solid #5c007a">
+    <div class="mini-stat-val" style="color:#5c007a"><?= $corr_count ?></div>
+    <div class="mini-stat-lbl">Correspondence Logged</div>
+  </div>
+</div>
+<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.5rem">
+  <a href="minutes.php" class="btn btn-secondary btn-sm">📝 Meeting Minutes</a>
+  <a href="attendance.php" class="btn btn-secondary btn-sm">✅ Attendance</a>
+  <a href="correspondence.php" class="btn btn-secondary btn-sm">📬 Correspondence Log</a>
+  <a href="member-letter.php" class="btn btn-secondary btn-sm">🖊️ Member Letter</a>
 </div>
 <?php endif; ?>
 
