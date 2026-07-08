@@ -57,9 +57,9 @@ try {
     $dob = s($payload, 'cadetDOB');
     if ($dob === '') $dob = null;
 
-    // ── Duplicate detection: update existing record if same cadet ─────────────
-    $dup = $pdo->prepare('SELECT id FROM members WHERE cadet_last_name = ? AND class_year = ? LIMIT 1');
-    $dup->execute([s($payload,'cadetLastName'), s($payload,'graduationYear')]);
+    // ── Duplicate detection: match on last name + first name + class year ────────
+    $dup = $pdo->prepare('SELECT id FROM members WHERE cadet_last_name = ? AND cadet_first_middle LIKE ? AND class_year = ? LIMIT 1');
+    $dup->execute([s($payload,'cadetLastName'), s($payload,'cadetFirstName').'%', s($payload,'graduationYear')]);
     $existing_id = $dup->fetchColumn();
 
     if ($existing_id) {
@@ -248,7 +248,7 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 curl_setopt($ch, CURLOPT_TIMEOUT, 60);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 $sheets_response = curl_exec($ch);
 $sheets_error    = curl_error($ch);
 curl_close($ch);

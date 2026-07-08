@@ -29,7 +29,13 @@ if (!file_exists($file)) {
     header('Location: vault.php'); exit;
 }
 
-$mime = $doc['mime_type'] ?: 'application/octet-stream';
+// Re-verify MIME from disk — do not trust the DB-stored value
+$finfo = finfo_open(FILEINFO_MIME_TYPE);
+$mime  = finfo_file($finfo, $file) ?: 'application/octet-stream';
+finfo_close($finfo);
+// Only allow known safe types; force download for anything else
+$allowed_inline = ['application/pdf','image/jpeg','image/png','image/gif','image/webp'];
+if (!in_array($mime, $allowed_inline)) $mime = 'application/octet-stream';
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . filesize($file));
 

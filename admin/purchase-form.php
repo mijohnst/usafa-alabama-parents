@@ -32,7 +32,8 @@ function handle_receipt_upload(string $key = 'receipt'): ?string {
     finfo_close($finfo);
     if (!in_array($mime, $allowed)) return null;
     if ($file['size'] > 10 * 1024 * 1024) return null; // 10MB max
-    $ext      = $mime === 'application/pdf' ? 'pdf' : 'jpg';
+    $ext_map  = ['application/pdf'=>'pdf','image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
+    $ext      = $ext_map[$mime] ?? 'jpg';
     $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
     $dest     = __DIR__ . '/receipts/' . $filename;
     if (!is_dir(__DIR__ . '/receipts')) mkdir(__DIR__ . '/receipts', 0755, true);
@@ -61,7 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $notes            = trim($_POST['notes']               ?? '');
     $payment_method   = trim($_POST['payment_method']      ?? '');
     $receipt_required = isset($_POST['receipt_required'])   ? 1 : 0;
-    $submitted_by     = (int)($_POST['submitted_by']        ?? $_SESSION['user_id'] ?? 0);
+    // Only admins/treasurers may re-attribute; everyone else is locked to their own ID
+    $submitted_by = (is_admin() || is_treasurer())
+        ? (int)($_POST['submitted_by'] ?? $_SESSION['user_id'] ?? 0)
+        : (int)($_SESSION['user_id'] ?? 0);
     $confirmed_dup    = !empty($_POST['confirmed_duplicate']);
 
     // Duplicate detection (same vendor, amount within 10%, within 30 days)
@@ -88,9 +92,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$date)        $errors[] = 'Date is required.';
     if ($pretax < 0)   $errors[] = 'Pre-tax amount cannot be negative.';
     if (!in_array($status, array_keys(PURCHASE_STATUSES))) $status = 'pending';
-    // Only treasurer or admin can mark reimbursed — block server-side regardless of form
-    if ($status === 'reimbursed' && !is_treasurer() && !is_admin()) {
-        $status = $is_edit ? ($p['status'] ?? 'pending') : 'approved';
+    // Only treasurer/admin can set approved or reimbursed — block server-side regardless of form
+    if (!is_treasurer() && !is_admin()) {
+        if ($status === 'reimbursed' || $status === 'approved') {
+            $status = $is_edit ? ($p['status'] ?? 'pending') : 'pending';
+        }
     }
 
     // Accept from either camera or file picker input

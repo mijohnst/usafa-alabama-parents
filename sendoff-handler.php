@@ -88,8 +88,9 @@ $body    = "A new registration has been submitted for the Cadet Class of 2030 Se
          . "Phone:                      " . $data['phone']          . "\n"
          . "Email:                      " . ($data['email']          ?: '—') . "\n";
 
+$safe_reply_to = str_replace(["\r", "\n"], '', $data['email'] ?: 'no-reply@alabamafalcons.org');
 $headers = "From: no-reply@alabamafalcons.org\r\n"
-         . "Reply-To: " . ($data['email'] ?: 'no-reply@alabamafalcons.org') . "\r\n"
+         . "Reply-To: " . $safe_reply_to . "\r\n"
          . "Content-Type: text/plain; charset=UTF-8\r\n";
 
 mail($to, $subject, $body, $headers);

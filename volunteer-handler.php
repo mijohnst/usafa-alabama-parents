@@ -40,7 +40,12 @@ try {
         [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>true]);
     $pdo->prepare('INSERT INTO volunteers (name,email,phone,areas,availability,cadet_info,comments) VALUES (?,?,?,?,?,?,?)')
         ->execute([$name,$email,$phone,$areas,$availability,$cadet_info,$comments]);
-} catch (Exception $e) { error_log('volunteer-handler DB error: '.$e->getMessage()); }
+} catch (Exception $e) {
+    error_log('volunteer-handler DB error: '.$e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success'=>false,'message'=>'A server error occurred. Please try again or email us directly.']);
+    exit;
+}
 
 // Email notification
 $subject  = sanitize_hdr('New Volunteer Interest: ' . $name);
