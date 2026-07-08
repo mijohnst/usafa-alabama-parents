@@ -400,9 +400,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li><strong>Submit a purchase</strong> — enter vendor, amount (pre-tax, tax, shipping), date, event category, and payment method</li>
         <li><strong>Attach a receipt</strong> — photo from your phone camera or uploaded file (JPG, PNG, PDF up to 10MB)</li>
         <li>Purchases that look similar to a recent entry will trigger a <strong>duplicate warning</strong> before saving</li>
-        <li>All purchases start as <strong>Pending</strong> until reviewed by the Treasurer</li>
-        <li>Members can only see and edit their own submissions</li>
-        <li>Treasurer and Admin can see everything, approve, and mark reimbursed</li>
+        <li>All purchases start as <strong>Pending</strong> until an Officer reviews and approves them</li>
+        <li>Once approved, the Treasurer pays the member and marks the purchase <strong>Reimbursed</strong></li>
+        <li>Members can only see and edit their own submissions; Officers and Admin see everything</li>
       </ul>
     </div>
     <div>
@@ -423,17 +423,17 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     <div class="flow-step fs-pending">
       <p class="fs-label">Step 1</p>
       <p class="fs-name">Pending</p>
-      <p class="fs-who">Submitted by any officer or member</p>
+      <p class="fs-who">Member or Officer submits with receipt</p>
     </div>
     <div class="flow-step fs-approved">
       <p class="fs-label">Step 2</p>
       <p class="fs-name">Approved</p>
-      <p class="fs-who">Treasurer or Admin reviews &amp; approves</p>
+      <p class="fs-who">Officer reviews and approves</p>
     </div>
     <div class="flow-step fs-reimb">
       <p class="fs-label">Step 3</p>
       <p class="fs-name">Reimbursed</p>
-      <p class="fs-who">Treasurer confirms payment made</p>
+      <p class="fs-who">Treasurer pays member and marks complete</p>
     </div>
   </div>
 </div>
