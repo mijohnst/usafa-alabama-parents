@@ -150,6 +150,7 @@ if (can_manage_members() || is_treasurer()) {
     $actions[] = ['icon'=>'🔒','label'=>'Document Vault','sub'=>$vcount>0?"$vcount document".($vcount>1?'s':''):'Secure file storage','href'=>'vault.php','color'=>'#37474f'];
 }
 $actions[] = ['icon'=>'🔑','label'=>'My Password','sub'=>'Change password','href'=>'change-password.php','color'=>'#546e7a'];
+$actions[] = ['icon'=>'📚','label'=>'Staff Guide','sub'=>'Portal orientation','href'=>'staff-guide.php','color'=>'#002554'];
 
 if (is_super_admin()) {
     $actions[] = ['icon'=>'👤','label'=>'Users','sub'=>'Manage accounts','href'=>'users.php','color'=>'#37474f'];
