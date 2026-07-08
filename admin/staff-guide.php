@@ -683,17 +683,17 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     <tbody>
       <tr><td>Dashboard</td><td class="y">Full</td><td class="y">Full</td><td class="y">Full</td><td class="p">Dues &amp; Finance</td><td class="p">Basic</td></tr>
       <tr><td>Members — View &amp; Edit</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="p">Dues only</td><td class="n">—</td></tr>
-      <tr><td>Members — Archive / Delete</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Purchases</td><td class="y">Full</td><td class="p">Submit / Approve</td><td class="p">Submit</td><td class="y">Full</td><td class="p">Own only</td></tr>
-      <tr><td>Photo Gallery</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Members — Archive / Delete</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Purchases</td><td class="p">Submit</td><td class="p">Submit / Approve</td><td class="p">Submit</td><td class="y">Full</td><td class="p">Own only</td></tr>
+      <tr><td>Photo Gallery</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Announcements</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Events</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Leadership</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Email / Compose</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Helpdesk</td><td class="y">Full</td><td class="p">Own only</td><td class="p">Own only</td><td class="n">—</td><td class="p">Own only</td></tr>
-      <tr><td>Document Vault</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
+      <tr><td>Leadership</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Email / Compose</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Helpdesk</td><td class="y">Full</td><td class="p">Own only</td><td class="p">Own only</td><td class="p">Own only</td><td class="p">Own only</td></tr>
+      <tr><td>Document Vault</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Directory</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
-      <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>User Management</td><td class="y">Tech only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
     </tbody>
   </table>
