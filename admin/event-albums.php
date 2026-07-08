@@ -72,10 +72,9 @@ if ($edit_id) {
     }
 }
 
-$albums = $pdo->query('SELECT a.*, COUNT(p.id) AS photo_count
+$albums = $pdo->query('SELECT a.*,
+    (SELECT COUNT(*) FROM event_photos  WHERE album_id=a.id) AS photo_count
     FROM event_albums a
-    LEFT JOIN event_photos p ON p.album_id=a.id
-    GROUP BY a.id
     ORDER BY a.sort_order ASC, a.id DESC')->fetchAll();
 
 admin_header('Event Albums');

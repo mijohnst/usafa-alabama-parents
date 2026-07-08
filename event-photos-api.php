@@ -28,16 +28,14 @@ if ($action === 'albums') {
     // Return all visible albums with photo count, doc count, and cover photo filename
     $rows = $pdo->query("
         SELECT a.id, a.name, a.event_date, a.description, a.sort_order,
-               COUNT(DISTINCT p.id)  AS photo_count,
-               COUNT(DISTINCT d.id)  AS doc_count,
-               cp.filename           AS cover_filename
+               (SELECT COUNT(*) FROM event_photos    WHERE album_id=a.id) AS photo_count,
+               (SELECT COUNT(*) FROM event_documents WHERE album_id=a.id) AS doc_count,
+               cp.filename AS cover_filename
         FROM event_albums a
-        LEFT JOIN event_photos     p  ON p.album_id = a.id
-        LEFT JOIN event_documents  d  ON d.album_id = a.id
-        LEFT JOIN event_photos     cp ON cp.id = a.cover_photo_id
+        LEFT JOIN event_photos cp ON cp.id = a.cover_photo_id
         WHERE a.visible = 1
-        GROUP BY a.id
-        HAVING photo_count > 0 OR doc_count > 0
+          AND ((SELECT COUNT(*) FROM event_photos    WHERE album_id=a.id) > 0
+            OR (SELECT COUNT(*) FROM event_documents WHERE album_id=a.id) > 0)
         ORDER BY a.sort_order ASC, a.id DESC
     ")->fetchAll();
 
