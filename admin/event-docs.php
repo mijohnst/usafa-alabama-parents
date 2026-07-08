@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $safe_name     = 'doc_' . $album_id . '_' . date('Ymd') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
 
                 move_uploaded_file($files['tmp_name'][$i], $doc_dir . $safe_name);
-                $pdo->prepare('INSERT INTO event_documents (album_id,filename,original_name,sort_order) VALUES (?,?,?,?)')
+                $pdo->prepare('INSERT INTO event_documents (album_id,filename,original_name,type,sort_order) VALUES (?,?,?,\'file\',?)')
                     ->execute([$album_id, $safe_name, $original_name, $next_sort + $i]);
                 $uploaded++;
             }
@@ -65,32 +65,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else              flash('error','No files received.');
         header('Location: event-docs.php?album_id=' . $album_id); exit;
 
+    } elseif ($action === 'add_link') {
+        if (!$album_id) { flash('error','Select an album first.'); header('Location: event-docs.php'); exit; }
+        $label = trim($_POST['link_label'] ?? '');
+        $url   = trim($_POST['link_url']   ?? '');
+        if (!$label || !$url) { flash('error','Label and URL are both required.'); header('Location: event-docs.php?album_id='.$album_id); exit; }
+        if (!filter_var($url, FILTER_VALIDATE_URL)) { flash('error','That doesn\'t look like a valid URL.'); header('Location: event-docs.php?album_id='.$album_id); exit; }
+        $max_sort_row = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0) FROM event_documents WHERE album_id=?');
+        $max_sort_row->execute([$album_id]);
+        $next_sort = (int)$max_sort_row->fetchColumn() + 10;
+        $pdo->prepare('INSERT INTO event_documents (album_id,filename,original_name,label,type,url,sort_order) VALUES (?,\'\',\'\',?,\'link\',?,?)')
+            ->execute([$album_id, $label, $url, $next_sort]);
+        flash('success','Link added.');
+        header('Location: event-docs.php?album_id=' . $album_id); exit;
+
     } elseif ($action === 'update') {
         $id = (int)($_POST['id'] ?? 0);
-        $pdo->prepare('UPDATE event_documents SET label=?,sort_order=? WHERE id=?')
-            ->execute([trim($_POST['label']??''), (int)$_POST['sort_order'], $id]);
-        flash('success','Document updated.');
+        $row = $pdo->prepare('SELECT type FROM event_documents WHERE id=?');
+        $row->execute([$id]); $d = $row->fetch(PDO::FETCH_ASSOC);
+        if ($d && $d['type'] === 'link') {
+            $url = trim($_POST['url'] ?? '');
+            if ($url && !filter_var($url, FILTER_VALIDATE_URL)) { flash('error','Invalid URL.'); header('Location: event-docs.php?album_id='.$album_id); exit; }
+            $pdo->prepare('UPDATE event_documents SET label=?,url=?,sort_order=? WHERE id=?')
+                ->execute([trim($_POST['label']??''), $url ?: null, (int)$_POST['sort_order'], $id]);
+        } else {
+            $pdo->prepare('UPDATE event_documents SET label=?,sort_order=? WHERE id=?')
+                ->execute([trim($_POST['label']??''), (int)$_POST['sort_order'], $id]);
+        }
+        flash('success','Updated.');
         header('Location: event-docs.php?album_id=' . $album_id); exit;
 
     } elseif ($action === 'delete') {
         $id  = (int)($_POST['id'] ?? 0);
-        $row = $pdo->prepare('SELECT filename FROM event_documents WHERE id=?');
-        $row->execute([$id]); $d = $row->fetch();
-        if ($d && preg_match('/^[a-zA-Z0-9._-]+$/', $d['filename'])) {
-            @unlink($doc_dir . $d['filename']);
+        $row = $pdo->prepare('SELECT filename, type FROM event_documents WHERE id=?');
+        $row->execute([$id]); $d = $row->fetch(PDO::FETCH_ASSOC);
+        if ($d) {
+            if ($d['type'] === 'file' && preg_match('/^[a-zA-Z0-9._-]+$/', $d['filename'])) {
+                @unlink($doc_dir . $d['filename']);
+            }
             $pdo->prepare('DELETE FROM event_documents WHERE id=?')->execute([$id]);
         }
-        flash('success','Document deleted.');
+        flash('success','Deleted.');
         header('Location: event-docs.php?album_id=' . $album_id); exit;
 
     } elseif ($action === 'bulk_delete') {
         $ids     = array_filter(array_map('intval', $_POST['ids'] ?? []));
         $deleted = 0;
         foreach ($ids as $id) {
-            $row = $pdo->prepare('SELECT filename FROM event_documents WHERE id=?');
-            $row->execute([$id]); $d = $row->fetch();
-            if ($d && preg_match('/^[a-zA-Z0-9._-]+$/', $d['filename'])) {
-                @unlink($doc_dir . $d['filename']);
+            $row = $pdo->prepare('SELECT filename, type FROM event_documents WHERE id=?');
+            $row->execute([$id]); $d = $row->fetch(PDO::FETCH_ASSOC);
+            if ($d) {
+                if ($d['type'] === 'file' && preg_match('/^[a-zA-Z0-9._-]+$/', $d['filename'])) {
+                    @unlink($doc_dir . $d['filename']);
+                }
                 $pdo->prepare('DELETE FROM event_documents WHERE id=?')->execute([$id]);
                 $deleted++;
             }
@@ -111,7 +138,7 @@ if ($album_id) {
     $s->execute([$album_id]);
     $current_album = $s->fetch(PDO::FETCH_ASSOC);
     if ($current_album) {
-        $s2 = $pdo->prepare('SELECT id, album_id, filename, original_name, label, sort_order, created_at FROM event_documents WHERE album_id=? ORDER BY sort_order ASC, id ASC');
+        $s2 = $pdo->prepare('SELECT id, album_id, filename, original_name, label, type, url, sort_order, created_at FROM event_documents WHERE album_id=? ORDER BY sort_order ASC, id ASC');
         $s2->execute([$album_id]);
         $docs = $s2->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -193,6 +220,27 @@ echo show_flash();
     </div>
   </form>
 </div>
+
+<!-- Add external link -->
+<div class="card" style="max-width:520px;margin-bottom:1.5rem">
+  <h2 style="margin-bottom:.75rem">Add External Link</h2>
+  <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:.75rem">Link to a file hosted elsewhere — Google Slides, Drive, Dropbox, etc. Opens in a new tab on the public page.</p>
+  <form method="POST">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="add_link">
+    <input type="hidden" name="album_id" value="<?= $album_id ?>">
+    <div class="form-group">
+      <label>Display Label <span style="color:#A6192E">*</span></label>
+      <input name="link_label" required placeholder="e.g. Appointee Sendoff 2026 Slideshow">
+    </div>
+    <div class="form-group">
+      <label>URL <span style="color:#A6192E">*</span></label>
+      <input type="url" name="link_url" required placeholder="https://docs.google.com/presentation/…" style="font-size:.82rem">
+    </div>
+    <button type="submit" class="btn btn-primary">Add Link</button>
+  </form>
+</div>
+
 <script>
 var uploadForm = document.getElementById('upload-btn').closest('form');
 uploadForm.querySelector('input[type=file]').addEventListener('change', function() {
@@ -235,30 +283,40 @@ uploadForm.addEventListener('submit', function(e) {
 
 <div style="display:grid;gap:.6rem">
   <?php foreach ($docs as $d):
-    $filepath = $doc_dir . $d['filename'];
-    $size_str = file_exists($filepath) ? format_bytes(filesize($filepath)) : '?';
-    $icon = doc_icon($d['filename']);
+    $is_link      = ($d['type'] === 'link');
+    $icon         = $is_link ? '🔗' : doc_icon($d['filename']);
     $display_name = $d['label'] !== '' ? $d['label'] : $d['original_name'];
+    $view_href    = $is_link ? $d['url'] : '/event-docs/' . h($d['filename']);
+    $meta         = $is_link
+        ? 'External link · added ' . date('M j, Y', strtotime($d['created_at']))
+        : h($d['original_name']) . ' · ' . (file_exists($doc_dir.$d['filename']) ? format_bytes(filesize($doc_dir.$d['filename'])) : '?') . ' · uploaded ' . date('M j, Y', strtotime($d['created_at']));
   ?>
   <div class="card" style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;flex-wrap:wrap" data-id="<?= $d['id'] ?>">
     <label style="flex-shrink:0;cursor:pointer;margin:0;display:flex;align-items:center;gap:.4rem">
       <input type="checkbox" class="doc-cb" value="<?= $d['id'] ?>" style="width:auto" onchange="updateBulkBar()">
     </label>
     <div style="font-size:1.5rem;flex-shrink:0"><?= $icon ?></div>
-    <div style="flex:1;min-width:0">
-      <div style="font-weight:600;font-size:.9rem;color:#002554;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= h($display_name) ?></div>
-      <div style="font-size:.72rem;color:#9aa5b4;margin-top:.1rem"><?= h($d['original_name']) ?> &middot; <?= $size_str ?> &middot; uploaded <?= date('M j, Y', strtotime($d['created_at'])) ?></div>
+    <div style="flex:1;min-width:180px">
+      <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+        <span style="font-weight:600;font-size:.9rem;color:#002554"><?= h($display_name) ?></span>
+        <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.1rem .35rem;border-radius:3px;background:<?= $is_link?'#e3f2fd':'#f1f3f5' ?>;color:<?= $is_link?'#1565c0':'#5a6a7a' ?>"><?= $is_link?'LINK':'FILE' ?></span>
+      </div>
+      <div style="font-size:.72rem;color:#9aa5b4;margin-top:.1rem"><?= $meta ?></div>
+      <?php if ($is_link): ?><div style="font-size:.7rem;color:#9aa5b4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px"><?= h($d['url']) ?></div><?php endif; ?>
     </div>
     <form method="POST" style="display:flex;gap:.4rem;align-items:center;flex-shrink:0;flex-wrap:wrap">
       <?= csrf_field() ?><input type="hidden" name="action" value="update">
       <input type="hidden" name="album_id" value="<?= $album_id ?>">
       <input type="hidden" name="id" value="<?= $d['id'] ?>">
-      <input name="label" value="<?= h($d['label']) ?>" placeholder="Display label (optional)" style="width:200px;font-size:.8rem;padding:.3rem .45rem">
+      <input name="label" value="<?= h($d['label']) ?>" placeholder="<?= $is_link ? 'Label (required)' : 'Display label (optional)' ?>" style="width:<?= $is_link?'160px':'200px' ?>;font-size:.8rem;padding:.3rem .45rem">
+      <?php if ($is_link): ?>
+      <input type="url" name="url" value="<?= h($d['url']) ?>" placeholder="https://…" style="width:200px;font-size:.8rem;padding:.3rem .45rem">
+      <?php endif; ?>
       <input type="number" name="sort_order" value="<?= $d['sort_order'] ?>" style="width:55px;font-size:.8rem;padding:.3rem .4rem" title="Sort order">
       <button type="submit" class="btn btn-secondary btn-sm">Save</button>
     </form>
-    <a href="/event-docs/<?= h($d['filename']) ?>" target="_blank" class="btn btn-secondary btn-sm" style="flex-shrink:0">View</a>
-    <form method="POST" onsubmit="return confirm('Delete this file?')" style="margin:0;flex-shrink:0">
+    <a href="<?= $view_href ?>" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="flex-shrink:0">View</a>
+    <form method="POST" onsubmit="return confirm('Delete this <?= $is_link?'link':'file' ?>?')" style="margin:0;flex-shrink:0">
       <?= csrf_field() ?><input type="hidden" name="action" value="delete">
       <input type="hidden" name="album_id" value="<?= $album_id ?>">
       <input type="hidden" name="id" value="<?= $d['id'] ?>">

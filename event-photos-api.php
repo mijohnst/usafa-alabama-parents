@@ -82,17 +82,17 @@ if ($action === 'albums') {
     $chk->execute([$album_id]);
     if (!$chk->fetch()) { echo json_encode(['docs' => []]); exit; }
 
-    $rows = $pdo->prepare('SELECT id, filename, original_name, label, sort_order FROM event_documents WHERE album_id=? ORDER BY sort_order ASC, id ASC');
+    $rows = $pdo->prepare('SELECT id, filename, original_name, label, type, url, sort_order FROM event_documents WHERE album_id=? ORDER BY sort_order ASC, id ASC');
     $rows->execute([$album_id]);
 
     $docs = [];
-    foreach ($rows->fetchAll() as $d) {
+    foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $d) {
+        $is_link = ($d['type'] === 'link');
         $docs[] = [
-            'id'           => (int)$d['id'],
-            'url'          => '/event-docs/' . rawurlencode($d['filename']),
-            'name'         => $d['label'] !== '' ? $d['label'] : $d['original_name'],
-            'original_name'=> $d['original_name'],
-            'ext'          => strtolower(pathinfo($d['filename'], PATHINFO_EXTENSION)),
+            'id'   => (int)$d['id'],
+            'url'  => $is_link ? $d['url'] : '/event-docs/' . rawurlencode($d['filename']),
+            'name' => $d['label'] !== '' ? $d['label'] : $d['original_name'],
+            'ext'  => $is_link ? 'link' : strtolower(pathinfo($d['filename'], PATHINFO_EXTENSION)),
         ];
     }
     echo json_encode(['docs' => $docs]);
