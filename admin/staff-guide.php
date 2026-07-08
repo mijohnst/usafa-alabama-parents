@@ -402,7 +402,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Purchases that look similar to a recent entry will trigger a <strong>duplicate warning</strong> before saving</li>
         <li>All purchases start as <strong>Pending</strong> until an Officer reviews and approves them</li>
         <li>Once approved, the Treasurer pays the member and marks the purchase <strong>Reimbursed</strong></li>
-        <li>Members can only see and edit their own submissions; Officers and Admin see everything</li>
+        <li>Members can only see and edit their own submissions; Officers, Treasurer, and Admin see everything</li>
       </ul>
     </div>
     <div>
