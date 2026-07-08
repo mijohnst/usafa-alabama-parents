@@ -284,7 +284,7 @@ const FIELDS = [
     'parent1_street','parent1_city','parent1_state','parent1_zip',
     'parent2_last_name','parent2_first_name','parent2_email','parent2_cell',
     'parent2_street','parent2_city','parent2_state','parent2_zip',
-    'al_region','remarks','photo_consent','directory_consent','is_board_member',
+    'al_region','remarks','photo_consent','directory_consent','parent1_is_board_member','parent2_is_board_member',
     'membership_paid','membership_year','membership_type','membership_paid_through'
 ];
 
@@ -406,11 +406,16 @@ function syncP2Addr(radio) {
     echo '<div class="form-group"><label>AL Region</label>' . $sel('al_region', REGIONS) . '</div>';
     echo '<div class="form-group"><label>Remarks</label><textarea name="remarks">' . $v('remarks') . '</textarea></div>';
     echo '</div>';
-    $board = !empty($m['is_board_member']);
+    $board1 = !empty($m['parent1_is_board_member']);
+    $board2 = !empty($m['parent2_is_board_member']);
     echo '<div class="form-group" style="margin-top:.5rem">';
+    echo '<label>Board Member</label>';
+    echo '<div style="display:flex;gap:1.5rem;margin-top:.4rem">';
     echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer">'
-       . '<input type="checkbox" name="is_board_member" value="1" style="width:auto"' . ($board ? ' checked' : '') . '> Board Member</label>';
-    echo '</div>';
+       . '<input type="checkbox" name="parent1_is_board_member" value="1" style="width:auto"' . ($board1 ? ' checked' : '') . '> Parent 1</label>';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+       . '<input type="checkbox" name="parent2_is_board_member" value="1" style="width:auto"' . ($board2 ? ' checked' : '') . '> Parent 2</label>';
+    echo '</div></div>';
     echo '<div class="form-row col-2" style="margin-top:.5rem">';
     $pc = $m['photo_consent'] ?? '';
     echo '<div class="form-group"><label>Photo Consent</label><div style="display:flex;gap:1.5rem;margin-top:.4rem">';

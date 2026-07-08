@@ -18,16 +18,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $chk->execute([$meeting_id]);
         if (!$chk->fetch()) { $error = 'Meeting not found.'; }
         else {
-            $checked = isset($_POST['attended']) ? array_map('intval', (array)$_POST['attended']) : [];
+            $checked = isset($_POST['attended']) ? (array)$_POST['attended'] : [];
             // Replace all attendance for this meeting
             $pdo->prepare("DELETE FROM meeting_attendance WHERE meeting_id=?")->execute([$meeting_id]);
-            if (!empty($checked)) {
-                $ins = $pdo->prepare("INSERT IGNORE INTO meeting_attendance (meeting_id, member_id) VALUES (?,?)");
-                foreach ($checked as $mid) {
-                    if ($mid > 0) $ins->execute([$meeting_id, $mid]);
-                }
+            $ins = $pdo->prepare("INSERT IGNORE INTO meeting_attendance (meeting_id, member_id, parent_slot) VALUES (?,?,?)");
+            $saved = 0;
+            foreach ($checked as $val) {
+                if (!preg_match('/^(\d+):([12])$/', (string)$val, $mtch)) continue;
+                $mid = (int)$mtch[1];
+                $slot = (int)$mtch[2];
+                if ($mid > 0) { $ins->execute([$meeting_id, $mid, $slot]); $saved++; }
             }
-            $msg = 'Attendance saved — ' . count($checked) . ' member' . (count($checked)!=1?'s':'') . ' recorded.';
+            $msg = 'Attendance saved — ' . $saved . ' member' . ($saved!=1?'s':'') . ' recorded.';
         }
     }
     if (!$error) {
@@ -50,7 +52,12 @@ if ($meeting_id < 1) {
     $att_counts = [];
     foreach ($att_stmt->fetchAll(PDO::FETCH_ASSOC) as $r) $att_counts[(int)$r['meeting_id']] = (int)$r['cnt'];
 
-    $total_mem = (int)$pdo->query("SELECT COUNT(*) FROM members WHERE archived=0")->fetchColumn();
+    $parent_rows = $pdo->query("SELECT parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name FROM members WHERE archived=0")->fetchAll(PDO::FETCH_ASSOC);
+    $total_mem = 0;
+    foreach ($parent_rows as $pr) {
+        if (trim($pr['parent1_first_name'] . $pr['parent1_last_name']) !== '') $total_mem++;
+        if (trim(($pr['parent2_first_name']??'') . ($pr['parent2_last_name']??'')) !== '') $total_mem++;
+    }
 
     $stmt = $pdo->prepare("SELECT * FROM club_meetings WHERE YEAR(meeting_date)=? ORDER BY meeting_date DESC");
     $stmt->execute([$year]);
@@ -144,17 +151,27 @@ $mq->execute([$meeting_id]);
 $meeting = $mq->fetch(PDO::FETCH_ASSOC);
 if (!$meeting) { header('Location: attendance.php'); exit; }
 
-// Load members
-$members = $pdo->query("SELECT id, parent1_first_name, parent1_last_name, cadet_first_middle, cadet_last_name, is_board_member FROM members WHERE archived=0 ORDER BY parent1_last_name ASC, parent1_first_name ASC")->fetchAll(PDO::FETCH_ASSOC);
-$board_members  = array_values(array_filter($members, fn($mem) => !empty($mem['is_board_member'])));
-$cadet_members  = array_values(array_filter($members, fn($mem) => empty($mem['is_board_member'])));
+// Load members and build one attendee "slot" per parent on file
+$members = $pdo->query("SELECT id, parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name, cadet_first_middle, cadet_last_name, parent1_is_board_member, parent2_is_board_member FROM members WHERE archived=0 ORDER BY parent1_last_name ASC, parent1_first_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+$slots = [];
+foreach ($members as $mem) {
+    $cadet = trim(($mem['cadet_first_middle']??'') . ' ' . ($mem['cadet_last_name']??''));
+    $p1 = trim($mem['parent1_first_name'] . ' ' . $mem['parent1_last_name']);
+    $p2 = trim(($mem['parent2_first_name']??'') . ' ' . ($mem['parent2_last_name']??''));
+    if ($p1 !== '') $slots[] = ['member_id'=>(int)$mem['id'], 'slot'=>1, 'name'=>$p1, 'cadet'=>$cadet, 'board'=>!empty($mem['parent1_is_board_member'])];
+    if ($p2 !== '') $slots[] = ['member_id'=>(int)$mem['id'], 'slot'=>2, 'name'=>$p2, 'cadet'=>$cadet, 'board'=>!empty($mem['parent2_is_board_member'])];
+}
+$board_slots  = array_values(array_filter($slots, fn($s) => $s['board']));
+$cadet_slots  = array_values(array_filter($slots, fn($s) => !$s['board']));
 
 // Load who already attended
-$aq = $pdo->prepare("SELECT member_id FROM meeting_attendance WHERE meeting_id=?");
+$aq = $pdo->prepare("SELECT member_id, parent_slot FROM meeting_attendance WHERE meeting_id=?");
 $aq->execute([$meeting_id]);
-$attended_ids = array_flip(array_column($aq->fetchAll(PDO::FETCH_ASSOC), 'member_id'));
+$attended_ids = [];
+foreach ($aq->fetchAll(PDO::FETCH_ASSOC) as $r) $attended_ids[$r['member_id'] . ':' . $r['parent_slot']] = true;
 
-$total = count($members);
+$total = count($slots);
 $present = count($attended_ids);
 
 admin_header('Take Attendance — ' . h($meeting['title']));
@@ -183,7 +200,7 @@ admin_header('Take Attendance — ' . h($meeting['title']));
   <?php if ($meeting['location']): ?><div style="font-size:.8rem;color:#5a6a7a;margin-top:.2rem">📍 <?= h($meeting['location']) ?></div><?php endif; ?>
 </div>
 
-<?php if (empty($members)): ?>
+<?php if (empty($slots)): ?>
   <p style="color:#9aa5b4">No active members found.</p>
 <?php else: ?>
 
@@ -203,33 +220,33 @@ admin_header('Take Attendance — ' . h($meeting['title']));
   </div>
 
   <?php
-  $att_row = function(array $mem) use ($attended_ids): void {
-      $is_checked = isset($attended_ids[$mem['id']]);
-      $cadet = trim(($mem['cadet_first_middle']??'') . ' ' . ($mem['cadet_last_name']??''));
+  $att_row = function(array $s) use ($attended_ids): void {
+      $key = $s['member_id'] . ':' . $s['slot'];
+      $is_checked = isset($attended_ids[$key]);
       ?>
     <label class="att-row <?= $is_checked ? 'checked' : '' ?>" onclick="toggleRow(this)">
-      <input type="checkbox" name="attended[]" value="<?= (int)$mem['id'] ?>"
+      <input type="checkbox" name="attended[]" value="<?= h($key) ?>"
              class="att-cb" <?= $is_checked ? 'checked' : '' ?> onclick="event.stopPropagation()">
       <div>
-        <div class="att-name"><?= h($mem['parent1_first_name'] . ' ' . $mem['parent1_last_name']) ?></div>
-        <?php if ($cadet): ?><div class="att-cadet">Cadet: <?= h($cadet) ?></div><?php endif; ?>
+        <div class="att-name"><?= h($s['name']) ?></div>
+        <?php if ($s['cadet']): ?><div class="att-cadet">Cadet: <?= h($s['cadet']) ?></div><?php endif; ?>
       </div>
     </label>
       <?php
   };
   ?>
 
-  <?php if ($board_members): ?>
+  <?php if ($board_slots): ?>
   <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a7a;margin-bottom:.4rem">Board Members</div>
   <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem">
-    <?php foreach ($board_members as $mem) $att_row($mem); ?>
+    <?php foreach ($board_slots as $s) $att_row($s); ?>
   </div>
   <?php endif; ?>
 
-  <?php if ($cadet_members): ?>
-  <?php if ($board_members): ?><div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a7a;margin-bottom:.4rem">Members</div><?php endif; ?>
+  <?php if ($cadet_slots): ?>
+  <?php if ($board_slots): ?><div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a7a;margin-bottom:.4rem">Members</div><?php endif; ?>
   <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem">
-    <?php foreach ($cadet_members as $mem) $att_row($mem); ?>
+    <?php foreach ($cadet_slots as $s) $att_row($s); ?>
   </div>
   <?php endif; ?>
 
