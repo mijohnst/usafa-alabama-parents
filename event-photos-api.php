@@ -1,6 +1,6 @@
 <?php
 // Public JSON API for the Club Events gallery page.
-// No authentication required — only returns visible albums and their photos.
+// No authentication required — only returns visible albums, their photos, and their documents.
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=300');
@@ -25,29 +25,32 @@ try {
 $action = $_GET['action'] ?? 'albums';
 
 if ($action === 'albums') {
-    // Return all visible albums with photo count and cover photo filename
+    // Return all visible albums with photo count, doc count, and cover photo filename
     $rows = $pdo->query("
         SELECT a.id, a.name, a.event_date, a.description, a.sort_order,
-               COUNT(p.id) AS photo_count,
-               cp.filename AS cover_filename
+               COUNT(DISTINCT p.id)  AS photo_count,
+               COUNT(DISTINCT d.id)  AS doc_count,
+               cp.filename           AS cover_filename
         FROM event_albums a
-        LEFT JOIN event_photos  p  ON p.album_id = a.id
-        LEFT JOIN event_photos  cp ON cp.id = a.cover_photo_id
+        LEFT JOIN event_photos     p  ON p.album_id = a.id
+        LEFT JOIN event_documents  d  ON d.album_id = a.id
+        LEFT JOIN event_photos     cp ON cp.id = a.cover_photo_id
         WHERE a.visible = 1
         GROUP BY a.id
-        HAVING photo_count > 0
+        HAVING photo_count > 0 OR doc_count > 0
         ORDER BY a.sort_order ASC, a.id DESC
     ")->fetchAll();
 
     $albums = [];
     foreach ($rows as $r) {
         $albums[] = [
-            'id'             => (int)$r['id'],
-            'name'           => $r['name'],
-            'event_date'     => $r['event_date'],
-            'description'    => $r['description'],
-            'photo_count'    => (int)$r['photo_count'],
-            'cover_url'      => $r['cover_filename'] ? '/event-photos/' . rawurlencode($r['cover_filename']) : null,
+            'id'          => (int)$r['id'],
+            'name'        => $r['name'],
+            'event_date'  => $r['event_date'],
+            'description' => $r['description'],
+            'photo_count' => (int)$r['photo_count'],
+            'doc_count'   => (int)$r['doc_count'],
+            'cover_url'   => $r['cover_filename'] ? '/event-photos/' . rawurlencode($r['cover_filename']) : null,
         ];
     }
     echo json_encode(['albums' => $albums]);
@@ -56,7 +59,6 @@ if ($action === 'albums') {
     $album_id = (int)($_GET['album_id'] ?? 0);
     if (!$album_id) { echo json_encode(['error' => 'Missing album_id']); exit; }
 
-    // Confirm album is visible
     $chk = $pdo->prepare('SELECT id FROM event_albums WHERE id=? AND visible=1');
     $chk->execute([$album_id]);
     if (!$chk->fetch()) { echo json_encode(['photos' => []]); exit; }
@@ -73,6 +75,29 @@ if ($action === 'albums') {
         ];
     }
     echo json_encode(['photos' => $photos]);
+
+} elseif ($action === 'docs') {
+    $album_id = (int)($_GET['album_id'] ?? 0);
+    if (!$album_id) { echo json_encode(['error' => 'Missing album_id']); exit; }
+
+    $chk = $pdo->prepare('SELECT id FROM event_albums WHERE id=? AND visible=1');
+    $chk->execute([$album_id]);
+    if (!$chk->fetch()) { echo json_encode(['docs' => []]); exit; }
+
+    $rows = $pdo->prepare('SELECT id, filename, original_name, label, sort_order FROM event_documents WHERE album_id=? ORDER BY sort_order ASC, id ASC');
+    $rows->execute([$album_id]);
+
+    $docs = [];
+    foreach ($rows->fetchAll() as $d) {
+        $docs[] = [
+            'id'           => (int)$d['id'],
+            'url'          => '/event-docs/' . rawurlencode($d['filename']),
+            'name'         => $d['label'] !== '' ? $d['label'] : $d['original_name'],
+            'original_name'=> $d['original_name'],
+            'ext'          => strtolower(pathinfo($d['filename'], PATHINFO_EXTENSION)),
+        ];
+    }
+    echo json_encode(['docs' => $docs]);
 
 } else {
     http_response_code(400);

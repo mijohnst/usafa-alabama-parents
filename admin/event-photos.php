@@ -119,6 +119,7 @@ echo show_flash();
 <div class="page-head">
   <h1>Event Photos</h1>
   <div style="display:flex;gap:.6rem">
+    <a href="event-docs.php<?= $album_id ? '?album_id='.$album_id : '' ?>" class="btn btn-secondary">📎 Files</a>
     <a href="event-albums.php" class="btn btn-secondary">📁 Albums</a>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>

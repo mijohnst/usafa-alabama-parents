@@ -187,6 +187,7 @@ echo show_flash();
     </div>
     <div style="display:flex;gap:.4rem;flex-shrink:0;flex-wrap:wrap">
       <a href="event-photos.php?album_id=<?= $a['id'] ?>" class="btn btn-secondary btn-sm">📷 Photos</a>
+      <a href="event-docs.php?album_id=<?= $a['id'] ?>" class="btn btn-secondary btn-sm">📎 Files</a>
       <a href="event-albums.php?edit=<?= $a['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
       <form method="POST" onsubmit="return confirm('Delete album &quot;<?= h(addslashes($a['name'])) ?>&quot; and all <?= (int)$a['photo_count'] ?> photo(s)? This cannot be undone.')" style="margin:0">
         <?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $a['id'] ?>">

@@ -54,6 +54,16 @@
     @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
     .empty-event{text-align:center;padding:2rem;color:var(--gray);font-size:.9rem;}
 
+    /* DOWNLOADS */
+    .downloads-section{margin-top:1.25rem;border-top:1px solid var(--light);padding-top:1rem;}
+    .downloads-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gray);margin-bottom:.6rem;}
+    .doc-list{display:flex;flex-direction:column;gap:.4rem;}
+    .doc-item{display:flex;align-items:center;gap:.65rem;text-decoration:none;color:var(--navy);padding:.5rem .75rem;border-radius:6px;background:var(--light);transition:background .15s;font-size:.88rem;}
+    .doc-item:hover{background:#dbe8f8;text-decoration:none;color:var(--navy);}
+    .doc-icon{font-size:1.15rem;flex-shrink:0;}
+    .doc-name{flex:1;font-weight:600;}
+    .doc-ext{font-size:.7rem;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;background:rgba(0,0,0,.07);padding:.1rem .35rem;border-radius:3px;}
+
     /* SLIDESHOW LINK */
     .slideshow-card{background:white;border-radius:10px;box-shadow:0 2px 16px rgba(0,53,148,.07);margin-top:1.5rem;padding:1.4rem 1.75rem;display:flex;align-items:center;gap:1.25rem;}
     .slideshow-icon{flex-shrink:0;width:42px;height:42px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;}
@@ -257,12 +267,18 @@ function buildEventSection(album, openByDefault) {
   const dateStr = album.event_date ? new Date(album.event_date + 'T00:00:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '';
   const metaId  = 'meta-' + album.id;
 
+  const parts = [];
+  if (dateStr) parts.push(dateStr);
+  if (album.photo_count) parts.push(album.photo_count + ' photo' + (album.photo_count !== 1 ? 's' : ''));
+  if (album.doc_count)   parts.push(album.doc_count   + ' file'  + (album.doc_count   !== 1 ? 's' : ''));
+  if (album.description) parts.push(esc(album.description));
+
   const header = document.createElement('div');
   header.className = 'event-header' + (openByDefault ? ' open' : '');
   header.innerHTML = `
     <div>
       <div class="event-title">${esc(album.name)}</div>
-      <div class="event-meta" id="${metaId}">${dateStr ? dateStr + ' · ' : ''}${album.photo_count} photo${album.photo_count !== 1 ? 's' : ''}${album.description ? ' · ' + esc(album.description) : ''}</div>
+      <div class="event-meta" id="${metaId}">${parts.join(' · ')}</div>
     </div>
     <span class="event-chevron">&#9660;</span>`;
 
@@ -271,7 +287,7 @@ function buildEventSection(album, openByDefault) {
 
   if (openByDefault) {
     body.innerHTML = '<div class="photo-load-bar"><span></span></div>';
-    fetchPhotos(album.id, body);
+    fetchEventContent(album, body);
   }
 
   let loaded = openByDefault;
@@ -281,7 +297,7 @@ function buildEventSection(album, openByDefault) {
     if (isOpen && !loaded) {
       loaded = true;
       body.innerHTML = '<div class="photo-load-bar"><span></span></div>';
-      fetchPhotos(album.id, body);
+      fetchEventContent(album, body);
     }
   });
 
@@ -290,44 +306,71 @@ function buildEventSection(album, openByDefault) {
   document.getElementById('gallery-content').appendChild(section);
 }
 
-// ─── PHOTO FETCHING ─────────────────────────────────────────────────────────────
+// ─── CONTENT FETCHING (photos + docs) ───────────────────────────────────────
 
-async function fetchPhotos(albumId, bodyEl) {
+async function fetchEventContent(album, bodyEl) {
   try {
-    const res = await fetch(`${API_URL}?action=photos&album_id=${encodeURIComponent(albumId)}`);
-    if (!res.ok) throw new Error(`API error ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    const { photos } = data;
+    const fetches = [fetch(`${API_URL}?action=photos&album_id=${encodeURIComponent(album.id)}`)];
+    if (album.doc_count > 0) fetches.push(fetch(`${API_URL}?action=docs&album_id=${encodeURIComponent(album.id)}`));
 
-    if (!photos || photos.length === 0) {
-      bodyEl.innerHTML = '<div class="empty-event">No photos in this album yet.</div>';
+    const responses = await Promise.all(fetches);
+    const [photoData, docData] = await Promise.all(responses.map(r => r.json()));
+    const photos = photoData.photos || [];
+    const docs   = docData   ? (docData.docs || []) : [];
+
+    bodyEl.innerHTML = '';
+
+    if (photos.length === 0 && docs.length === 0) {
+      bodyEl.innerHTML = '<div class="empty-event">No content in this album yet.</div>';
       return;
     }
 
-    const grid = document.createElement('div');
-    grid.className = 'photo-grid';
+    if (photos.length > 0) {
+      const grid = document.createElement('div');
+      grid.className = 'photo-grid';
+      photos.forEach((photo, index) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'photo-thumb';
+        const img = document.createElement('img');
+        img.alt = photo.caption || '';
+        img.loading = 'lazy';
+        img.src = photo.url;
+        img.onload = () => img.classList.add('loaded');
+        img.onerror = () => { wrap.style.display = 'none'; };
+        wrap.appendChild(img);
+        wrap.addEventListener('click', () => openLightbox(photos, index));
+        grid.appendChild(wrap);
+      });
+      bodyEl.appendChild(grid);
+    }
 
-    photos.forEach((photo, index) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'photo-thumb';
-      const img = document.createElement('img');
-      img.alt = photo.caption || '';
-      img.loading = 'lazy';
-      img.src = photo.url;
-      img.onload = () => img.classList.add('loaded');
-      img.onerror = () => { wrap.style.display = 'none'; };
-      wrap.appendChild(img);
-      wrap.addEventListener('click', () => openLightbox(photos, index));
-      grid.appendChild(wrap);
-    });
-
-    bodyEl.innerHTML = '';
-    bodyEl.appendChild(grid);
+    if (docs.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'downloads-section';
+      section.innerHTML = '<div class="downloads-label">Downloads</div>';
+      const list = document.createElement('div');
+      list.className = 'doc-list';
+      docs.forEach(doc => {
+        const a = document.createElement('a');
+        a.href = doc.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'doc-item';
+        a.innerHTML = `<span class="doc-icon">${docIcon(doc.ext)}</span><span class="doc-name">${esc(doc.name)}</span><span class="doc-ext">${esc(doc.ext)}</span>`;
+        list.appendChild(a);
+      });
+      section.appendChild(list);
+      bodyEl.appendChild(section);
+    }
   } catch (err) {
-    bodyEl.innerHTML = '<div class="empty-event">Could not load photos for this event.</div>';
+    bodyEl.innerHTML = '<div class="empty-event">Could not load content for this event.</div>';
     console.error(err);
   }
+}
+
+function docIcon(ext) {
+  const icons = { pdf: '📄', ppt: '📊', pptx: '📊', xls: '📗', xlsx: '📗', doc: '📝', docx: '📝', csv: '📋', txt: '📋' };
+  return icons[ext] || '📎';
 }
 
 // ─── LIGHTBOX ───────────────────────────────────────────────────────────────────
