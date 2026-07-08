@@ -63,7 +63,7 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
   <div>
     <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Year</label>
     <select name="year">
-      <option value="">All (excl. 2026)</option>
+      <option value="">All years</option>
       <?php foreach (['2026','2027','2028','2029','2030','Prep School'] as $y): ?>
         <option value="<?= h($y) ?>" <?= $year===$y?'selected':''?>><?= h($y) ?></option>
       <?php endforeach; ?>

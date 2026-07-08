@@ -294,7 +294,7 @@ function openBirthdays() {
     <div class="form-group">
       <label>Class Year</label>
       <select name="year">
-        <option value="">All years (excl. 2026)</option>
+        <option value="">All years</option>
         <?php foreach (['2026','2027','2028','2029','2030','Prep School','Graduate'] as $y): ?>
           <option value="<?= h($y) ?>" <?= $year===$y?'selected':''?>><?= h($y) ?></option>
         <?php endforeach; ?>
