@@ -30,7 +30,6 @@ if ($search !== '') {
     $params[':q'] = '%' . $search . '%';
 }
 if ($year   !== '') { $where[] = 'class_year = :year';  $params[':year']   = $year; }
-else                { $where[] = 'class_year != :excl'; $params[':excl']   = '2026'; }
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
 if ($paid     === '1') { $where[] = 'membership_paid = 1'; }
 if ($paid     === '0') { $where[] = 'membership_paid = 0'; }
@@ -96,11 +95,9 @@ foreach ($stats_rows as $s) {
     $stat_by_year[$s['class_year']] = ($stat_by_year[$s['class_year']] ?? 0) + $s['cnt'];
     if ($s['membership_paid']) $stat_paid_by_year[$s['class_year']] = ($stat_paid_by_year[$s['class_year']] ?? 0) + $s['cnt'];
 }
-// Unpaid only counts active years (2027-2030), not 2026 graduates
 $stat_unpaid = (int)$pdo->query(
-    "SELECT COUNT(*) FROM members WHERE archived = 0 AND membership_paid = 0 AND class_year != '2026'"
+    "SELECT COUNT(*) FROM members WHERE archived = 0 AND membership_paid = 0"
 )->fetchColumn();
-unset($stat_by_year['2026']);
 
 // New members this month
 $new_this_month = (int)$pdo->query(
@@ -124,7 +121,7 @@ if (can_manage_finances() && !is_member()) {
 // Upcoming birthdays (next 30 days)
 $bday_rows = $pdo->query(
     "SELECT cadet_last_name, cadet_first_middle, cadet_birthday, cadet_po_box
-     FROM members WHERE archived = 0 AND class_year != '2026' AND cadet_birthday IS NOT NULL AND cadet_birthday != ''"
+     FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL AND cadet_birthday != ''"
 )->fetchAll();
 $upcoming_bdays = [];
 $today = new DateTime('today');

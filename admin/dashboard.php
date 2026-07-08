@@ -12,7 +12,7 @@ $stats = [];
 if (true) {
     $ms = $pdo->query("SELECT COUNT(*) as total,
                               SUM(membership_paid) as paid,
-                              SUM(CASE WHEN class_year!='2026' AND membership_paid=0 THEN 1 ELSE 0 END) as unpaid,
+                              SUM(CASE WHEN membership_paid=0 THEN 1 ELSE 0 END) as unpaid,
                               SUM(CASE WHEN created_at>=DATE_FORMAT(NOW(),'%Y-%m-01') THEN 1 ELSE 0 END) as new_month
                        FROM members WHERE archived=0")->fetch();
     $stats['members'] = $ms;
@@ -86,7 +86,7 @@ $stats['my_open_tickets'] = (int)$mt_stmt->fetchColumn();
 $bday_soon = 0;
 if (!is_member()) {
     try {
-        $b_stmt = $pdo->query("SELECT COUNT(*) FROM members WHERE archived=0 AND class_year!='2026'
+        $b_stmt = $pdo->query("SELECT COUNT(*) FROM members WHERE archived=0
             AND cadet_birthday IS NOT NULL AND cadet_birthday!=''
             AND (DAYOFYEAR(cadet_birthday)-DAYOFYEAR(NOW()) BETWEEN 0 AND 7
                  OR DAYOFYEAR(cadet_birthday)-DAYOFYEAR(NOW())+365 BETWEEN 0 AND 7)");

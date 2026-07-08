@@ -9,7 +9,6 @@ $region = $_GET['region'] ?? '';
 $where  = ['archived = 0'];
 $params = [];
 if ($year   !== '') { $where[] = 'class_year = :year';   $params[':year']   = $year; }
-else                { $where[] = "class_year != '2026'"; }
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
 
 $stmt = $pdo->prepare('SELECT * FROM members WHERE ' . implode(' AND ', $where)

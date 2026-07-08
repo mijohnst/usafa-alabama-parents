@@ -55,7 +55,7 @@ admin_header('Start New Membership Year');
       This will reset dues for <strong><?= $affected ?> member(s)</strong>
       (Class of 2027–2030 only) — marking them unpaid so they can renew for the
       <strong><?= h($new_year) ?></strong> dues cycle.
-      Class of 2026, Prep School, and Graduate records are not changed.
+      Prep School and Graduate records are not changed.
       <?php if ($skipped): ?>
         <br><strong><?= $skipped ?> member(s) on the 4-year plan with active coverage will be skipped</strong> and kept as paid.
       <?php endif; ?>
