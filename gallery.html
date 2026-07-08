@@ -167,17 +167,7 @@
 <!-- GALLERY -->
 <main class="gallery-wrap">
 
-  <div id="setup-notice" class="setup-notice" style="display:none;">
-    <h3>Setup Required</h3>
-    <ol>
-      <li>Go to <code>script.google.com</code>, create a new project, and paste the Apps Script code (provided separately).</li>
-      <li>Click <strong>Deploy &rarr; New deployment</strong>, choose <strong>Web app</strong>, set <em>Execute as: Me</em> and <em>Who has access: Anyone</em>. Copy the web app URL.</li>
-      <li>In <code>gallery.html</code>, replace <code>YOUR_APPS_SCRIPT_URL</code> with that URL.</li>
-      <li>Share your "Club Photos" Drive folder as <strong>Anyone with the link &rarr; Viewer</strong>.</li>
-    </ol>
-  </div>
-
-  <div id="gallery-loading" class="state-msg">
+<div id="gallery-loading" class="state-msg">
     <div class="spinner"></div>
     <p>Loading event photos&hellip;</p>
   </div>
@@ -226,40 +216,28 @@
 </footer>
 
 <script>
-// ─── CONFIGURATION ──────────────────────────────────────────────────────────────
-//  Paste your deployed Apps Script web app URL here (see setup steps below).
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYnqvyvUy_trZ8E2ue_VRkDWn_dr5gVB5zQqBreMP6etQQjYWVB2kANlhpD_2aUs_J/exec';
-// ────────────────────────────────────────────────────────────────────────────────
-
-function thumbUrl(fileId, width) {
-  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${width || 400}`;
-}
+const API_URL = '/event-photos-api.php';
 
 // ─── GALLERY LOADING ────────────────────────────────────────────────────────────
 
 async function loadGallery() {
-  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL') {
-    document.getElementById('gallery-loading').style.display = 'none';
-    document.getElementById('setup-notice').style.display = 'block';
-    return;
-  }
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=folders`);
-    if (!res.ok) throw new Error(`Script error ${res.status}`);
+    const res = await fetch(`${API_URL}?action=albums`);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    const { files } = data;
+    const { albums } = data;
 
     document.getElementById('gallery-loading').style.display = 'none';
 
-    if (!files || files.length === 0) {
-      showError('No event folders found yet. Add subfolders to your "Club Photos" Drive folder to get started.');
+    if (!albums || albums.length === 0) {
+      showError('No event photos have been posted yet. Check back soon!');
       return;
     }
-    files.forEach((folder, i) => buildEventSection(folder, i === 0));
+    albums.forEach((album, i) => buildEventSection(album, i === 0));
   } catch (err) {
     document.getElementById('gallery-loading').style.display = 'none';
-    showError('Could not connect to the photo service. Check your Apps Script URL and confirm the web app is deployed with "Anyone can access".');
+    showError('Could not load event photos. Please try again later.');
     console.error(err);
   }
 }
@@ -272,16 +250,19 @@ function showError(msg) {
 
 // ─── EVENT SECTIONS ─────────────────────────────────────────────────────────────
 
-function buildEventSection(folder, openByDefault) {
+function buildEventSection(album, openByDefault) {
   const section = document.createElement('div');
   section.className = 'event-section';
+
+  const dateStr = album.event_date ? new Date(album.event_date + 'T00:00:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '';
+  const metaId  = 'meta-' + album.id;
 
   const header = document.createElement('div');
   header.className = 'event-header' + (openByDefault ? ' open' : '');
   header.innerHTML = `
     <div>
-      <div class="event-title">${esc(folder.name)}</div>
-      <div class="event-meta" id="meta-${folder.id}">Loading&hellip;</div>
+      <div class="event-title">${esc(album.name)}</div>
+      <div class="event-meta" id="${metaId}">${dateStr ? dateStr + ' · ' : ''}${album.photo_count} photo${album.photo_count !== 1 ? 's' : ''}${album.description ? ' · ' + esc(album.description) : ''}</div>
     </div>
     <span class="event-chevron">&#9660;</span>`;
 
@@ -290,7 +271,7 @@ function buildEventSection(folder, openByDefault) {
 
   if (openByDefault) {
     body.innerHTML = '<div class="photo-load-bar"><span></span></div>';
-    fetchPhotos(folder.id, body);
+    fetchPhotos(album.id, body);
   }
 
   let loaded = openByDefault;
@@ -300,7 +281,7 @@ function buildEventSection(folder, openByDefault) {
     if (isOpen && !loaded) {
       loaded = true;
       body.innerHTML = '<div class="photo-load-bar"><span></span></div>';
-      fetchPhotos(folder.id, body);
+      fetchPhotos(album.id, body);
     }
   });
 
@@ -311,36 +292,33 @@ function buildEventSection(folder, openByDefault) {
 
 // ─── PHOTO FETCHING ─────────────────────────────────────────────────────────────
 
-async function fetchPhotos(folderId, bodyEl) {
+async function fetchPhotos(albumId, bodyEl) {
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=photos&folderId=${encodeURIComponent(folderId)}`);
-    if (!res.ok) throw new Error(`Script error ${res.status}`);
+    const res = await fetch(`${API_URL}?action=photos&album_id=${encodeURIComponent(albumId)}`);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    const { files } = data;
+    const { photos } = data;
 
-    const metaEl = document.getElementById(`meta-${folderId}`);
-    if (metaEl) metaEl.textContent = files.length ? `${files.length} photo${files.length !== 1 ? 's' : ''}` : 'No photos yet';
-
-    if (!files || files.length === 0) {
-      bodyEl.innerHTML = '<div class="empty-event">No photos in this folder yet.</div>';
+    if (!photos || photos.length === 0) {
+      bodyEl.innerHTML = '<div class="empty-event">No photos in this album yet.</div>';
       return;
     }
 
     const grid = document.createElement('div');
     grid.className = 'photo-grid';
 
-    files.forEach((file, index) => {
+    photos.forEach((photo, index) => {
       const wrap = document.createElement('div');
       wrap.className = 'photo-thumb';
       const img = document.createElement('img');
-      img.alt = file.name.replace(/\.[^.]+$/, '');
+      img.alt = photo.caption || '';
       img.loading = 'lazy';
-      img.src = thumbUrl(file.id, 400);
+      img.src = photo.url;
       img.onload = () => img.classList.add('loaded');
       img.onerror = () => { wrap.style.display = 'none'; };
       wrap.appendChild(img);
-      wrap.addEventListener('click', () => openLightbox(files, index));
+      wrap.addEventListener('click', () => openLightbox(photos, index));
       grid.appendChild(wrap);
     });
 
@@ -373,9 +351,9 @@ function showLbSlide() {
   const f = lbPhotos[lbIdx];
   const img = document.getElementById('lb-img');
   img.src = '';
-  img.src = thumbUrl(f.id, 1600);
-  img.alt = f.name.replace(/\.[^.]+$/, '');
-  document.getElementById('lb-caption').textContent = f.name.replace(/\.[^.]+$/, '');
+  img.src = f.url;
+  img.alt = f.caption || '';
+  document.getElementById('lb-caption').textContent = f.caption || '';
   document.getElementById('lb-counter').textContent = `${lbIdx + 1} / ${lbPhotos.length}`;
   document.getElementById('lb-prev').style.visibility = lbIdx === 0 ? 'hidden' : 'visible';
   document.getElementById('lb-next').style.visibility = lbIdx === lbPhotos.length - 1 ? 'hidden' : 'visible';
