@@ -150,4 +150,9 @@ admin_header('Finance Report');
 
 </div>
 
+<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
+  <a href="receipts-by.php?by=event&year=<?= $year ?>" class="btn btn-secondary btn-sm">🗂️ Receipts by Event</a>
+  <a href="receipts-by.php?by=vendor&year=<?= $year ?>" class="btn btn-secondary btn-sm">🗂️ Receipts by Vendor</a>
+</div>
+
 <?php admin_footer(); ?>
