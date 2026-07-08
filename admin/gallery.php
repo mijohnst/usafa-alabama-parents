@@ -3,18 +3,24 @@ require_once __DIR__ . '/auth.php';
 require_member_admin();
 $pdo = get_pdo();
 
-// ── Auto-cleanup: remove photos > 30 days old or keep max 20 ─────────────
-function gallery_cleanup(PDO $pdo, string $dir): void {
+function get_gallery_limit(PDO $pdo): int {
+    $row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='gallery_max_photos'")->fetch();
+    $val = $row ? (int)$row['setting_value'] : 20;
+    return max(1, min(100, $val));
+}
+
+// ── Auto-cleanup: remove photos > 30 days old or keep max N ──────────────
+function gallery_cleanup(PDO $pdo, string $dir, int $limit): void {
     // Delete photos older than 30 days
     $old = $pdo->query("SELECT id, filename FROM site_photos WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)")->fetchAll();
     foreach ($old as $p) {
         if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) @unlink($dir . $p['filename']);
         $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$p['id']]);
     }
-    // Enforce 20-photo limit — delete oldest beyond limit
+    // Enforce photo limit — delete oldest beyond limit
     $count = (int)$pdo->query('SELECT COUNT(*) FROM site_photos')->fetchColumn();
-    if ($count > 20) {
-        $excess = $pdo->query("SELECT id, filename FROM site_photos ORDER BY id ASC LIMIT " . (int)($count - 20))->fetchAll();
+    if ($count > $limit) {
+        $excess = $pdo->query("SELECT id, filename FROM site_photos ORDER BY id ASC LIMIT " . (int)($count - $limit))->fetchAll();
         foreach ($excess as $p) {
             if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) @unlink($dir . $p['filename']);
             $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$p['id']]);
@@ -25,10 +31,20 @@ function gallery_cleanup(PDO $pdo, string $dir): void {
 $dir = __DIR__ . '/../site-photos/';
 if (!is_dir($dir)) mkdir($dir, 0755, true);
 
+$max_photos = get_gallery_limit($pdo);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify(); $action = $_POST['action'] ?? '';
 
-    if ($action === 'upload') {
+    if ($action === 'set_limit') {
+        $new_limit = max(1, min(100, (int)($_POST['gallery_max_photos'] ?? 20)));
+        $pdo->prepare("INSERT INTO site_settings (setting_key,setting_label,setting_value,setting_type) VALUES ('gallery_max_photos','Max photos in gallery',?,'number') ON DUPLICATE KEY UPDATE setting_value=?")->execute([$new_limit, $new_limit]);
+        $max_photos = $new_limit;
+        gallery_cleanup($pdo, $dir, $max_photos);
+        flash('success', "Photo limit updated to $max_photos.");
+        header('Location: gallery.php'); exit;
+
+    } elseif ($action === 'upload') {
         $caption    = trim($_POST['caption']    ?? '');
         $sort       = (int)($_POST['sort_order']?? 0);
         $uploaded   = 0;
@@ -59,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Run cleanup after upload
-        gallery_cleanup($pdo, $dir);
+        gallery_cleanup($pdo, $dir, $max_photos);
 
         if ($uploaded > 0)  flash('success', "$uploaded photo" . ($uploaded>1?'s':'') . " uploaded." . ($skipped>0?" $skipped skipped (invalid).":''));
         elseif ($skipped > 0) flash('error', "No valid photos. Use JPG, PNG, GIF, or WebP under 10MB.");
@@ -83,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Run cleanup on page load too (catches old photos even without uploads)
-gallery_cleanup($pdo, $dir);
+gallery_cleanup($pdo, $dir, $max_photos);
 
 $photos = $pdo->query('SELECT *, DATEDIFF(NOW(),created_at) as days_old FROM site_photos ORDER BY sort_order ASC, id ASC')->fetchAll();
 $total  = count($photos);
@@ -100,9 +116,22 @@ echo show_flash();
 
 <div class="page-head"><h1>Photo Gallery</h1><a href="dashboard.php" class="btn btn-secondary">← Dashboard</a></div>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">
-  Photos appear in the main site slideshow. <strong>Auto-cleanup:</strong> photos older than 30 days or beyond the 20-photo limit are removed automatically.
-  Currently <strong><?= $total ?>/20</strong> photos.
+  Photos appear in the main site slideshow. <strong>Auto-cleanup:</strong> photos older than 30 days or beyond the photo limit are removed automatically.
+  Currently <strong><?= $total ?>/<?= $max_photos ?></strong> photos.
 </p>
+
+<!-- Photo limit setting -->
+<div class="card" style="max-width:520px;margin-bottom:1.5rem">
+  <h2 style="margin-bottom:1rem">Display Limit</h2>
+  <form method="POST" style="display:flex;align-items:flex-end;gap:.75rem">
+    <?= csrf_field() ?><input type="hidden" name="action" value="set_limit">
+    <div class="form-group" style="margin:0;flex:1">
+      <label>Max photos to display <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">(1–100)</span></label>
+      <input type="number" name="gallery_max_photos" value="<?= $max_photos ?>" min="1" max="100" required>
+    </div>
+    <button type="submit" class="btn btn-secondary" style="margin-bottom:0">Save</button>
+  </form>
+</div>
 
 <!-- Upload form -->
 <div class="card" style="max-width:520px;margin-bottom:1.5rem">
@@ -117,9 +146,9 @@ echo show_flash();
       <div class="form-group"><label>Caption <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">applies to all selected</span></label><input name="caption" placeholder="Event or description"></div>
       <div class="form-group"><label>Start Sort Order</label><input type="number" name="sort_order" value="<?= ($total)*10+10 ?>"></div>
     </div>
-    <?php if ($total >= 18): ?>
+    <?php if ($total >= $max_photos - 2): ?>
     <div style="background:#fff8e1;border:1px solid #ffc107;border-radius:4px;padding:.6rem .8rem;font-size:.82rem;color:#5f4c00;margin-bottom:.75rem">
-      ⚠️ <?= 20-$total ?> slot<?= (20-$total)!==1?'s':'' ?> remaining before the oldest are auto-removed.
+      ⚠️ <?= $max_photos-$total ?> slot<?= ($max_photos-$total)!==1?'s':'' ?> remaining before the oldest are auto-removed.
     </div>
     <?php endif; ?>
     <button type="submit" class="btn btn-primary">Upload Photos</button>
