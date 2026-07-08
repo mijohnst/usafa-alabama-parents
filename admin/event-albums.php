@@ -62,9 +62,9 @@ $editing = null;
 $edit_photos = [];
 
 if ($edit_id) {
-    $s = $pdo->prepare('SELECT * FROM event_albums WHERE id=?');
+    $s = $pdo->prepare('SELECT id, name, event_date, description, cover_photo_id, sort_order, visible, created_at FROM event_albums WHERE id=?');
     $s->execute([$edit_id]);
-    $editing = $s->fetch();
+    $editing = $s->fetch(PDO::FETCH_ASSOC);
     if ($editing) {
         $s2 = $pdo->prepare('SELECT * FROM event_photos WHERE album_id=? ORDER BY sort_order ASC, id ASC');
         $s2->execute([$edit_id]);
@@ -72,10 +72,11 @@ if ($edit_id) {
     }
 }
 
-$albums = $pdo->query('SELECT a.*,
-    (SELECT COUNT(*) FROM event_photos  WHERE album_id=a.id) AS photo_count
+$albums = $pdo->query('SELECT a.id, a.name, a.event_date, a.description, a.cover_photo_id,
+    a.sort_order, a.visible, a.created_at,
+    (SELECT COUNT(*) FROM event_photos WHERE album_id=a.id) AS photo_count
     FROM event_albums a
-    ORDER BY a.sort_order ASC, a.id DESC')->fetchAll();
+    ORDER BY a.sort_order ASC, a.id DESC')->fetchAll(PDO::FETCH_ASSOC);
 
 admin_header('Event Albums');
 echo show_flash();
