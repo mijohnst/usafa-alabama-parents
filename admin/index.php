@@ -454,15 +454,24 @@ function openBirthdays() {
 
 <?php if (can_mark_dues() && !empty($members)): ?>
 <!-- Bulk action bar -->
-<div id="bulk-bar" style="display:none;position:sticky;bottom:1rem;background:#002554;color:#fff;padding:.85rem 1.25rem;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
-  <span id="bulk-count" style="font-size:.9rem;font-weight:600"></span>
-  <span style="font-size:.85rem;opacity:.75">Mark selected as paid for <strong><?= h(membership_year()) ?></strong></span>
+<div id="bulk-bar" style="display:none;position:sticky;bottom:1rem;background:#002554;color:#fff;padding:.85rem 1.25rem;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);align-items:center;gap:.65rem;flex-wrap:wrap;margin-top:.75rem">
+  <span id="bulk-count" style="font-size:.9rem;font-weight:600;margin-right:.25rem"></span>
+  <span style="font-size:.82rem;opacity:.7">Dues:</span>
   <select name="membership_type" form="bulk-form" style="padding:.28rem .55rem;font-size:.78rem;width:auto;background:#fff;color:#1a2332;border-radius:4px;border:1px solid #d0d5dd">
     <option value="annual">Annual ($75)</option>
     <option value="4year">4-Year ($275)</option>
   </select>
-  <button type="submit" form="bulk-form" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Mark as Paid</button>
-  <button type="submit" form="bulk-form" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm">✗ Mark as Unpaid</button>
+  <button type="submit" form="bulk-form" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Paid</button>
+  <button type="submit" form="bulk-form" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">✗ Unpaid</button>
+  <?php if (can_manage_members()): ?>
+  <span style="font-size:.82rem;opacity:.7;margin-left:.25rem">Members:</span>
+  <?php if ($archived === '1'): ?>
+  <button type="submit" form="bulk-form" name="action" value="restore" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">↩ Restore</button>
+  <?php else: ?>
+  <button type="submit" form="bulk-form" name="action" value="archive" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">Archive</button>
+  <?php endif; ?>
+  <button type="submit" form="bulk-form" name="action" value="delete" class="btn btn-danger btn-sm" onclick="return confirm('Permanently delete selected members? This cannot be undone.')">Delete</button>
+  <?php endif; ?>
 </div>
 
 <script>
