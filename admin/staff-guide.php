@@ -227,8 +227,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   <div class="rule"></div>
   <div class="three-col">
     <div class="card">
-      <h3><span class="pill pill-admin">Admin</span></h3>
-      <p>Full access to everything including user management, all financial data, and system settings. Typically the Tech Officer.</p>
+      <h3><span class="pill pill-tech">Tech Support</span></h3>
+      <p>Full access to everything — user management, all financial data, system settings, and all member data. Assigned to the Technology Officer.</p>
     </div>
     <div class="card">
       <h3><span class="pill pill-officer">Officer</span></h3>
@@ -245,10 +245,6 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     <div class="card">
       <h3><span class="pill pill-member">Member</span></h3>
       <p>Submits their own purchases and expense receipts, views and responds to their own helpdesk tickets only.</p>
-    </div>
-    <div class="card" style="border-left-color:var(--silver)">
-      <h3 style="color:var(--text-muted)">Tech</h3>
-      <p style="color:var(--text-muted)">Same access as Admin. Assigned to the Technology Officer.</p>
     </div>
   </div>
 </div>
@@ -275,7 +271,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <ul>
           <li><strong>All roles</strong> — Member counts and birthdays</li>
           <li><strong>Treasurer +</strong> — Finance stats and dues collected</li>
-          <li><strong>Admin/Officer</strong> — Full dashboard including pending helpdesk tickets</li>
+          <li><strong>Tech Support/Officer</strong> — Full dashboard including pending helpdesk tickets</li>
         </ul>
       </div>
       <div class="hbox mt1">
@@ -402,7 +398,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Purchases that look similar to a recent entry will trigger a <strong>duplicate warning</strong> before saving</li>
         <li>All purchases start as <strong>Pending</strong> until an Officer reviews and approves them</li>
         <li>Once approved, the Treasurer pays the member and marks the purchase <strong>Reimbursed</strong></li>
-        <li>Members can only see and edit their own submissions; Officers, Treasurer, and Admin see everything</li>
+        <li>Members can only see and edit their own submissions; Officers, Treasurer, and Tech Support see everything</li>
       </ul>
     </div>
     <div>
@@ -611,7 +607,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Secure storage for club documents — tax forms, meeting minutes, policies, financial records</li>
         <li>Files are <strong>not publicly accessible</strong></li>
         <li>Upload PDF or image files with a title and category</li>
-        <li>Access: Treasurer, Officers, Admin</li>
+        <li>Access: Treasurer, Officers, Tech Support</li>
         <li>Files can be viewed inline or downloaded</li>
       </ul>
     </div>
@@ -678,7 +674,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     <thead>
       <tr>
         <th>Section</th>
-        <th>Admin</th>
+        <th>Tech Support</th>
         <th>Officer</th>
         <th>Secretary</th>
         <th>Treasurer</th>
@@ -699,7 +695,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <tr><td>Document Vault</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Directory</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>User Management</td><td class="y">Admin only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>User Management</td><td class="y">Tech only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
     </tbody>
   </table>
   </div>
