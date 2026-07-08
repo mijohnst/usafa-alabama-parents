@@ -64,8 +64,15 @@ $year     = (int)($_GET['year'] ?? date('Y'));
 $type_f   = $_GET['type'] ?? '';
 if (!in_array($type_f, array_merge([''], array_keys($SOURCE_TYPES)))) $type_f = '';
 
-$years_avail = $pdo->query("SELECT DISTINCT YEAR(entry_date) y FROM income_entries ORDER BY y DESC")->fetchAll(PDO::FETCH_COLUMN);
-if (empty($years_avail)) $years_avail = [(int)date('Y')];
+// Combine years from income_entries AND membership years (e.g. "2026-2027" → 2026)
+$ie_years  = $pdo->query("SELECT DISTINCT YEAR(entry_date) FROM income_entries")->fetchAll(PDO::FETCH_COLUMN);
+$mem_years = $pdo->query("SELECT DISTINCT CAST(LEFT(membership_year,4) AS UNSIGNED) FROM members WHERE membership_year != '' AND membership_year IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
+$years_avail = array_values(array_unique(array_merge(
+    array_map('intval', $ie_years),
+    array_map('intval', $mem_years),
+    [(int)date('Y')]
+)));
+rsort($years_avail);
 
 $where = ['YEAR(i.entry_date) = :year'];
 $params = [':year' => $year];
@@ -79,13 +86,13 @@ $stmt = $pdo->prepare("SELECT i.*, u.name AS received_by_name
 $stmt->execute($params);
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Dues from members table for the selected year (membership_year = $year)
+// Dues from members table — membership_year stored as "2026-2027", match on first 4 chars
 $dues_stmt = $pdo->prepare("SELECT
     COUNT(CASE WHEN membership_type='annual' AND membership_paid=1 THEN 1 END) AS annual_count,
     COUNT(CASE WHEN membership_type='4year'  AND membership_paid=1 THEN 1 END) AS fouryear_count,
     COUNT(*) AS member_count
-    FROM members WHERE archived=0 AND membership_year=?");
-$dues_stmt->execute([$year]);
+    FROM members WHERE archived=0 AND LEFT(membership_year,4) = ?");
+$dues_stmt->execute([(string)$year]);
 $dues_row = $dues_stmt->fetch(PDO::FETCH_ASSOC);
 $dues_annual      = (int)($dues_row['annual_count']   ?? 0);
 $dues_fouryear    = (int)($dues_row['fouryear_count'] ?? 0);
@@ -187,13 +194,13 @@ echo show_flash();
 <div class="card" style="margin-bottom:1.5rem;border-left:4px solid #1565c0">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem;margin-bottom:.85rem">
     <div>
-      <h2 style="margin:0;font-size:.95rem;color:#1565c0">Membership Dues — <?= $year ?></h2>
+      <h2 style="margin:0;font-size:.95rem;color:#1565c0">Membership Dues — <?= $year ?>–<?= $year+1 ?></h2>
       <div style="font-size:.75rem;color:#9aa5b4;margin-top:.2rem">Pulled from membership records · read-only</div>
     </div>
     <a href="index.php?year=<?= $year ?>" class="btn btn-secondary btn-sm">View Members</a>
   </div>
   <?php if ($dues_total === 0): ?>
-    <p style="color:#9aa5b4;font-size:.85rem;margin:0">No dues payments recorded for <?= $year ?> membership year.</p>
+    <p style="color:#9aa5b4;font-size:.85rem;margin:0">No dues payments recorded for <?= $year ?>–<?= $year+1 ?> membership year.</p>
   <?php else: ?>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.6rem">
     <div style="background:#f7f9fc;border-radius:6px;padding:.85rem 1rem;text-align:center">
