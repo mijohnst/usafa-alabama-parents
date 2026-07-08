@@ -44,8 +44,8 @@ arsort($by_cat);   arsort($total_by_cat);
 arsort($by_event); arsort($total_by_event);
 
 // Max bar reference (across all rows/years)
-$max_cat   = max(array_merge([1], ...array_map(fn($v) => array_values($v), $by_cat)));
-$max_event = max(array_merge([1], ...array_map(fn($v) => array_values($v), $by_event)));
+$max_cat   = max(array_merge([1], ...array_values(array_map(fn($v) => array_values($v), $by_cat))));
+$max_event = max(array_merge([1], ...array_values(array_map(fn($v) => array_values($v), $by_event))));
 
 // Year-over-year delta helpers
 function delta_pct(float $prev, float $curr): ?float {
