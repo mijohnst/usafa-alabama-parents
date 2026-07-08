@@ -176,20 +176,19 @@ echo show_flash();
       ⚠️ <?= $max_photos-$total ?> slot<?= ($max_photos-$total)!==1?'s':'' ?> remaining before the oldest are auto-removed.
     </div>
     <?php endif; ?>
-    <button type="submit" class="btn btn-primary" id="upload-btn" onclick="startUpload()">Upload Photos</button>
+    <button type="submit" class="btn btn-primary" id="upload-btn">Upload Photos</button>
     <div id="upload-notice" style="display:none;margin-top:.75rem;background:#e8f0fb;border:1px solid #b3caf5;border-radius:4px;padding:.6rem .8rem;font-size:.82rem;color:#003594">
       ⏳ Uploading — this may take a moment for large photos. Please wait and do not click again.
     </div>
   </form>
 </div>
 <script>
-function startUpload() {
+document.getElementById('upload-btn').closest('form').addEventListener('submit', function() {
   var btn = document.getElementById('upload-btn');
   var notice = document.getElementById('upload-notice');
-  btn.disabled = true;
-  btn.textContent = 'Uploading…';
   notice.style.display = 'block';
-}
+  setTimeout(function() { btn.disabled = true; btn.textContent = 'Uploading…'; }, 50);
+});
 </script>
 
 <!-- Bulk action bar -->
