@@ -39,6 +39,24 @@ function send_birthday_emails(PDO $pdo): int {
     }
     if (empty($rows)) return 0;
 
+    // Templates are editable in admin/settings.php (site_settings table);
+    // fall back to these defaults if that migration hasn't been run yet.
+    $tpl = [
+        'birthday_cadet_subject'  => 'Happy Birthday, {name}! 🎉',
+        'birthday_cadet_body'     => "Happy Birthday, {name}!\n\nThe " . CLUB_NAME . " is thinking of you today and wishing you a fantastic birthday.\nThank you for everything you do — we're proud of you!\n\nAim High · Fly · Fight · Win\n" . CLUB_NAME . "\n" . SITE_URL,
+        'birthday_parent_subject' => "It's {cadet_name}'s Birthday! \u{1F382}",
+        'birthday_parent_body'    => "Hi,\n\nJust a note from the " . CLUB_NAME . " — today is {cadet_name}'s birthday! We hope {name} has a wonderful day.\n\nThank you for being part of our club family.\n\n" . CLUB_NAME . "\n" . SITE_URL,
+    ];
+    try {
+        $tpl_stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?,?,?,?)');
+        $tpl_stmt->execute(array_keys($tpl));
+        foreach ($tpl_stmt->fetchAll(PDO::FETCH_ASSOC) as $tr) {
+            if (trim((string)$tr['setting_value']) !== '') $tpl[$tr['setting_key']] = $tr['setting_value'];
+        }
+    } catch (PDOException $e) {
+        // site_settings not migrated yet — silently use the defaults above
+    }
+
     $year  = (int)date('Y');
     $mark  = $pdo->prepare('INSERT IGNORE INTO birthday_email_log (member_id, year_sent) VALUES (?, ?)');
     $count = 0;
@@ -53,22 +71,14 @@ function send_birthday_emails(PDO $pdo): int {
         $nick_or_first = $nickname !== '' ? $nickname : (explode(' ', trim((string)($r['cadet_first_middle'] ?? '')))[0] ?? '');
         if ($nick_or_first === '') $nick_or_first = $full_name ?: 'Cadet';
 
+        $replace = ['{name}' => $nick_or_first, '{cadet_name}' => $full_name ?: $nick_or_first];
+
         if (!empty($r['cadet_email']) && filter_var($r['cadet_email'], FILTER_VALIDATE_EMAIL)) {
-            $subject = "Happy Birthday, $nick_or_first! 🎉";
-            $body    = "Happy Birthday, $nick_or_first!\n\n"
-                     . "The " . CLUB_NAME . " is thinking of you today and wishing you a fantastic birthday.\n"
-                     . "Thank you for everything you do — we're proud of you!\n\n"
-                     . "Aim High · Fly · Fight · Win\n"
-                     . CLUB_NAME . "\n" . SITE_URL;
-            send_notification($r['cadet_email'], $subject, $body);
+            send_notification($r['cadet_email'], strtr($tpl['birthday_cadet_subject'], $replace), strtr($tpl['birthday_cadet_body'], $replace));
         }
 
-        $parent_subject = "It's $full_name's Birthday! \u{1F382}";
-        $parent_body    = "Hi,\n\n"
-                         . "Just a note from the " . CLUB_NAME . " — today is $full_name's birthday! "
-                         . "We hope $nick_or_first has a wonderful day.\n\n"
-                         . "Thank you for being part of our club family.\n\n"
-                         . CLUB_NAME . "\n" . SITE_URL;
+        $parent_subject = strtr($tpl['birthday_parent_subject'], $replace);
+        $parent_body    = strtr($tpl['birthday_parent_body'], $replace);
         foreach ([$r['parent1_email'] ?? '', $r['parent2_email'] ?? ''] as $pe) {
             if ($pe !== '' && filter_var($pe, FILTER_VALIDATE_EMAIL)) {
                 send_notification($pe, $parent_subject, $parent_body);

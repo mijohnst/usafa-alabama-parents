@@ -29,6 +29,7 @@ $sections = [
     'President\'s Letter' => ['president_letter','president_name','president_title'],
     'Social & Links'      => ['facebook_url'],
     'Footer Resources'    => ['footer_resources'],
+    'Cadet Birthday Emails' => ['birthday_cadet_subject','birthday_cadet_body','birthday_parent_subject','birthday_parent_body'],
 ];
 
 admin_header('Site Settings');
@@ -49,7 +50,8 @@ echo show_flash();
 </div>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.5rem">
   Changes here update the main website automatically.
-  <strong>Footer Resources:</strong> one per line as <code>Title|URL</code>
+  <strong>Footer Resources:</strong> one per line as <code>Title|URL</code>.
+  <strong>Birthday Emails:</strong> use <code>{name}</code> for the cadet's nickname/first name and <code>{cadet_name}</code> for their full name — sent daily by a cron job, see <code>admin/birthday-wishes.php</code>.
 </p>
 
 <form method="POST" id="settings-form">
@@ -70,7 +72,7 @@ echo show_flash();
         <input type="hidden" name="president_letter" id="president_letter_input">
         <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">Use the toolbar above to format text, add links, or insert images. Looks the same as it will on the website.</p>
       <?php elseif ($type === 'textarea'): ?>
-        <textarea name="<?= h($key) ?>" rows="<?= $key==='membership_description'?5:4 ?>"><?= h($val) ?></textarea>
+        <textarea name="<?= h($key) ?>" rows="<?= in_array($key, ['membership_description','birthday_cadet_body','birthday_parent_body']) ? 6 : 4 ?>"><?= h($val) ?></textarea>
       <?php else: ?>
         <input type="text" name="<?= h($key) ?>" value="<?= h($val) ?>" placeholder="<?= $type==='url'?'e.g. https://... or #section':'' ?>">
       <?php endif; ?>
