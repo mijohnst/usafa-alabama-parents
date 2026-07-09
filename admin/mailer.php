@@ -22,6 +22,62 @@ function send_notification(string $to, string $subject, string $body): bool {
     return mail($to, $clean_subject, $body, $headers);
 }
 
+// ── Send happy-birthday emails to today's cadets + their parents ─────────
+// Idempotent per cadet per calendar year via birthday_email_log.
+// Returns the number of cadets processed (not the number of individual emails).
+function send_birthday_emails(PDO $pdo): int {
+    try {
+        $rows = $pdo->query(
+            "SELECT id, cadet_first_middle, cadet_last_name, nickname, cadet_email, parent1_email, parent2_email
+             FROM members
+             WHERE archived = 0 AND cadet_birthday IS NOT NULL
+               AND MONTH(cadet_birthday) = MONTH(CURDATE()) AND DAY(cadet_birthday) = DAY(CURDATE())"
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('mailer: send_birthday_emails query failed — ' . $e->getMessage());
+        return 0;
+    }
+    if (empty($rows)) return 0;
+
+    $year  = (int)date('Y');
+    $mark  = $pdo->prepare('INSERT IGNORE INTO birthday_email_log (member_id, year_sent) VALUES (?, ?)');
+    $count = 0;
+
+    foreach ($rows as $r) {
+        $mark->execute([$r['id'], $year]);
+        if ($mark->rowCount() < 1) continue; // already sent this cadet a wish this year
+        $count++;
+
+        $full_name = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $nickname  = trim((string)($r['nickname'] ?? ''));
+        $nick_or_first = $nickname !== '' ? $nickname : (explode(' ', trim((string)($r['cadet_first_middle'] ?? '')))[0] ?? '');
+        if ($nick_or_first === '') $nick_or_first = $full_name ?: 'Cadet';
+
+        if (!empty($r['cadet_email']) && filter_var($r['cadet_email'], FILTER_VALIDATE_EMAIL)) {
+            $subject = "Happy Birthday, $nick_or_first! 🎉";
+            $body    = "Happy Birthday, $nick_or_first!\n\n"
+                     . "The " . CLUB_NAME . " is thinking of you today and wishing you a fantastic birthday.\n"
+                     . "Thank you for everything you do — we're proud of you!\n\n"
+                     . "Aim High · Fly · Fight · Win\n"
+                     . CLUB_NAME . "\n" . SITE_URL;
+            send_notification($r['cadet_email'], $subject, $body);
+        }
+
+        $parent_subject = "It's $full_name's Birthday! \u{1F382}";
+        $parent_body    = "Hi,\n\n"
+                         . "Just a note from the " . CLUB_NAME . " — today is $full_name's birthday! "
+                         . "We hope $nick_or_first has a wonderful day.\n\n"
+                         . "Thank you for being part of our club family.\n\n"
+                         . CLUB_NAME . "\n" . SITE_URL;
+        foreach ([$r['parent1_email'] ?? '', $r['parent2_email'] ?? ''] as $pe) {
+            if ($pe !== '' && filter_var($pe, FILTER_VALIDATE_EMAIL)) {
+                send_notification($pe, $parent_subject, $parent_body);
+            }
+        }
+    }
+    return $count;
+}
+
 // ── Notify board-flagged parents that meeting minutes have been posted ───
 // Returns the number of emails successfully sent.
 function notify_board_minutes_posted(PDO $pdo, array $meeting, string $posted_by_name): int {
