@@ -286,7 +286,7 @@ uploadForm.addEventListener('submit', function(e) {
     $is_link      = ($d['type'] === 'link');
     $icon         = $is_link ? '🔗' : doc_icon($d['filename']);
     $display_name = $d['label'] !== '' ? $d['label'] : $d['original_name'];
-    $view_href    = $is_link ? h($d['url']) : '/event-docs/' . h($d['filename']);
+    $view_href    = $is_link ? h($d['url']) : '/event-doc-serve.php?f=' . rawurlencode($d['filename']);
     $meta         = $is_link
         ? 'External link · added ' . date('M j, Y', strtotime($d['created_at']))
         : h($d['original_name']) . ' · ' . (file_exists($doc_dir.$d['filename']) ? format_bytes(filesize($doc_dir.$d['filename'])) : '?') . ' · uploaded ' . date('M j, Y', strtotime($d['created_at']));

@@ -48,7 +48,7 @@ if ($action === 'albums') {
             'description' => $r['description'],
             'photo_count' => (int)$r['photo_count'],
             'doc_count'   => (int)$r['doc_count'],
-            'cover_url'   => $r['cover_filename'] ? '/event-photos/' . rawurlencode($r['cover_filename']) : null,
+            'cover_url'   => $r['cover_filename'] ? '/event-photo-serve.php?f=' . rawurlencode($r['cover_filename']) : null,
         ];
     }
     echo json_encode(['albums' => $albums]);
@@ -68,7 +68,7 @@ if ($action === 'albums') {
     foreach ($rows->fetchAll() as $p) {
         $photos[] = [
             'id'      => (int)$p['id'],
-            'url'     => '/event-photos/' . rawurlencode($p['filename']),
+            'url'     => '/event-photo-serve.php?f=' . rawurlencode($p['filename']),
             'caption' => $p['caption'],
         ];
     }
@@ -90,7 +90,7 @@ if ($action === 'albums') {
         $is_link = ($d['type'] === 'link');
         $docs[] = [
             'id'   => (int)$d['id'],
-            'url'  => $is_link ? $d['url'] : '/event-docs/' . rawurlencode($d['filename']),
+            'url'  => $is_link ? $d['url'] : '/event-doc-serve.php?f=' . rawurlencode($d['filename']),
             'name' => $d['label'] !== '' ? $d['label'] : $d['original_name'],
             'ext'  => $is_link ? 'link' : strtolower(pathinfo($d['filename'], PATHINFO_EXTENSION)),
         ];

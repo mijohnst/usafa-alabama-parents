@@ -3,6 +3,8 @@ document.getElementById('hamburger').addEventListener('click', function() {
 });
 document.querySelectorAll('.nav-links a').forEach(function(link) {
   link.addEventListener('click', function() {
+    var isDropdownToggle = link.parentElement.classList.contains('nav-dropdown');
+    if (isDropdownToggle && window.innerWidth <= 768) return;
     document.getElementById('nav-links').classList.remove('open');
   });
 });

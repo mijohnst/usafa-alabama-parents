@@ -238,7 +238,7 @@ uploadForm.addEventListener('submit', function(e) {
   <?php foreach ($photos as $p): ?>
   <div class="photo-card" data-id="<?= $p['id'] ?>">
     <div style="position:relative">
-      <img src="/event-photos/<?= h($p['filename']) ?>" alt="<?= h($p['caption']) ?>">
+      <img src="/event-photo-serve.php?f=<?= rawurlencode($p['filename']) ?>" alt="<?= h($p['caption']) ?>">
       <label style="position:absolute;top:.4rem;left:.4rem;background:rgba(0,0,0,.5);border-radius:3px;padding:.2rem .3rem;cursor:pointer;margin:0">
         <input type="checkbox" class="photo-cb" value="<?= $p['id'] ?>" style="width:auto;cursor:pointer" onchange="updateBulkBar()">
       </label>

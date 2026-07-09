@@ -610,6 +610,10 @@ function escHtml(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function safeHref(url) {
+  return /^https?:\/\/|^\//i.test(url || '') ? url : '#';
+}
+
 function renderNews(items, isLive) {
   var container = document.getElementById('news-container');
   var ts = document.getElementById('news-updated');
@@ -724,7 +728,7 @@ fetch('/settings-feed.php').then(function(r){return r.json();}).then(function(da
   if (s.hero_subtitle) document.getElementById('hero-subtitle').textContent = s.hero_subtitle;
   if (s.hero_cta_text || s.hero_cta_url) {
     var cta = document.getElementById('hero-cta');
-    if (cta) { if (s.hero_cta_text) cta.textContent = s.hero_cta_text; if (s.hero_cta_url) cta.href = s.hero_cta_url; }
+    if (cta) { if (s.hero_cta_text) cta.textContent = s.hero_cta_text; if (s.hero_cta_url) cta.href = safeHref(s.hero_cta_url); }
   }
   // Membership
   if (s.membership_dues) {
@@ -737,7 +741,7 @@ fetch('/settings-feed.php').then(function(r){return r.json();}).then(function(da
   }
   // Facebook
   if (s.facebook_url) {
-    document.querySelectorAll('a[id="footer-fb-link"], a.fb-icon, a.footer-fb').forEach(function(el){ el.href = s.facebook_url; });
+    document.querySelectorAll('a[id="footer-fb-link"], a.fb-icon, a.footer-fb').forEach(function(el){ el.href = safeHref(s.facebook_url); });
   }
   // Footer resources
   if (s.footer_resources) {
@@ -768,7 +772,7 @@ async function loadAnnouncements() {
     var c = colors[ann.type] || colors.info;
     var html = '<div style="background:' + c[0] + ';color:' + c[1] + ';padding:.85rem 3rem;position:relative;text-align:center;font-size:1rem;font-weight:600;line-height:1.5">'
              + '<span>' + escHtml(ann.message)
-             + (ann.link_text && ann.link_url ? ' <a href="' + escHtml(ann.link_url) + '" style="color:' + c[1] + ';text-decoration:underline;margin-left:.5rem;font-weight:700">' + escHtml(ann.link_text) + ' →</a>' : '')
+             + (ann.link_text && ann.link_url ? ' <a href="' + escHtml(safeHref(ann.link_url)) + '" style="color:' + c[1] + ';text-decoration:underline;margin-left:.5rem;font-weight:700">' + escHtml(ann.link_text) + ' →</a>' : '')
              + '</span>'
              + '<button onclick="this.parentElement.parentElement.style.display=\'none\'" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.4rem;color:' + c[1] + ';opacity:.6;line-height:1;padding:.25rem">&times;</button>'
              + '</div>';

@@ -149,7 +149,7 @@ echo show_flash();
       <input type="hidden" name="album_id" value="<?= $editing['id'] ?>">
       <input type="hidden" name="photo_id" value="<?= $is_cover ? '0' : $p['id'] ?>">
       <button type="submit" style="padding:0;border:3px solid <?= $is_cover ? '#003594' : 'transparent' ?>;border-radius:6px;cursor:pointer;display:block;width:100%;background:none">
-        <img src="/event-photos/<?= h($p['filename']) ?>" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:3px;display:block">
+        <img src="/event-photo-serve.php?f=<?= rawurlencode($p['filename']) ?>" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:3px;display:block">
         <?php if ($is_cover): ?><div style="font-size:.65rem;text-align:center;padding:.15rem;background:#003594;color:white;border-radius:0 0 3px 3px">Cover</div><?php endif; ?>
       </button>
     </form>
@@ -166,7 +166,7 @@ echo show_flash();
   <?php foreach ($albums as $a): ?>
   <div class="card" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;flex-wrap:wrap">
     <?php if (!empty($a['cover_filename'])): ?>
-    <img src="/event-photos/<?= h($a['cover_filename']) ?>" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;flex-shrink:0">
+    <img src="/event-photo-serve.php?f=<?= rawurlencode($a['cover_filename']) ?>" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;flex-shrink:0">
     <?php else: ?>
     <div style="width:72px;height:72px;background:var(--light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.75rem;flex-shrink:0">📷</div>
     <?php endif; ?>

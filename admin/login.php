@@ -28,17 +28,29 @@ if ($bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['bootst
 
 // ── Normal login ───────────────────────────────────────────────────────────
 if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootstrap'])) {
-    $user = verify_login($pdo, trim($_POST['username'] ?? ''), $_POST['password'] ?? '');
-    if ($user) {
-        session_regenerate_id(true);
-        $_SESSION['logged_in']  = true;
-        $_SESSION['role']       = $user['role'];
-        $_SESSION['user_id']    = $user['id'];
-        $_SESSION['user_name']  = $user['name'];
-        $_SESSION['user_email'] = $user['email'];
-        header('Location: dashboard.php'); exit;
+    $username_input = trim($_POST['username'] ?? '');
+    $status = login_attempt_status($pdo, $username_input);
+
+    if ($status && !empty($status['locked_until']) && strtotime($status['locked_until']) > time()) {
+        $wait = (int)ceil((strtotime($status['locked_until']) - time()) / 60);
+        $error = "Too many failed attempts. Try again in $wait minute" . ($wait != 1 ? 's' : '') . '.';
+    } else {
+        $user = verify_login($pdo, $username_input, $_POST['password'] ?? '');
+        if ($user) {
+            if ((int)$user['failed_attempts'] > 0 || $user['locked_until']) {
+                register_login_success($pdo, (int)$user['id']);
+            }
+            session_regenerate_id(true);
+            $_SESSION['logged_in']  = true;
+            $_SESSION['role']       = $user['role'];
+            $_SESSION['user_id']    = $user['id'];
+            $_SESSION['user_name']  = $user['name'];
+            $_SESSION['user_email'] = $user['email'];
+            header('Location: dashboard.php'); exit;
+        }
+        if ($status) register_login_failure($pdo, (int)$status['id'], (int)$status['failed_attempts']);
+        $error = 'Invalid username or password.';
     }
-    $error = 'Invalid username or password.';
 }
 ?>
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">

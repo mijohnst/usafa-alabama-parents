@@ -4,7 +4,9 @@
 function start_session(): void {
     if (session_status() === PHP_SESSION_NONE) {
         session_name('usafa_admin');
-        session_set_cookie_params(['httponly' => true, 'samesite' => 'Strict']);
+        $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        session_set_cookie_params(['httponly' => true, 'samesite' => 'Strict', 'secure' => $is_https]);
         session_start();
     }
 }
@@ -121,6 +123,31 @@ function verify_login(PDO $pdo, string $username, string $password): ?array {
         return $user;
     }
     return null;
+}
+
+const LOGIN_MAX_ATTEMPTS   = 5;
+const LOGIN_LOCKOUT_MINUTES = 15;
+
+// Look up an account's current lockout state by username or email
+function login_attempt_status(PDO $pdo, string $username): ?array {
+    $stmt = $pdo->prepare(
+        'SELECT id, failed_attempts, locked_until FROM users WHERE (username = :u OR email = :u) AND active = 1 LIMIT 1'
+    );
+    $stmt->execute([':u' => $username]);
+    return $stmt->fetch() ?: null;
+}
+
+function register_login_failure(PDO $pdo, int $user_id, int $failed_attempts): void {
+    $failed_attempts++;
+    $locked_until = $failed_attempts >= LOGIN_MAX_ATTEMPTS
+        ? date('Y-m-d H:i:s', time() + LOGIN_LOCKOUT_MINUTES * 60)
+        : null;
+    $pdo->prepare('UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?')
+        ->execute([$failed_attempts, $locked_until, $user_id]);
+}
+
+function register_login_success(PDO $pdo, int $user_id): void {
+    $pdo->prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?')->execute([$user_id]);
 }
 
 // Check if the users table exists and has at least one user
