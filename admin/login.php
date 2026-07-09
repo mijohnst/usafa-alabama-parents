@@ -28,6 +28,7 @@ if ($bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['bootst
 
 // ── Normal login ───────────────────────────────────────────────────────────
 if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootstrap'])) {
+    csrf_verify();
     $username_input = trim($_POST['username'] ?? '');
     $status = login_attempt_status($pdo, $username_input);
 
@@ -108,6 +109,7 @@ button:hover{background:#002268}
     </form>
   <?php else: ?>
     <form method="POST">
+      <?= csrf_field() ?>
       <label>Username or Email</label>
       <input type="text" name="username" required autocomplete="username">
       <label>Password</label>

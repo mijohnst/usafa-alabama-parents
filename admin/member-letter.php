@@ -48,6 +48,7 @@ if ($member) {
     $paid_color = $member['membership_paid'] ? '#1b5e20' : '#A6192E';
     $cadet_full = trim(($member['cadet_first_middle']??'') . ' ' . ($member['cadet_last_name']??''));
     $parent_full = trim($member['parent1_first_name'] . ' ' . $member['parent1_last_name']);
+    $squadron = $member['squadron_yr2_4'] ?: ($member['fall_squadron'] ?: $member['bct_squadron']);
     $mem_year    = $member['membership_year'] ?? '';
     $letter_date = date('F j, Y');
     ?>
@@ -115,16 +116,16 @@ body{font-family:'Times New Roman',Times,serif;font-size:12pt;color:#000;backgro
       <td><?= h($cadet_full) ?></td>
     </tr>
     <?php endif; ?>
-    <?php if ($member['cadet_squadron'] ?? ''): ?>
+    <?php if ($squadron): ?>
     <tr>
       <td>Squadron:</td>
-      <td><?= h($member['cadet_squadron']) ?></td>
+      <td><?= h($squadron) ?></td>
     </tr>
     <?php endif; ?>
-    <?php if ($member['cadet_class_year'] ?? ''): ?>
+    <?php if ($member['class_year'] ?? ''): ?>
     <tr>
       <td>Class Year:</td>
-      <td><?= h($member['cadet_class_year']) ?></td>
+      <td><?= h($member['class_year']) ?></td>
     </tr>
     <?php endif; ?>
     <tr>
