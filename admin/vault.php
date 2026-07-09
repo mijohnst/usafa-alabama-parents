@@ -179,7 +179,12 @@ echo show_flash();
   <div class="doc-row">
     <span class="doc-icon"><?= $icon ?></span>
     <div class="doc-meta">
-      <div class="doc-title"><?= h($d['title']) ?></div>
+      <div class="doc-title">
+        <?= h($d['title']) ?>
+        <?php if (!empty($d['source_meeting_id'])): ?>
+        <span title="Auto-synced from Meeting Minutes — edit/replace/delete it there instead" style="font-size:.65rem;font-weight:700;color:#0d47a1;background:#e3f2fd;padding:.05rem .35rem;border-radius:3px;margin-left:.3rem;vertical-align:middle">🔗 SYNCED</span>
+        <?php endif; ?>
+      </div>
       <div class="doc-sub">
         <?php if ($d['description']): ?><?= h($d['description']) ?> &bull; <?php endif; ?>
         <?= h($size_fmt($d['file_size'])) ?> &bull;

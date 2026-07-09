@@ -12,6 +12,20 @@ $error = '';
 $upload_dir = __DIR__ . '/minutes-files/';
 if (!is_dir($upload_dir)) @mkdir($upload_dir, 0755, true);
 
+// ── Minutes files are mirrored into the Document Vault (category "Meeting
+// Minutes") so they're browsable there too, staying in sync automatically. ──
+$vault_dir = __DIR__ . '/vault/';
+if (!is_dir($vault_dir)) @mkdir($vault_dir, 0755, true);
+
+function remove_vault_mirror(PDO $pdo, string $vault_dir, int $meeting_id): void {
+    $row = $pdo->prepare('SELECT id, filename FROM vault_documents WHERE source_meeting_id=?');
+    $row->execute([$meeting_id]);
+    if ($v = $row->fetch(PDO::FETCH_ASSOC)) {
+        if (preg_match('/^[a-zA-Z0-9._-]+$/', $v['filename'])) @unlink($vault_dir . $v['filename']);
+        $pdo->prepare('DELETE FROM vault_documents WHERE id=?')->execute([$v['id']]);
+    }
+}
+
 // ── Actions ───────────────────────────────────────────────────────────────
 $action = $_POST['action'] ?? '';
 
@@ -71,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fp = $upload_dir . basename($m['minutes_file']);
                 if (is_file($fp)) @unlink($fp);
             }
+            remove_vault_mirror($pdo, $vault_dir, $id);
             // Remove attendance records
             $pdo->prepare("DELETE FROM meeting_attendance WHERE meeting_id=?")->execute([$id]);
             $pdo->prepare("DELETE FROM club_meetings WHERE id=?")->execute([$id]);
@@ -110,6 +125,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $error = 'Failed to save file.';
                     } else {
                         $pdo->prepare("UPDATE club_meetings SET minutes_file=? WHERE id=?")->execute([$fname, $id]);
+
+                        // Mirror into the Document Vault (replaces any previous mirror for this meeting)
+                        remove_vault_mirror($pdo, $vault_dir, $id);
+                        $vault_name = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                        if (copy($upload_dir . $fname, $vault_dir . $vault_name)) {
+                            $mi = $pdo->prepare('SELECT title, meeting_date, meeting_type FROM club_meetings WHERE id=?');
+                            $mi->execute([$id]);
+                            $minfo = $mi->fetch(PDO::FETCH_ASSOC);
+                            $vault_title = trim(($minfo['title'] ?: 'Meeting Minutes') . ' — ' . date('F j, Y', strtotime($minfo['meeting_date'] ?? 'now')));
+                            $vault_desc  = ucfirst($minfo['meeting_type'] ?? 'general') . ' meeting minutes';
+                            $pdo->prepare('INSERT INTO vault_documents (title,category,description,filename,file_size,mime_type,uploaded_by,source_meeting_id) VALUES (?,?,?,?,?,?,?,?)')
+                                ->execute([$vault_title, 'Meeting Minutes', $vault_desc, $vault_name, filesize($vault_dir . $vault_name), $mime, $_SESSION['user_id'] ?? null, $id]);
+                        }
+
                         $msg = 'Minutes uploaded.';
                     }
                 }
@@ -126,6 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($r && $r['minutes_file']) {
                 $fp = $upload_dir . basename($r['minutes_file']);
                 if (is_file($fp)) @unlink($fp);
+                remove_vault_mirror($pdo, $vault_dir, $id);
                 $pdo->prepare("UPDATE club_meetings SET minutes_file='', minutes_token=NULL WHERE id=?")->execute([$id]);
                 $msg = 'File removed.';
             }
