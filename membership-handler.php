@@ -30,6 +30,16 @@ if (!$payload) {
     exit();
 }
 
+require_once __DIR__ . '/admin/form-guard.php';
+
+// Honeypot — bots fill this hidden field, real visitors never see it.
+// Pretend success so bots don't learn to avoid the field.
+if (honeypot_tripped($payload)) {
+    http_response_code(200);
+    echo json_encode(['success' => true, 'message' => 'Application received! Thank you for joining the Alabama Falcons family.']);
+    exit();
+}
+
 function sanitize_header($val) {
     return str_replace(["\r", "\n"], '', (string)$val);
 }
@@ -49,6 +59,12 @@ try {
          PDO::ATTR_EMULATE_PREPARES => true]
     );
 
+    if (rate_limited($pdo, 'membership_form')) {
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Too many submissions from your network. Please try again later or email us directly at secretary@alabamafalcons.org.']);
+        exit();
+    }
+
     // Map form field names → DB columns
     $first  = s($payload, 'cadetFirstName');
     $middle = s($payload, 'cadetMiddleName');
@@ -57,9 +73,22 @@ try {
     $dob = s($payload, 'cadetDOB');
     if ($dob === '') $dob = null;
 
-    // ── Duplicate detection: match on last name + first name + class year ────────
-    $dup = $pdo->prepare('SELECT id FROM members WHERE cadet_last_name = ? AND cadet_first_middle LIKE ? AND class_year = ? LIMIT 1');
-    $dup->execute([s($payload,'cadetLastName'), s($payload,'cadetFirstName').'%', s($payload,'graduationYear')]);
+    // ── Duplicate detection: same last name + class year, AND either an exact
+    // cadet name match or a matching parent email — a first-name *prefix* match
+    // alone would incorrectly collide siblings/twins (e.g. "Jack" vs "Jackson").
+    $dup = $pdo->prepare(
+        'SELECT id FROM members
+         WHERE cadet_last_name = :last_name AND class_year = :class_year
+           AND (cadet_first_middle = :first_middle
+                OR (:parent1_email <> "" AND parent1_email = :parent1_email))
+         LIMIT 1'
+    );
+    $dup->execute([
+        'last_name'     => s($payload, 'cadetLastName'),
+        'class_year'    => s($payload, 'graduationYear'),
+        'first_middle'  => $first_middle,
+        'parent1_email' => s($payload, 'parent1Email'),
+    ]);
     $existing_id = $dup->fetchColumn();
 
     if ($existing_id) {

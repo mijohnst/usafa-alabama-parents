@@ -1,6 +1,9 @@
 <?php
 header('Content-Type: application/json');
 
+require_once __DIR__ . '/admin/auth.php';
+require_once __DIR__ . '/admin/form-guard.php';
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
@@ -12,6 +15,19 @@ $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Invalid request data.']);
+    exit;
+}
+
+// Honeypot — bots fill this hidden field, real visitors never see it.
+// Pretend success so bots don't learn to avoid the field.
+if (honeypot_tripped($input)) {
+    echo json_encode(['success' => true, 'message' => 'Registration submitted! We look forward to seeing you at the sendoff.']);
+    exit;
+}
+
+if (rate_limited(get_pdo(), 'sendoff_form')) {
+    http_response_code(429);
+    echo json_encode(['success' => false, 'message' => 'Too many submissions from your network. Please try again later or email us directly at secretary@alabamafalcons.org.']);
     exit;
 }
 
@@ -71,6 +87,17 @@ if (isset($result['success']) && $result['success'] === false) {
     exit;
 }
 
+// Mask all but the last 4 characters of an ID number — the full number is
+// already saved to the registration system (Google Sheets); no need for it
+// to also sit in plain text in an email inbox indefinitely.
+function mask_id_number(string $id): string {
+    $id = preg_replace('/\s+/', '', $id);
+    $len = strlen($id);
+    if ($len === 0) return '';
+    if ($len <= 4) return str_repeat('•', $len);
+    return str_repeat('•', $len - 4) . substr($id, -4);
+}
+
 // Email notification to secretary
 $data = json_decode($payload, true);
 $to      = 'secretary@alabamafalcons.org';
@@ -80,7 +107,7 @@ $body    = "A new registration has been submitted for the Cadet Class of 2030 Se
          . "First Name:                 " . $data['first']          . "\n"
          . "Date of Birth:              " . $data['dob']            . "\n"
          . "REAL ID State:              " . ($data['real_id_state']  ?: '—') . "\n"
-         . "REAL ID Number (DL):        " . ($data['real_id_number'] ?: '—') . "\n"
+         . "REAL ID Number (DL):        " . ($data['real_id_number'] ? mask_id_number($data['real_id_number']) . ' (full number on file in registration system)' : '—') . "\n"
          . "DOD ID Holder:              " . $data['dod_id_holder']  . "\n"
          . "US Citizen:                 " . $data['us_citizen']     . "\n"
          . "Cadet Name:                 " . $data['cadet_name']     . "\n"

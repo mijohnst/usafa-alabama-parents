@@ -88,6 +88,7 @@ if ($action === 'albums') {
     $docs = [];
     foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $d) {
         $is_link = ($d['type'] === 'link');
+        if ($is_link && !preg_match('/^https?:\/\//i', $d['url'])) continue; // re-validate on output too
         $docs[] = [
             'id'   => (int)$d['id'],
             'url'  => $is_link ? $d['url'] : '/event-doc-serve.php?f=' . rawurlencode($d['filename']),

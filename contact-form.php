@@ -4,6 +4,9 @@
  * Sends emails via PHP mail() function
  */
 
+require_once __DIR__ . '/admin/auth.php';
+require_once __DIR__ . '/admin/form-guard.php';
+
 // Set headers
 header('Content-Type: application/json');
 
@@ -25,6 +28,19 @@ $data = json_decode($raw, true);
 // Fallback: also accept regular POST fields (form submission)
 if (empty($data)) {
     $data = $_POST;
+}
+
+// Honeypot — bots fill this hidden field, real visitors never see it.
+// Pretend success so bots don't learn to avoid the field.
+if (honeypot_tripped($data)) {
+    echo json_encode(['success' => true, 'message' => 'Thank you! Your message has been sent.']);
+    exit;
+}
+
+if (rate_limited(get_pdo(), 'contact_form')) {
+    http_response_code(429);
+    echo json_encode(['success' => false, 'message' => 'Too many submissions from your network. Please try again later or email us directly at info@alabamafalcons.org.']);
+    exit;
 }
 
 // Validate required fields
