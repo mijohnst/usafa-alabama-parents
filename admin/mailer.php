@@ -44,8 +44,8 @@ function send_birthday_emails(PDO $pdo): int {
     $tpl = [
         'birthday_cadet_subject'  => 'Happy Birthday, {name}! 🎉',
         'birthday_cadet_body'     => "Happy Birthday, {name}!\n\nThe " . CLUB_NAME . " is thinking of you today and wishing you a fantastic birthday.\nThank you for everything you do — we're proud of you!\n\nAim High · Fly · Fight · Win\n" . CLUB_NAME . "\n" . SITE_URL,
-        'birthday_parent_subject' => "It's {cadet_name}'s Birthday! \u{1F382}",
-        'birthday_parent_body'    => "Hi,\n\nJust a note from the " . CLUB_NAME . " — today is {cadet_name}'s birthday! We hope {name} has a wonderful day.\n\nThank you for being part of our club family.\n\n" . CLUB_NAME . "\n" . SITE_URL,
+        'birthday_parent_subject' => "Celebrating {cadet_name} Today! \u{1F382}",
+        'birthday_parent_body'    => "On behalf of the " . CLUB_NAME . ", we want to take a moment to recognize {cadet_name} on their birthday today.\n\nCadets like {name} inspire us with their dedication, discipline, and hard work, and we are incredibly proud of everything they've accomplished on their journey at the Academy. We hope today is filled with celebration, and that {name} feels the pride and support of the entire Alabama Falcons family.\n\nHappy Birthday, {name}!\n\n" . CLUB_NAME . "\n" . SITE_URL,
     ];
     try {
         $tpl_stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?,?,?,?)');
