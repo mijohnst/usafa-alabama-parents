@@ -67,7 +67,7 @@ function send_birthday_emails(PDO $pdo): int {
 
     try {
         $rows = $pdo->query(
-            "SELECT id, cadet_first_middle, cadet_last_name, nickname, cadet_email, parent1_email, parent2_email
+            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, nickname, cadet_email, parent1_email, parent2_email
              FROM members
              WHERE archived = 0 AND cadet_birthday IS NOT NULL
                AND MONTH(cadet_birthday) = MONTH(CURDATE()) AND DAY(cadet_birthday) = DAY(CURDATE())"
@@ -85,9 +85,10 @@ function send_birthday_emails(PDO $pdo): int {
         if (!mark_automated_sent($pdo, 'birthday', (int)$r['id'], (string)$year)) continue; // already wished this year
         $count++;
 
-        $full_name = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $full_name = trim(($r['cadet_first_name'] ?? '') . ' ' . ($r['cadet_middle_name'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $full_name = preg_replace('/\s+/', ' ', $full_name);
         $nickname  = trim((string)($r['nickname'] ?? ''));
-        $nick_or_first = $nickname !== '' ? $nickname : (explode(' ', trim((string)($r['cadet_first_middle'] ?? '')))[0] ?? '');
+        $nick_or_first = $nickname !== '' ? $nickname : trim((string)($r['cadet_first_name'] ?? ''));
         if ($nick_or_first === '') $nick_or_first = $full_name ?: 'Cadet';
         $replace = ['{name}' => $nick_or_first, '{cadet_name}' => $full_name ?: $nick_or_first];
 
@@ -114,7 +115,7 @@ function send_dues_renewal_reminders(PDO $pdo): int {
 
     try {
         $rows = $pdo->query(
-            "SELECT id, cadet_first_middle, cadet_last_name, parent1_first_name, parent1_email, parent2_email, membership_paid_through, membership_type
+            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, parent1_first_name, parent1_email, parent2_email, membership_paid_through, membership_type
              FROM members
              WHERE archived = 0 AND membership_paid = 1 AND membership_paid_through <> ''"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -133,7 +134,7 @@ function send_dues_renewal_reminders(PDO $pdo): int {
         if (!mark_automated_sent($pdo, 'dues_renewal', (int)$r['id'], $r['membership_paid_through'])) continue;
         $count++;
 
-        $full_name   = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $full_name = trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name'] ?? '') . ' ' . ($r['cadet_middle_name'] ?? '') . ' ' . ($r['cadet_last_name'] ?? '')));
         $replace = [
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',
@@ -156,7 +157,7 @@ function send_lapsed_reengagement(PDO $pdo): int {
 
     try {
         $rows = $pdo->query(
-            "SELECT id, cadet_first_middle, cadet_last_name, parent1_first_name, parent1_email, parent2_email, membership_paid_through
+            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, parent1_first_name, parent1_email, parent2_email, membership_paid_through
              FROM members
              WHERE archived = 0 AND membership_paid_through <> ''"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -175,7 +176,7 @@ function send_lapsed_reengagement(PDO $pdo): int {
         if (!mark_automated_sent($pdo, 'lapsed_reengagement', (int)$r['id'], $r['membership_paid_through'])) continue;
         $count++;
 
-        $full_name = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $full_name = trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name'] ?? '') . ' ' . ($r['cadet_middle_name'] ?? '') . ' ' . ($r['cadet_last_name'] ?? '')));
         $replace = [
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',
@@ -198,7 +199,7 @@ function send_new_member_welcome(PDO $pdo): int {
     $offset = (int)$cfg['days_offset'];
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, cadet_first_middle, cadet_last_name, parent1_first_name, parent1_email, parent2_email
+            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, parent1_first_name, parent1_email, parent2_email
              FROM members
              WHERE archived = 0 AND created_at IS NOT NULL
                AND DATEDIFF(CURDATE(), created_at) BETWEEN ? AND ?"
@@ -215,7 +216,7 @@ function send_new_member_welcome(PDO $pdo): int {
         if (!mark_automated_sent($pdo, 'new_member_welcome', (int)$r['id'], 'once')) continue;
         $count++;
 
-        $full_name = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $full_name = trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name'] ?? '') . ' ' . ($r['cadet_middle_name'] ?? '') . ' ' . ($r['cadet_last_name'] ?? '')));
         $replace = [
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',

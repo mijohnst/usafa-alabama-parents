@@ -305,7 +305,7 @@ const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', '
 const CLASS_YEARS = ['', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
 
 const FIELDS = [
-    'class_year','cadet_last_name','cadet_first_middle','nickname','cadet_birthday','cadet_po_box',
+    'class_year','cadet_last_name','cadet_first_name','cadet_middle_name','nickname','cadet_birthday','cadet_po_box',
     'cadet_email','cadet_cell','bct_squadron','bct_flight','fall_squadron','squadron_yr2_4',
     'parent1_last_name','parent1_first_name','parent1_email','parent1_cell',
     'parent1_street','parent1_city','parent1_state','parent1_zip',
@@ -346,10 +346,11 @@ function member_form(array $m = [], bool $is_edit = false): void {
     };
 
     echo '<fieldset><legend>Cadet</legend>';
-    echo '<div class="form-row col-3">';
+    echo '<div class="form-row col-4">';
     echo '<div class="form-group"><label>Class Year *</label>' . $sel('class_year', CLASS_YEARS) . '</div>';
     echo '<div class="form-group"><label>Last Name *</label><input name="cadet_last_name" value="' . $v('cadet_last_name') . '" required></div>';
-    echo '<div class="form-group"><label>First / Middle Name</label><input name="cadet_first_middle" value="' . $v('cadet_first_middle') . '"></div>';
+    echo '<div class="form-group"><label>First Name</label><input name="cadet_first_name" value="' . $v('cadet_first_name') . '"></div>';
+    echo '<div class="form-group"><label>Middle Name</label><input name="cadet_middle_name" value="' . $v('cadet_middle_name') . '"></div>';
     echo '</div>';
     echo '<div class="form-row col-4">';
     echo '<div class="form-group"><label>Nickname</label><input name="nickname" value="' . $v('nickname') . '"></div>';

@@ -92,7 +92,7 @@ foreach ($by_year as $yr => $group):
     $sqd = $m['squadron_yr2_4'] ?: ($m['fall_squadron'] ?: $m['bct_squadron']);
   ?>
   <div class="card">
-    <div class="cadet-name"><?= h($m['cadet_last_name']) ?>, <?= h($m['cadet_first_middle']) ?></div>
+    <div class="cadet-name"><?= h($m['cadet_last_name']) ?>, <?= h(trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name'])) ?></div>
     <div class="cadet-meta">
       <?= h($sqd) ?><?= $sqd && $m['al_region'] ? ' &bull; ' : '' ?><?= h($m['al_region']) ?>
       <?php if ($m['cadet_po_box']): ?>&bull; PO <?= h($m['cadet_po_box']) ?><?php endif; ?>

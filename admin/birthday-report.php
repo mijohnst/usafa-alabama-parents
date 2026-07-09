@@ -26,7 +26,7 @@ try {
     );
 
     $stmt = $pdo->prepare(
-        "SELECT cadet_last_name, cadet_first_middle, cadet_birthday, cadet_po_box, class_year
+        "SELECT cadet_last_name, cadet_first_name, cadet_middle_name, cadet_birthday, cadet_po_box, class_year
          FROM members
          WHERE archived = 0
            AND cadet_birthday IS NOT NULL
@@ -53,7 +53,7 @@ if (empty($cadets)) {
     $body .= "No cadets have birthdays in $month_name.\n";
 } else {
     foreach ($cadets as $c) {
-        $name = trim($c['cadet_first_middle'] . ' ' . $c['cadet_last_name']);
+        $name = trim(preg_replace('/\s+/', ' ', $c['cadet_first_name'] . ' ' . $c['cadet_middle_name'] . ' ' . $c['cadet_last_name']));
         $day  = $c['cadet_birthday'] ? date('F j', strtotime($c['cadet_birthday'])) : '—';
         $box  = $c['cadet_po_box'] ?: 'No PO Box on file';
         $body .= "$day\n";

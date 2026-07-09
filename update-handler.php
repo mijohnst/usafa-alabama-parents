@@ -66,25 +66,24 @@ try {
 
     $first  = s($payload, 'cadetFirstName');
     $middle = s($payload, 'cadetMiddleName');
-    $first_middle = trim("$first $middle");
 
     $dob = s($payload, 'cadetDOB');
     if ($dob === '') $dob = null;
 
     // ── Find the existing record — never create a new one. Same match rule
     // used by the membership form's duplicate detection: last name + class
-    // year, plus either an exact cadet name match or a matching parent email.
+    // year, plus either an exact cadet first name match or a matching parent email.
     $dup = $pdo->prepare(
         'SELECT id FROM members
          WHERE archived = 0 AND cadet_last_name = :last_name AND class_year = :class_year
-           AND (cadet_first_middle = :first_middle
+           AND (cadet_first_name = :first_name
                 OR (:parent1_email <> "" AND parent1_email = :parent1_email))
          LIMIT 1'
     );
     $dup->execute([
         'last_name'     => s($payload, 'cadetLastName'),
         'class_year'    => s($payload, 'graduationYear'),
-        'first_middle'  => $first_middle,
+        'first_name'    => $first,
         'parent1_email' => s($payload, 'parent1Email'),
     ]);
     $existing_id = $dup->fetchColumn();
@@ -99,7 +98,7 @@ try {
 
     $upd = $pdo->prepare("
         UPDATE members SET
-            cadet_first_middle=:cadet_first_middle, nickname=:nickname,
+            cadet_first_name=:cadet_first_name, cadet_middle_name=:cadet_middle_name, nickname=:nickname,
             cadet_birthday=:cadet_birthday, cadet_po_box=:cadet_po_box,
             cadet_email=:cadet_email, cadet_cell=:cadet_cell,
             bct_squadron=:bct_squadron,
@@ -115,7 +114,8 @@ try {
         WHERE id = :id
     ");
     $upd->execute([
-        'cadet_first_middle' => $first_middle,
+        'cadet_first_name'   => $first,
+        'cadet_middle_name'  => $middle,
         'nickname'           => s($payload, 'nickname'),
         'cadet_birthday'     => $dob,
         'cadet_po_box'       => s($payload, 'poBox'),
@@ -188,7 +188,7 @@ mail($secretary_email, $subject, $email_body, $headers);
 $parent_email = s($payload, 'parent1Email');
 if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
     $parent_name  = s($payload, 'parent1FirstName');
-    $cadet_name   = trim($first_middle . ' ' . s($payload, 'cadetLastName'));
+    $cadet_name   = trim(preg_replace('/\s+/', ' ', "$first $middle " . s($payload, 'cadetLastName')));
     $conf_subject = 'Your Information Has Been Updated — USAFA Parents Club of Alabama';
     $conf_body    = "Dear $parent_name,\n\n"
                   . "Your family's information for $cadet_name has been updated in our records.\n\n"

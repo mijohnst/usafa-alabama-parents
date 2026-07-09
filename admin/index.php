@@ -22,7 +22,7 @@ $where  = ['1=1'];
 $params = [];
 
 if ($search !== '') {
-    $where[] = '(cadet_last_name LIKE :q OR cadet_first_middle LIKE :q
+    $where[] = '(cadet_last_name LIKE :q OR cadet_first_name LIKE :q OR cadet_middle_name LIKE :q
                  OR parent1_last_name LIKE :q OR parent1_first_name LIKE :q
                  OR parent2_last_name LIKE :q OR parent2_first_name LIKE :q
                  OR cadet_email LIKE :q OR parent1_email LIKE :q OR parent2_email LIKE :q
@@ -40,7 +40,7 @@ if ($squadron !== '') {
 $where[] = $archived === '1' ? 'archived = 1' : 'archived = 0';
 
 $order = $sort === 'cadet_last_name'
-    ? "cadet_last_name $dir, cadet_first_middle $dir"
+    ? "cadet_last_name $dir, cadet_first_name $dir"
     : "$sort $dir, cadet_last_name asc";
 
 $sql = 'SELECT * FROM members WHERE ' . implode(' AND ', $where) . " ORDER BY $order";
@@ -53,13 +53,13 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="members-' . date('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['Year','Last Name','First/Middle','Squadron','Region',
+    fputcsv($out, ['Year','Last Name','First Name','Middle Name','Squadron','Region',
                    'P1 Name','P1 Email','P1 Cell','P2 Name','P2 Email','P2 Cell',
                    'Dues','Dues Year','Remarks']);
     foreach ($members as $m) {
         $sqd = $m['squadron_yr2_4'] ?: ($m['fall_squadron'] ?: $m['bct_squadron']);
         fputcsv($out, [
-            $m['class_year'], $m['cadet_last_name'], $m['cadet_first_middle'],
+            $m['class_year'], $m['cadet_last_name'], $m['cadet_first_name'], $m['cadet_middle_name'],
             $sqd, $m['al_region'],
             trim($m['parent1_first_name'].' '.$m['parent1_last_name']),
             $m['parent1_email'], $m['parent1_cell'],
@@ -120,7 +120,7 @@ if (can_manage_finances() && !is_member()) {
 
 // Upcoming birthdays (next 30 days)
 $bday_rows = $pdo->query(
-    "SELECT cadet_last_name, cadet_first_middle, cadet_birthday, cadet_po_box
+    "SELECT cadet_last_name, cadet_first_name, cadet_middle_name, cadet_birthday, cadet_po_box
      FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL AND cadet_birthday != ''"
 )->fetchAll();
 $upcoming_bdays = [];
@@ -132,7 +132,7 @@ foreach ($bday_rows as $b) {
         if ($next < $today) $next->modify('+1 year');
         $days = (int)$today->diff($next)->days;
         if ($days <= 30) {
-            $upcoming_bdays[] = ['name'  => $b['cadet_last_name'] . ', ' . $b['cadet_first_middle'],
+            $upcoming_bdays[] = ['name'  => $b['cadet_last_name'] . ', ' . trim($b['cadet_first_name'] . ' ' . $b['cadet_middle_name']),
                                   'box'   => $b['cadet_po_box'],
                                   'fmt'   => $next->format('M j'),
                                   'days'  => $days];
@@ -383,7 +383,7 @@ function openBirthdays() {
       <?php endif; ?>
       <td><?= h($m['class_year']) ?></td>
       <td>
-        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?= $m['cadet_first_middle'] ? ', ' . h($m['cadet_first_middle']) : '' ?><br>
+        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><br>
         <?php if ($m['cadet_email']): ?><a href="mailto:<?= h($m['cadet_email']) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($m['cadet_email']) ?></a><?php endif; ?>
       </td>
       <td><?php if ($m['al_region']): ?><span class="badge <?= h($region_cls) ?>"><?= h($m['al_region']) ?></span><?php endif; ?></td>

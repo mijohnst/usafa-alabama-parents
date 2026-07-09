@@ -68,25 +68,24 @@ try {
     // Map form field names → DB columns
     $first  = s($payload, 'cadetFirstName');
     $middle = s($payload, 'cadetMiddleName');
-    $first_middle = trim("$first $middle");
 
     $dob = s($payload, 'cadetDOB');
     if ($dob === '') $dob = null;
 
     // ── Duplicate detection: same last name + class year, AND either an exact
-    // cadet name match or a matching parent email — a first-name *prefix* match
-    // alone would incorrectly collide siblings/twins (e.g. "Jack" vs "Jackson").
+    // cadet first name match or a matching parent email — a first-name *prefix*
+    // match alone would incorrectly collide siblings/twins (e.g. "Jack" vs "Jackson").
     $dup = $pdo->prepare(
         'SELECT id FROM members
          WHERE cadet_last_name = :last_name AND class_year = :class_year
-           AND (cadet_first_middle = :first_middle
+           AND (cadet_first_name = :first_name
                 OR (:parent1_email <> "" AND parent1_email = :parent1_email))
          LIMIT 1'
     );
     $dup->execute([
         'last_name'     => s($payload, 'cadetLastName'),
         'class_year'    => s($payload, 'graduationYear'),
-        'first_middle'  => $first_middle,
+        'first_name'    => $first,
         'parent1_email' => s($payload, 'parent1Email'),
     ]);
     $existing_id = $dup->fetchColumn();
@@ -95,7 +94,7 @@ try {
         // Returning member — update their record instead of inserting
         $upd = $pdo->prepare("
             UPDATE members SET
-                cadet_first_middle=:cadet_first_middle, nickname=:nickname,
+                cadet_first_name=:cadet_first_name, cadet_middle_name=:cadet_middle_name, nickname=:nickname,
                 cadet_birthday=:cadet_birthday, cadet_po_box=:cadet_po_box,
                 cadet_email=:cadet_email, cadet_cell=:cadet_cell,
                 bct_squadron=:bct_squadron,
@@ -111,7 +110,8 @@ try {
             WHERE id = :id
         ");
         $upd->execute([
-            'cadet_first_middle' => $first_middle,
+            'cadet_first_name'   => $first,
+            'cadet_middle_name'  => $middle,
             'nickname'           => s($payload,'nickname'),
             'cadet_birthday'     => $dob,
             'cadet_po_box'       => s($payload,'poBox'),
@@ -142,7 +142,7 @@ try {
     } else {
     $stmt = $pdo->prepare("
         INSERT INTO members (
-            class_year, cadet_last_name, cadet_first_middle, nickname,
+            class_year, cadet_last_name, cadet_first_name, cadet_middle_name, nickname,
             cadet_birthday, cadet_po_box, cadet_email, cadet_cell,
             bct_squadron,
             parent1_last_name, parent1_first_name, parent1_email, parent1_cell,
@@ -152,7 +152,7 @@ try {
             photo_consent, directory_consent,
             membership_paid, membership_year
         ) VALUES (
-            :class_year, :cadet_last_name, :cadet_first_middle, :nickname,
+            :class_year, :cadet_last_name, :cadet_first_name, :cadet_middle_name, :nickname,
             :cadet_birthday, :cadet_po_box, :cadet_email, :cadet_cell,
             :bct_squadron,
             :parent1_last_name, :parent1_first_name, :parent1_email, :parent1_cell,
@@ -167,7 +167,8 @@ try {
     $stmt->execute([
         'class_year'          => s($payload, 'graduationYear'),
         'cadet_last_name'     => s($payload, 'cadetLastName'),
-        'cadet_first_middle'  => $first_middle,
+        'cadet_first_name'    => $first,
+        'cadet_middle_name'   => $middle,
         'nickname'            => s($payload, 'nickname'),
         'cadet_birthday'      => $dob,
         'cadet_po_box'        => s($payload, 'poBox'),
@@ -250,7 +251,7 @@ mail($secretary_email, $subject, $email_body, $headers);
 $parent_email = s($payload, 'parent1Email');
 if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
     $parent_name  = s($payload, 'parent1FirstName');
-    $cadet_name   = trim($first_middle . ' ' . s($payload, 'cadetLastName'));
+    $cadet_name   = trim(preg_replace('/\s+/', ' ', "$first $middle " . s($payload, 'cadetLastName')));
     $conf_subject = 'Membership Application Received — USAFA Parents Club of Alabama';
     $conf_body    = "Dear $parent_name,\n\n"
                   . "We have received your membership application for $cadet_name (Class of " . s($payload,'graduationYear') . ").\n\n"
