@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
 require_login();
 if (!can_manage_members() && !is_secretary() && !is_treasurer()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
@@ -125,9 +126,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($r && $r['minutes_file']) {
                 $fp = $upload_dir . basename($r['minutes_file']);
                 if (is_file($fp)) @unlink($fp);
-                $pdo->prepare("UPDATE club_meetings SET minutes_file='' WHERE id=?")->execute([$id]);
+                $pdo->prepare("UPDATE club_meetings SET minutes_file='', minutes_token=NULL WHERE id=?")->execute([$id]);
                 $msg = 'File removed.';
             }
+        }
+    }
+
+    elseif ($action === 'notify_board') {
+        $id = (int)($_POST['id'] ?? 0);
+        $mq = $pdo->prepare("SELECT * FROM club_meetings WHERE id=?");
+        $mq->execute([$id]);
+        $meeting = $mq->fetch(PDO::FETCH_ASSOC);
+        if (!$meeting || !$meeting['minutes_file']) {
+            $error = 'Upload minutes before notifying the board.';
+        } else {
+            if (empty($meeting['minutes_token'])) {
+                $meeting['minutes_token'] = bin2hex(random_bytes(24));
+                $pdo->prepare("UPDATE club_meetings SET minutes_token=? WHERE id=?")
+                    ->execute([$meeting['minutes_token'], $id]);
+            }
+            $sent = notify_board_minutes_posted($pdo, $meeting, $_SESSION['user_name'] ?? 'Secretary');
+            $msg = $sent > 0
+                ? "Notified $sent board member" . ($sent != 1 ? 's' : '') . '.'
+                : 'No board members with an email on file were found.';
         }
     }
 
@@ -306,6 +327,12 @@ echo show_flash();
           <input type="hidden" name="action" value="delete_file">
           <input type="hidden" name="meeting_id" value="<?= (int)$m['id'] ?>">
           <button type="submit" class="btn btn-sm" style="padding:.1rem .4rem;font-size:.7rem;color:#A6192E;background:none;border:none;cursor:pointer">✕</button>
+        </form>
+        <form method="POST" style="display:block;margin-top:.25rem" onsubmit="return confirm('Email all board members that minutes for this meeting have been posted?')">
+          <?= csrf_field() ?>
+          <input type="hidden" name="action" value="notify_board">
+          <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">
+          <button type="submit" class="btn btn-sm" style="padding:.1rem .4rem;font-size:.7rem;color:#003594;background:none;border:none;cursor:pointer;text-decoration:underline">📧 Notify Board</button>
         </form>
       <?php else: ?>
         <form method="POST" enctype="multipart/form-data" style="display:flex;align-items:center;gap:.3rem">

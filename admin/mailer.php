@@ -10,6 +10,7 @@
 define('CLUB_NAME',  'USAFA Parents Club of Alabama');
 define('CLUB_FROM',  'USAFA Parents Club of Alabama <info@alabamafalcons.org>');
 define('ADMIN_URL',  'https://alabamafalcons.org/admin/');
+define('SITE_URL',   'https://alabamafalcons.org/');
 
 function send_notification(string $to, string $subject, string $body): bool {
     $headers  = "From: " . CLUB_FROM . "\r\n";
@@ -19,6 +20,54 @@ function send_notification(string $to, string $subject, string $body): bool {
     $clean_subject = preg_replace('/[\x00-\x1F\x7F]/', '', $subject);
     $clean_subject = mb_substr($clean_subject, 0, 200); // cap length
     return mail($to, $clean_subject, $body, $headers);
+}
+
+// ── Notify board-flagged parents that meeting minutes have been posted ───
+// Returns the number of emails successfully sent.
+function notify_board_minutes_posted(PDO $pdo, array $meeting, string $posted_by_name): int {
+    try {
+        $rows = $pdo->query(
+            "SELECT parent1_email AS email FROM members WHERE archived=0 AND parent1_is_board_member=1 AND parent1_email <> ''
+             UNION
+             SELECT parent2_email AS email FROM members WHERE archived=0 AND parent2_is_board_member=1 AND parent2_email <> ''"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('mailer: notify_board_minutes_posted query failed — ' . $e->getMessage());
+        return 0;
+    }
+    if (empty($rows)) return 0;
+
+    $seen = [];
+    $emails = [];
+    foreach ($rows as $r) {
+        $email = strtolower(trim($r['email']));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || isset($seen[$email])) continue;
+        $seen[$email] = true;
+        $emails[] = $email;
+    }
+    if (empty($emails)) return 0;
+
+    $date = date('F j, Y', strtotime($meeting['meeting_date']));
+    $url  = SITE_URL . 'minutes-public.php?id=' . (int)$meeting['id'] . '&token=' . $meeting['minutes_token'];
+
+    $subject = "Meeting Minutes Posted — {$meeting['title']} ($date)";
+    $body    = CLUB_NAME . "\n"
+             . "Meeting Minutes Posted\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "Minutes have been posted for the following meeting:\n\n"
+             . "  Meeting:  {$meeting['title']}\n"
+             . "  Date:     $date\n";
+    if (!empty($meeting['location']))     $body .= "  Location: {$meeting['location']}\n";
+    if (!empty($meeting['meeting_link'])) $body .= "  Link:     {$meeting['meeting_link']}\n";
+    $body .= "\nPosted by: $posted_by_name\n\n"
+           . "View / download the minutes:\n$url\n\n"
+           . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+
+    $sent = 0;
+    foreach ($emails as $email) {
+        if (send_notification($email, $subject, $body)) $sent++;
+    }
+    return $sent;
 }
 
 // ── Notify all treasurers + admins of a new purchase ─────────────────────
