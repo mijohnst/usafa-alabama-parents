@@ -22,32 +22,49 @@ function send_notification(string $to, string $subject, string $body): bool {
     return mail($to, $clean_subject, $body, $headers);
 }
 
-// Load the four birthday email templates (subject/body × cadet/parent) from
-// site_settings — editable in admin/settings.php — falling back to these
-// defaults if that migration hasn't been run yet.
-function load_birthday_templates(PDO $pdo): array {
-    $tpl = [
-        'birthday_cadet_subject'  => 'Happy Birthday, {name}! 🎉',
-        'birthday_cadet_body'     => "Happy Birthday, {name}!\n\nThe " . CLUB_NAME . " is thinking of you today and wishing you a fantastic birthday.\nThank you for everything you do — we're proud of you!\n\nAim High · Fly · Fight · Win\n" . CLUB_NAME . "\n" . SITE_URL,
-        'birthday_parent_subject' => "Celebrating {cadet_name} Today! \u{1F382}",
-        'birthday_parent_body'    => "On behalf of the " . CLUB_NAME . ", we want to take a moment to recognize {cadet_name} on their birthday today.\n\nCadets like {name} inspire us with their dedication, discipline, and hard work, and we are incredibly proud of everything they've accomplished on their journey at the Academy. We hope today is filled with celebration, and that {name} feels the pride and support of the entire Alabama Falcons family.\n\nHappy Birthday, {name}!\n\n" . CLUB_NAME . "\n" . SITE_URL,
-    ];
+// ─────────────────────────────────────────────────────────────────────────
+// Automated Emails framework — templates + enable/disable live in the
+// automated_emails table, managed from admin/automated-emails.php.
+// Idempotency ("don't resend the same occasion") is tracked generically in
+// automated_email_log, keyed by (email_key, subject_id, period_key).
+// ─────────────────────────────────────────────────────────────────────────
+
+function load_automated_email(PDO $pdo, string $email_key): ?array {
+    $stmt = $pdo->prepare('SELECT * FROM automated_emails WHERE email_key = ? LIMIT 1');
+    $stmt->execute([$email_key]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+// Returns true (and records the send) only the first time this exact
+// (email_key, subject_id, period_key) combination is seen.
+function mark_automated_sent(PDO $pdo, string $email_key, int $subject_id, string $period_key): bool {
+    $stmt = $pdo->prepare('INSERT IGNORE INTO automated_email_log (email_key, subject_id, period_key) VALUES (?, ?, ?)');
+    $stmt->execute([$email_key, $subject_id, $period_key]);
+    return $stmt->rowCount() > 0;
+}
+
+// Parses a "YYYY-YYYY" membership_paid_through value into the date it
+// actually expires (June 30 of the second year, matching the July-June
+// club year used by membership_year()). Returns null if unparseable.
+function parse_membership_expiration(string $paid_through): ?DateTimeImmutable {
+    if (!preg_match('/^(\d{4})-(\d{4})$/', trim($paid_through), $m)) return null;
     try {
-        $tpl_stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?,?,?,?)');
-        $tpl_stmt->execute(array_keys($tpl));
-        foreach ($tpl_stmt->fetchAll(PDO::FETCH_ASSOC) as $tr) {
-            if (trim((string)$tr['setting_value']) !== '') $tpl[$tr['setting_key']] = $tr['setting_value'];
-        }
-    } catch (PDOException $e) {
-        // site_settings not migrated yet — silently use the defaults above
+        return new DateTimeImmutable($m[2] . '-06-30');
+    } catch (Exception $e) {
+        return null;
     }
-    return $tpl;
 }
 
 // ── Send happy-birthday emails to today's cadets + their parents ─────────
-// Idempotent per cadet per calendar year via birthday_email_log.
+// Cadet and parent versions can be enabled/disabled independently.
 // Returns the number of cadets processed (not the number of individual emails).
 function send_birthday_emails(PDO $pdo): int {
+    $cadet_cfg  = load_automated_email($pdo, 'birthday_cadet');
+    $parent_cfg = load_automated_email($pdo, 'birthday_parent');
+    $cadet_on   = $cadet_cfg  && $cadet_cfg['enabled'];
+    $parent_on  = $parent_cfg && $parent_cfg['enabled'];
+    if (!$cadet_on && !$parent_on) return 0;
+
     try {
         $rows = $pdo->query(
             "SELECT id, cadet_first_middle, cadet_last_name, nickname, cadet_email, parent1_email, parent2_email
@@ -61,47 +78,232 @@ function send_birthday_emails(PDO $pdo): int {
     }
     if (empty($rows)) return 0;
 
-    $tpl   = load_birthday_templates($pdo);
     $year  = (int)date('Y');
-    $mark  = $pdo->prepare('INSERT IGNORE INTO birthday_email_log (member_id, year_sent) VALUES (?, ?)');
     $count = 0;
 
     foreach ($rows as $r) {
-        $mark->execute([$r['id'], $year]);
-        if ($mark->rowCount() < 1) continue; // already sent this cadet a wish this year
+        if (!mark_automated_sent($pdo, 'birthday', (int)$r['id'], (string)$year)) continue; // already wished this year
         $count++;
 
         $full_name = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
         $nickname  = trim((string)($r['nickname'] ?? ''));
         $nick_or_first = $nickname !== '' ? $nickname : (explode(' ', trim((string)($r['cadet_first_middle'] ?? '')))[0] ?? '');
         if ($nick_or_first === '') $nick_or_first = $full_name ?: 'Cadet';
-
         $replace = ['{name}' => $nick_or_first, '{cadet_name}' => $full_name ?: $nick_or_first];
 
-        if (!empty($r['cadet_email']) && filter_var($r['cadet_email'], FILTER_VALIDATE_EMAIL)) {
-            send_notification($r['cadet_email'], strtr($tpl['birthday_cadet_subject'], $replace), strtr($tpl['birthday_cadet_body'], $replace));
+        if ($cadet_on && !empty($r['cadet_email']) && filter_var($r['cadet_email'], FILTER_VALIDATE_EMAIL)) {
+            send_notification($r['cadet_email'], strtr($cadet_cfg['subject'], $replace), strtr($cadet_cfg['body'], $replace));
         }
-
-        $parent_subject = strtr($tpl['birthday_parent_subject'], $replace);
-        $parent_body    = strtr($tpl['birthday_parent_body'], $replace);
-        foreach ([$r['parent1_email'] ?? '', $r['parent2_email'] ?? ''] as $pe) {
-            if ($pe !== '' && filter_var($pe, FILTER_VALIDATE_EMAIL)) {
-                send_notification($pe, $parent_subject, $parent_body);
+        if ($parent_on) {
+            $parent_subject = strtr($parent_cfg['subject'], $replace);
+            $parent_body    = strtr($parent_cfg['body'], $replace);
+            foreach ([$r['parent1_email'] ?? '', $r['parent2_email'] ?? ''] as $pe) {
+                if ($pe !== '' && filter_var($pe, FILTER_VALIDATE_EMAIL)) {
+                    send_notification($pe, $parent_subject, $parent_body);
+                }
             }
         }
     }
     return $count;
 }
 
-// ── Send a preview of both birthday email templates to a test address ────
-// Uses sample placeholder data — does not touch birthday_email_log or query members.
-function send_birthday_test_email(PDO $pdo, string $to): bool {
-    $tpl     = load_birthday_templates($pdo);
-    $replace = ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example'];
+// ── Dues renewal reminder — parents, once, N days before paid-through ends ──
+function send_dues_renewal_reminders(PDO $pdo): int {
+    $cfg = load_automated_email($pdo, 'dues_renewal');
+    if (!$cfg || !$cfg['enabled']) return 0;
 
-    $ok1 = send_notification($to, '[TEST — Cadet Email] ' . strtr($tpl['birthday_cadet_subject'], $replace), strtr($tpl['birthday_cadet_body'], $replace));
-    $ok2 = send_notification($to, '[TEST — Parent Email] ' . strtr($tpl['birthday_parent_subject'], $replace), strtr($tpl['birthday_parent_body'], $replace));
-    return $ok1 && $ok2;
+    try {
+        $rows = $pdo->query(
+            "SELECT id, cadet_first_middle, cadet_last_name, parent1_first_name, parent1_email, parent2_email, membership_paid_through, membership_type
+             FROM members
+             WHERE archived = 0 AND membership_paid = 1 AND membership_paid_through <> ''"
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('mailer: send_dues_renewal_reminders query failed — ' . $e->getMessage());
+        return 0;
+    }
+
+    $today = new DateTimeImmutable('today');
+    $count = 0;
+    foreach ($rows as $r) {
+        $exp = parse_membership_expiration($r['membership_paid_through']);
+        if (!$exp) continue;
+        $days_left = (int)$today->diff($exp)->format('%r%a');
+        if ($days_left < 0 || $days_left > (int)$cfg['days_offset']) continue;
+        if (!mark_automated_sent($pdo, 'dues_renewal', (int)$r['id'], $r['membership_paid_through'])) continue;
+        $count++;
+
+        $full_name   = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $replace = [
+            '{parent_name}' => $r['parent1_first_name'] ?: 'there',
+            '{cadet_name}'  => $full_name ?: 'your cadet',
+            '{expire_date}' => $exp->format('F j, Y'),
+            '{dues_amount}' => $r['membership_type'] === '4year' ? '$275' : '$75',
+        ];
+        $subject = strtr($cfg['subject'], $replace);
+        $body    = strtr($cfg['body'], $replace);
+        foreach ([$r['parent1_email'] ?? '', $r['parent2_email'] ?? ''] as $pe) {
+            if ($pe !== '' && filter_var($pe, FILTER_VALIDATE_EMAIL)) send_notification($pe, $subject, $body);
+        }
+    }
+    return $count;
+}
+
+// ── Lapsed member re-engagement — parents, once, N days after expiration ──
+function send_lapsed_reengagement(PDO $pdo): int {
+    $cfg = load_automated_email($pdo, 'lapsed_reengagement');
+    if (!$cfg || !$cfg['enabled']) return 0;
+
+    try {
+        $rows = $pdo->query(
+            "SELECT id, cadet_first_middle, cadet_last_name, parent1_first_name, parent1_email, parent2_email, membership_paid_through
+             FROM members
+             WHERE archived = 0 AND membership_paid_through <> ''"
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('mailer: send_lapsed_reengagement query failed — ' . $e->getMessage());
+        return 0;
+    }
+
+    $today = new DateTimeImmutable('today');
+    $count = 0;
+    foreach ($rows as $r) {
+        $exp = parse_membership_expiration($r['membership_paid_through']);
+        if (!$exp || $today < $exp) continue; // not expired yet
+        $days_past = (int)$exp->diff($today)->format('%r%a');
+        if ($days_past < (int)$cfg['days_offset']) continue;
+        if (!mark_automated_sent($pdo, 'lapsed_reengagement', (int)$r['id'], $r['membership_paid_through'])) continue;
+        $count++;
+
+        $full_name = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $replace = [
+            '{parent_name}' => $r['parent1_first_name'] ?: 'there',
+            '{cadet_name}'  => $full_name ?: 'your cadet',
+            '{expire_date}' => $exp->format('F j, Y'),
+        ];
+        $subject = strtr($cfg['subject'], $replace);
+        $body    = strtr($cfg['body'], $replace);
+        foreach ([$r['parent1_email'] ?? '', $r['parent2_email'] ?? ''] as $pe) {
+            if ($pe !== '' && filter_var($pe, FILTER_VALIDATE_EMAIL)) send_notification($pe, $subject, $body);
+        }
+    }
+    return $count;
+}
+
+// ── New member welcome follow-up — parents, once, N days after joining ───
+function send_new_member_welcome(PDO $pdo): int {
+    $cfg = load_automated_email($pdo, 'new_member_welcome');
+    if (!$cfg || !$cfg['enabled']) return 0;
+
+    $offset = (int)$cfg['days_offset'];
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, cadet_first_middle, cadet_last_name, parent1_first_name, parent1_email, parent2_email
+             FROM members
+             WHERE archived = 0 AND created_at IS NOT NULL
+               AND DATEDIFF(CURDATE(), created_at) BETWEEN ? AND ?"
+        );
+        $stmt->execute([$offset, $offset + 6]); // small window so a missed cron day doesn't skip anyone
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('mailer: send_new_member_welcome query failed — ' . $e->getMessage());
+        return 0;
+    }
+
+    $count = 0;
+    foreach ($rows as $r) {
+        if (!mark_automated_sent($pdo, 'new_member_welcome', (int)$r['id'], 'once')) continue;
+        $count++;
+
+        $full_name = trim(($r['cadet_first_middle'] ?? '') . ' ' . ($r['cadet_last_name'] ?? ''));
+        $replace = [
+            '{parent_name}' => $r['parent1_first_name'] ?: 'there',
+            '{cadet_name}'  => $full_name ?: 'your cadet',
+        ];
+        $subject = strtr($cfg['subject'], $replace);
+        $body    = strtr($cfg['body'], $replace);
+        foreach ([$r['parent1_email'] ?? '', $r['parent2_email'] ?? ''] as $pe) {
+            if ($pe !== '' && filter_var($pe, FILTER_VALIDATE_EMAIL)) send_notification($pe, $subject, $body);
+        }
+    }
+    return $count;
+}
+
+// ── Meeting reminder — morning-of; board meetings → board parents only, ──
+// ── other meeting types → all active members ──────────────────────────────
+function send_meeting_reminders(PDO $pdo): int {
+    $cfg = load_automated_email($pdo, 'meeting_reminder');
+    if (!$cfg || !$cfg['enabled']) return 0;
+
+    try {
+        $meetings = $pdo->query("SELECT * FROM club_meetings WHERE meeting_date = CURDATE()")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('mailer: send_meeting_reminders query failed — ' . $e->getMessage());
+        return 0;
+    }
+    if (empty($meetings)) return 0;
+
+    $count = 0;
+    foreach ($meetings as $meeting) {
+        if (!mark_automated_sent($pdo, 'meeting_reminder', (int)$meeting['id'], 'sent')) continue;
+
+        try {
+            if ($meeting['meeting_type'] === 'board') {
+                $email_rows = $pdo->query(
+                    "SELECT parent1_email AS email FROM members WHERE archived=0 AND parent1_is_board_member=1 AND parent1_email <> ''
+                     UNION
+                     SELECT parent2_email AS email FROM members WHERE archived=0 AND parent2_is_board_member=1 AND parent2_email <> ''"
+                )->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $pair_rows = $pdo->query("SELECT parent1_email, parent2_email FROM members WHERE archived=0")->fetchAll(PDO::FETCH_ASSOC);
+                $email_rows = [];
+                foreach ($pair_rows as $pr) {
+                    if (!empty($pr['parent1_email'])) $email_rows[] = ['email' => $pr['parent1_email']];
+                    if (!empty($pr['parent2_email'])) $email_rows[] = ['email' => $pr['parent2_email']];
+                }
+            }
+        } catch (PDOException $e) {
+            $email_rows = [];
+        }
+
+        $seen = []; $emails = [];
+        foreach ($email_rows as $er) {
+            $email = strtolower(trim($er['email'] ?? ''));
+            if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || isset($seen[$email])) continue;
+            $seen[$email] = true;
+            $emails[] = $email;
+        }
+        if (empty($emails)) continue;
+        $count++;
+
+        $replace = [
+            '{meeting_title}'    => $meeting['title'],
+            '{meeting_date}'     => date('l, F j, Y', strtotime($meeting['meeting_date'])),
+            '{meeting_location}' => $meeting['location'] ?: 'No location listed',
+            '{meeting_link}'     => $meeting['meeting_link'] ?: 'No virtual link provided',
+        ];
+        $subject = strtr($cfg['subject'], $replace);
+        $body    = strtr($cfg['body'], $replace);
+        foreach ($emails as $email) send_notification($email, $subject, $body);
+    }
+    return $count;
+}
+
+// ── Send a preview of any automated email to a test address ──────────────
+// Uses sample placeholder data — does not touch automated_email_log or query members.
+function send_automated_test_email(PDO $pdo, string $email_key, string $to): bool {
+    $samples = [
+        'birthday_cadet'      => ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example'],
+        'birthday_parent'     => ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example'],
+        'dues_renewal'        => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example', '{expire_date}' => date('F j, Y', strtotime('+30 days')), '{dues_amount}' => '$75'],
+        'meeting_reminder'    => ['{meeting_title}' => 'Monthly General Meeting', '{meeting_date}' => date('l, F j, Y'), '{meeting_location}' => 'Zoom', '{meeting_link}' => 'https://zoom.us/j/example'],
+        'new_member_welcome'  => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example'],
+        'lapsed_reengagement' => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example', '{expire_date}' => date('F j, Y', strtotime('-60 days'))],
+    ];
+    $cfg = load_automated_email($pdo, $email_key);
+    if (!$cfg) return false;
+    $replace = $samples[$email_key] ?? [];
+    return send_notification($to, '[TEST] ' . strtr($cfg['subject'], $replace), strtr($cfg['body'], $replace));
 }
 
 // ── Notify board-flagged parents that meeting minutes have been posted ───

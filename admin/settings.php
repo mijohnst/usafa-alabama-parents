@@ -5,22 +5,6 @@ $pdo = get_pdo();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
-    $action = $_POST['action'] ?? 'save';
-
-    if ($action === 'send_birthday_test') {
-        $test_email = trim($_POST['test_email'] ?? '');
-        if (!filter_var($test_email, FILTER_VALIDATE_EMAIL)) {
-            flash('error', 'Enter a valid email address to send the test to.');
-        } else {
-            require_once __DIR__ . '/mailer.php';
-            $ok = send_birthday_test_email($pdo, $test_email);
-            flash($ok ? 'success' : 'error', $ok
-                ? "Test birthday emails sent to $test_email (uses whatever is currently saved below)."
-                : 'Could not send — check the server\'s mail configuration.');
-        }
-        header('Location: settings.php'); exit;
-    }
-
     $rows = $pdo->query('SELECT setting_key, setting_type FROM site_settings')->fetchAll();
     foreach ($rows as $row) {
         $key = $row['setting_key'];
@@ -45,7 +29,6 @@ $sections = [
     'President\'s Letter' => ['president_letter','president_name','president_title'],
     'Social & Links'      => ['facebook_url'],
     'Footer Resources'    => ['footer_resources'],
-    'Cadet Birthday Emails' => ['birthday_cadet_subject','birthday_cadet_body','birthday_parent_subject','birthday_parent_body'],
 ];
 
 admin_header('Site Settings');
@@ -67,7 +50,8 @@ echo show_flash();
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.5rem">
   Changes here update the main website automatically.
   <strong>Footer Resources:</strong> one per line as <code>Title|URL</code>.
-  <strong>Birthday Emails:</strong> use <code>{name}</code> for the cadet's nickname/first name and <code>{cadet_name}</code> for their full name — sent daily by a cron job, see <code>admin/birthday-wishes.php</code>.
+  Looking for the cadet birthday / dues renewal / meeting reminder emails? Those moved to
+  <a href="automated-emails.php">Automated Emails</a>.
 </p>
 
 <form method="POST" id="settings-form">
@@ -88,7 +72,7 @@ echo show_flash();
         <input type="hidden" name="president_letter" id="president_letter_input">
         <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">Use the toolbar above to format text, add links, or insert images. Looks the same as it will on the website.</p>
       <?php elseif ($type === 'textarea'): ?>
-        <textarea name="<?= h($key) ?>" rows="<?= in_array($key, ['membership_description','birthday_cadet_body','birthday_parent_body']) ? 6 : 4 ?>"><?= h($val) ?></textarea>
+        <textarea name="<?= h($key) ?>" rows="<?= $key==='membership_description' ? 6 : 4 ?>"><?= h($val) ?></textarea>
       <?php else: ?>
         <input type="text" name="<?= h($key) ?>" value="<?= h($val) ?>" placeholder="<?= $type==='url'?'e.g. https://... or #section':'' ?>">
       <?php endif; ?>
@@ -98,20 +82,6 @@ echo show_flash();
   <?php endforeach; ?>
   <button type="submit" class="btn btn-primary" style="min-width:180px">Save All Settings</button>
 </form>
-
-<div class="card" style="margin-top:1.25rem;max-width:520px">
-  <h2 style="margin-bottom:.5rem;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a6a7a">Test the Birthday Emails</h2>
-  <p style="font-size:.8rem;color:#5a6a7a;margin-bottom:1rem">Sends both the cadet and parent versions to an address of your choice, using sample data ("Jamie Example") and whatever wording is currently saved above. <strong>Save your changes first</strong> if you just edited the text.</p>
-  <form method="POST" style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="send_birthday_test">
-    <div class="form-group" style="margin:0;flex:1;min-width:220px">
-      <label>Send test to</label>
-      <input type="email" name="test_email" required placeholder="you@example.com" value="<?= h($_SESSION['user_email'] ?? '') ?>">
-    </div>
-    <button type="submit" class="btn btn-secondary">Send Test</button>
-  </form>
-</div>
 
 <script>
 // Initialise Quill rich text editor
