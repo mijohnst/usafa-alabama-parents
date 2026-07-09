@@ -5,6 +5,22 @@ $pdo = get_pdo();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+    $action = $_POST['action'] ?? 'save';
+
+    if ($action === 'send_birthday_test') {
+        $test_email = trim($_POST['test_email'] ?? '');
+        if (!filter_var($test_email, FILTER_VALIDATE_EMAIL)) {
+            flash('error', 'Enter a valid email address to send the test to.');
+        } else {
+            require_once __DIR__ . '/mailer.php';
+            $ok = send_birthday_test_email($pdo, $test_email);
+            flash($ok ? 'success' : 'error', $ok
+                ? "Test birthday emails sent to $test_email (uses whatever is currently saved below)."
+                : 'Could not send — check the server\'s mail configuration.');
+        }
+        header('Location: settings.php'); exit;
+    }
+
     $rows = $pdo->query('SELECT setting_key, setting_type FROM site_settings')->fetchAll();
     foreach ($rows as $row) {
         $key = $row['setting_key'];
@@ -82,6 +98,20 @@ echo show_flash();
   <?php endforeach; ?>
   <button type="submit" class="btn btn-primary" style="min-width:180px">Save All Settings</button>
 </form>
+
+<div class="card" style="margin-top:1.25rem;max-width:520px">
+  <h2 style="margin-bottom:.5rem;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a6a7a">Test the Birthday Emails</h2>
+  <p style="font-size:.8rem;color:#5a6a7a;margin-bottom:1rem">Sends both the cadet and parent versions to an address of your choice, using sample data ("Jamie Example") and whatever wording is currently saved above. <strong>Save your changes first</strong> if you just edited the text.</p>
+  <form method="POST" style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="send_birthday_test">
+    <div class="form-group" style="margin:0;flex:1;min-width:220px">
+      <label>Send test to</label>
+      <input type="email" name="test_email" required placeholder="you@example.com" value="<?= h($_SESSION['user_email'] ?? '') ?>">
+    </div>
+    <button type="submit" class="btn btn-secondary">Send Test</button>
+  </form>
+</div>
 
 <script>
 // Initialise Quill rich text editor

@@ -22,6 +22,28 @@ function send_notification(string $to, string $subject, string $body): bool {
     return mail($to, $clean_subject, $body, $headers);
 }
 
+// Load the four birthday email templates (subject/body × cadet/parent) from
+// site_settings — editable in admin/settings.php — falling back to these
+// defaults if that migration hasn't been run yet.
+function load_birthday_templates(PDO $pdo): array {
+    $tpl = [
+        'birthday_cadet_subject'  => 'Happy Birthday, {name}! 🎉',
+        'birthday_cadet_body'     => "Happy Birthday, {name}!\n\nThe " . CLUB_NAME . " is thinking of you today and wishing you a fantastic birthday.\nThank you for everything you do — we're proud of you!\n\nAim High · Fly · Fight · Win\n" . CLUB_NAME . "\n" . SITE_URL,
+        'birthday_parent_subject' => "Celebrating {cadet_name} Today! \u{1F382}",
+        'birthday_parent_body'    => "On behalf of the " . CLUB_NAME . ", we want to take a moment to recognize {cadet_name} on their birthday today.\n\nCadets like {name} inspire us with their dedication, discipline, and hard work, and we are incredibly proud of everything they've accomplished on their journey at the Academy. We hope today is filled with celebration, and that {name} feels the pride and support of the entire Alabama Falcons family.\n\nHappy Birthday, {name}!\n\n" . CLUB_NAME . "\n" . SITE_URL,
+    ];
+    try {
+        $tpl_stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?,?,?,?)');
+        $tpl_stmt->execute(array_keys($tpl));
+        foreach ($tpl_stmt->fetchAll(PDO::FETCH_ASSOC) as $tr) {
+            if (trim((string)$tr['setting_value']) !== '') $tpl[$tr['setting_key']] = $tr['setting_value'];
+        }
+    } catch (PDOException $e) {
+        // site_settings not migrated yet — silently use the defaults above
+    }
+    return $tpl;
+}
+
 // ── Send happy-birthday emails to today's cadets + their parents ─────────
 // Idempotent per cadet per calendar year via birthday_email_log.
 // Returns the number of cadets processed (not the number of individual emails).
@@ -39,24 +61,7 @@ function send_birthday_emails(PDO $pdo): int {
     }
     if (empty($rows)) return 0;
 
-    // Templates are editable in admin/settings.php (site_settings table);
-    // fall back to these defaults if that migration hasn't been run yet.
-    $tpl = [
-        'birthday_cadet_subject'  => 'Happy Birthday, {name}! 🎉',
-        'birthday_cadet_body'     => "Happy Birthday, {name}!\n\nThe " . CLUB_NAME . " is thinking of you today and wishing you a fantastic birthday.\nThank you for everything you do — we're proud of you!\n\nAim High · Fly · Fight · Win\n" . CLUB_NAME . "\n" . SITE_URL,
-        'birthday_parent_subject' => "Celebrating {cadet_name} Today! \u{1F382}",
-        'birthday_parent_body'    => "On behalf of the " . CLUB_NAME . ", we want to take a moment to recognize {cadet_name} on their birthday today.\n\nCadets like {name} inspire us with their dedication, discipline, and hard work, and we are incredibly proud of everything they've accomplished on their journey at the Academy. We hope today is filled with celebration, and that {name} feels the pride and support of the entire Alabama Falcons family.\n\nHappy Birthday, {name}!\n\n" . CLUB_NAME . "\n" . SITE_URL,
-    ];
-    try {
-        $tpl_stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?,?,?,?)');
-        $tpl_stmt->execute(array_keys($tpl));
-        foreach ($tpl_stmt->fetchAll(PDO::FETCH_ASSOC) as $tr) {
-            if (trim((string)$tr['setting_value']) !== '') $tpl[$tr['setting_key']] = $tr['setting_value'];
-        }
-    } catch (PDOException $e) {
-        // site_settings not migrated yet — silently use the defaults above
-    }
-
+    $tpl   = load_birthday_templates($pdo);
     $year  = (int)date('Y');
     $mark  = $pdo->prepare('INSERT IGNORE INTO birthday_email_log (member_id, year_sent) VALUES (?, ?)');
     $count = 0;
@@ -86,6 +91,17 @@ function send_birthday_emails(PDO $pdo): int {
         }
     }
     return $count;
+}
+
+// ── Send a preview of both birthday email templates to a test address ────
+// Uses sample placeholder data — does not touch birthday_email_log or query members.
+function send_birthday_test_email(PDO $pdo, string $to): bool {
+    $tpl     = load_birthday_templates($pdo);
+    $replace = ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example'];
+
+    $ok1 = send_notification($to, '[TEST — Cadet Email] ' . strtr($tpl['birthday_cadet_subject'], $replace), strtr($tpl['birthday_cadet_body'], $replace));
+    $ok2 = send_notification($to, '[TEST — Parent Email] ' . strtr($tpl['birthday_parent_subject'], $replace), strtr($tpl['birthday_parent_body'], $replace));
+    return $ok1 && $ok2;
 }
 
 // ── Notify board-flagged parents that meeting minutes have been posted ───
