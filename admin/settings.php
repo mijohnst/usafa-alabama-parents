@@ -29,6 +29,7 @@ $sections = [
     'President\'s Letter' => ['president_letter','president_name','president_title'],
     'Social & Links'      => ['facebook_url'],
     'Footer Resources'    => ['footer_resources'],
+    'Email Signatures'    => ['signature_president','signature_vp','signature_secretary','signature_treasurer'],
 ];
 
 admin_header('Site Settings');
@@ -52,6 +53,8 @@ echo show_flash();
   <strong>Footer Resources:</strong> one per line as <code>Title|URL</code>.
   Looking for the cadet birthday / dues renewal / meeting reminder emails? Those moved to
   <a href="automated-emails.php">Automated Emails</a>.
+  <strong>Email Signatures:</strong> automatically appended to the bottom of messages sent from
+  <a href="email.php">Compose Email</a>, based on which "From" address is selected.
 </p>
 
 <form method="POST" id="settings-form">

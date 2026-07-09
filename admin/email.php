@@ -60,6 +60,24 @@ $from_options = [
     'treasurer@alabamafalcons.org' => 'Treasurer',
 ];
 
+// Maps each From address to its signature's site_settings key (edit signature
+// text on the Site Settings page, under "Email Signatures").
+$signature_keys = [
+    'president@alabamafalcons.org' => 'signature_president',
+    'vp@alabamafalcons.org'        => 'signature_vp',
+    'secretary@alabamafalcons.org' => 'signature_secretary',
+    'treasurer@alabamafalcons.org' => 'signature_treasurer',
+];
+
+$pdo = get_pdo();
+$signatures = [];
+try {
+    $sig_rows = $pdo->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key LIKE 'signature_%'")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($sig_rows as $sr) $signatures[$sr['setting_key']] = $sr['setting_value'];
+} catch (PDOException $e) {
+    // site_settings not migrated yet — signatures will just be blank
+}
+
 // ── State ─────────────────────────────────────────────────────────────────
 $recipients  = trim($_POST['recipients']  ?? '');
 $subject     = trim($_POST['subject']     ?? '');
@@ -78,7 +96,6 @@ $f_type   = $_POST['f_type']   ?? 'parent_both';
 
 // ── Handle load recipients ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['load'])) {
-    $pdo        = get_pdo();
     $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type);
 }
 
@@ -94,13 +111,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
         if (empty($valid)) {
             $errors[] = 'No valid email addresses found.';
         } else {
+            $sig_key   = $signature_keys[$from_email] ?? '';
+            $signature = trim($signatures[$sig_key] ?? '');
+            $full_body = $signature !== '' ? $body . "\n\n-- \n" . $signature : $body;
+
             $clean_subject = str_replace(["\r","\n"], '', $subject);
             $headers  = "From: USAFA Parents Club of Alabama <{$from_email}>\r\n";
             $headers .= "Reply-To: {$from_email}\r\n";
             $headers .= "BCC: " . implode(', ', $valid) . "\r\n";
             $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
-            if (mail('info@alabamafalcons.org', $clean_subject, $body, $headers)) {
+            if (mail('info@alabamafalcons.org', $clean_subject, $full_body, $headers)) {
                 $sent        = true;
                 $valid_count = count($valid);
                 $recipients  = '';
@@ -235,13 +256,14 @@ admin_header('Compose Email');
 
     <div class="form-group" style="max-width:360px">
       <label>From</label>
-      <select name="from_email" style="font-weight:600;color:#002554">
+      <select name="from_email" id="from-select" style="font-weight:600;color:#002554" onchange="updateSigPreview()">
         <?php foreach ($from_options as $addr => $title): ?>
           <option value="<?= h($addr) ?>" <?= $from_email===$addr?'selected':''?>>
             <?= h($title) ?> &lt;<?= h($addr) ?>&gt;
           </option>
         <?php endforeach; ?>
       </select>
+      <div id="sig-preview" style="font-size:.75rem;color:#5a6a7a;margin-top:.5rem;white-space:pre-line;border-left:2px solid #e1e5eb;padding-left:.6rem"></div>
     </div>
 
     <div class="form-group">
@@ -270,12 +292,22 @@ admin_header('Compose Email');
     <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
       <button type="submit" name="send" value="1" class="btn btn-primary">Send Email</button>
       <a href="email.php" class="btn btn-secondary">Clear</a>
-      <span style="font-size:.82rem;color:#5a6a7a">Sends as BCC — recipients will not see each other's addresses.</span>
+      <span style="font-size:.82rem;color:#5a6a7a">Sends as BCC — recipients will not see each other's addresses. Your signature (shown above) is added automatically.</span>
     </div>
   </form>
 </div>
 
 <script>
+// ── Signature preview ─────────────────────────────────────────────────────
+var signatures = <?= json_encode($signatures) ?>;
+var sigKeyMap   = <?= json_encode($signature_keys) ?>;
+function updateSigPreview() {
+  var from = document.getElementById('from-select').value;
+  var sig  = signatures[sigKeyMap[from]] || '';
+  document.getElementById('sig-preview').textContent = sig ? 'Signature: ' + sig : '';
+}
+updateSigPreview();
+
 // ── Year checkbox dropdown ────────────────────────────────────────────────
 var yrCd  = document.getElementById('yr-cd');
 var yrBtn = document.getElementById('yr-btn');
