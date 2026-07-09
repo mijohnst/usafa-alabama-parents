@@ -22,15 +22,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $type  = $_POST['meeting_type'] ?? 'general';
         $title = trim($_POST['title'] ?? '');
         $loc   = trim($_POST['location'] ?? '');
+        $link  = trim($_POST['meeting_link'] ?? '');
         $notes = trim($_POST['notes'] ?? '');
         if (!in_array($type, ['general','board','special','other'])) $type = 'general';
         if ($date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             $error = 'Meeting date is required.';
         } elseif ($title === '') {
             $error = 'Title is required.';
+        } elseif ($link !== '' && !preg_match('/^https?:\/\//i', $link)) {
+            $error = 'Meeting link must start with https:// or http://';
         } else {
-            $s = $pdo->prepare("INSERT INTO club_meetings (meeting_date, meeting_type, title, location, notes, created_by) VALUES (?,?,?,?,?,?)");
-            $s->execute([$date, $type, $title, $loc, $notes, $_SESSION['user_id']??null]);
+            $s = $pdo->prepare("INSERT INTO club_meetings (meeting_date, meeting_type, title, location, meeting_link, notes, created_by) VALUES (?,?,?,?,?,?,?)");
+            $s->execute([$date, $type, $title, $loc, $link, $notes, $_SESSION['user_id']??null]);
             $msg = 'Meeting added.';
         }
     }
@@ -41,15 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $type  = $_POST['meeting_type'] ?? 'general';
         $title = trim($_POST['title'] ?? '');
         $loc   = trim($_POST['location'] ?? '');
+        $link  = trim($_POST['meeting_link'] ?? '');
         $notes = trim($_POST['notes'] ?? '');
         if (!in_array($type, ['general','board','special','other'])) $type = 'general';
         if ($id < 1 || $date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             $error = 'Invalid input.';
         } elseif ($title === '') {
             $error = 'Title is required.';
+        } elseif ($link !== '' && !preg_match('/^https?:\/\//i', $link)) {
+            $error = 'Meeting link must start with https:// or http://';
         } else {
-            $s = $pdo->prepare("UPDATE club_meetings SET meeting_date=?, meeting_type=?, title=?, location=?, notes=? WHERE id=?");
-            $s->execute([$date, $type, $title, $loc, $notes, $id]);
+            $s = $pdo->prepare("UPDATE club_meetings SET meeting_date=?, meeting_type=?, title=?, location=?, meeting_link=?, notes=? WHERE id=?");
+            $s->execute([$date, $type, $title, $loc, $link, $notes, $id]);
             $msg = 'Meeting updated.';
         }
     }
@@ -225,6 +231,11 @@ echo show_flash();
         <input type="text" name="location" class="form-control" maxlength="200"
                value="<?= h($edit_meeting['location'] ?? '') ?>" placeholder="Optional">
       </div>
+      <div class="form-group">
+        <label>Zoom / Google Meet Link</label>
+        <input type="url" name="meeting_link" class="form-control" maxlength="500"
+               value="<?= h($edit_meeting['meeting_link'] ?? '') ?>" placeholder="https://zoom.us/j/… or https://meet.google.com/…">
+      </div>
     </div>
     <div class="form-group" style="margin-top:.5rem">
       <label>Notes</label>
@@ -281,7 +292,12 @@ echo show_flash();
       <?= h($m['title']) ?>
       <?php if ($m['notes']): ?><div style="font-size:.72rem;color:#9aa5b4;margin-top:.15rem"><?= h(mb_strimwidth($m['notes'],0,80,'…')) ?></div><?php endif; ?>
     </td>
-    <td><?= $m['location'] ? h($m['location']) : '<span style="color:#c0c8d4">—</span>' ?></td>
+    <td>
+      <?= $m['location'] ? h($m['location']) : '<span style="color:#c0c8d4">—</span>' ?>
+      <?php if (!empty($m['meeting_link'])): ?>
+        <div><a href="<?= h($m['meeting_link']) ?>" target="_blank" rel="noopener" style="font-size:.75rem;color:#003594;font-weight:600;text-decoration:none">🔗 Join</a></div>
+      <?php endif; ?>
+    </td>
     <td>
       <?php if ($m['minutes_file']): ?>
         <a href="minutes-serve.php?id=<?= (int)$m['id'] ?>" target="_blank" style="color:#003594;font-size:.78rem;font-weight:600;text-decoration:none">📄 View</a>

@@ -216,6 +216,7 @@ admin_header('Take Attendance — ' . h($meeting['title']));
     <div style="display:flex;gap:.5rem;flex-wrap:wrap">
       <button type="button" class="btn btn-secondary btn-sm" onclick="markAll(true)">Mark All Present</button>
       <button type="button" class="btn btn-secondary btn-sm" onclick="markAll(false)">Clear All</button>
+      <button type="submit" class="btn btn-primary btn-sm">Save Attendance</button>
     </div>
   </div>
 
