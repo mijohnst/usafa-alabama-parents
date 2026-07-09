@@ -229,8 +229,9 @@ function send_new_member_welcome(PDO $pdo): int {
     return $count;
 }
 
-// ── Meeting reminder — morning-of; board meetings → board parents only, ──
-// ── other meeting types → all active members ──────────────────────────────
+// ── Meeting reminder — morning-of. Board meetings → board-flagged parents ──
+// ── only. General meetings → all active members. Special/Other → no email ──
+// ── at all. ─────────────────────────────────────────────────────────────
 function send_meeting_reminders(PDO $pdo): int {
     $cfg = load_automated_email($pdo, 'meeting_reminder');
     if (!$cfg || !$cfg['enabled']) return 0;
@@ -245,6 +246,9 @@ function send_meeting_reminders(PDO $pdo): int {
 
     $count = 0;
     foreach ($meetings as $meeting) {
+        // Special/Other meetings never get a reminder
+        if (!in_array($meeting['meeting_type'], ['board', 'general'], true)) continue;
+
         if (!mark_automated_sent($pdo, 'meeting_reminder', (int)$meeting['id'], 'sent')) continue;
 
         try {
@@ -254,7 +258,7 @@ function send_meeting_reminders(PDO $pdo): int {
                      UNION
                      SELECT parent2_email AS email FROM members WHERE archived=0 AND parent2_is_board_member=1 AND parent2_email <> ''"
                 )->fetchAll(PDO::FETCH_ASSOC);
-            } else {
+            } else { // general
                 $pair_rows = $pdo->query("SELECT parent1_email, parent2_email FROM members WHERE archived=0")->fetchAll(PDO::FETCH_ASSOC);
                 $email_rows = [];
                 foreach ($pair_rows as $pr) {
