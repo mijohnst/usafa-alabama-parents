@@ -1,0 +1,209 @@
+<?php
+/**
+ * Update-Your-Information Handler
+ * Matches the submitted form to an existing member record and updates it.
+ * Never creates a new record — if no match is found, the visitor is told
+ * to contact the secretary. Does not touch membership_paid, membership_year,
+ * membership_paid_through, or membership_type (dues status is untouched).
+ */
+
+header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('Access-Control-Allow-Origin: https://alabamafalcons.org');
+    header('Access-Control-Allow-Methods: POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
+    http_response_code(200);
+    exit();
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed']);
+    exit();
+}
+
+$input   = file_get_contents('php://input');
+$payload = json_decode($input, true);
+
+if (!$payload) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid JSON payload']);
+    exit();
+}
+
+require_once __DIR__ . '/admin/form-guard.php';
+
+// Honeypot — bots fill this hidden field, real visitors never see it.
+if (honeypot_tripped($payload)) {
+    echo json_encode(['success' => true, 'message' => 'Your information has been updated.']);
+    exit();
+}
+
+function sanitize_header($val) {
+    return str_replace(["\r", "\n"], '', (string)$val);
+}
+
+function s(array $p, string $key): string {
+    return trim($p[$key] ?? '');
+}
+
+require_once __DIR__ . '/admin/config.php';
+
+try {
+    $pdo = new PDO(
+        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+        DB_USER, DB_PASS,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+         PDO::ATTR_EMULATE_PREPARES => true]
+    );
+
+    if (rate_limited($pdo, 'update_form')) {
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Too many submissions from your network. Please try again later or email secretary@alabamafalcons.org.']);
+        exit();
+    }
+
+    $first  = s($payload, 'cadetFirstName');
+    $middle = s($payload, 'cadetMiddleName');
+    $first_middle = trim("$first $middle");
+
+    $dob = s($payload, 'cadetDOB');
+    if ($dob === '') $dob = null;
+
+    // ── Find the existing record — never create a new one. Same match rule
+    // used by the membership form's duplicate detection: last name + class
+    // year, plus either an exact cadet name match or a matching parent email.
+    $dup = $pdo->prepare(
+        'SELECT id FROM members
+         WHERE archived = 0 AND cadet_last_name = :last_name AND class_year = :class_year
+           AND (cadet_first_middle = :first_middle
+                OR (:parent1_email <> "" AND parent1_email = :parent1_email))
+         LIMIT 1'
+    );
+    $dup->execute([
+        'last_name'     => s($payload, 'cadetLastName'),
+        'class_year'    => s($payload, 'graduationYear'),
+        'first_middle'  => $first_middle,
+        'parent1_email' => s($payload, 'parent1Email'),
+    ]);
+    $existing_id = $dup->fetchColumn();
+
+    if (!$existing_id) {
+        echo json_encode([
+            'success' => false,
+            'error'   => "We couldn't find a matching record. Please email secretary@alabamafalcons.org so we can update your information manually."
+        ]);
+        exit();
+    }
+
+    $upd = $pdo->prepare("
+        UPDATE members SET
+            cadet_first_middle=:cadet_first_middle, nickname=:nickname,
+            cadet_birthday=:cadet_birthday, cadet_po_box=:cadet_po_box,
+            cadet_email=:cadet_email, cadet_cell=:cadet_cell,
+            bct_squadron=:bct_squadron,
+            parent1_last_name=:parent1_last_name, parent1_first_name=:parent1_first_name,
+            parent1_email=:parent1_email, parent1_cell=:parent1_cell,
+            parent1_street=:parent1_street, parent1_city=:parent1_city,
+            parent1_state=:parent1_state, parent1_zip=:parent1_zip,
+            parent2_last_name=:parent2_last_name, parent2_first_name=:parent2_first_name,
+            parent2_email=:parent2_email, parent2_cell=:parent2_cell,
+            parent2_street=:parent2_street, parent2_city=:parent2_city,
+            parent2_state=:parent2_state, parent2_zip=:parent2_zip,
+            photo_consent=:photo_consent, directory_consent=:directory_consent
+        WHERE id = :id
+    ");
+    $upd->execute([
+        'cadet_first_middle' => $first_middle,
+        'nickname'           => s($payload, 'nickname'),
+        'cadet_birthday'     => $dob,
+        'cadet_po_box'       => s($payload, 'poBox'),
+        'cadet_email'        => s($payload, 'cadetEmail'),
+        'cadet_cell'         => s($payload, 'cadetPhone'),
+        'bct_squadron'       => s($payload, 'squadron'),
+        'parent1_last_name'  => s($payload, 'parent1LastName'),
+        'parent1_first_name' => s($payload, 'parent1FirstName'),
+        'parent1_email'      => s($payload, 'parent1Email'),
+        'parent1_cell'       => s($payload, 'parent1Phone'),
+        'parent1_street'     => s($payload, 'streetAddress'),
+        'parent1_city'       => s($payload, 'city'),
+        'parent1_state'      => s($payload, 'state'),
+        'parent1_zip'        => s($payload, 'zipCode'),
+        'parent2_last_name'  => s($payload, 'parent2LastName'),
+        'parent2_first_name' => s($payload, 'parent2FirstName'),
+        'parent2_email'      => s($payload, 'parent2Email'),
+        'parent2_cell'       => s($payload, 'parent2Phone'),
+        'parent2_street'     => s($payload,'parent2AddressSame')==='Yes' ? s($payload,'streetAddress') : s($payload,'parent2Street'),
+        'parent2_city'       => s($payload,'parent2AddressSame')==='Yes' ? s($payload,'city')          : s($payload,'parent2City'),
+        'parent2_state'      => s($payload,'parent2AddressSame')==='Yes' ? s($payload,'state')         : s($payload,'parent2State'),
+        'parent2_zip'        => s($payload,'parent2AddressSame')==='Yes' ? s($payload,'zipCode')       : s($payload,'parent2Zip'),
+        'photo_consent'      => s($payload, 'photoConsent'),
+        'directory_consent'  => s($payload, 'directoryConsent'),
+        'id'                 => $existing_id,
+    ]);
+
+} catch (PDOException $e) {
+    error_log('Update handler: MySQL error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database error. Please email secretary@alabamafalcons.org directly.']);
+    exit();
+}
+
+// ── Notify secretary of the update ────────────────────────────────────────
+$secretary_email = 'secretary@alabamafalcons.org';
+$subject = 'Member Info Updated: ' . sanitize_header(s($payload, 'cadetFirstName')) . ' ' . sanitize_header(s($payload, 'cadetLastName'));
+
+$email_body  = "A member updated their information via the Update Your Information form:\n\n";
+$email_body .= "CADET INFORMATION\n";
+$email_body .= "Name: " . s($payload,'cadetFirstName') . " " . s($payload,'cadetMiddleName') . " " . s($payload,'cadetLastName') . "\n";
+$email_body .= "Nickname: " . s($payload,'nickname') . "\n";
+$email_body .= "Email: " . s($payload,'cadetEmail') . "\n";
+$email_body .= "Phone: " . s($payload,'cadetPhone') . "\n";
+$email_body .= "Graduation Year: " . s($payload,'graduationYear') . "\n";
+$email_body .= "Squadron: " . s($payload,'squadron') . "\n";
+$email_body .= "USAFA Mailbox: " . s($payload,'poBox') . "\n\n";
+$email_body .= "PARENT/FAMILY INFORMATION\n";
+$email_body .= "Primary: " . s($payload,'parent1FirstName') . " " . s($payload,'parent1LastName') . "\n";
+$email_body .= "Email: " . s($payload,'parent1Email') . "\n";
+$email_body .= "Phone: " . s($payload,'parent1Phone') . "\n";
+if (s($payload,'parent2FirstName') !== '') {
+    $email_body .= "\nSecondary: " . s($payload,'parent2FirstName') . " " . s($payload,'parent2LastName') . "\n";
+    $email_body .= "Email: " . s($payload,'parent2Email') . "\n";
+    $email_body .= "Phone: " . s($payload,'parent2Phone') . "\n";
+}
+$email_body .= "\nADDRESS\n";
+$email_body .= s($payload,'streetAddress') . "\n";
+$email_body .= s($payload,'city') . ", " . s($payload,'state') . " " . s($payload,'zipCode') . "\n\n";
+$email_body .= "CONSENTS\n";
+$email_body .= "Photo: " . s($payload,'photoConsent') . "\n";
+$email_body .= "Directory: " . s($payload,'directoryConsent') . "\n";
+
+$headers  = "From: noreply@alabamafalcons.org\r\n";
+$headers .= "Reply-To: " . sanitize_header(s($payload,'parent1Email')) . "\r\n";
+$headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+mail($secretary_email, $subject, $email_body, $headers);
+
+// ── Confirmation email to parent ──────────────────────────────────────────
+$parent_email = s($payload, 'parent1Email');
+if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
+    $parent_name  = s($payload, 'parent1FirstName');
+    $cadet_name   = trim($first_middle . ' ' . s($payload, 'cadetLastName'));
+    $conf_subject = 'Your Information Has Been Updated — USAFA Parents Club of Alabama';
+    $conf_body    = "Dear $parent_name,\n\n"
+                  . "Your family's information for $cadet_name has been updated in our records.\n\n"
+                  . "If any of this wasn't intentional, or you have questions, please contact us at secretary@alabamafalcons.org.\n\n"
+                  . "Aim High · Fly · Fight · Win\n"
+                  . "USAFA Parents Club of Alabama\n"
+                  . "alabamafalcons.org";
+    $conf_headers = "From: USAFA Parents Club of Alabama <secretary@alabamafalcons.org>\r\n"
+                  . "Reply-To: secretary@alabamafalcons.org\r\n"
+                  . "Content-Type: text/plain; charset=UTF-8\r\n";
+    mail($parent_email, $conf_subject, $conf_body, $conf_headers);
+}
+
+http_response_code(200);
+echo json_encode([
+    'success' => true,
+    'message' => 'Thank you! Your information has been updated.'
+]);
