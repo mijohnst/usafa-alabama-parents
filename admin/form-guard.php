@@ -5,7 +5,10 @@
  */
 
 // True if the honeypot field was filled in — real visitors never see or fill it.
-function honeypot_tripped(array $data, string $field = 'website'): bool {
+// Accepts mixed (not just array) since callers only loosely check the decoded
+// JSON body before passing it here — a malformed/non-object body must not crash.
+function honeypot_tripped($data, string $field = 'website'): bool {
+    if (!is_array($data)) return false;
     return trim((string)($data[$field] ?? '')) !== '';
 }
 
