@@ -4,10 +4,11 @@ require_finance();
 $pdo = get_pdo();
 $id  = (int)($_GET['id'] ?? 0);
 if (!$id) { header('Location: purchases.php'); exit; }
-$stmt = $pdo->prepare('SELECT receipt_filename FROM purchases WHERE id=?');
+$stmt = $pdo->prepare('SELECT receipt_filename, submitted_by FROM purchases WHERE id=?');
 $stmt->execute([$id]);
 $p = $stmt->fetch();
 if (!$p || empty($p['receipt_filename'])) { header('Location: purchases.php'); exit; }
+if (!can_view_purchase($p)) { header('Location: purchases.php'); exit; }
 
 $receipts_dir = realpath(__DIR__ . '/receipts');
 $file         = realpath(__DIR__ . '/receipts/' . basename($p['receipt_filename']));

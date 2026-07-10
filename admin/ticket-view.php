@@ -21,6 +21,12 @@ if (!$ticket) { flash('error','Ticket not found.'); header('Location: helpdesk.p
 
 $is_mine = (int)($ticket['submitted_by']??-1) === (int)($_SESSION['user_id']??0);
 
+// Only the submitter and staff (admin/tech/officer/secretary) can view a ticket.
+if (!$is_mine && !can_manage_members()) {
+    flash('error', 'You do not have permission to view that ticket.');
+    header('Location: helpdesk.php'); exit;
+}
+
 // ── Helper: build full ticket history for email ───────────────────────────
 function build_ticket_email(PDO $pdo, array $ticket, string $event_line): string {
     $url  = 'https://alabamafalcons.org/admin/ticket-view.php?id=' . (int)$ticket['id'];

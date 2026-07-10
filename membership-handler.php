@@ -48,6 +48,31 @@ function s(array $p, string $key): string {
     return trim($p[$key] ?? '');
 }
 
+// Required fields mirror the `required` attributes on membership.html —
+// keep both in sync if the form changes.
+$required_fields = [
+    'cadetFirstName', 'cadetLastName', 'cadetEmail', 'graduationYear',
+    'parent1FirstName', 'parent1LastName', 'parent1Phone', 'parent1Email',
+    'streetAddress', 'city', 'state', 'zipCode',
+];
+foreach ($required_fields as $field) {
+    if (s($payload, $field) === '') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => "Missing required field: $field"]);
+        exit();
+    }
+}
+if (!filter_var(s($payload, 'cadetEmail'), FILTER_VALIDATE_EMAIL)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid cadet email address.']);
+    exit();
+}
+if (!filter_var(s($payload, 'parent1Email'), FILTER_VALIDATE_EMAIL)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid primary contact email address.']);
+    exit();
+}
+
 // ── 1. Write to MySQL (primary) ────────────────────────────────────────────
 require_once __DIR__ . '/admin/config.php';
 

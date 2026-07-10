@@ -4,13 +4,15 @@ require_once __DIR__ . '/mailer.php';
 require_finance();
 $pdo = get_pdo();
 
-$purchases = $pdo->query(
-    "SELECT p.*, u.name as submitted_by_name, u.email as submitted_by_email
-     FROM purchases p
-     LEFT JOIN users u ON p.submitted_by = u.id
-     WHERE p.status = 'approved'
-     ORDER BY p.purchase_date ASC, p.id ASC"
-)->fetchAll();
+// A plain member only ever sees their own pending reimbursements; leadership sees everyone's.
+$sql = "SELECT p.*, u.name as submitted_by_name, u.email as submitted_by_email
+        FROM purchases p
+        LEFT JOIN users u ON p.submitted_by = u.id
+        WHERE p.status = 'approved'" . (is_member() ? ' AND p.submitted_by = :me' : '') . "
+        ORDER BY p.purchase_date ASC, p.id ASC";
+$stmt = $pdo->prepare($sql);
+$stmt->execute(is_member() ? ['me' => $_SESSION['user_id'] ?? 0] : []);
+$purchases = $stmt->fetchAll();
 
 $total = array_sum(array_column($purchases, 'amount_total'));
 

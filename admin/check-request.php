@@ -13,6 +13,7 @@ $s = $pdo->prepare("SELECT p.*, u.name AS submitted_by_name, u.email AS submitte
 $s->execute([$id]);
 $p = $s->fetch(PDO::FETCH_ASSOC);
 if (!$p) { header('Location: purchases.php'); exit; }
+if (!can_view_purchase($p)) { header('Location: purchases.php'); exit; }
 
 // Fetch club name / president from settings
 $setting = function(string $key) use ($pdo): string {

@@ -12,7 +12,8 @@ $where  = ['1=1'];
 $params = [];
 if ($filter_status   !== '') { $where[] = 't.status = :status';   $params[':status']   = $filter_status; }
 if ($filter_category !== '') { $where[] = 't.category = :cat';    $params[':cat']      = $filter_category; }
-if ($mine)                   { $where[] = 't.submitted_by = :me'; $params[':me']       = $_SESSION['user_id'] ?? 0; }
+// Non-staff (not admin/tech/officer/secretary) can only ever see their own tickets.
+if ($mine || !can_manage_members()) { $where[] = 't.submitted_by = :me'; $params[':me'] = $_SESSION['user_id'] ?? 0; }
 if ($filter_search   !== '') {
     $where[] = '(t.subject LIKE :q OR t.ticket_number LIKE :q OR t.description LIKE :q)';
     $params[':q'] = '%' . $filter_search . '%';

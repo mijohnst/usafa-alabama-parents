@@ -16,6 +16,7 @@ if ($id) {
     $stmt->execute([$id]);
     $p = $stmt->fetch();
     if (!$p) { flash('error','Purchase not found.'); header('Location: purchases.php'); exit; }
+    if (!can_view_purchase($p)) { flash('error','You do not have permission to view that purchase.'); header('Location: purchases.php'); exit; }
     $old_event   = $p['event'] ?? '';
     $is_edit     = true;
     $read_only   = !can_edit_purchase($p);

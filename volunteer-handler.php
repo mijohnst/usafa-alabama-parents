@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/admin/auth.php';
+require_once __DIR__ . '/admin/form-guard.php';
+
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -15,6 +18,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = file_get_contents('php://input');
 $data  = json_decode($input, true);
 if (!$data) { http_response_code(400); echo json_encode(['error'=>'Invalid input']); exit(); }
+
+// Honeypot — bots fill this hidden field, real visitors never see it.
+// Pretend success so bots don't learn to avoid the field.
+if (honeypot_tripped($data)) {
+    echo json_encode(['success' => true, 'message' => "Thank you! We'll be in touch soon."]);
+    exit;
+}
+
+if (rate_limited(get_pdo(), 'volunteer_form')) {
+    http_response_code(429);
+    echo json_encode(['success' => false, 'error' => 'Too many submissions from your network. Please try again later or email us directly at info@alabamafalcons.org.']);
+    exit;
+}
 
 function s(array $d, string $k): string { return trim($d[$k] ?? ''); }
 function sanitize_hdr(string $v): string { return str_replace(["\r","\n"], '', $v); }
@@ -34,10 +50,8 @@ if (!$name || !$email) { http_response_code(400); echo json_encode(['error'=>'Na
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) { http_response_code(400); echo json_encode(['error'=>'Invalid email address.']); exit(); }
 
 // Save to DB
-require_once __DIR__ . '/admin/config.php';
 try {
-    $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS,
-        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>true]);
+    $pdo = get_pdo();
     $pdo->prepare('INSERT INTO volunteers (name,email,phone,areas,availability,cadet_info,comments) VALUES (?,?,?,?,?,?,?)')
         ->execute([$name,$email,$phone,$areas,$availability,$cadet_info,$comments]);
 } catch (Exception $e) {

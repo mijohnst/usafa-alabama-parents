@@ -22,6 +22,8 @@ if ($filter_search   !== '') {
     $where[] = '(p.vendor LIKE :q OR p.description LIKE :q OR p.order_number LIKE :q OR p.notes LIKE :q)';
     $params[':q'] = '%' . $filter_search . '%';
 }
+// A plain member only ever sees their own purchases; leadership sees everyone's.
+if (is_member()) { $where[] = 'p.submitted_by = :me'; $params[':me'] = $_SESSION['user_id'] ?? 0; }
 
 $sql = 'SELECT p.*, u.name as submitted_by_name
         FROM purchases p

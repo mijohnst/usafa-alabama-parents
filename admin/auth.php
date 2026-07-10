@@ -92,6 +92,13 @@ function can_edit_purchase(array $purchase): bool {
     return false;
 }
 
+// Leadership (admin/tech/officer/treasurer/secretary) can view any purchase;
+// a plain member can only view their own.
+function can_view_purchase(array $purchase): bool {
+    if (!is_member()) return true;
+    return (int)($purchase['submitted_by'] ?? -1) === (int)($_SESSION['user_id'] ?? 0);
+}
+
 function current_user_name(): string {
     return $_SESSION['user_name'] ?? 'Unknown';
 }

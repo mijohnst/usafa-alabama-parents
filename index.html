@@ -456,6 +456,10 @@
       </div>
       <div class="contact-form">
         <form id="volunteer-form">
+          <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+            <label for="vol-website">Leave this field empty</label>
+            <input type="text" id="vol-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
           <div class="form-row">
             <div class="form-group"><label for="vol-name">Your Name *</label><input type="text" id="vol-name" name="name" required placeholder="First Last" /></div>
             <div class="form-group"><label for="vol-email">Email Address *</label><input type="email" id="vol-email" name="email" required placeholder="you@example.com" /></div>
@@ -554,7 +558,8 @@ if (volForm) {
         cadetInfo:    document.getElementById('vol-cadet').value.trim(),
         areas:        areas,
         availability: document.getElementById('vol-avail').value.trim(),
-        comments:     document.getElementById('vol-comments').value.trim()
+        comments:     document.getElementById('vol-comments').value.trim(),
+        website:      document.getElementById('vol-website').value.trim()
       };
       var resp = await fetch('volunteer-handler.php', {
         method: 'POST',

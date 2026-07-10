@@ -101,7 +101,7 @@ function mask_id_number(string $id): string {
 // Email notification to secretary
 $data = json_decode($payload, true);
 $to      = 'secretary@alabamafalcons.org';
-$subject = 'New Sendoff Registration – ' . $data['first'] . ' ' . $data['last'];
+$subject = str_replace(["\r", "\n"], '', 'New Sendoff Registration – ' . $data['first'] . ' ' . $data['last']);
 $body    = "A new registration has been submitted for the Cadet Class of 2030 Sendoff.\n\n"
          . "Last Name:                  " . $data['last']           . "\n"
          . "First Name:                 " . $data['first']          . "\n"
