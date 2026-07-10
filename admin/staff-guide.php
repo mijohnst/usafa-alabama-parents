@@ -214,7 +214,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         </ul>
       </div>
       <div class="hbox mt1">
-        <strong>First time?</strong> Your login is created by the Admin or Tech Officer. You cannot self-register.
+        <strong>First time?</strong> Your login is created by the Tech Officer. You cannot self-register.
       </div>
     </div>
   </div>
@@ -223,13 +223,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
 <!-- 2: Roles -->
 <div class="slide s-content" id="s2">
   <p class="label">Access Control</p>
-  <h2>The Six Portal Roles</h2>
+  <h2>The Five Portal Roles</h2>
   <div class="rule"></div>
   <div class="three-col">
-    <div class="card">
-      <h3><span class="pill pill-admin">Admin</span></h3>
-      <p>Full access to everything — identical permissions to Tech Support. Only Admin and Tech can create user accounts and change roles.</p>
-    </div>
     <div class="card">
       <h3><span class="pill pill-tech">Tech Support</span></h3>
       <p>Full access to everything — user management, all financial data, system settings, and all member data. Assigned to the Technology Officer.</p>
@@ -264,7 +260,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <ul class="bullets mt1">
         <li><strong>Member stats</strong> — Total members, paid this year, unpaid, and new this month</li>
         <li><strong>Upcoming birthdays</strong> — Cadet birthdays in the next 30 days with P.O. Box</li>
-        <li><strong>Finance summary</strong> — Pending reimbursements, YTD spending (Treasurer/Admin)</li>
+        <li><strong>Finance summary</strong> — Pending reimbursements, YTD spending (Treasurer/Tech)</li>
         <li><strong>Dues collected</strong> — Annual vs 4-Year totals and dollar amounts (Treasurer)</li>
         <li><strong>Quick links</strong> — Jump to any section from the dashboard cards</li>
       </ul>
@@ -296,7 +292,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li><strong>Search</strong> by cadet name, parent name, email, or phone number</li>
         <li><strong>Filter</strong> by class year, Alabama region, squadron, or paid/unpaid status</li>
         <li><strong>View archived members</strong> using the Status filter — they stay in the system, just hidden from the active list</li>
-        <li><strong>Add a member</strong> manually (Officer/Secretary/Admin)</li>
+        <li><strong>Add a member</strong> manually (Officer/Secretary/Tech)</li>
         <li><strong>Click any member</strong> to see their full profile — cadet info, parents, dues history, squadron assignments</li>
         <li><strong>Archive vs Delete</strong> — Archive is reversible; Delete is permanent</li>
       </ul>
@@ -403,7 +399,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>All purchases start as <strong>Pending</strong> until an Officer reviews and approves them</li>
         <li>Once approved, the Treasurer pays the member and marks the purchase <strong>Reimbursed</strong></li>
         <li>A plain Member can only see and edit their own submissions</li>
-        <li>Officers and Secretary can <strong>view</strong> every purchase for oversight, but can still only <strong>edit</strong> their own — Treasurer and Admin/Tech can edit any</li>
+        <li>Officers and Secretary can <strong>view</strong> every purchase for oversight, but can still only <strong>edit</strong> their own — Treasurer and Tech Support can edit any</li>
       </ul>
     </div>
     <div>
@@ -570,7 +566,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>The recipient count updates live as you adjust filters</li>
         <li>Write a <strong>subject and message body</strong> — plain text only</li>
         <li>Emails are sent from the club's official info@ address with a Reply-To matching the logged-in officer's email</li>
-        <li>Available to: Officers, Secretary, Admin</li>
+        <li>Available to: Officers, Secretary, Tech Support</li>
       </ul>
     </div>
     <div>
@@ -601,7 +597,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <ul>
         <li>Internal support ticket system for member inquiries</li>
         <li>Statuses: <strong>Open, In Progress, Resolved</strong></li>
-        <li><strong>Admin/Tech only</strong> can manage tickets — respond as staff, change status, assign, and close</li>
+        <li><strong>Tech Support only</strong> can manage tickets — respond as staff, change status, assign, and close</li>
         <li><strong>Officer and Secretary</strong> can view any ticket for oversight, but can only reply on their own</li>
         <li>Treasurer and Member can submit tickets and view their own only</li>
       </ul>
@@ -655,7 +651,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     </div>
   </div>
   <div class="hbox mt2">
-    <strong>Access:</strong> Admin, Tech, Officer, Secretary, Treasurer. Deleting a meeting also deletes its attendance records and vault copy — no separate cleanup needed.
+    <strong>Access:</strong> Tech Support, Officer, Secretary, Treasurer. Deleting a meeting also deletes its attendance records and vault copy — no separate cleanup needed.
   </div>
 </div>
 
@@ -685,7 +681,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     </div>
   </div>
   <div class="hbox mt2">
-    <strong>Access to both tools:</strong> Admin, Tech, Officer, Secretary, Treasurer.
+    <strong>Access to both tools:</strong> Tech Support, Officer, Secretary, Treasurer.
   </div>
 </div>
 
@@ -739,7 +735,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     <thead>
       <tr>
         <th>Section</th>
-        <th>Admin / Tech</th>
+        <th>Tech Support</th>
         <th>Officer</th>
         <th>Secretary</th>
         <th>Treasurer</th>
