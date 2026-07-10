@@ -635,12 +635,11 @@
         var result = await resp.json();
 
         if (result.success) {
-          statusEl.textContent = result.message;
+          statusEl.textContent = result.message + ' Redirecting to the homepage…';
           statusEl.className = 'success';
           statusEl.style.display = 'block';
-          btn.textContent = 'Update My Information';
-          btn.disabled = false;
-          form.reset();
+          window.scrollTo({ top: statusEl.offsetTop - 100, behavior: 'smooth' });
+          setTimeout(function() { window.location.href = 'index.html'; }, 2500);
         } else {
           statusEl.textContent = 'Error: ' + (result.error || 'Unknown error') + '. Please try again or contact secretary@alabamafalcons.org';
           statusEl.className = 'error';
