@@ -302,7 +302,7 @@ const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];
 const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
 const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Birthday / Gift', 'General Operations', 'Other'];
 const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'reimbursed' => 'Reimbursed'];
-const CLASS_YEARS = ['', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
+const CLASS_YEARS = ['', '2026', '2027', '2028', '2029', '2030', '2031', 'Prep School', 'Graduate'];
 
 const FIELDS = [
     'class_year','cadet_last_name','cadet_first_name','cadet_middle_name','nickname','cadet_birthday','cadet_po_box',
