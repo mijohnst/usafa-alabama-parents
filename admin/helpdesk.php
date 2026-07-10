@@ -72,11 +72,13 @@ echo show_flash();
         <?php endforeach; ?>
       </select>
     </div>
+    <?php if (can_manage_members()): ?>
     <div class="form-group" style="flex:0;align-self:flex-end">
       <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;margin-bottom:.55rem">
         <input type="checkbox" name="mine" value="1" <?= $mine?'checked':''?> style="width:auto"> My tickets only
       </label>
     </div>
+    <?php endif; ?>
     <div class="form-group" style="flex:0">
       <label>&nbsp;</label>
       <div style="display:flex;gap:.5rem">
