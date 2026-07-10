@@ -655,7 +655,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <ul>
         <li>Searchable, printable roster of active members</li>
         <li>Filter by class year or Alabama region</li>
-        <li>Only shows families who <strong>opted in to Directory Listing</strong> on their membership/update form</li>
+        <li>Excludes families who <strong>opted out of Directory Listing</strong> on their membership/update form — blank/unanswered still shows</li>
         <li>Access: All logged-in roles, including Members</li>
         <li>Archived members are never listed, opted-in or not</li>
       </ul>
@@ -810,7 +810,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <tr><td>Correspondence Log</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Member Letters</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Document Vault</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
-      <tr><td>Directory (opted-in members only)</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td>Directory (opted-out members hidden)</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
       <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>User Management</td><td class="y">Tech only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
     </tbody>

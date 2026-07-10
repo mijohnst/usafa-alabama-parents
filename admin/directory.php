@@ -6,10 +6,12 @@ $pdo = get_pdo();
 $year   = $_GET['year']   ?? '';
 $region = $_GET['region'] ?? '';
 
-// Only families who explicitly opted in to the member directory appear here —
+// Families who explicitly opted out of the member directory are excluded —
 // this page is meant to be shared/printed for members, unlike the admin
-// member list, so directory_consent must be honored.
-$where  = ['archived = 0', "directory_consent = 'Yes'"];
+// member list, so directory_consent must be honored. Blank/unanswered
+// (common for members who joined before this question existed) is treated
+// as included, not opted out.
+$where  = ['archived = 0', "(directory_consent IS NULL OR directory_consent <> 'No')"];
 $params = [];
 if ($year   !== '') { $where[] = 'class_year = :year';   $params[':year']   = $year; }
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
@@ -53,7 +55,7 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
 <div class="no-print" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem">
   <div>
     <h1>Member Directory</h1>
-    <div class="subtitle">USAFA Parents Club of Alabama &mdash; <?= date('F Y') ?> &mdash; families who opted in to directory listing only</div>
+    <div class="subtitle">USAFA Parents Club of Alabama &mdash; <?= date('F Y') ?> &mdash; excludes families who opted out of directory listing</div>
   </div>
   <div style="display:flex;gap:.5rem">
     <button onclick="window.print()" style="padding:.5rem 1.1rem;background:#003594;color:#fff;border:none;border-radius:4px;font-size:.85rem;cursor:pointer">Print / Save PDF</button>
