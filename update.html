@@ -155,12 +155,12 @@
   <!-- UPDATE FORM -->
   <section class="section">
     <h2>Update Your Information</h2>
-    <p>Only <strong>Cadet First Name</strong>, <strong>Last Name</strong>, and <strong>Graduation Year</strong> are required — those are what we use to find your record. Everything else is optional: fill in only what's new or changed. Leaving a field blank keeps whatever is already on file for it — it will not erase existing data.</p>
+    <p>Fields marked <strong>*</strong> are required. Everything else is optional: fill in only what's new or changed. Leaving a field blank keeps whatever is already on file for it — it will not erase existing data.</p>
 
     <div style="background: #e3f2fd; border: 2px solid #1976d2; border-radius: 6px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;">
       <p style="color: #0d47a1; font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: flex-start; gap: 0.75rem;">
         <span style="font-size: 1.25rem;">ℹ️</span>
-        <span>To find your record, we match on <strong>Cadet Last Name</strong>, <strong>Graduation Year</strong>, and either the <strong>Cadet's First Name</strong> or your <strong>Primary Contact Email</strong> exactly as they're already on file. If nothing matches, we won't create a new record — you'll be asked to email the secretary instead.</span>
+        <span>To find your record, we match on <strong>Cadet Last Name</strong> and either the <strong>Cadet's First Name</strong> or your <strong>Primary Contact Email</strong> exactly as they're already on file. If nothing matches, we won't create a new record — you'll be asked to email the secretary instead.</span>
       </p>
     </div>
 
@@ -203,34 +203,18 @@
           </div>
         </div>
 
-        <div class="form-row-3">
-          <div class="form-group">
-            <label for="graduationYear">Graduation Year *</label>
-            <select id="graduationYear" name="graduationYear" required>
-              <option value="">Select graduation year</option>
-              <option value="2026">2026</option>
-              <option value="2027">2027</option>
-              <option value="2028">2028</option>
-              <option value="2029">2029</option>
-              <option value="2030">2030</option>
-              <option value="2031">2031</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="cadetDOB">Date of Birth</label>
-            <input type="date" id="cadetDOB" name="cadetDOB" />
-          </div>
-          <div class="form-group">
-            <label for="poBox">USAFA Mailbox / PO Box</label>
-            <input type="text" id="poBox" name="poBox" />
-          </div>
-        </div>
-
         <div class="form-row">
+          <div class="form-group">
+            <label for="poBox">USAFA Mailbox / PO Box *</label>
+            <input type="text" id="poBox" name="poBox" required />
+          </div>
           <div class="form-group">
             <label for="squadron">Squadron</label>
             <input type="text" id="squadron" name="squadron" />
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="cadetPhone">Cadet Cell Phone</label>
             <input type="tel" id="cadetPhone" name="cadetPhone" />
@@ -242,18 +226,18 @@
         <div class="form-divider-label" id="fs-consent">Photo &amp; Directory Consent</div>
 
         <div class="form-group">
-          <label>May we use cadet photos on our website and publications?</label>
+          <label>May we use cadet photos on our website and publications? *</label>
           <div class="radio-group">
-            <label><input type="radio" name="photoConsent" value="Yes" /> Yes</label>
-            <label><input type="radio" name="photoConsent" value="No" /> No</label>
+            <label><input type="radio" name="photoConsent" value="Yes" required /> Yes</label>
+            <label><input type="radio" name="photoConsent" value="No" required /> No</label>
           </div>
         </div>
 
         <div class="form-group">
-          <label>May we include your family information in our member directory?</label>
+          <label>May we include your family information in our member directory? *</label>
           <div class="radio-group">
-            <label><input type="radio" name="directoryConsent" value="Yes" /> Yes</label>
-            <label><input type="radio" name="directoryConsent" value="No" /> No</label>
+            <label><input type="radio" name="directoryConsent" value="Yes" required /> Yes</label>
+            <label><input type="radio" name="directoryConsent" value="No" required /> No</label>
           </div>
         </div>
 
@@ -272,12 +256,20 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label>Is the Secondary Contact's last name the same as the Primary Contact's?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="parent2LastNameSame" value="Yes" checked onchange="toggleParent2LastName(this)"> Yes, same last name</label>
+            <label><input type="radio" name="parent2LastNameSame" value="No" onchange="toggleParent2LastName(this)"> No, different last name</label>
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label for="parent2FirstName">Secondary Contact First Name</label>
             <input type="text" id="parent2FirstName" name="parent2FirstName" />
           </div>
-          <div class="form-group">
+          <div class="form-group" id="parent2-lastname-wrap">
             <label for="parent2LastName">Secondary Contact Last Name</label>
             <input type="text" id="parent2LastName" name="parent2LastName" />
           </div>
@@ -402,6 +394,28 @@
       document.getElementById('parent2-address').style.display =
         radio.value === 'No' ? 'block' : 'none';
     }
+
+    function toggleParent2LastName(radio) {
+      var same = radio.value === 'Yes';
+      var wrap = document.getElementById('parent2-lastname-wrap');
+      wrap.style.opacity = same ? '.5' : '1';
+      wrap.style.pointerEvents = same ? 'none' : 'auto';
+      if (same) {
+        document.getElementById('parent2LastName').value = document.getElementById('parent1LastName').value;
+      }
+    }
+    // Sync on load since "Yes" is pre-selected
+    (function() {
+      var r = document.querySelector('[name=parent2LastNameSame]:checked');
+      if (r) toggleParent2LastName(r);
+    })();
+    // Keep Secondary Contact's last name synced live while typing the Primary's, if "Yes" is selected
+    document.getElementById('parent1LastName').addEventListener('input', function() {
+      var r = document.querySelector('[name=parent2LastNameSame]:checked');
+      if (r && r.value === 'Yes') {
+        document.getElementById('parent2LastName').value = this.value;
+      }
+    });
 
     function validateForm(formData) {
       var errors = [];
