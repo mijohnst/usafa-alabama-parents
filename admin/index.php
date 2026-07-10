@@ -10,6 +10,7 @@ $region  = $_GET['region']       ?? '';
 $paid    = $_GET['paid']         ?? '';
 $squadron  = trim($_GET['squadron']  ?? '');
 $split_only = isset($_GET['split']);
+$dup_only   = isset($_GET['dup']);
 $archived  = $_GET['archived']   ?? '0';
 $sort      = $_GET['sort']       ?? 'class_year';
 $dir       = $_GET['dir']        ?? 'asc';
@@ -39,16 +40,30 @@ if ($squadron !== '') {
     $params[':sqd'] = $squadron;
 }
 if ($split_only) { $where[] = "cadet_first_name LIKE '% %'"; }
+if ($dup_only) {
+    $where[] = "EXISTS (SELECT 1 FROM members m2 WHERE m2.archived = 0 AND m2.id <> members.id
+                         AND m2.cadet_last_name = members.cadet_last_name AND m2.class_year = members.class_year)";
+}
 $where[] = $archived === '1' ? 'archived = 1' : 'archived = 0';
 
-$order = $sort === 'cadet_last_name'
-    ? "cadet_last_name $dir, cadet_first_name $dir"
-    : "$sort $dir, cadet_last_name asc";
+$order = $dup_only
+    ? 'cadet_last_name asc, class_year asc, cadet_first_name asc'
+    : ($sort === 'cadet_last_name'
+        ? "cadet_last_name $dir, cadet_first_name $dir"
+        : "$sort $dir, cadet_last_name asc");
 
 $sql = 'SELECT * FROM members WHERE ' . implode(' AND ', $where) . " ORDER BY $order";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $members = $stmt->fetchAll();
+
+// Flag rows sharing a last name + class year with another row in this same
+// result set, so a "possible duplicate" badge can be shown while browsing.
+$dup_key_counts = [];
+foreach ($members as $m) {
+    $k = strtolower($m['cadet_last_name']) . '|' . $m['class_year'];
+    $dup_key_counts[$k] = ($dup_key_counts[$k] ?? 0) + 1;
+}
 
 // ── CSV export ─────────────────────────────────────────────────────────────
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
@@ -112,6 +127,15 @@ $needs_split_count = (int)$pdo->query(
     "SELECT COUNT(*) FROM members WHERE archived = 0 AND cadet_first_name LIKE '% %'"
 )->fetchColumn();
 
+// Possible duplicate cadets — same last name + class year appearing more than once.
+$dup_count = (int)$pdo->query(
+    "SELECT COUNT(*) FROM members m WHERE archived = 0 AND EXISTS (
+        SELECT 1 FROM members m2
+        WHERE m2.archived = 0 AND m2.id <> m.id
+          AND m2.cadet_last_name = m.cadet_last_name AND m2.class_year = m.class_year
+    )"
+)->fetchColumn();
+
 // Dues progress bar (active years 2027-2030 only)
 $active_total = $stat_paid + $stat_unpaid;
 $dues_pct     = $active_total > 0 ? round($stat_paid / $active_total * 100) : 0;
@@ -157,7 +181,7 @@ function sort_link(string $col, string $label, string $current_sort, string $cur
          . htmlspecialchars($label) . '<span style="opacity:.5">' . $arrow . '</span></a>';
 }
 
-$get_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'split'=>$split_only?'1':null]);
+$get_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'split'=>$split_only?'1':null,'dup'=>$dup_only?'1':null]);
 
 admin_header('Members');
 echo show_flash();
@@ -168,7 +192,7 @@ echo show_flash();
   <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown of <?= $stat_total ?> total)</span></h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <?php
-    $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron,'split'=>$split_only?'1':null]);
+    $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron,'split'=>$split_only?'1':null,'dup'=>$dup_only?'1':null]);
     $csv_params['export'] = 'csv';
     ?>
     <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
@@ -188,6 +212,7 @@ if ($fin_approved) $alerts[] = ['color'=>'#e3f2fd','border'=>'#90caf9','text'=>'
 if ($new_this_month) $alerts[] = ['color'=>'#e8f5e9','border'=>'#a5d6a7','text'=>'#1b5e20','icon'=>'👤','msg'=>"$new_this_month new member".($new_this_month>1?'s':'')." this month",'href'=>'index.php?q='];
 if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8','text'=>'#4a148c','icon'=>'🎂','msg'=>count($upcoming_bdays)." birthday".( count($upcoming_bdays)>1?'s':'')." in the next 30 days",'href'=>'#bday-panel','onclick'=>'openBirthdays()'];
 if ($needs_split_count) $alerts[] = ['color'=>'#fff3cd','border'=>'#ffc107','text'=>'#5f4c00','icon'=>'✂️','msg'=>"$needs_split_count cadet name".($needs_split_count>1?'s':'')." still need First/Middle split",'href'=>'index.php?split=1'];
+if ($dup_count) $alerts[] = ['color'=>'#fde0e0','border'=>'#e57373','text'=>'#8a1425','icon'=>'👥','msg'=>"$dup_count possible duplicate cadet".($dup_count>1?'s':'')." (same last name + class year)",'href'=>'index.php?dup=1'];
 ?>
 <?php if (!empty($alerts)): ?>
 <div style="display:grid;grid-template-columns:repeat(<?= count($alerts) ?>,1fr);gap:.6rem;margin-bottom:1.25rem">
@@ -294,6 +319,7 @@ function openBirthdays() {
 <div class="card" style="padding:1rem 1.5rem">
   <form method="GET" class="filter-bar">
     <?php if ($split_only): ?><input type="hidden" name="split" value="1"><?php endif; ?>
+    <?php if ($dup_only): ?><input type="hidden" name="dup" value="1"><?php endif; ?>
     <div class="form-group" style="flex:2;min-width:200px">
       <label>Search name / email / phone</label>
       <input name="q" value="<?= h($search) ?>" placeholder="Type to search…">
@@ -393,7 +419,7 @@ function openBirthdays() {
       <?php endif; ?>
       <td><?= h($m['class_year']) ?></td>
       <td>
-        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><?php if (strpos(trim($m['cadet_first_name']), ' ') !== false): ?> <span title="First Name still contains a space — likely needs to be split into First/Middle" style="font-size:.65rem;font-weight:700;color:#5f4c00;background:#fff3cd;padding:.05rem .35rem;border-radius:3px">✂️ SPLIT?</span><?php endif; ?><br>
+        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><?php if (strpos(trim($m['cadet_first_name']), ' ') !== false): ?> <span title="First Name still contains a space — likely needs to be split into First/Middle" style="font-size:.65rem;font-weight:700;color:#5f4c00;background:#fff3cd;padding:.05rem .35rem;border-radius:3px">✂️ SPLIT?</span><?php endif; ?><?php if (($dup_key_counts[strtolower($m['cadet_last_name']) . '|' . $m['class_year']] ?? 0) > 1): ?> <span title="Another active cadet shares this last name + class year — possible duplicate" style="font-size:.65rem;font-weight:700;color:#8a1425;background:#fde0e0;padding:.05rem .35rem;border-radius:3px">👥 DUP?</span><?php endif; ?><br>
         <?php if ($m['cadet_email']): ?><a href="mailto:<?= h($m['cadet_email']) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($m['cadet_email']) ?></a><?php endif; ?>
       </td>
       <td><?php if ($m['al_region']): ?><span class="badge <?= h($region_cls) ?>"><?= h($m['al_region']) ?></span><?php endif; ?></td>
