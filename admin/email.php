@@ -128,6 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
                 $subject     = '';
                 $body        = '';
             } else {
+                $mail_err = error_get_last();
+                error_log('Compose Email: mail() failed for ' . count($valid) . ' recipient(s) from ' . $from_email
+                    . '. Last PHP error: ' . ($mail_err['message'] ?? 'none captured'));
                 $errors[] = 'Server failed to send. Please try again or contact your hosting provider.';
             }
         }
