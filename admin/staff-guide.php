@@ -598,8 +598,10 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li><strong>Filter recipients</strong> by class year, Alabama region, or paid/unpaid status before composing</li>
         <li>Use the <strong>Reset button</strong> to clear all filters and start fresh</li>
         <li>The recipient count updates live as you adjust filters</li>
-        <li>Write a <strong>subject and message body</strong> — plain text only</li>
-        <li>Emails are sent from the club's official info@ address with a Reply-To matching the logged-in officer's email</li>
+        <li><strong>Format the message</strong> with the rich text toolbar — bold, color, size, alignment, lists, links — plus an emoji picker</li>
+        <li><strong>Attach files</strong> — images, PDF, Word, Excel, PowerPoint — up to 10MB each, 20MB total</li>
+        <li>Choose which officer address to send <strong>From</strong> — Reply-To matches automatically, and a copy always goes to info@alabamafalcons.org for the club's records</li>
+        <li>Large sends are automatically split into batches behind the scenes if the recipient count is high — nothing you need to do</li>
         <li>Available to: Officers, Secretary, Tech Support</li>
       </ul>
     </div>
