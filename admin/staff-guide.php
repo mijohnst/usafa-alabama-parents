@@ -596,6 +596,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     <div>
       <ul class="bullets">
         <li><strong>Filter recipients</strong> by class year, Alabama region, or paid/unpaid status before composing</li>
+        <li><strong>Email List</strong> picks whose address to pull — Everyone, Both/either Parent, Cadet, or Board Members Only</li>
         <li>Use the <strong>Reset button</strong> to clear all filters and start fresh</li>
         <li>The recipient count updates live as you adjust filters</li>
         <li><strong>Format the message</strong> with the rich text toolbar — bold, color, size, alignment, lists, links — plus an emoji picker</li>
@@ -613,6 +614,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
           <li>Class-year-specific announcements (filter: 2027)</li>
           <li>General newsletters to all active members</li>
           <li>Event invitations to specific regions</li>
+          <li>Quick note to leadership (Email List: Board Members Only)</li>
         </ul>
       </div>
       <div class="hbox mt1">

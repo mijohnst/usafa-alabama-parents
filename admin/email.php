@@ -30,7 +30,8 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     if ($paid   === '1') $where[] = 'membership_paid = 1';
     if ($paid   === '0') $where[] = 'membership_paid = 0';
 
-    $sql  = 'SELECT parent1_email, parent2_email, cadet_email FROM members WHERE ' . implode(' AND ', $where);
+    $sql  = 'SELECT parent1_email, parent2_email, cadet_email, parent1_is_board_member, parent2_is_board_member
+             FROM members WHERE ' . implode(' AND ', $where);
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll();
@@ -38,6 +39,11 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     $lines = [];
     foreach ($rows as $r) {
         switch ($list_type) {
+            case 'everyone':
+                if ($r['parent1_email']) $lines[] = $r['parent1_email'];
+                if ($r['parent2_email']) $lines[] = $r['parent2_email'];
+                if ($r['cadet_email'])   $lines[] = $r['cadet_email'];
+                break;
             case 'parent_both':
                 if ($r['parent1_email']) $lines[] = $r['parent1_email'];
                 if ($r['parent2_email']) $lines[] = $r['parent2_email'];
@@ -45,8 +51,15 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
             case 'parent1':
                 if ($r['parent1_email']) $lines[] = $r['parent1_email'];
                 break;
+            case 'parent2':
+                if ($r['parent2_email']) $lines[] = $r['parent2_email'];
+                break;
             case 'cadet':
                 if ($r['cadet_email']) $lines[] = $r['cadet_email'];
+                break;
+            case 'board':
+                if ($r['parent1_is_board_member'] && $r['parent1_email']) $lines[] = $r['parent1_email'];
+                if ($r['parent2_is_board_member'] && $r['parent2_email']) $lines[] = $r['parent2_email'];
                 break;
         }
     }
@@ -347,9 +360,12 @@ admin_header('Compose Email');
       <div class="form-group" style="margin:0">
         <label>Email List</label>
         <select name="f_type">
+          <option value="everyone"    <?= $f_type==='everyone'   ?'selected':''?>>Everyone (Both Parents + Cadet)</option>
           <option value="parent_both" <?= $f_type==='parent_both'?'selected':''?>>Both Parent Emails</option>
           <option value="parent1"     <?= $f_type==='parent1'    ?'selected':''?>>Parent 1 Only</option>
+          <option value="parent2"     <?= $f_type==='parent2'    ?'selected':''?>>Parent 2 Only</option>
           <option value="cadet"       <?= $f_type==='cadet'      ?'selected':''?>>Cadet Emails</option>
+          <option value="board"       <?= $f_type==='board'      ?'selected':''?>>Board Members Only</option>
         </select>
       </div>
 
