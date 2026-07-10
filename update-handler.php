@@ -71,18 +71,19 @@ try {
     // COALESCE-protected UPDATE below leaves the existing value untouched.
     $dob = null;
 
-    // ── Find the existing record — never create a new one. Graduation Year is
-    // no longer collected on this form, so matching relies on last name plus
-    // either an exact cadet first name match or a matching parent email.
+    // ── Find the existing record — never create a new one. Same match rule
+    // used by the membership form's duplicate detection: last name + class
+    // year, plus either an exact cadet first name match or a matching parent email.
     $dup = $pdo->prepare(
         'SELECT id FROM members
-         WHERE archived = 0 AND cadet_last_name = :last_name
+         WHERE archived = 0 AND cadet_last_name = :last_name AND class_year = :class_year
            AND (cadet_first_name = :first_name
                 OR (:parent1_email <> "" AND parent1_email = :parent1_email))
          LIMIT 1'
     );
     $dup->execute([
         'last_name'     => s($payload, 'cadetLastName'),
+        'class_year'    => s($payload, 'graduationYear'),
         'first_name'    => $first,
         'parent1_email' => s($payload, 'parent1Email'),
     ]);

@@ -160,7 +160,7 @@
     <div style="background: #e3f2fd; border: 2px solid #1976d2; border-radius: 6px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;">
       <p style="color: #0d47a1; font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: flex-start; gap: 0.75rem;">
         <span style="font-size: 1.25rem;">ℹ️</span>
-        <span>To find your record, we match on <strong>Cadet Last Name</strong> and either the <strong>Cadet's First Name</strong> or your <strong>Primary Contact Email</strong> exactly as they're already on file. If nothing matches, we won't create a new record — you'll be asked to email the secretary instead.</span>
+        <span>To find your record, we match on <strong>Cadet Last Name</strong>, <strong>Graduation Year</strong>, and either the <strong>Cadet's First Name</strong> or your <strong>Primary Contact Email</strong> exactly as they're already on file. If nothing matches, we won't create a new record — you'll be asked to email the secretary instead.</span>
       </p>
     </div>
 
@@ -203,7 +203,19 @@
           </div>
         </div>
 
-        <div class="form-row">
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="graduationYear">Graduation Year *</label>
+            <select id="graduationYear" name="graduationYear" required>
+              <option value="">Select graduation year</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+              <option value="2028">2028</option>
+              <option value="2029">2029</option>
+              <option value="2030">2030</option>
+              <option value="2031">2031</option>
+            </select>
+          </div>
           <div class="form-group">
             <label for="poBox">USAFA Mailbox / PO Box *</label>
             <input type="text" id="poBox" name="poBox" required />
