@@ -3,6 +3,15 @@
 
 function start_session(): void {
     if (session_status() === PHP_SESSION_NONE) {
+        // The host's default session.gc_maxlifetime is short enough (~10 min
+        // observed) that an admin idling on a form — composing an email,
+        // filling out a long member edit — can have their session file
+        // garbage-collected out from under them, so their next submit fails
+        // CSRF verification with no obvious cause. Extend it to 4 hours.
+        // The session cookie itself stays browser-close-scoped (lifetime 0,
+        // unchanged) — this only affects how long an open tab can idle, not
+        // whether a session survives closing the browser.
+        ini_set('session.gc_maxlifetime', '14400');
         session_name('usafa_admin');
         $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
