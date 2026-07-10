@@ -96,21 +96,38 @@ try {
         exit();
     }
 
+    // A blank submitted value means "didn't change this field" — COALESCE(NULLIF(...))
+    // keeps the existing column value instead of overwriting it with an empty string.
+    // cadet_birthday is the exception: it's already normalized to PHP null when blank,
+    // so a plain COALESCE against the bound (possibly-null) value works directly.
     $upd = $pdo->prepare("
         UPDATE members SET
-            cadet_first_name=:cadet_first_name, cadet_middle_name=:cadet_middle_name, nickname=:nickname,
-            cadet_birthday=:cadet_birthday, cadet_po_box=:cadet_po_box,
-            cadet_email=:cadet_email, cadet_cell=:cadet_cell,
-            bct_squadron=:bct_squadron,
-            parent1_last_name=:parent1_last_name, parent1_first_name=:parent1_first_name,
-            parent1_email=:parent1_email, parent1_cell=:parent1_cell,
-            parent1_street=:parent1_street, parent1_city=:parent1_city,
-            parent1_state=:parent1_state, parent1_zip=:parent1_zip,
-            parent2_last_name=:parent2_last_name, parent2_first_name=:parent2_first_name,
-            parent2_email=:parent2_email, parent2_cell=:parent2_cell,
-            parent2_street=:parent2_street, parent2_city=:parent2_city,
-            parent2_state=:parent2_state, parent2_zip=:parent2_zip,
-            photo_consent=:photo_consent, directory_consent=:directory_consent
+            cadet_first_name  = COALESCE(NULLIF(:cadet_first_name, ''), cadet_first_name),
+            cadet_middle_name = COALESCE(NULLIF(:cadet_middle_name, ''), cadet_middle_name),
+            nickname          = COALESCE(NULLIF(:nickname, ''), nickname),
+            cadet_birthday    = COALESCE(:cadet_birthday, cadet_birthday),
+            cadet_po_box      = COALESCE(NULLIF(:cadet_po_box, ''), cadet_po_box),
+            cadet_email       = COALESCE(NULLIF(:cadet_email, ''), cadet_email),
+            cadet_cell        = COALESCE(NULLIF(:cadet_cell, ''), cadet_cell),
+            bct_squadron      = COALESCE(NULLIF(:bct_squadron, ''), bct_squadron),
+            parent1_last_name  = COALESCE(NULLIF(:parent1_last_name, ''), parent1_last_name),
+            parent1_first_name = COALESCE(NULLIF(:parent1_first_name, ''), parent1_first_name),
+            parent1_email      = COALESCE(NULLIF(:parent1_email, ''), parent1_email),
+            parent1_cell       = COALESCE(NULLIF(:parent1_cell, ''), parent1_cell),
+            parent1_street     = COALESCE(NULLIF(:parent1_street, ''), parent1_street),
+            parent1_city       = COALESCE(NULLIF(:parent1_city, ''), parent1_city),
+            parent1_state      = COALESCE(NULLIF(:parent1_state, ''), parent1_state),
+            parent1_zip        = COALESCE(NULLIF(:parent1_zip, ''), parent1_zip),
+            parent2_last_name  = COALESCE(NULLIF(:parent2_last_name, ''), parent2_last_name),
+            parent2_first_name = COALESCE(NULLIF(:parent2_first_name, ''), parent2_first_name),
+            parent2_email      = COALESCE(NULLIF(:parent2_email, ''), parent2_email),
+            parent2_cell       = COALESCE(NULLIF(:parent2_cell, ''), parent2_cell),
+            parent2_street     = COALESCE(NULLIF(:parent2_street, ''), parent2_street),
+            parent2_city       = COALESCE(NULLIF(:parent2_city, ''), parent2_city),
+            parent2_state      = COALESCE(NULLIF(:parent2_state, ''), parent2_state),
+            parent2_zip        = COALESCE(NULLIF(:parent2_zip, ''), parent2_zip),
+            photo_consent      = COALESCE(NULLIF(:photo_consent, ''), photo_consent),
+            directory_consent  = COALESCE(NULLIF(:directory_consent, ''), directory_consent)
         WHERE id = :id
     ");
     $upd->execute([
@@ -143,6 +160,13 @@ try {
         'id'                 => $existing_id,
     ]);
 
+    // Re-fetch the record as it now actually stands — since blank submitted
+    // fields were preserved rather than overwritten, the emails below need
+    // the real saved values, not just whatever was (or wasn't) typed this time.
+    $fresh = $pdo->prepare('SELECT * FROM members WHERE id = ?');
+    $fresh->execute([$existing_id]);
+    $member = $fresh->fetch(PDO::FETCH_ASSOC);
+
 } catch (PDOException $e) {
     error_log('Update handler: MySQL error: ' . $e->getMessage());
     http_response_code(500);
@@ -150,45 +174,48 @@ try {
     exit();
 }
 
+$g = fn(string $k) => (string)($member[$k] ?? '');
+
 // ── Notify secretary of the update ────────────────────────────────────────
 $secretary_email = 'secretary@alabamafalcons.org';
-$subject = 'Member Info Updated: ' . sanitize_header(s($payload, 'cadetFirstName')) . ' ' . sanitize_header(s($payload, 'cadetLastName'));
+$subject = 'Member Info Updated: ' . sanitize_header($g('cadet_first_name')) . ' ' . sanitize_header($g('cadet_last_name'));
 
-$email_body  = "A member updated their information via the Update Your Information form:\n\n";
+$email_body  = "A member updated their information via the Update Your Information form.\n";
+$email_body .= "Fields left blank on the form kept their existing value — this reflects the record as it now stands:\n\n";
 $email_body .= "CADET INFORMATION\n";
-$email_body .= "Name: " . s($payload,'cadetFirstName') . " " . s($payload,'cadetMiddleName') . " " . s($payload,'cadetLastName') . "\n";
-$email_body .= "Nickname: " . s($payload,'nickname') . "\n";
-$email_body .= "Email: " . s($payload,'cadetEmail') . "\n";
-$email_body .= "Phone: " . s($payload,'cadetPhone') . "\n";
-$email_body .= "Graduation Year: " . s($payload,'graduationYear') . "\n";
-$email_body .= "Squadron: " . s($payload,'squadron') . "\n";
-$email_body .= "USAFA Mailbox: " . s($payload,'poBox') . "\n\n";
+$email_body .= "Name: " . trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name')) . "\n";
+$email_body .= "Nickname: " . $g('nickname') . "\n";
+$email_body .= "Email: " . $g('cadet_email') . "\n";
+$email_body .= "Phone: " . $g('cadet_cell') . "\n";
+$email_body .= "Graduation Year: " . $g('class_year') . "\n";
+$email_body .= "Squadron: " . $g('bct_squadron') . "\n";
+$email_body .= "USAFA Mailbox: " . $g('cadet_po_box') . "\n\n";
 $email_body .= "PARENT/FAMILY INFORMATION\n";
-$email_body .= "Primary: " . s($payload,'parent1FirstName') . " " . s($payload,'parent1LastName') . "\n";
-$email_body .= "Email: " . s($payload,'parent1Email') . "\n";
-$email_body .= "Phone: " . s($payload,'parent1Phone') . "\n";
-if (s($payload,'parent2FirstName') !== '') {
-    $email_body .= "\nSecondary: " . s($payload,'parent2FirstName') . " " . s($payload,'parent2LastName') . "\n";
-    $email_body .= "Email: " . s($payload,'parent2Email') . "\n";
-    $email_body .= "Phone: " . s($payload,'parent2Phone') . "\n";
+$email_body .= "Primary: " . trim($g('parent1_first_name') . ' ' . $g('parent1_last_name')) . "\n";
+$email_body .= "Email: " . $g('parent1_email') . "\n";
+$email_body .= "Phone: " . $g('parent1_cell') . "\n";
+if ($g('parent2_first_name') !== '') {
+    $email_body .= "\nSecondary: " . trim($g('parent2_first_name') . ' ' . $g('parent2_last_name')) . "\n";
+    $email_body .= "Email: " . $g('parent2_email') . "\n";
+    $email_body .= "Phone: " . $g('parent2_cell') . "\n";
 }
 $email_body .= "\nADDRESS\n";
-$email_body .= s($payload,'streetAddress') . "\n";
-$email_body .= s($payload,'city') . ", " . s($payload,'state') . " " . s($payload,'zipCode') . "\n\n";
+$email_body .= $g('parent1_street') . "\n";
+$email_body .= $g('parent1_city') . ", " . $g('parent1_state') . " " . $g('parent1_zip') . "\n\n";
 $email_body .= "CONSENTS\n";
-$email_body .= "Photo: " . s($payload,'photoConsent') . "\n";
-$email_body .= "Directory: " . s($payload,'directoryConsent') . "\n";
+$email_body .= "Photo: " . $g('photo_consent') . "\n";
+$email_body .= "Directory: " . $g('directory_consent') . "\n";
 
 $headers  = "From: noreply@alabamafalcons.org\r\n";
-$headers .= "Reply-To: " . sanitize_header(s($payload,'parent1Email')) . "\r\n";
+$headers .= "Reply-To: " . sanitize_header($g('parent1_email')) . "\r\n";
 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 mail($secretary_email, $subject, $email_body, $headers);
 
 // ── Confirmation email to parent ──────────────────────────────────────────
-$parent_email = s($payload, 'parent1Email');
+$parent_email = $g('parent1_email');
 if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
-    $parent_name  = s($payload, 'parent1FirstName');
-    $cadet_name   = trim(preg_replace('/\s+/', ' ', "$first $middle " . s($payload, 'cadetLastName')));
+    $parent_name  = $g('parent1_first_name') ?: 'there';
+    $cadet_name   = trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name')) ?: 'your cadet';
     $conf_subject = 'Your Information Has Been Updated — USAFA Parents Club of Alabama';
     $conf_body    = "Dear $parent_name,\n\n"
                   . "Your family's information for $cadet_name has been updated in our records.\n\n"
