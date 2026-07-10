@@ -109,6 +109,12 @@ try {
         exit();
     }
 
+    // Snapshot the record before updating so the secretary notification below
+    // can show exactly what changed, not just the record as it now stands.
+    $before = $pdo->prepare('SELECT * FROM members WHERE id = ?');
+    $before->execute([$existing_id]);
+    $old = $before->fetch(PDO::FETCH_ASSOC);
+
     // A blank submitted value means "didn't change this field" — COALESCE(NULLIF(...))
     // keeps the existing column value instead of overwriting it with an empty string.
     // cadet_birthday is the exception: it's already normalized to PHP null when blank,
@@ -188,13 +194,51 @@ try {
 }
 
 $g = fn(string $k) => (string)($member[$k] ?? '');
+$o = fn(string $k) => (string)($old[$k] ?? '');
+
+// ── Build a before/after diff so the secretary can review at a glance ─────
+$diff_labels = [
+    'cadet_first_name'   => 'Cadet First Name',
+    'cadet_middle_name'  => 'Cadet Middle Name',
+    'nickname'            => 'Nickname',
+    'cadet_po_box'        => 'USAFA Mailbox / PO Box',
+    'cadet_email'         => 'Cadet Email',
+    'cadet_cell'          => 'Cadet Cell Phone',
+    'bct_squadron'        => 'Squadron',
+    'parent1_first_name'  => 'Primary Contact First Name',
+    'parent1_last_name'   => 'Primary Contact Last Name',
+    'parent1_email'       => 'Primary Contact Email',
+    'parent1_cell'        => 'Primary Contact Phone',
+    'parent1_street'      => 'Primary Contact Street',
+    'parent1_city'        => 'Primary Contact City',
+    'parent1_state'       => 'Primary Contact State',
+    'parent1_zip'         => 'Primary Contact Zip',
+    'parent2_first_name'  => 'Secondary Contact First Name',
+    'parent2_last_name'   => 'Secondary Contact Last Name',
+    'parent2_email'       => 'Secondary Contact Email',
+    'parent2_cell'        => 'Secondary Contact Phone',
+    'parent2_street'      => 'Secondary Contact Street',
+    'parent2_city'        => 'Secondary Contact City',
+    'parent2_state'       => 'Secondary Contact State',
+    'parent2_zip'         => 'Secondary Contact Zip',
+    'photo_consent'       => 'Photo Consent',
+    'directory_consent'   => 'Directory Consent',
+];
+$changes = [];
+foreach ($diff_labels as $col => $label) {
+    if ($o($col) !== $g($col)) {
+        $changes[] = $label . ': ' . ($o($col) !== '' ? $o($col) : '(blank)') . '  →  ' . ($g($col) !== '' ? $g($col) : '(blank)');
+    }
+}
 
 // ── Notify secretary of the update ────────────────────────────────────────
 $secretary_email = 'secretary@alabamafalcons.org';
 $subject = 'Member Info Updated: ' . sanitize_header($g('cadet_first_name')) . ' ' . sanitize_header($g('cadet_last_name'));
 
-$email_body  = "A member updated their information via the Update Your Information form.\n";
-$email_body .= "Fields left blank on the form kept their existing value — this reflects the record as it now stands:\n\n";
+$email_body  = "A member updated their information via the Update Your Information form.\n\n";
+$email_body .= "WHAT CHANGED\n";
+$email_body .= empty($changes) ? "(No fields actually changed — everything submitted matched what was already on file.)\n\n" : implode("\n", $changes) . "\n\n";
+$email_body .= "Fields left blank on the form kept their existing value — the full record below reflects how it now stands:\n\n";
 $email_body .= "CADET INFORMATION\n";
 $email_body .= "Name: " . trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name')) . "\n";
 $email_body .= "Nickname: " . $g('nickname') . "\n";
