@@ -33,7 +33,7 @@
     @media (max-width: 600px) {
       .form-row, .form-row-3 { grid-template-columns: 1fr; }
     }
-    .form-group { margin-bottom: 1.25rem; }
+    .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--navy); font-size: 0.9rem; }
     .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; font-family: var(--font-body); color: var(--navy); font-size: 0.95rem; background: var(--white); }
     .form-group textarea { resize: vertical; min-height: 80px; }
@@ -44,8 +44,8 @@
     .radio-group label { font-weight: 400; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
     .radio-group input[type="radio"] { width: auto; accent-color: var(--navy); }
 
-    .form-divider { border: none; border-top: 2px solid rgba(0, 53, 148, 0.15); margin: 2rem 0 1.5rem; }
-    .form-divider-label { font-family: var(--font-display); font-size: 1.1rem; color: var(--navy); margin-bottom: 1rem; }
+    .form-divider { border: none; border-top: 2px solid rgba(0, 53, 148, 0.15); margin: 1.5rem 0 1rem; }
+    .form-divider-label { font-family: var(--font-display); font-size: 1rem; color: var(--navy); margin-bottom: 0.75rem; }
 
     .cta-button { display: inline-block; background: linear-gradient(180deg, #1a5cbf 0%, #002554 100%); color: var(--white); padding: 0.9rem 2rem; border-radius: 4px; font-family: var(--font-body); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.85rem; transition: all 0.15s ease; border: none; cursor: pointer; width: 100%; box-shadow: 0 4px 0 #001535, 0 6px 12px rgba(0,0,0,.25); position: relative; top: 0; }
     .cta-button:hover { background: linear-gradient(180deg, #2166cc 0%, #003080 100%); box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,.2); top: 2px; }
@@ -61,11 +61,13 @@
     .info-box p { color: var(--gray); margin-bottom: 0.5rem; font-size: 0.95rem; }
     .info-box p:last-child { margin-bottom: 0; }
 
-    /* COLLAPSIBLE SECTIONS */
-    .section-toggle { display: flex; align-items: center; gap: 0.65rem; width: 100%; background: var(--light); border: none; border-radius: 4px; padding: 0.85rem 1.1rem; font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; color: var(--navy); cursor: pointer; margin: 1.5rem 0 0; text-align: left; transition: background 0.15s; }
-    .section-toggle:hover { background: #e5eaf1; }
-    .section-toggle .toggle-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 1rem; line-height: 1; flex-shrink: 0; }
-    .collapsible-section { padding: 1.25rem 0.25rem 0; }
+    /* SIDE-BY-SIDE PRIMARY / SECONDARY COLUMNS */
+    .dual-column { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; }
+    .subcol-label { font-family: var(--font-display); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray); font-weight: 600; margin-bottom: 0.65rem; }
+    @media (max-width: 700px) {
+      .dual-column { grid-template-columns: 1fr; gap: 0; }
+      .dual-column > div + div { margin-top: 1.25rem; }
+    }
 
     /* FOOTER */
     footer { background: var(--topbar); color: rgba(245, 245, 240, 0.6); text-align: center; padding: 2rem; font-size: 0.85rem; }
@@ -249,46 +251,39 @@
           </div>
         </div>
 
-        <!-- PRIMARY CONTACT -->
+        <!-- CONTACT INFORMATION -->
         <hr class="form-divider" />
-        <div class="form-divider-label" id="fs-parents">Primary Contact</div>
+        <div class="form-divider-label" id="fs-parents">Contact Information</div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="parent1FirstName">First Name</label>
-            <input type="text" id="parent1FirstName" name="parent1FirstName" />
-          </div>
-          <div class="form-group">
-            <label for="parent1LastName">Last Name</label>
-            <input type="text" id="parent1LastName" name="parent1LastName" />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="parent1Phone">Phone</label>
-            <input type="tel" id="parent1Phone" name="parent1Phone" />
-          </div>
-          <div class="form-group">
-            <label for="parent1Email">Email</label>
-            <input type="email" id="parent1Email" name="parent1Email" />
-          </div>
-        </div>
-
-        <!-- SECONDARY CONTACT (collapsible) -->
-        <button type="button" class="section-toggle" onclick="toggleCollapsible('secondary-contact-section', this)">
-          <span class="toggle-icon">+</span> Update Secondary Contact Info
-        </button>
-        <div id="secondary-contact-section" class="collapsible-section" style="display:none">
-          <div class="form-group">
-            <label>Is the Secondary Contact's last name the same as the Primary Contact's?</label>
-            <div class="radio-group">
-              <label><input type="radio" name="parent2LastNameSame" value="Yes" checked onchange="toggleParent2LastName(this)"> Yes, same last name</label>
-              <label><input type="radio" name="parent2LastNameSame" value="No" onchange="toggleParent2LastName(this)"> No, different last name</label>
+        <div class="dual-column">
+          <div>
+            <div class="subcol-label">Primary Contact</div>
+            <div class="form-group">
+              <label for="parent1FirstName">First Name</label>
+              <input type="text" id="parent1FirstName" name="parent1FirstName" />
+            </div>
+            <div class="form-group">
+              <label for="parent1LastName">Last Name</label>
+              <input type="text" id="parent1LastName" name="parent1LastName" />
+            </div>
+            <div class="form-group">
+              <label for="parent1Phone">Phone</label>
+              <input type="tel" id="parent1Phone" name="parent1Phone" />
+            </div>
+            <div class="form-group">
+              <label for="parent1Email">Email</label>
+              <input type="email" id="parent1Email" name="parent1Email" />
             </div>
           </div>
-
-          <div class="form-row">
+          <div>
+            <div class="subcol-label">Secondary Contact</div>
+            <div class="form-group">
+              <label>Same last name as Primary Contact?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="parent2LastNameSame" value="Yes" checked onchange="toggleParent2LastName(this)"> Yes</label>
+                <label><input type="radio" name="parent2LastNameSame" value="No" onchange="toggleParent2LastName(this)"> No</label>
+              </div>
+            </div>
             <div class="form-group">
               <label for="parent2FirstName">First Name</label>
               <input type="text" id="parent2FirstName" name="parent2FirstName" />
@@ -297,9 +292,6 @@
               <label for="parent2LastName">Last Name</label>
               <input type="text" id="parent2LastName" name="parent2LastName" />
             </div>
-          </div>
-
-          <div class="form-row">
             <div class="form-group">
               <label for="parent2Phone">Phone</label>
               <input type="tel" id="parent2Phone" name="parent2Phone" />
@@ -311,59 +303,59 @@
           </div>
         </div>
 
-        <!-- ADDRESS (collapsible) -->
-        <button type="button" class="section-toggle" onclick="toggleCollapsible('address-section', this)">
-          <span class="toggle-icon">+</span> My Address Has Changed
-        </button>
-        <div id="address-section" class="collapsible-section" style="display:none">
-          <div class="form-divider-label" style="font-size:.95rem">Primary Contact Address</div>
+        <!-- ADDRESS -->
+        <hr class="form-divider" />
+        <div class="form-divider-label" id="fs-address">Address</div>
 
-          <div class="form-group">
-            <label for="streetAddress">Street Address</label>
-            <input type="text" id="streetAddress" name="streetAddress" />
-          </div>
-
-          <div class="form-row-3">
+        <div class="dual-column">
+          <div>
+            <div class="subcol-label">Primary Contact Address</div>
+            <div class="form-group">
+              <label for="streetAddress">Street Address</label>
+              <input type="text" id="streetAddress" name="streetAddress" />
+            </div>
             <div class="form-group">
               <label for="city">City</label>
               <input type="text" id="city" name="city" />
             </div>
-            <div class="form-group">
-              <label for="state">State</label>
-              <input type="text" id="state" name="state" placeholder="AL" />
-            </div>
-            <div class="form-group">
-              <label for="zipCode">Zip Code</label>
-              <input type="text" id="zipCode" name="zipCode" />
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-top:.5rem">
-            <label>Does the Secondary Contact share the same address?</label>
-            <div class="radio-group">
-              <label><input type="radio" name="parent2AddressSame" value="Yes" checked onchange="toggleParent2Address(this)"> Yes, same address</label>
-              <label><input type="radio" name="parent2AddressSame" value="No" onchange="toggleParent2Address(this)"> No, different address</label>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="state">State</label>
+                <input type="text" id="state" name="state" placeholder="AL" />
+              </div>
+              <div class="form-group">
+                <label for="zipCode">Zip Code</label>
+                <input type="text" id="zipCode" name="zipCode" />
+              </div>
             </div>
           </div>
-
-          <div id="parent2-address" style="display:none">
-            <div class="form-divider-label" style="font-size:.95rem">Secondary Contact Address</div>
+          <div>
+            <div class="subcol-label">Secondary Contact Address</div>
             <div class="form-group">
-              <label for="parent2Street">Street Address</label>
-              <input type="text" id="parent2Street" name="parent2Street" />
+              <label>Same address as Primary Contact?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="parent2AddressSame" value="Yes" checked onchange="toggleParent2Address(this)"> Yes</label>
+                <label><input type="radio" name="parent2AddressSame" value="No" onchange="toggleParent2Address(this)"> No</label>
+              </div>
             </div>
-            <div class="form-row-3">
+            <div id="parent2-address" style="display:none">
+              <div class="form-group">
+                <label for="parent2Street">Street Address</label>
+                <input type="text" id="parent2Street" name="parent2Street" />
+              </div>
               <div class="form-group">
                 <label for="parent2City">City</label>
                 <input type="text" id="parent2City" name="parent2City" />
               </div>
-              <div class="form-group">
-                <label for="parent2State">State</label>
-                <input type="text" id="parent2State" name="parent2State" placeholder="AL" />
-              </div>
-              <div class="form-group">
-                <label for="parent2Zip">Zip Code</label>
-                <input type="text" id="parent2Zip" name="parent2Zip" />
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="parent2State">State</label>
+                  <input type="text" id="parent2State" name="parent2State" placeholder="AL" />
+                </div>
+                <div class="form-group">
+                  <label for="parent2Zip">Zip Code</label>
+                  <input type="text" id="parent2Zip" name="parent2Zip" />
+                </div>
               </div>
             </div>
           </div>
@@ -401,13 +393,6 @@
     function toggleParent2Address(radio) {
       document.getElementById('parent2-address').style.display =
         radio.value === 'No' ? 'block' : 'none';
-    }
-
-    function toggleCollapsible(id, btn) {
-      var el = document.getElementById(id);
-      var opening = el.style.display === 'none';
-      el.style.display = opening ? 'block' : 'none';
-      btn.querySelector('.toggle-icon').textContent = opening ? '−' : '+';
     }
 
     function toggleParent2LastName(radio) {
