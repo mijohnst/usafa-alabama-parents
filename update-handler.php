@@ -119,8 +119,17 @@ try {
     // keeps the existing column value instead of overwriting it with an empty string.
     // cadet_birthday is the exception: it's already normalized to PHP null when blank,
     // so a plain COALESCE against the bound (possibly-null) value works directly.
+    // Graduation year is a <select> of known values — whitelist it so a
+    // tampered/garbage value falls back to COALESCE-preserving the existing
+    // year instead of being written as-is.
+    $grad_year = s($payload, 'graduationYear');
+    if (!in_array($grad_year, ['2026', '2027', '2028', '2029', '2030', '2031'], true)) {
+        $grad_year = '';
+    }
+
     $upd = $pdo->prepare("
         UPDATE members SET
+            class_year        = COALESCE(NULLIF(:class_year, ''), class_year),
             cadet_first_name  = COALESCE(NULLIF(:cadet_first_name, ''), cadet_first_name),
             cadet_middle_name = COALESCE(NULLIF(:cadet_middle_name, ''), cadet_middle_name),
             nickname          = COALESCE(NULLIF(:nickname, ''), nickname),
@@ -150,6 +159,7 @@ try {
         WHERE id = :id
     ");
     $upd->execute([
+        'class_year'         => $grad_year,
         'cadet_first_name'   => $first,
         'cadet_middle_name'  => $middle,
         'nickname'           => s($payload, 'nickname'),
@@ -198,6 +208,7 @@ $o = fn(string $k) => (string)($old[$k] ?? '');
 
 // ── Build a before/after diff so the secretary can review at a glance ─────
 $diff_labels = [
+    'class_year'          => 'Graduation Year',
     'cadet_first_name'   => 'Cadet First Name',
     'cadet_middle_name'  => 'Cadet Middle Name',
     'nickname'            => 'Nickname',
