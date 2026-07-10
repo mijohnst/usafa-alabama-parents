@@ -9,6 +9,7 @@ $year    = $_GET['year']         ?? '';
 $region  = $_GET['region']       ?? '';
 $paid    = $_GET['paid']         ?? '';
 $squadron  = trim($_GET['squadron']  ?? '');
+$split_only = isset($_GET['split']);
 $archived  = $_GET['archived']   ?? '0';
 $sort      = $_GET['sort']       ?? 'class_year';
 $dir       = $_GET['dir']        ?? 'asc';
@@ -37,6 +38,7 @@ if ($squadron !== '') {
     $where[] = '(bct_squadron = :sqd OR fall_squadron = :sqd OR squadron_yr2_4 = :sqd)';
     $params[':sqd'] = $squadron;
 }
+if ($split_only) { $where[] = "cadet_first_name LIKE '% %'"; }
 $where[] = $archived === '1' ? 'archived = 1' : 'archived = 0';
 
 $order = $sort === 'cadet_last_name'
@@ -104,6 +106,12 @@ $new_this_month = (int)$pdo->query(
     "SELECT COUNT(*) FROM members WHERE archived = 0 AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
 )->fetchColumn();
 
+// Cadet records where First Name still has a space — likely an unsplit
+// "First Middle" value left over from before the name fields were separated.
+$needs_split_count = (int)$pdo->query(
+    "SELECT COUNT(*) FROM members WHERE archived = 0 AND cadet_first_name LIKE '% %'"
+)->fetchColumn();
+
 // Dues progress bar (active years 2027-2030 only)
 $active_total = $stat_paid + $stat_unpaid;
 $dues_pct     = $active_total > 0 ? round($stat_paid / $active_total * 100) : 0;
@@ -149,7 +157,7 @@ function sort_link(string $col, string $label, string $current_sort, string $cur
          . htmlspecialchars($label) . '<span style="opacity:.5">' . $arrow . '</span></a>';
 }
 
-$get_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid]);
+$get_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'split'=>$split_only?'1':null]);
 
 admin_header('Members');
 echo show_flash();
@@ -160,7 +168,7 @@ echo show_flash();
   <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown of <?= $stat_total ?> total)</span></h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <?php
-    $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron]);
+    $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron,'split'=>$split_only?'1':null]);
     $csv_params['export'] = 'csv';
     ?>
     <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
@@ -179,6 +187,7 @@ if ($fin_pending)  $alerts[] = ['color'=>'#fff3cd','border'=>'#ffc107','text'=>'
 if ($fin_approved) $alerts[] = ['color'=>'#e3f2fd','border'=>'#90caf9','text'=>'#0d47a1','icon'=>'💰','msg'=>"$fin_approved awaiting reimbursement",'href'=>'pending-reimbursements.php'];
 if ($new_this_month) $alerts[] = ['color'=>'#e8f5e9','border'=>'#a5d6a7','text'=>'#1b5e20','icon'=>'👤','msg'=>"$new_this_month new member".($new_this_month>1?'s':'')." this month",'href'=>'index.php?q='];
 if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8','text'=>'#4a148c','icon'=>'🎂','msg'=>count($upcoming_bdays)." birthday".( count($upcoming_bdays)>1?'s':'')." in the next 30 days",'href'=>'#bday-panel','onclick'=>'openBirthdays()'];
+if ($needs_split_count) $alerts[] = ['color'=>'#fff3cd','border'=>'#ffc107','text'=>'#5f4c00','icon'=>'✂️','msg'=>"$needs_split_count cadet name".($needs_split_count>1?'s':'')." still need First/Middle split",'href'=>'index.php?split=1'];
 ?>
 <?php if (!empty($alerts)): ?>
 <div style="display:grid;grid-template-columns:repeat(<?= count($alerts) ?>,1fr);gap:.6rem;margin-bottom:1.25rem">
@@ -284,6 +293,7 @@ function openBirthdays() {
 <!-- Filters -->
 <div class="card" style="padding:1rem 1.5rem">
   <form method="GET" class="filter-bar">
+    <?php if ($split_only): ?><input type="hidden" name="split" value="1"><?php endif; ?>
     <div class="form-group" style="flex:2;min-width:200px">
       <label>Search name / email / phone</label>
       <input name="q" value="<?= h($search) ?>" placeholder="Type to search…">
@@ -383,7 +393,7 @@ function openBirthdays() {
       <?php endif; ?>
       <td><?= h($m['class_year']) ?></td>
       <td>
-        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><br>
+        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><?php if (strpos(trim($m['cadet_first_name']), ' ') !== false): ?> <span title="First Name still contains a space — likely needs to be split into First/Middle" style="font-size:.65rem;font-weight:700;color:#5f4c00;background:#fff3cd;padding:.05rem .35rem;border-radius:3px">✂️ SPLIT?</span><?php endif; ?><br>
         <?php if ($m['cadet_email']): ?><a href="mailto:<?= h($m['cadet_email']) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($m['cadet_email']) ?></a><?php endif; ?>
       </td>
       <td><?php if ($m['al_region']): ?><span class="badge <?= h($region_cls) ?>"><?= h($m['al_region']) ?></span><?php endif; ?></td>
