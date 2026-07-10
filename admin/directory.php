@@ -93,34 +93,35 @@ foreach ($by_year as $yr => $group):
   <div class="grid">
   <?php foreach ($group as $m):
     $sqd = $m['squadron_yr2_4'] ?: ($m['fall_squadron'] ?: $m['bct_squadron']);
+    $v = fn(string $k) => h((string)($m[$k] ?? ''));
   ?>
   <div class="card">
-    <div class="cadet-name"><?= h($m['cadet_last_name']) ?>, <?= h(trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name'])) ?></div>
+    <div class="cadet-name"><?= $v('cadet_last_name') ?>, <?= h(trim(($m['cadet_first_name'] ?? '') . ' ' . ($m['cadet_middle_name'] ?? ''))) ?></div>
     <div class="cadet-meta">
-      <?= h($sqd) ?><?= $sqd && $m['al_region'] ? ' &bull; ' : '' ?><?= h($m['al_region']) ?>
-      <?php if ($m['cadet_po_box']): ?>&bull; PO <?= h($m['cadet_po_box']) ?><?php endif; ?>
+      <?= h((string)($sqd ?? '')) ?><?= $sqd && $m['al_region'] ? ' &bull; ' : '' ?><?= $v('al_region') ?>
+      <?php if ($m['cadet_po_box']): ?>&bull; PO <?= $v('cadet_po_box') ?><?php endif; ?>
     </div>
 
     <?php if ($m['parent1_first_name'] || $m['parent1_last_name']): ?>
-    <div class="p-name"><?= h(trim($m['parent1_first_name'].' '.$m['parent1_last_name'])) ?></div>
+    <div class="p-name"><?= h(trim(($m['parent1_first_name'] ?? '').' '.($m['parent1_last_name'] ?? ''))) ?></div>
     <div class="p-detail">
-      <?php if ($m['parent1_cell']): ?><a href="tel:<?= h(preg_replace('/\D/','',$m['parent1_cell'])) ?>"><?= h($m['parent1_cell']) ?></a><br><?php endif; ?>
-      <?php if ($m['parent1_email']): ?><a href="mailto:<?= h($m['parent1_email']) ?>"><?= h($m['parent1_email']) ?></a><?php endif; ?>
+      <?php if ($m['parent1_cell']): ?><a href="tel:<?= h(preg_replace('/\D/','',$m['parent1_cell'])) ?>"><?= $v('parent1_cell') ?></a><br><?php endif; ?>
+      <?php if ($m['parent1_email']): ?><a href="mailto:<?= $v('parent1_email') ?>"><?= $v('parent1_email') ?></a><?php endif; ?>
     </div>
     <?php endif; ?>
 
     <?php if ($m['parent2_first_name'] || $m['parent2_last_name']): ?>
     <div class="divider"></div>
-    <div class="p-name"><?= h(trim($m['parent2_first_name'].' '.$m['parent2_last_name'])) ?></div>
+    <div class="p-name"><?= h(trim(($m['parent2_first_name'] ?? '').' '.($m['parent2_last_name'] ?? ''))) ?></div>
     <div class="p-detail">
-      <?php if ($m['parent2_cell']): ?><a href="tel:<?= h(preg_replace('/\D/','',$m['parent2_cell'])) ?>"><?= h($m['parent2_cell']) ?></a><br><?php endif; ?>
-      <?php if ($m['parent2_email']): ?><a href="mailto:<?= h($m['parent2_email']) ?>"><?= h($m['parent2_email']) ?></a><?php endif; ?>
+      <?php if ($m['parent2_cell']): ?><a href="tel:<?= h(preg_replace('/\D/','',$m['parent2_cell'])) ?>"><?= $v('parent2_cell') ?></a><br><?php endif; ?>
+      <?php if ($m['parent2_email']): ?><a href="mailto:<?= $v('parent2_email') ?>"><?= $v('parent2_email') ?></a><?php endif; ?>
     </div>
     <?php endif; ?>
 
     <?php if ($m['parent1_street']): ?>
     <div class="divider"></div>
-    <div class="p-detail"><?= h($m['parent1_street']) ?><br><?= h($m['parent1_city']) ?>, <?= h($m['parent1_state']) ?> <?= h($m['parent1_zip']) ?></div>
+    <div class="p-detail"><?= $v('parent1_street') ?><br><?= $v('parent1_city') ?>, <?= $v('parent1_state') ?> <?= $v('parent1_zip') ?></div>
     <?php endif; ?>
   </div>
   <?php endforeach; ?>

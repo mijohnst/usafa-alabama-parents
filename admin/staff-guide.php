@@ -167,6 +167,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
 }
 .nb-btn:hover{background:rgba(255,255,255,.1)}
 .nb-btn:disabled{opacity:.25;cursor:default}
+.nb-exit{margin-left:1.25rem;text-decoration:none;border-color:rgba(166,25,46,.5)}
+.nb-exit:hover{background:rgba(166,25,46,.25)}
 .nb-progress{display:flex;gap:.35rem;align-items:center;flex:1;justify-content:center;padding:0 1rem}
 .nb-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.22);cursor:pointer;transition:all .2s;flex-shrink:0}
 .nb-dot.on{background:var(--crimson);transform:scale(1.5)}
@@ -863,6 +865,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   <div class="nb-progress" id="dots"></div>
   <span class="nb-ctr" id="ctr"></span>
   <button class="nb-btn" id="btn-next" onclick="go(1)">Next →</button>
+  <a class="nb-btn nb-exit" href="index.php">✕ Exit to Portal</a>
 </div>
 
 <script>
