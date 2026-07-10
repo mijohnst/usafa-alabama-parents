@@ -401,10 +401,14 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>Zip</label><input name="parent1_zip" value="' . $v('parent1_zip') . '"></div>';
     echo '</div></fieldset>';
 
-    // Detect if parent 2 address already matches parent 1. For a brand-new
-    // member (Add Member, no data yet) default to "Same" — most families
-    // share an address, and this matches the public Application/Update
-    // forms' default. Editing an existing member still reflects real data.
+    // Detect if parent 2 already matches parent 1's last name / address. For
+    // a brand-new member (Add Member, no data yet) default to "Same" — most
+    // families share a last name and address, and this matches the public
+    // Application/Update forms' default. Editing an existing member still
+    // reflects real data.
+    $last_same = $is_edit
+        ? (!empty($m['parent1_last_name']) && ($m['parent1_last_name'] ?? '') === ($m['parent2_last_name'] ?? ''))
+        : true;
     $addr_same = $is_edit
         ? (!empty($m['parent1_street'])
             && ($m['parent1_street'] ?? '') === ($m['parent2_street'] ?? '')
@@ -412,8 +416,16 @@ function member_form(array $m = [], bool $is_edit = false): void {
         : true;
 
     echo '<fieldset><legend>Parent / Contact 2</legend>';
+    echo '<div class="form-group" style="margin-bottom:.75rem">';
+    echo '<label>Is the Last Name the Same as Parent 1?</label>';
+    echo '<div style="display:flex;gap:1.5rem;margin-top:.3rem">';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.9rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+       . '<input type="radio" name="p2_last_same" value="1" style="width:auto" onchange="syncP2Last(this)"' . ($last_same ? ' checked' : '') . '> Same</label>';
+    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.9rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+       . '<input type="radio" name="p2_last_same" value="0" style="width:auto" onchange="syncP2Last(this)"' . (!$last_same ? ' checked' : '') . '> Different</label>';
+    echo '</div></div>';
     echo '<div class="form-row col-4">';
-    echo '<div class="form-group"><label>Last Name</label><input name="parent2_last_name" value="' . $v('parent2_last_name') . '"></div>';
+    echo '<div class="form-group" id="p2-last-wrap" style="' . ($last_same ? 'opacity:.5;pointer-events:none' : '') . '"><label>Last Name</label><input id="p2_last_name" name="parent2_last_name" value="' . $v('parent2_last_name') . '"></div>';
     echo '<div class="form-group"><label>First Name</label><input name="parent2_first_name" value="' . $v('parent2_first_name') . '"></div>';
     echo '<div class="form-group"><label>Email</label><input type="email" name="parent2_email" value="' . $v('parent2_email') . '"></div>';
     echo '<div class="form-group"><label>Cell</label><input type="tel" name="parent2_cell" value="' . $v('parent2_cell') . '"></div>';
@@ -434,6 +446,24 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>Zip</label><input id="p2_zip" name="parent2_zip" value="' . $v('parent2_zip') . '"></div>';
     echo '</div></div></fieldset>';
     echo '<script>
+function syncP2Last(radio) {
+  var same = radio.value === "1";
+  var wrap = document.getElementById("p2-last-wrap");
+  wrap.style.opacity = same ? ".5" : "1";
+  wrap.style.pointerEvents = same ? "none" : "auto";
+  if (same) {
+    document.getElementById("p2_last_name").value = document.querySelector("[name=parent1_last_name]").value;
+  }
+}
+(function(){ var r = document.querySelector("[name=p2_last_same]:checked"); if (r) syncP2Last(r); })();
+(function(){
+  var el = document.querySelector("[name=parent1_last_name]");
+  if (el) el.addEventListener("input", function(){
+    var r = document.querySelector("[name=p2_last_same]:checked");
+    if (r && r.value === "1") syncP2Last(r);
+  });
+})();
+
 function syncP2Addr(radio) {
   var same = radio.value === "1";
   var wrap = document.getElementById("p2-addr-fields");
