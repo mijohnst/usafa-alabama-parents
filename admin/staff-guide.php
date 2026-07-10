@@ -175,6 +175,16 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
 /* ── Utilities ── */
 .mt1{margin-top:.75rem}.mt2{margin-top:1.5rem}.mt05{margin-top:.4rem}
 .gap-sm{gap:.65rem}
+
+/* ── Screenshots ── */
+.shot-strip{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}
+.shot-item{display:flex;flex-direction:column;align-items:center}
+.shot-thumb{height:100px;border:1px solid var(--border);border-radius:4px;cursor:zoom-in;box-shadow:0 1px 4px rgba(0,0,0,.15);transition:transform .15s;display:block}
+.shot-thumb:hover{transform:scale(1.04)}
+.shot-cap{font-size:.62rem;color:var(--text-muted);text-align:center;margin-top:.25rem;max-width:150px}
+#lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:3rem;cursor:zoom-out}
+#lightbox.open{display:flex}
+#lightbox img{max-width:100%;max-height:100%;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
 </style>
 </head>
 <body>
@@ -279,6 +289,12 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       </div>
     </div>
   </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/dashboard-secretary.jpg" alt="Secretary dashboard" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Secretary dashboard</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/dashboard-officer.jpg" alt="Officer dashboard" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Officer dashboard</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/dashboard-treasurer.jpg" alt="Treasurer dashboard" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Treasurer dashboard</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/automated-emails.jpg" alt="Automated Emails settings" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Automated Emails</span></div>
+  </div>
 </div>
 
 <!-- 4: Members -->
@@ -312,6 +328,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         </ul>
       </div>
     </div>
+  </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/members-list.jpg" alt="Member roster list with filters and dues stats" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Member roster</span></div>
   </div>
 </div>
 
@@ -433,6 +452,10 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <p class="fs-who">Treasurer pays member and marks complete</p>
     </div>
   </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/add-purchase.jpg" alt="Add Purchase form" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Add Purchase</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/finance-purchases.jpg" alt="Purchases list" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Purchases list</span></div>
+  </div>
 </div>
 
 <!-- 9: Section — Website Content -->
@@ -474,6 +497,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       </div>
     </div>
   </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/gallery.jpg" alt="Photo Gallery upload and management page" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Photo Gallery</span></div>
+  </div>
 </div>
 
 <!-- 11: Announcements & Events -->
@@ -510,6 +536,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   <div class="hbox mt2">
     Both sections update the public site <strong>immediately</strong> when saved — no publish step required.
   </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/announcements.jpg" alt="Site Announcements page" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Announcements</span></div>
+  </div>
 </div>
 
 <!-- 12: Leadership -->
@@ -542,6 +571,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         When an officer transitions out, update the name, title, and photo rather than deleting and re-adding — this preserves the sort order.
       </div>
     </div>
+  </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/leadership.jpg" alt="Club Leadership admin list" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Club Leadership</span></div>
   </div>
 </div>
 
@@ -584,6 +616,10 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       </div>
     </div>
   </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/compose-email-president.jpg" alt="Compose Email as President" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Compose Email</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/compose-email-secretary.jpg" alt="Compose Email as Secretary, loading Cadet Emails" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Loading recipients</span></div>
+  </div>
 </div>
 
 <!-- 15: Helpdesk, Vault, Directory -->
@@ -623,6 +659,10 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       </ul>
     </div>
   </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/support-tickets.jpg" alt="Support Tickets list" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Support Tickets</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/document-vault.jpg" alt="Document Vault" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Document Vault</span></div>
+  </div>
 </div>
 
 <!-- 16: Meeting Minutes & Attendance -->
@@ -652,6 +692,10 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   </div>
   <div class="hbox mt2">
     <strong>Access:</strong> Tech Support, Officer, Secretary, Treasurer. Deleting a meeting also deletes its attendance records and vault copy — no separate cleanup needed.
+  </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/minutes-list.jpg" alt="Meeting Minutes list" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Meeting Minutes</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/attendance-take.jpg" alt="Take Attendance checklist" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Take Attendance</span></div>
   </div>
 </div>
 
@@ -722,6 +766,11 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         </ul>
       </div>
     </div>
+  </div>
+  <div class="shot-strip">
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/site-settings.jpg" alt="Site Settings page" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Site Settings</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/sponsors.jpg" alt="Sponsors admin list" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Sponsors</span></div>
+    <div class="shot-item"><img class="shot-thumb" src="guide-images/volunteers.jpg" alt="Volunteer Interest submissions" onclick="openShot(this.src,this.alt)"><span class="shot-cap">Volunteer Interest</span></div>
   </div>
 </div>
 
@@ -803,6 +852,11 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
 
 </div><!-- /deck -->
 
+<!-- Screenshot lightbox -->
+<div id="lightbox" onclick="closeShot()">
+  <img id="lightbox-img" src="" alt="">
+</div>
+
 <!-- Nav bar -->
 <div class="nav-bar">
   <button class="nb-btn" id="btn-prev" onclick="go(-1)">← Prev</button>
@@ -882,9 +936,26 @@ function jumpTo(i) {
 }
 
 document.addEventListener('keydown', e => {
+  if (lightbox.classList.contains('open')) {
+    if (e.key === 'Escape') closeShot();
+    return;
+  }
   if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
 });
+
+// ── Screenshot lightbox ──────────────────────────────────────────────────
+const lightbox    = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+function openShot(src, alt) {
+  lightboxImg.src = src;
+  lightboxImg.alt = alt || '';
+  lightbox.classList.add('open');
+}
+function closeShot() {
+  lightbox.classList.remove('open');
+  lightboxImg.src = '';
+}
 
 render();
 </script>
