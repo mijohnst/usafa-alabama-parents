@@ -227,16 +227,20 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   <div class="rule"></div>
   <div class="three-col">
     <div class="card">
+      <h3><span class="pill pill-admin">Admin</span></h3>
+      <p>Full access to everything — identical permissions to Tech Support. Only Admin and Tech can create user accounts and change roles.</p>
+    </div>
+    <div class="card">
       <h3><span class="pill pill-tech">Tech Support</span></h3>
       <p>Full access to everything — user management, all financial data, system settings, and all member data. Assigned to the Technology Officer.</p>
     </div>
     <div class="card">
       <h3><span class="pill pill-officer">Officer</span></h3>
-      <p>Manages members, website content (leadership, events, announcements, gallery), email communications, and can view finances.</p>
+      <p>Manages members, website content (leadership, events, announcements, gallery), email communications, and can view all finances and helpdesk tickets.</p>
     </div>
     <div class="card">
       <h3><span class="pill pill-secretary">Secretary</span></h3>
-      <p>Full member roster access, email compose, and website content management (events, announcements, gallery, settings). Can submit own purchases. Can only view own helpdesk tickets.</p>
+      <p>Full member roster access, email compose, website content management, and the club's record-keeping tools — meeting minutes, attendance, correspondence log, and member letters. Can view all purchases and helpdesk tickets, but can only submit/edit their own.</p>
     </div>
     <div class="card">
       <h3><span class="pill pill-treasurer">Treasurer</span></h3>
@@ -398,7 +402,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Purchases that look similar to a recent entry will trigger a <strong>duplicate warning</strong> before saving</li>
         <li>All purchases start as <strong>Pending</strong> until an Officer reviews and approves them</li>
         <li>Once approved, the Treasurer pays the member and marks the purchase <strong>Reimbursed</strong></li>
-        <li>Members can only see and edit their own submissions; Officers, Treasurer, and Tech Support see everything</li>
+        <li>A plain Member can only see and edit their own submissions</li>
+        <li>Officers and Secretary can <strong>view</strong> every purchase for oversight, but can still only <strong>edit</strong> their own — Treasurer and Admin/Tech can edit any</li>
       </ul>
     </div>
     <div>
@@ -596,8 +601,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <ul>
         <li>Internal support ticket system for member inquiries</li>
         <li>Statuses: <strong>Open, In Progress, Resolved</strong></li>
-        <li><strong>Tech Support only</strong> can manage all tickets — view, respond, assign, and close</li>
-        <li>All other roles can submit tickets and view their own only</li>
+        <li><strong>Admin/Tech only</strong> can manage tickets — respond as staff, change status, assign, and close</li>
+        <li><strong>Officer and Secretary</strong> can view any ticket for oversight, but can only reply on their own</li>
+        <li>Treasurer and Member can submit tickets and view their own only</li>
       </ul>
     </div>
     <div class="card">
@@ -606,25 +612,85 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Secure storage for club documents — tax forms, meeting minutes, policies, financial records</li>
         <li>Files are <strong>not publicly accessible</strong></li>
         <li>Upload PDF or image files with a title and category</li>
-        <li>Access: Treasurer, Officers, Tech Support</li>
+        <li>Access: Treasurer, Officers, Secretary, Tech Support</li>
         <li>Files can be viewed inline or downloaded</li>
       </ul>
     </div>
     <div class="card">
       <h3>Member Directory</h3>
       <ul>
-        <li>Searchable roster of all active members</li>
+        <li>Searchable, printable roster of active members</li>
         <li>Filter by class year or Alabama region</li>
-        <li>View contact info for any member</li>
+        <li>Only shows families who <strong>opted in to Directory Listing</strong> on their membership/update form</li>
         <li>Access: All logged-in roles, including Members</li>
-        <li>Shows active members only (archived members not listed)</li>
+        <li>Archived members are never listed, opted-in or not</li>
       </ul>
     </div>
   </div>
 </div>
 
-<!-- 16: Site Settings -->
+<!-- 16: Meeting Minutes & Attendance -->
 <div class="slide s-content" id="s16">
+  <p class="label">Section · Secretary Tools</p>
+  <h2>Meeting Minutes &amp; Attendance</h2>
+  <div class="rule"></div>
+  <div class="two-col">
+    <div class="card">
+      <h3>Meeting Minutes</h3>
+      <ul>
+        <li>Log a meeting: date, type (General/Board/Special/Other), title, location, and Zoom/Meet link</li>
+        <li>Upload the minutes file (PDF, DOC, or DOCX) once notes are ready</li>
+        <li>Uploading automatically mirrors a copy into the <strong>Document Vault</strong> under "Meeting Minutes" — stays in sync if replaced or deleted</li>
+        <li><strong>Notify Board</strong> emails every board member a secure link to view or download the minutes — no login required on their end</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Attendance</h3>
+      <ul>
+        <li>Click into any meeting to check off who attended</li>
+        <li><strong>Mark All Present</strong> / <strong>Clear All</strong> helpers speed up entry</li>
+        <li>Saving replaces the full attendance list for that meeting</li>
+        <li>The meeting list shows an attendance rate with a color-coded bar</li>
+      </ul>
+    </div>
+  </div>
+  <div class="hbox mt2">
+    <strong>Access:</strong> Admin, Tech, Officer, Secretary, Treasurer. Deleting a meeting also deletes its attendance records and vault copy — no separate cleanup needed.
+  </div>
+</div>
+
+<!-- 17: Correspondence & Member Letters -->
+<div class="slide s-content" id="s17">
+  <p class="label">Section · Secretary Tools</p>
+  <h2>Correspondence Log &amp; Member Letters</h2>
+  <div class="rule"></div>
+  <div class="two-col">
+    <div class="card">
+      <h3>Correspondence Log</h3>
+      <ul>
+        <li>Log outgoing or incoming club correspondence — letters, emails, calls, and more</li>
+        <li>Fields: date, direction (Sent/Received), contact name, organization, method, subject, notes</li>
+        <li>Filter by year and direction; export the filtered log to CSV</li>
+        <li>Internal record-keeping only — nothing here sends an email itself</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Member Status Letters</h3>
+      <ul>
+        <li>Search for a member by parent or cadet name</li>
+        <li><strong>Generate Letter</strong> produces a printable/PDF-able membership confirmation, auto-filled from their record</li>
+        <li>Useful for a family that needs proof of membership</li>
+        <li>Nothing is emailed or saved automatically — staff prints or saves as PDF manually</li>
+      </ul>
+    </div>
+  </div>
+  <div class="hbox mt2">
+    <strong>Access to both tools:</strong> Admin, Tech, Officer, Secretary, Treasurer.
+  </div>
+</div>
+
+<!-- 18: Site Settings -->
+<div class="slide s-content" id="s18">
   <p class="label">Section · Settings</p>
   <h2>Site Settings — Controlling Homepage Content</h2>
   <div class="rule"></div>
@@ -663,8 +729,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   </div>
 </div>
 
-<!-- 17: Role Quick Reference -->
-<div class="slide s-content" id="s17" style="padding:2.25rem 4rem">
+<!-- 19: Role Quick Reference -->
+<div class="slide s-content" id="s19" style="padding:2.25rem 4rem">
   <p class="label">Quick Reference</p>
   <h2>Who Can Do What — Role Access Summary</h2>
   <div class="rule"></div>
@@ -673,7 +739,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     <thead>
       <tr>
         <th>Section</th>
-        <th>Tech Support</th>
+        <th>Admin / Tech</th>
         <th>Officer</th>
         <th>Secretary</th>
         <th>Treasurer</th>
@@ -684,15 +750,20 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <tr><td>Dashboard</td><td class="y">Full</td><td class="y">Full</td><td class="y">Full</td><td class="p">Dues &amp; Finance</td><td class="p">Basic</td></tr>
       <tr><td>Members — View &amp; Edit</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="p">Dues only</td><td class="n">—</td></tr>
       <tr><td>Members — Archive / Delete</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Purchases</td><td class="p">Submit</td><td class="p">Submit / Approve</td><td class="p">Submit</td><td class="y">Full</td><td class="p">Own only</td></tr>
+      <tr><td>Purchases — View</td><td class="y">✓ all</td><td class="y">✓ all</td><td class="y">✓ all</td><td class="y">✓ all</td><td class="p">Own only</td></tr>
+      <tr><td>Purchases — Submit / Edit</td><td class="p">Own only</td><td class="p">Submit / Approve</td><td class="p">Own only</td><td class="y">Any</td><td class="p">Own only</td></tr>
       <tr><td>Photo Gallery</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Announcements</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Events</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Leadership</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Email / Compose</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
-      <tr><td>Helpdesk</td><td class="y">Full</td><td class="p">Own only</td><td class="p">Own only</td><td class="p">Own only</td><td class="p">Own only</td></tr>
+      <tr><td>Helpdesk — View</td><td class="y">Full</td><td class="p">Any (read-only)</td><td class="p">Any (read-only)</td><td class="p">Own only</td><td class="p">Own only</td></tr>
+      <tr><td>Helpdesk — Manage / Reply</td><td class="y">✓</td><td class="p">Own only</td><td class="p">Own only</td><td class="p">Own only</td><td class="p">Own only</td></tr>
+      <tr><td>Meeting Minutes &amp; Attendance</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
+      <tr><td>Correspondence Log</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
+      <tr><td>Member Letters</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Document Vault</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
-      <tr><td>Directory</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td>Directory (opted-in members only)</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
       <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>User Management</td><td class="y">Tech only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
     </tbody>
@@ -700,8 +771,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   </div>
 </div>
 
-<!-- 18: Tips -->
-<div class="slide s-content" id="s18">
+<!-- 20: Tips -->
+<div class="slide s-content" id="s20">
   <p class="label">Best Practices</p>
   <h2>Tips for Day-to-Day Use</h2>
   <div class="rule"></div>
@@ -719,12 +790,14 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <li><strong>Contact the Tech Officer</strong> for password resets, new user accounts, or any portal issues</li>
       <li><strong>Email sends immediately</strong> — double-check your recipient filter and count before hitting Send</li>
       <li><strong>The site reflects changes instantly</strong> — announcements, events, leadership, and settings update the public website as soon as you save</li>
+      <li><strong>Take attendance right after posting minutes</strong> — the meeting is already in front of you, and it keeps the attendance rate accurate</li>
+      <li><strong>Directory listing is opt-in</strong> — if a family wants to appear in the printable directory, they need to select "Yes" on their membership or update form</li>
     </ul>
   </div>
 </div>
 
-<!-- 19: Closing -->
-<div class="slide s-close" id="s19">
+<!-- 21: Closing -->
+<div class="slide s-close" id="s21">
   <div class="accent-bar" style="margin:0 auto 1.5rem"></div>
   <h1>Questions?</h1>
   <p class="cs">USAFA Parents Club of Alabama &nbsp;·&nbsp; Club Portal</p>
@@ -743,7 +816,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
 </div>
 
 <script>
-const TOTAL = 20;
+const TOTAL = 22;
 let cur = 0;
 let going = false;
 
