@@ -5,7 +5,9 @@ $pdo = get_pdo();
 
 // ── Filters ────────────────────────────────────────────────────────────────
 $search  = trim($_GET['q']       ?? '');
-$year    = $_GET['year']         ?? '';
+// Accepts either the new multi-select year[]=... or an old bookmarked
+// single year=... link — both land here as an array either way.
+$years   = array_values(array_filter((array)($_GET['year'] ?? [])));
 $region  = $_GET['region']       ?? '';
 $paid    = $_GET['paid']         ?? '';
 $squadron  = trim($_GET['squadron']  ?? '');
@@ -31,7 +33,12 @@ if ($search !== '') {
                  OR cadet_cell LIKE :q OR parent1_cell LIKE :q)';
     $params[':q'] = '%' . $search . '%';
 }
-if ($year   !== '') { $where[] = 'class_year = :year';  $params[':year']   = $year; }
+$safe_years = array_intersect($years, ['2026','2027','2028','2029','2030','2031','Prep School','Graduate']);
+if (!empty($safe_years)) {
+    $ph = [];
+    foreach (array_values($safe_years) as $i => $y) { $ph[] = ":yr$i"; $params[":yr$i"] = $y; }
+    $where[] = 'class_year IN (' . implode(',', $ph) . ')';
+}
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
 if ($paid     === '1') { $where[] = 'membership_paid = 1'; }
 if ($paid     === '0') { $where[] = 'membership_paid = 0'; }
@@ -181,7 +188,7 @@ function sort_link(string $col, string $label, string $current_sort, string $cur
          . htmlspecialchars($label) . '<span style="opacity:.5">' . $arrow . '</span></a>';
 }
 
-$get_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'split'=>$split_only?'1':null,'dup'=>$dup_only?'1':null]);
+$get_params = array_filter(['q'=>$search,'year'=>$years,'region'=>$region,'paid'=>$paid,'split'=>$split_only?'1':null,'dup'=>$dup_only?'1':null]);
 
 admin_header('Members');
 echo show_flash();
@@ -192,7 +199,7 @@ echo show_flash();
   <h1>Members <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">(<?= count($members) ?> shown of <?= $stat_total ?> total)</span></h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <?php
-    $csv_params = array_filter(['q'=>$search,'year'=>$year,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron,'split'=>$split_only?'1':null,'dup'=>$dup_only?'1':null]);
+    $csv_params = array_filter(['q'=>$search,'year'=>$years,'region'=>$region,'paid'=>$paid,'squadron'=>$squadron,'split'=>$split_only?'1':null,'dup'=>$dup_only?'1':null]);
     $csv_params['export'] = 'csv';
     ?>
     <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
@@ -315,6 +322,19 @@ function openBirthdays() {
 </script>
 <?php endif; ?>
 
+<style>
+.cd{position:relative}
+.cd-btn{width:100%;text-align:left;background:#fff;border:1px solid #d0d5dd;border-radius:4px;padding:.55rem .75rem;cursor:pointer;font-size:.9rem;color:#1a2332;display:flex;justify-content:space-between;align-items:center;font-family:inherit}
+.cd-btn::after{content:'▾';font-size:.8rem;color:#5a6a7a;flex-shrink:0}
+.cd-btn:focus{outline:none;border-color:#003594;box-shadow:0 0 0 2px rgba(0,53,148,.15)}
+.cd-panel{display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid #d0d5dd;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:200;padding:.4rem 0;min-width:160px}
+.cd.open .cd-panel{display:block}
+.cd-panel label{display:flex;align-items:center;gap:.55rem;padding:.38rem .8rem;cursor:pointer;font-size:.875rem;color:#1a2332;font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap}
+.cd-panel label:hover{background:#f5f7fa}
+.cd-panel input[type=checkbox]{width:auto;accent-color:#003594;cursor:pointer}
+.cd-footer{border-top:1px solid #e1e5eb;padding:.4rem .8rem 0;display:flex;gap:.5rem;margin-top:.25rem}
+</style>
+
 <!-- Filters -->
 <div class="card" style="padding:1rem 1.5rem">
   <form method="GET" class="filter-bar">
@@ -326,12 +346,21 @@ function openBirthdays() {
     </div>
     <div class="form-group">
       <label>Class Year</label>
-      <select name="year">
-        <option value="">All years</option>
-        <?php foreach (['2026','2027','2028','2029','2030','2031','Prep School','Graduate'] as $y): ?>
-          <option value="<?= h($y) ?>" <?= $year===$y?'selected':''?>><?= h($y) ?></option>
-        <?php endforeach; ?>
-      </select>
+      <div class="cd" id="yr-cd">
+        <button type="button" class="cd-btn" id="yr-btn">All Years</button>
+        <div class="cd-panel">
+          <?php foreach (['2026','2027','2028','2029','2030','2031','Prep School','Graduate'] as $y): ?>
+            <label>
+              <input type="checkbox" name="year[]" value="<?= h($y) ?>" <?= in_array($y,$years)?'checked':''?>>
+              <?= h($y) ?>
+            </label>
+          <?php endforeach; ?>
+          <div class="cd-footer">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setYrs(true)">All</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setYrs(false)">None</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="form-group">
       <label>AL Region</label>
@@ -375,6 +404,30 @@ function openBirthdays() {
     </div>
   </form>
 </div>
+
+<script>
+// ── Class Year checkbox dropdown ──────────────────────────────────────────
+var yrCd  = document.getElementById('yr-cd');
+var yrBtn = document.getElementById('yr-btn');
+var yrCbs = yrCd.querySelectorAll('input[type=checkbox]');
+
+function updateYrLabel() {
+  var checked = Array.from(yrCbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+  yrBtn.childNodes[0].textContent = checked.length === 0            ? 'All Years' :
+                                    checked.length === yrCbs.length ? 'All Years' :
+                                    checked.join(', ');
+}
+yrBtn.addEventListener('click', function(e){ e.stopPropagation(); yrCd.classList.toggle('open'); });
+document.addEventListener('click', function(){ yrCd.classList.remove('open'); });
+yrCd.querySelector('.cd-panel').addEventListener('click', function(e){ e.stopPropagation(); });
+yrCbs.forEach(function(cb){ cb.addEventListener('change', updateYrLabel); });
+updateYrLabel();
+
+function setYrs(state) {
+  yrCbs.forEach(function(cb){ cb.checked = state; });
+  updateYrLabel();
+}
+</script>
 
 <?php if (can_mark_dues()): ?>
 <!-- Bulk action form (inputs inside the table use form="bulk-form") -->
