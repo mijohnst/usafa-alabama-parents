@@ -114,23 +114,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
             $sig_key   = $signature_keys[$from_email] ?? '';
             $signature = trim($signatures[$sig_key] ?? '');
             $full_body = $signature !== '' ? $body . "\n\n-- \n" . $signature : $body;
-
             $clean_subject = str_replace(["\r","\n"], '', $subject);
-            $headers  = "From: USAFA Parents Club of Alabama <{$from_email}>\r\n";
-            $headers .= "Reply-To: {$from_email}\r\n";
-            $headers .= "BCC: " . implode(', ', $valid) . "\r\n";
-            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
-            if (mail('info@alabamafalcons.org', $clean_subject, $full_body, $headers)) {
+            // The mail server rejects any single send with too many recipients
+            // (hit at 113). Batch BCC into chunks well under that ceiling —
+            // each batch is its own separate send to info@alabamafalcons.org.
+            $batches      = array_chunk($valid, 90);
+            $sent_count   = 0;
+            $failed_count = 0;
+
+            foreach ($batches as $batch) {
+                $headers  = "From: USAFA Parents Club of Alabama <{$from_email}>\r\n";
+                $headers .= "Reply-To: {$from_email}\r\n";
+                $headers .= "BCC: " . implode(', ', $batch) . "\r\n";
+                $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+
+                if (mail('info@alabamafalcons.org', $clean_subject, $full_body, $headers)) {
+                    $sent_count += count($batch);
+                } else {
+                    $failed_count += count($batch);
+                    $mail_err = error_get_last();
+                    error_log('Compose Email: mail() failed for a batch of ' . count($batch) . ' recipient(s) from ' . $from_email
+                        . '. Last PHP error: ' . ($mail_err['message'] ?? 'none captured'));
+                }
+            }
+
+            if ($sent_count > 0) {
                 $sent        = true;
-                $valid_count = count($valid);
+                $valid_count = $sent_count;
                 $recipients  = '';
                 $subject     = '';
                 $body        = '';
+                if ($failed_count > 0) {
+                    $errors[] = "Sent to $sent_count recipient(s), but $failed_count could not be sent — please try again for those, or contact your hosting provider if it keeps happening.";
+                }
             } else {
-                $mail_err = error_get_last();
-                error_log('Compose Email: mail() failed for ' . count($valid) . ' recipient(s) from ' . $from_email
-                    . '. Last PHP error: ' . ($mail_err['message'] ?? 'none captured'));
                 $errors[] = 'Server failed to send. Please try again or contact your hosting provider.';
             }
         }
