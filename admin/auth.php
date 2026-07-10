@@ -385,10 +385,15 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>Zip</label><input name="parent1_zip" value="' . $v('parent1_zip') . '"></div>';
     echo '</div></fieldset>';
 
-    // Detect if parent 2 address already matches parent 1
-    $addr_same = !empty($m['parent1_street'])
-              && ($m['parent1_street'] ?? '') === ($m['parent2_street'] ?? '')
-              && ($m['parent1_city']   ?? '') === ($m['parent2_city']   ?? '');
+    // Detect if parent 2 address already matches parent 1. For a brand-new
+    // member (Add Member, no data yet) default to "Same" — most families
+    // share an address, and this matches the public Application/Update
+    // forms' default. Editing an existing member still reflects real data.
+    $addr_same = $is_edit
+        ? (!empty($m['parent1_street'])
+            && ($m['parent1_street'] ?? '') === ($m['parent2_street'] ?? '')
+            && ($m['parent1_city']   ?? '') === ($m['parent2_city']   ?? ''))
+        : true;
 
     echo '<fieldset><legend>Parent / Contact 2</legend>';
     echo '<div class="form-row col-4">';
@@ -427,6 +432,14 @@ function syncP2Addr(radio) {
 }
 // Sync on load if "same" is pre-selected
 (function(){ var r = document.querySelector("[name=p2_addr_same]:checked"); if (r) syncP2Addr(r); })();
+// Keep Parent 2 synced live while typing Parent 1\'s address, if "Same" is selected
+["parent1_street","parent1_city","parent1_state","parent1_zip"].forEach(function(name){
+  var el = document.querySelector("[name=" + name + "]");
+  if (el) el.addEventListener("input", function(){
+    var r = document.querySelector("[name=p2_addr_same]:checked");
+    if (r && r.value === "1") syncP2Addr(r);
+  });
+});
 </script>';
 
     echo '<fieldset><legend>Region, Consents &amp; Notes</legend>';
