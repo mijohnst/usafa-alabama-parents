@@ -35,13 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($type === 'new_members') { $where[] = "created_at >= DATE_SUB(NOW(), INTERVAL $days DAY)"; }
 
     $sql = 'SELECT cadet_last_name, cadet_first_name, cadet_middle_name, class_year, al_region,
-                   cadet_po_box, cadet_birthday, bct_squadron, fall_squadron, squadron_yr2_4,
+                   cadet_po_box, cadet_birthday, bct_squadron, bct_flight, fall_squadron, squadron_yr2_4,
                    parent1_first_name, parent1_last_name, parent1_email, parent1_cell,
                    parent1_street, parent1_city, parent1_state, parent1_zip,
                    parent2_first_name, parent2_last_name, parent2_email, parent2_cell,
                    parent2_street, parent2_city, parent2_state, parent2_zip,
                    cadet_email, cadet_cell, membership_paid, membership_year,
-                   created_at
+                   created_at, remarks
             FROM members WHERE ' . implode(' AND ', $where)
          . ' ORDER BY class_year, cadet_last_name';
 
