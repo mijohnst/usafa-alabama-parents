@@ -71,21 +71,33 @@ try {
     // COALESCE-protected UPDATE below leaves the existing value untouched.
     $dob = null;
 
-    // ── Find the existing record — never create a new one. Same match rule
-    // used by the membership form's duplicate detection: last name + class
-    // year, plus either an exact cadet first name match or a matching parent email.
+    // ── Find the existing record — never create a new one. Identity is
+    // whatever was verified by update-lookup.php (last name + class year +
+    // an email already on file for either parent), carried here in hidden
+    // fields — NOT re-derived from the (possibly just-edited) visible form
+    // fields, and NOT a guessable first-name fallback.
+    $verified_last  = s($payload, 'verifiedLastName');
+    $verified_year  = s($payload, 'verifiedYear');
+    $verified_email = s($payload, 'verifiedEmail');
+
+    if ($verified_last === '' || $verified_year === '' || $verified_email === '') {
+        echo json_encode([
+            'success' => false,
+            'error'   => 'Please use "Find My Record" before submitting changes.'
+        ]);
+        exit();
+    }
+
     $dup = $pdo->prepare(
         'SELECT id FROM members
          WHERE archived = 0 AND cadet_last_name = :last_name AND class_year = :class_year
-           AND (cadet_first_name = :first_name
-                OR (:parent1_email <> "" AND parent1_email = :parent1_email))
+           AND (parent1_email = :email OR parent2_email = :email)
          LIMIT 1'
     );
     $dup->execute([
-        'last_name'     => s($payload, 'cadetLastName'),
-        'class_year'    => s($payload, 'graduationYear'),
-        'first_name'    => $first,
-        'parent1_email' => s($payload, 'parent1Email'),
+        'last_name'  => $verified_last,
+        'class_year' => $verified_year,
+        'email'      => $verified_email,
     ]);
     $existing_id = $dup->fetchColumn();
 
