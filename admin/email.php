@@ -53,6 +53,78 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     return implode("\n", array_unique($lines));
 }
 
+// ── Read + validate uploaded attachments ────────────────────────────────────
+// Returns [attachments[], errors[]]. Each attachment: ['name'=>, 'mime'=>, 'content'=>].
+function collect_email_attachments(): array {
+    $attachments = [];
+    $errors      = [];
+    if (empty($_FILES['attachments']) || empty($_FILES['attachments']['name'][0])) {
+        return [$attachments, $errors];
+    }
+
+    $allowed_mime = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain',
+    ];
+    $max_each  = 10 * 1024 * 1024; // 10MB per file
+    $max_total = 20 * 1024 * 1024; // 20MB combined
+    $total     = 0;
+    $finfo     = finfo_open(FILEINFO_MIME_TYPE);
+
+    $count = count($_FILES['attachments']['name']);
+    for ($i = 0; $i < $count; $i++) {
+        $name = $_FILES['attachments']['name'][$i];
+        $err  = $_FILES['attachments']['error'][$i];
+        $tmp  = $_FILES['attachments']['tmp_name'][$i];
+        $size = (int)$_FILES['attachments']['size'][$i];
+        if ($err === UPLOAD_ERR_NO_FILE) continue;
+        if ($err !== UPLOAD_ERR_OK) { $errors[] = "$name: upload failed."; continue; }
+        if ($size > $max_each)       { $errors[] = "$name: over the 10MB per-file limit, skipped."; continue; }
+        if ($total + $size > $max_total) { $errors[] = "$name: skipped, would exceed the 20MB combined attachment limit."; continue; }
+
+        $mime = finfo_file($finfo, $tmp);
+        if (!in_array($mime, $allowed_mime, true)) { $errors[] = "$name: file type not allowed, skipped."; continue; }
+
+        $content = file_get_contents($tmp);
+        if ($content === false) { $errors[] = "$name: could not read uploaded file."; continue; }
+
+        $total += $size;
+        $attachments[] = ['name' => $name, 'mime' => $mime, 'content' => $content];
+    }
+    finfo_close($finfo);
+    return [$attachments, $errors];
+}
+
+// ── Build a MIME message (HTML body, optionally with attachments) ──────────
+// Returns [contentTypeHeaderLine, messageBody].
+function build_mime_email(string $html_body, array $attachments): array {
+    if (empty($attachments)) {
+        return ["Content-Type: text/html; charset=UTF-8\r\n", $html_body];
+    }
+    $boundary = md5(uniqid((string)mt_rand(), true));
+    $msg  = "--$boundary\r\n";
+    $msg .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $msg .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+    $msg .= $html_body . "\r\n\r\n";
+    foreach ($attachments as $att) {
+        $safe_name = str_replace(['"', "\r", "\n"], '', $att['name']);
+        $msg .= "--$boundary\r\n";
+        $msg .= "Content-Type: {$att['mime']}; name=\"$safe_name\"\r\n";
+        $msg .= "Content-Transfer-Encoding: base64\r\n";
+        $msg .= "Content-Disposition: attachment; filename=\"$safe_name\"\r\n\r\n";
+        $msg .= chunk_split(base64_encode($att['content'])) . "\r\n";
+    }
+    $msg .= "--$boundary--";
+    return ["Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n", $msg];
+}
+
 $from_options = [
     'president@alabamafalcons.org' => 'President',
     'vp@alabamafalcons.org'        => 'Vice President',
@@ -102,23 +174,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['load'])) {
 // ── Handle send ───────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
     csrf_verify();
+    // Quill's "empty" state is still non-empty HTML (e.g. "<p><br></p>"), so
+    // check the stripped text content rather than the raw HTML string.
+    $body_text = trim(strip_tags(str_replace('&nbsp;', ' ', $body)));
+
     if (empty($recipients)) $errors[] = 'At least one recipient is required.';
     if (empty($subject))    $errors[] = 'Subject is required.';
-    if (empty($body))       $errors[] = 'Message body is required.';
+    if ($body_text === '')  $errors[] = 'Message body is required.';
+
+    [$attachments, $attach_errors] = collect_email_attachments();
 
     if (empty($errors)) {
         $valid = extract_emails($recipients);
         if (empty($valid)) {
             $errors[] = 'No valid email addresses found.';
         } else {
-            $sig_key   = $signature_keys[$from_email] ?? '';
-            $signature = trim($signatures[$sig_key] ?? '');
-            $full_body = $signature !== '' ? $body . "\n\n-- \n" . $signature : $body;
+            $sig_key       = $signature_keys[$from_email] ?? '';
+            $signature     = trim($signatures[$sig_key] ?? '');
+            $full_body     = $signature !== '' ? $body . '<p>-- <br>' . nl2br(htmlspecialchars($signature)) . '</p>' : $body;
             $clean_subject = str_replace(["\r","\n"], '', $subject);
+
+            [$content_type_header, $mime_body] = build_mime_email($full_body, $attachments);
 
             // The mail server rejects any single send with too many recipients
             // (hit at 113). Batch BCC into chunks well under that ceiling —
-            // each batch is its own separate send to info@alabamafalcons.org.
+            // each batch is its own separate send to info@alabamafalcons.org,
+            // reusing the same MIME body/attachments for every batch.
             $batches      = array_chunk($valid, 90);
             $sent_count   = 0;
             $failed_count = 0;
@@ -127,9 +208,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
                 $headers  = "From: USAFA Parents Club of Alabama <{$from_email}>\r\n";
                 $headers .= "Reply-To: {$from_email}\r\n";
                 $headers .= "BCC: " . implode(', ', $batch) . "\r\n";
-                $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+                $headers .= "MIME-Version: 1.0\r\n";
+                $headers .= $content_type_header;
 
-                if (mail('info@alabamafalcons.org', $clean_subject, $full_body, $headers)) {
+                if (mail('info@alabamafalcons.org', $clean_subject, $mime_body, $headers)) {
                     $sent_count += count($batch);
                 } else {
                     $failed_count += count($batch);
@@ -153,12 +235,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
             }
         }
     }
+
+    foreach ($attach_errors as $ae) $errors[] = $ae;
 }
 
 $preview_count = count(extract_emails($recipients));
 
 admin_header('Compose Email');
 ?>
+<!-- Quill rich text editor (CDN) -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <style>
 .compose-card{background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:1.5rem;max-width:900px;margin-bottom:1.25rem}
 .loader-card{background:#f0f4ff;border:1px solid #c7d4f5;border-radius:6px;padding:1.25rem 1.5rem;max-width:900px;margin-bottom:1.25rem}
@@ -176,6 +263,18 @@ admin_header('Compose Email');
 .cd-panel label:hover{background:#f5f7fa}
 .cd-panel input[type=checkbox]{width:auto;accent-color:#003594;cursor:pointer}
 .cd-footer{border-top:1px solid #e1e5eb;padding:.4rem .8rem 0;display:flex;gap:.5rem;margin-top:.25rem}
+.ql-editor{min-height:220px;font-family:"Segoe UI",Arial,sans-serif;font-size:.95rem}
+.ql-toolbar{border-radius:4px 4px 0 0}
+.ql-container{border-radius:0 0 4px 4px;background:#fff}
+.editor-toolbar-extra{display:flex;justify-content:flex-end;margin:.4rem 0 .25rem}
+.emoji-btn{background:#fff;border:1px solid #d0d5dd;border-radius:4px;padding:.3rem .6rem;font-size:.95rem;cursor:pointer}
+.emoji-btn:hover{background:#f5f7fa}
+.emoji-panel{display:none;position:absolute;z-index:300;background:#fff;border:1px solid #d0d5dd;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:.5rem;grid-template-columns:repeat(8,1fr);gap:.15rem;margin-top:.25rem}
+.emoji-panel.open{display:grid}
+.emoji-panel button{background:none;border:none;font-size:1.2rem;padding:.25rem;cursor:pointer;border-radius:3px;line-height:1}
+.emoji-panel button:hover{background:#f0f4ff}
+.attach-list{display:flex;flex-direction:column;gap:.3rem;margin-top:.5rem}
+.attach-chip{display:flex;align-items:center;justify-content:space-between;background:#f5f7fa;border:1px solid #e1e5eb;border-radius:4px;padding:.4rem .65rem;font-size:.82rem;color:#1a2332}
 </style>
 
 <div class="page-head">
@@ -268,7 +367,7 @@ admin_header('Compose Email');
 
 <!-- Compose Form -->
 <div class="compose-card">
-  <form method="POST" id="compose-form">
+  <form method="POST" id="compose-form" enctype="multipart/form-data">
     <?= csrf_field() ?>
     <?php foreach ((array)$f_years as $fy): ?><input type="hidden" name="f_years[]" value="<?= h($fy) ?>"><?php endforeach; ?>
     <input type="hidden" name="f_region"  value="<?= h($f_region) ?>">
@@ -302,12 +401,21 @@ admin_header('Compose Email');
       <input name="subject" value="<?= h($subject) ?>" placeholder="e.g. Parents Weekend Reminder" maxlength="200">
     </div>
 
-    <div class="form-group">
+    <div class="form-group" style="position:relative">
       <label>Message</label>
-      <textarea name="body" id="body" rows="12"
-        placeholder="Type your message here…"
-        oninput="updateChar()"><?= h($body) ?></textarea>
+      <div class="editor-toolbar-extra" style="position:relative">
+        <button type="button" class="emoji-btn" id="emoji-btn">😀 Emoji</button>
+        <div class="emoji-panel" id="emoji-panel"></div>
+      </div>
+      <div id="email-editor"><?= $body ?></div>
+      <input type="hidden" name="body" id="body_input">
       <div class="char-count" id="char-count">0 characters</div>
+    </div>
+
+    <div class="form-group">
+      <label>Attachments <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional — up to 10MB per file, 20MB total</span></label>
+      <input type="file" name="attachments[]" id="attachments-input" multiple>
+      <div class="attach-list" id="attach-list"></div>
     </div>
 
     <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
@@ -366,11 +474,70 @@ function updateCount() {
   el.style.color = n > 0 ? '#2e7d32' : '#5a6a7a';
   el.textContent = n > 0 ? '✓ ' + n + ' valid address' + (n!==1?'es':'') + ' loaded' : 'No addresses loaded yet';
 }
+// ── Message rich text editor ──────────────────────────────────────────────
+var quill = new Quill('#email-editor', {
+  theme: 'snow',
+  modules: {
+    toolbar: [
+      ['bold','italic','underline','strike'],
+      [{ 'color': [] },{ 'background': [] }],
+      [{ 'size': ['small',false,'large','huge'] }],
+      [{ 'align': [] }],
+      [{ 'list': 'ordered' },{ 'list': 'bullet' }],
+      ['link'],
+      ['clean']
+    ]
+  }
+});
+var bodyInput = document.getElementById('body_input');
 function updateChar() {
-  var n = document.getElementById('body').value.length;
+  bodyInput.value = quill.root.innerHTML;
+  var n = quill.getText().trim().length;
   document.getElementById('char-count').textContent = n.toLocaleString() + ' character' + (n!==1?'s':'');
 }
+quill.on('text-change', updateChar);
 updateChar();
+document.getElementById('compose-form').addEventListener('submit', function() {
+  bodyInput.value = quill.root.innerHTML; // safety net
+});
+
+// ── Emoji picker ───────────────────────────────────────────────────────────
+var EMOJIS = ['😀','😊','😍','🎉','🎊','👍','👏','🙌','🤝','💪','❤️','⭐','✅','📅','📌','📣',
+              '✈️','🎓','🦅','🇺🇸','🏈','☀️','🎄','🎃','🥳','🙏','💰','📸','📝','🔔','⚡','🚀'];
+var emojiBtn   = document.getElementById('emoji-btn');
+var emojiPanel = document.getElementById('emoji-panel');
+EMOJIS.forEach(function(e) {
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = e;
+  b.addEventListener('click', function(ev) {
+    ev.stopPropagation();
+    var range = quill.getSelection(true);
+    quill.insertText(range ? range.index : quill.getLength(), e, 'user');
+    quill.setSelection((range ? range.index : 0) + e.length, 0);
+    emojiPanel.classList.remove('open');
+  });
+  emojiPanel.appendChild(b);
+});
+emojiBtn.addEventListener('click', function(e) { e.stopPropagation(); emojiPanel.classList.toggle('open'); });
+document.addEventListener('click', function() { emojiPanel.classList.remove('open'); });
+emojiPanel.addEventListener('click', function(e) { e.stopPropagation(); });
+
+// ── Attachments — show selected files with size, since <input type=file> ──
+// ── doesn't show much on its own once multiple files are chosen ───────────
+var attachInput = document.getElementById('attachments-input');
+var attachList  = document.getElementById('attach-list');
+attachInput.addEventListener('change', function() {
+  attachList.innerHTML = '';
+  Array.from(attachInput.files).forEach(function(f) {
+    var chip = document.createElement('div');
+    chip.className = 'attach-chip';
+    var kb = f.size / 1024;
+    var sizeText = kb > 1024 ? (kb/1024).toFixed(1) + ' MB' : Math.round(kb) + ' KB';
+    chip.innerHTML = '<span>📎 ' + f.name + '</span><span style="color:#9aa5b4">' + sizeText + '</span>';
+    attachList.appendChild(chip);
+  });
+});
 </script>
 
 <?php admin_footer(); ?>
