@@ -123,7 +123,7 @@ try {
     )->fetchColumn();
 } catch (Exception $e) { $my_open_slots = 0; }
 $actions[] = ['icon'=>'🙋','label'=>'Volunteer Sign-Ups','sub'=>$my_open_slots>0?"$my_open_slots need people":'View opportunities','href'=>'volunteer-signup.php','color'=>'#1b5e20'];
-$actions[] = ['icon'=>'📆','label'=>'Event RSVP','sub'=>'Let us know you\'re coming','href'=>'event-rsvp.php','color'=>'#1565c0'];
+$actions[] = ['icon'=>'📆','label'=>'My RSVPs','sub'=>'Let us know you\'re coming','href'=>'event-rsvp.php','color'=>'#1565c0'];
 $actions[] = ['icon'=>'📷','label'=>'Submit Photos','sub'=>'Share your event photos','href'=>'submit-photo.php','color'=>'#6a1b9a'];
 $actions[] = ['icon'=>'🤝','label'=>'My Committees','sub'=>'Flag where you can help','href'=>'my-committees.php','color'=>'#f57f17'];
 
