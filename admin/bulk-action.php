@@ -55,12 +55,12 @@ if ($action === 'mark_paid') {
 
 } elseif ($action === 'portal_invite') {
     require_once __DIR__ . '/mailer.php';
-    $stmt = $pdo->prepare("SELECT parent1_first_name,parent1_last_name,parent1_email,parent2_first_name,parent2_last_name,parent2_email FROM members WHERE id IN ($ph)");
+    $stmt = $pdo->prepare("SELECT id,parent1_first_name,parent1_last_name,parent1_email,parent2_first_name,parent2_last_name,parent2_email FROM members WHERE id IN ($ph)");
     $stmt->execute($ids);
     $dup_check = $pdo->prepare('SELECT id FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?');
     $insert    = $pdo->prepare(
-        "INSERT INTO users (name,email,username,password_hash,role,active,invite_token,invite_expires)
-         VALUES (?,?,?,?,'member',1,?,DATE_ADD(NOW(), INTERVAL 14 DAY))"
+        "INSERT INTO users (name,email,username,password_hash,role,active,invite_token,invite_expires,member_id)
+         VALUES (?,?,?,?,'member',1,?,DATE_ADD(NOW(), INTERVAL 14 DAY),?)"
     );
     $invited = 0; $skipped = 0;
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $m) {
@@ -74,7 +74,7 @@ if ($action === 'mark_paid') {
 
             $token = bin2hex(random_bytes(24));
             try {
-                $insert->execute([$name, $email, $email, password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT), $token]);
+                $insert->execute([$name, $email, $email, password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT), $token, $m['id']]);
             } catch (PDOException $e) {
                 $skipped++; continue;
             }

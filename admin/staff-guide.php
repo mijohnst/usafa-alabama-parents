@@ -819,6 +819,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   <div class="hbox mt1">
     <strong>Getting members into the portal:</strong> Use the <strong>Send Portal Invite</strong> bulk action on the member roster (filter to Paid, Select All, then Send Portal Invite) to email each parent with their own sign-up link — no manual account creation needed. Anyone who already has a login is skipped automatically. If a link expires before they use it, resend it from <strong>Users</strong> (shows an "Invite Pending" badge).
   </div>
+  <div class="hbox mt1">
+    <strong>My Membership:</strong> Anyone invited via Send Portal Invite is automatically linked to their cadet family record, so their dashboard shows a My Membership tile with their own dues status (Paid/Unpaid, plan, and coverage year) plus a link to pay if unpaid. Accounts with no matching family record (e.g. staff-only logins) simply don't see the tile.
+  </div>
 </div>
 
 <!-- 20: Role Quick Reference -->

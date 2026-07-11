@@ -5,10 +5,14 @@ $pdo  = get_pdo();
 $role = $_SESSION['role'] ?? 'member';
 $name = current_user_name();
 try {
-    $avatar_stmt = $pdo->prepare('SELECT avatar_filename FROM users WHERE id = ?');
-    $avatar_stmt->execute([$_SESSION['user_id'] ?? 0]);
-    $my_avatar = $avatar_stmt->fetchColumn();
-} catch (Exception $e) { $my_avatar = null; }
+    $my_user_stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
+    $my_user_stmt->execute([$_SESSION['user_id'] ?? 0]);
+    $my_user   = $my_user_stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $my_avatar = $my_user['avatar_filename'] ?? null;
+} catch (Exception $e) { $my_avatar = null; $my_user = []; }
+try {
+    $my_member = $my_user ? find_linked_member($pdo, $my_user) : null;
+} catch (Exception $e) { $my_member = null; }
 
 // ── Gather data for alerts and stats ──────────────────────────────────────
 $stats = [];
@@ -114,6 +118,12 @@ $actions = [];
 $mem_total = $stats['members']['total'] ?? null;
 $actions[] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_total.' active':'View roster','href'=>'index.php','color'=>'#002554'];
 
+// My Membership — only for accounts linked to (or email-matched to) a
+// cadet family record. Staff-only accounts with no family match won't see it.
+if ($my_member) {
+    $actions[] = ['icon'=>'🪪','label'=>'My Membership','sub'=>$my_member['membership_paid']?'✓ Paid':'✗ Unpaid — pay now','href'=>'my-membership.php','color'=>$my_member['membership_paid']?'#1b5e20':'#A6192E'];
+}
+
 // Member self-service tiles — every role, including officers who may want
 // to sign up/RSVP/submit themselves too.
 try {
@@ -126,6 +136,7 @@ $actions[] = ['icon'=>'🙋','label'=>'Volunteer Sign-Ups','sub'=>$my_open_slots
 $actions[] = ['icon'=>'📆','label'=>'My RSVPs','sub'=>'Let us know you\'re coming','href'=>'event-rsvp.php','color'=>'#1565c0'];
 $actions[] = ['icon'=>'📷','label'=>'Submit Photos','sub'=>'Share your event photos','href'=>'submit-photo.php','color'=>'#6a1b9a'];
 $actions[] = ['icon'=>'🤝','label'=>'My Committees','sub'=>'Flag where you can help','href'=>'my-committees.php','color'=>'#f57f17'];
+$actions[] = ['icon'=>'📖','label'=>'Directory','sub'=>'Printable roster','href'=>'directory.php','color'=>'#1b5e20'];
 
 if (can_manage_members()) {
     $actions[] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
@@ -141,7 +152,6 @@ if (can_manage_members()) {
     $actions[] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
     $actions[] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
     $actions[] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
-    $actions[] = ['icon'=>'📖','label'=>'Directory','sub'=>'Printable roster','href'=>'directory.php','color'=>'#1b5e20'];
     // Secretary tools
     $actions[] = ['icon'=>'📝','label'=>'Minutes','sub'=>'Meeting minutes & files','href'=>'minutes.php','color'=>'#5c007a'];
     $actions[] = ['icon'=>'✅','label'=>'Attendance','sub'=>'Track who attended','href'=>'attendance.php','color'=>'#5c007a'];

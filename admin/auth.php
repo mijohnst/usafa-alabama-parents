@@ -128,6 +128,26 @@ function require_finance(): void {
     }
 }
 
+// Find the cadet family record a portal login belongs to, if any. Uses the
+// stored member_id link when present, otherwise falls back to matching the
+// user's email against the family's parent emails (covers accounts created
+// before the link existed).
+function find_linked_member(PDO $pdo, array $user): ?array {
+    if (!empty($user['member_id'])) {
+        $stmt = $pdo->prepare('SELECT * FROM members WHERE id = ? AND archived = 0');
+        $stmt->execute([$user['member_id']]);
+        $m = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($m) return $m;
+    }
+    $email = strtolower(trim($user['email'] ?? ''));
+    if ($email === '') return null;
+    $stmt = $pdo->prepare(
+        'SELECT * FROM members WHERE archived = 0 AND (LOWER(parent1_email) = ? OR LOWER(parent2_email) = ?) LIMIT 1'
+    );
+    $stmt->execute([$email, $email]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
 // Verify credentials against the users table
 function verify_login(PDO $pdo, string $username, string $password): ?array {
     $stmt = $pdo->prepare(
