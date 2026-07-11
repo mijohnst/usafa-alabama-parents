@@ -308,6 +308,7 @@ function admin_header(string $title): void {
     echo '<div class="topbar">';
     echo '<a href="dashboard.php" class="topbar-title" style="color:#fff;text-decoration:none;display:flex;align-items:center;gap:.65rem"><img src="../logo01.png" alt="" style="height:32px;border-radius:3px"><span>USAFA Parents Club of Alabama <small>Club Portal</small></span></a>';
     echo '<nav>';
+    echo '<a href="../index.html" target="_blank" rel="noopener" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none" title="Open the public website in a new tab">View Site ↗</a>';
     echo '<a href="dashboard.php" title="Home">🏠</a>';
     echo '<a href="index.php">Members</a>';
     if (can_manage_finances()) {
