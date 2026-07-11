@@ -152,11 +152,11 @@ if (can_manage_members()) {
         "SELECT COUNT(*) FROM volunteer_opportunities o WHERE o.active=1
          AND (SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id=o.id) < o.spots_needed"
     )->fetchColumn(); } catch(Exception $e) { $vo_needed = 0; }
-    $actions[] = ['icon'=>'🙋','label'=>'Volunteer Opportunities','sub'=>$vo_needed>0?"$vo_needed need people":'Manage opportunities','href'=>'volunteer-opportunities.php','color'=>'#1b5e20','badge'=>$vo_needed>0?$vo_needed:0];
-    $actions[] = ['icon'=>'📆','label'=>'Event RSVPs','sub'=>'See who\'s coming','href'=>'event-rsvps.php','color'=>'#1565c0'];
+    $actions[] = ['icon'=>'🧰','label'=>'Volunteer Opportunities','sub'=>$vo_needed>0?"$vo_needed need people":'Manage opportunities','href'=>'volunteer-opportunities.php','color'=>'#1b5e20','badge'=>$vo_needed>0?$vo_needed:0];
+    $actions[] = ['icon'=>'👀','label'=>'Event RSVPs','sub'=>'See who\'s coming','href'=>'event-rsvps.php','color'=>'#1565c0'];
     try { $photo_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM photo_submissions WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $photo_pending = 0; }
-    $actions[] = ['icon'=>'📷','label'=>'Photo Submissions','sub'=>$photo_pending>0?"$photo_pending awaiting review":'All caught up','href'=>'photo-submissions.php','color'=>$photo_pending>0?'#A6192E':'#6a1b9a','badge'=>$photo_pending>0?$photo_pending:0];
-    $actions[] = ['icon'=>'🤝','label'=>'Committee Interest','sub'=>'See who volunteered','href'=>'committee-interest.php','color'=>'#f57f17'];
+    $actions[] = ['icon'=>'🔍','label'=>'Photo Submissions','sub'=>$photo_pending>0?"$photo_pending awaiting review":'All caught up','href'=>'photo-submissions.php','color'=>$photo_pending>0?'#A6192E':'#6a1b9a','badge'=>$photo_pending>0?$photo_pending:0];
+    $actions[] = ['icon'=>'📇','label'=>'Committee Interest','sub'=>'See who volunteered','href'=>'committee-interest.php','color'=>'#f57f17'];
 }
 
 if (can_manage_finances()) {
