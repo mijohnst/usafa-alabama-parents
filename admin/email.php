@@ -2,7 +2,7 @@
 require_once __DIR__ . '/auth.php';
 require_member_admin(); // admin, tech, officer, secretary
 
-$all_years = ['2026','2027','2028','2029','2030','2031','Prep School','Graduate'];
+$all_years = CLASS_YEAR_LIST;
 
 // ── Extract valid emails from various text formats ─────────────────────────
 function extract_emails(string $raw): array {
@@ -21,7 +21,7 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     $where  = ['1=1'];
     $params = [];
 
-    $safe_years = array_intersect($years, ['2026','2027','2028','2029','2030','2031','Prep School','Graduate']);
+    $safe_years = array_intersect($years, CLASS_YEAR_LIST);
     if (empty($safe_years)) return ''; // nothing selected → no recipients
     $ph = [];
     foreach (array_values($safe_years) as $i => $y) { $ph[] = ":yr$i"; $params[":yr$i"] = $y; }

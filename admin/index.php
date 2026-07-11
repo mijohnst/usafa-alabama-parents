@@ -33,7 +33,7 @@ if ($search !== '') {
                  OR cadet_cell LIKE :q OR parent1_cell LIKE :q)';
     $params[':q'] = '%' . $search . '%';
 }
-$safe_years = array_intersect($years, ['2026','2027','2028','2029','2030','2031','Prep School','Graduate']);
+$safe_years = array_intersect($years, CLASS_YEAR_LIST);
 if (!empty($safe_years)) {
     $ph = [];
     foreach (array_values($safe_years) as $i => $y) { $ph[] = ":yr$i"; $params[":yr$i"] = $y; }
@@ -355,7 +355,7 @@ function openBirthdays() {
       <div class="cd" id="yr-cd">
         <button type="button" class="cd-btn" id="yr-btn">All Years</button>
         <div class="cd-panel">
-          <?php foreach (['2026','2027','2028','2029','2030','2031','Prep School','Graduate'] as $y): ?>
+          <?php foreach (CLASS_YEAR_LIST as $y): ?>
             <label>
               <input type="checkbox" name="year[]" value="<?= h($y) ?>" <?= in_array($y,$years)?'checked':''?>>
               <?= h($y) ?>

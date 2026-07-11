@@ -3,7 +3,7 @@ require_once __DIR__ . '/auth.php';
 require_login();
 $pdo = get_pdo();
 
-$all_years     = ['2026','2027','2028','2029','2030','2031','Prep School','Graduate'];
+$all_years     = CLASS_YEAR_LIST;
 $current_years = array_merge(current_class_years(), ['Prep School']);
 $other_years   = array_values(array_diff($all_years, $current_years));
 
