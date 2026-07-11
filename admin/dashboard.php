@@ -162,7 +162,9 @@ if (can_manage_members()) {
 if (can_manage_finances()) {
     $pending  = $stats['finance']['pending_count']  ?? 0;
     $approved = $stats['finance']['approved_count'] ?? 0;
-    $actions[] = ['icon'=>'💰','label'=>'Finance','sub'=>$pending>0?"$pending need approval":'View purchases','href'=>'purchases.php','color'=>$pending>0?'#A6192E':'#1b5e20','badge'=>$pending>0?$pending:0];
+    if (!is_member()) {
+        $actions[] = ['icon'=>'💰','label'=>'Finance','sub'=>$pending>0?"$pending need approval":'View purchases','href'=>'purchases.php','color'=>$pending>0?'#A6192E':'#1b5e20','badge'=>$pending>0?$pending:0];
+    }
     $actions[] = ['icon'=>'🧾','label'=>'Add Purchase','sub'=>'Submit an expense','href'=>'purchase-form.php','color'=>'#003594'];
     if (is_treasurer()) {
         $actions[] = ['icon'=>'💳','label'=>'Reimburse','sub'=>$approved>0?"$approved approved":'Nothing pending','href'=>'pending-reimbursements.php','color'=>$approved>0?'#003594':'#5a6a7a','badge'=>$approved>0?$approved:0];
