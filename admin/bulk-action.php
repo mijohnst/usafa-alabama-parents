@@ -13,7 +13,7 @@ $mem_type = $_POST['membership_type'] ?? 'annual';
 if (!in_array($mem_type, ['annual','4year'])) $mem_type = 'annual';
 
 $dues_actions   = ['mark_paid','mark_unpaid'];
-$member_actions = ['archive','restore','delete'];
+$member_actions = ['archive','restore','delete','portal_invite'];
 $all_actions    = array_merge($dues_actions, $member_actions);
 
 if (empty($ids) || !in_array($action, $all_actions)) {
@@ -52,6 +52,39 @@ if ($action === 'mark_paid') {
 } elseif ($action === 'delete') {
     $pdo->prepare("DELETE FROM members WHERE id IN ($ph)")->execute($ids);
     flash('success', count($ids) . ' member(s) permanently deleted.');
+
+} elseif ($action === 'portal_invite') {
+    require_once __DIR__ . '/mailer.php';
+    $stmt = $pdo->prepare("SELECT parent1_first_name,parent1_last_name,parent1_email,parent2_first_name,parent2_last_name,parent2_email FROM members WHERE id IN ($ph)");
+    $stmt->execute($ids);
+    $dup_check = $pdo->prepare('SELECT id FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?');
+    $insert    = $pdo->prepare(
+        "INSERT INTO users (name,email,username,password_hash,role,active,invite_token,invite_expires)
+         VALUES (?,?,?,?,'member',1,?,DATE_ADD(NOW(), INTERVAL 14 DAY))"
+    );
+    $invited = 0; $skipped = 0;
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $m) {
+        foreach ([1, 2] as $slot) {
+            $email = strtolower(trim($m["parent{$slot}_email"] ?? ''));
+            if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+            $name = trim($m["parent{$slot}_first_name"] . ' ' . $m["parent{$slot}_last_name"]) ?: $email;
+
+            $dup_check->execute([$email, $email]);
+            if ($dup_check->fetch()) { $skipped++; continue; }
+
+            $token = bin2hex(random_bytes(24));
+            try {
+                $insert->execute([$name, $email, $email, password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT), $token]);
+            } catch (PDOException $e) {
+                $skipped++; continue;
+            }
+            send_portal_invite($email, $name, $token);
+            $invited++;
+        }
+    }
+    $msg = "$invited portal invite" . ($invited !== 1 ? 's' : '') . ' sent.';
+    if ($skipped) $msg .= " $skipped already had a portal account.";
+    flash('success', $msg);
 }
 
 header('Location: index.php' . ($action === 'restore' ? '?archived=1' : ''));

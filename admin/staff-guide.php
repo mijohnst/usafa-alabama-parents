@@ -392,6 +392,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
           <li><strong>Archive</strong> — hides from active list, fully reversible (Officer+)</li>
           <li><strong>Restore</strong> — shown when viewing archived list (Officer+)</li>
           <li><strong>Delete</strong> — permanent, requires confirmation (Officer+)</li>
+          <li><strong>Send Portal Invite</strong> — emails a sign-up link to each selected member's parent(s) (Officer+)</li>
         </ul>
       </div>
     </div>
@@ -814,6 +815,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   </div>
   <div class="hbox mt2">
     <strong>Committee Interest:</strong> Members check off which committees they'd be willing to help with (Fundraising, Events &amp; Socials, Communications, Care Packages, Membership Outreach, Sendoff Support). Officers see everyone's picks grouped by committee, with a mailto link to reach out directly. All four tools are available to every logged-in role from the dashboard; the review/management side is limited to Tech Support, Officer, and Secretary.
+  </div>
+  <div class="hbox mt1">
+    <strong>Getting members into the portal:</strong> Use the <strong>Send Portal Invite</strong> bulk action on the member roster (filter to Paid, Select All, then Send Portal Invite) to email each parent with their own sign-up link — no manual account creation needed. Anyone who already has a login is skipped automatically. If a link expires before they use it, resend it from <strong>Users</strong> (shows an "Invite Pending" badge).
   </div>
 </div>
 

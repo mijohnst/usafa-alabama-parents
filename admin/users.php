@@ -65,6 +65,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header('Location: users.php'); exit;
 
+    } elseif ($action === 'resend_invite') {
+        require_once __DIR__ . '/mailer.php';
+        $id = (int)($_POST['id'] ?? 0);
+        $row = $pdo->prepare('SELECT name,email FROM users WHERE id=? AND invite_token IS NOT NULL');
+        $row->execute([$id]);
+        $u = $row->fetch();
+        if ($u) {
+            $token = bin2hex(random_bytes(24));
+            $pdo->prepare('UPDATE users SET invite_token=?, invite_expires=DATE_ADD(NOW(), INTERVAL 14 DAY) WHERE id=?')->execute([$token, $id]);
+            send_portal_invite($u['email'], $u['name'], $token);
+            flash('success', 'Invite resent to ' . $u['name'] . '.');
+        }
+        header('Location: users.php'); exit;
+
     } elseif ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id === (int)($_SESSION['user_id'] ?? 0)) {
@@ -180,9 +194,20 @@ echo show_flash();
     <div class="user-meta">
       @<?= h($u['username']) ?><br>
       <?= h($u['email']) ?>
+      <?php if (!empty($u['invite_token'])): ?>
+        <br><span style="display:inline-block;margin-top:.3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.15rem .5rem;border-radius:99px;background:<?= strtotime($u['invite_expires']) < time() ? '#ffebee' : '#fff3cd' ?>;color:<?= strtotime($u['invite_expires']) < time() ? '#c62828' : '#5f4c00' ?>"><?= strtotime($u['invite_expires']) < time() ? 'Invite Expired' : 'Invite Pending' ?></span>
+      <?php endif; ?>
     </div>
     <div class="user-actions">
       <a href="users.php?edit=<?= $u['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
+      <?php if (!empty($u['invite_token'])): ?>
+      <form method="POST" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="resend_invite">
+        <input type="hidden" name="id" value="<?= $u['id'] ?>">
+        <button type="submit" class="btn btn-secondary btn-sm">Resend Invite</button>
+      </form>
+      <?php endif; ?>
       <?php if ($u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
       <form method="POST" style="margin:0">
         <?= csrf_field() ?>

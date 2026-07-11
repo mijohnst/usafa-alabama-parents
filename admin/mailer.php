@@ -649,3 +649,19 @@ function notify_status_change(PDO $pdo, array $purchase, string $old_status, str
 
     send_notification($user['email'], $subject, $body);
 }
+
+// ── Invite a paid member to set up their own portal login ────────────────
+function send_portal_invite(string $to, string $name, string $token): bool {
+    $url     = SITE_URL . 'portal-signup.php?token=' . $token;
+    $subject = 'Set Up Your ' . CLUB_NAME . ' Portal Account';
+    $body    = CLUB_NAME . "\n"
+             . "You're Invited to the Member Portal\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "Hi $name,\n\n"
+             . "As a paid member, you now have access to the Parents Club portal — "
+             . "sign up for volunteer opportunities, RSVP to events, share event photos, "
+             . "and flag which committees you'd like to help with.\n\n"
+             . "Set up your account (link expires in 14 days):\n$url\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+    return send_notification($to, $subject, $body);
+}

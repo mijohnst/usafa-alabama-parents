@@ -560,6 +560,8 @@ function setYrs(state) {
   <button type="submit" form="bulk-form" name="action" value="archive" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">Archive</button>
   <?php endif; ?>
   <button type="submit" form="bulk-form" name="action" value="delete" class="btn btn-danger btn-sm" onclick="return confirm('Permanently delete selected members? This cannot be undone.')">Delete</button>
+  <span style="font-size:.82rem;opacity:.7;margin-left:.25rem">Portal:</span>
+  <button type="submit" form="bulk-form" name="action" value="portal_invite" class="btn btn-primary btn-sm" onclick="return confirm('Email a portal sign-up invite to each selected member\'s parent(s)? Anyone who already has a portal account is skipped.')">✉️ Send Portal Invite</button>
   <?php endif; ?>
 </div>
 
