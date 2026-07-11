@@ -110,17 +110,17 @@ $role_colors  = ['admin'=>'#002554','tech'=>'#bf360c','officer'=>'#1a237e',
 $role_label = $role_display[$role] ?? ucfirst($role);
 $role_color = $role_colors[$role] ?? '#5a6a7a';
 
-// ── Quick action definitions by role ──────────────────────────────────────
-$actions = [];
+// ── Quick action definitions by role, grouped into dashboard sections ──────
+$sections = [];
 
 // Members tile for all roles
 $mem_total = $stats['members']['total'] ?? null;
-$actions[] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_total.' active':'View roster','href'=>'index.php','color'=>'#002554'];
+$sections['For You'][] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_total.' active':'View roster','href'=>'index.php','color'=>'#002554'];
 
 // My Membership — only for accounts linked to (or email-matched to) a
 // cadet family record. Staff-only accounts with no family match won't see it.
 if ($my_member) {
-    $actions[] = ['icon'=>'🪪','label'=>'My Membership','sub'=>$my_member['membership_paid']?'✓ Paid':'✗ Unpaid — pay now','href'=>'my-membership.php','color'=>$my_member['membership_paid']?'#1b5e20':'#A6192E'];
+    $sections['For You'][] = ['icon'=>'🪪','label'=>'My Membership','sub'=>$my_member['membership_paid']?'✓ Paid':'✗ Unpaid — pay now','href'=>'my-membership.php','color'=>$my_member['membership_paid']?'#1b5e20':'#A6192E'];
 }
 
 // Member self-service tiles — every role, including officers who may want
@@ -131,81 +131,84 @@ try {
          AND (SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id=o.id) < o.spots_needed"
     )->fetchColumn();
 } catch (Exception $e) { $my_open_slots = 0; }
-$actions[] = ['icon'=>'🙋','label'=>'Volunteer Sign-Ups','sub'=>$my_open_slots>0?"$my_open_slots need people":'View opportunities','href'=>'volunteer-signup.php','color'=>'#1b5e20'];
-$actions[] = ['icon'=>'📆','label'=>'My RSVPs','sub'=>'Let us know you\'re coming','href'=>'event-rsvp.php','color'=>'#1565c0'];
-$actions[] = ['icon'=>'📷','label'=>'Submit Photos','sub'=>'Share your event photos','href'=>'submit-photo.php','color'=>'#6a1b9a'];
-$actions[] = ['icon'=>'🤝','label'=>'My Committees','sub'=>'Flag where you can help','href'=>'my-committees.php','color'=>'#f57f17'];
-$actions[] = ['icon'=>'📖','label'=>'Directory','sub'=>'Printable roster','href'=>'directory.php','color'=>'#1b5e20'];
+$sections['For You'][] = ['icon'=>'🙋','label'=>'Volunteer Sign-Ups','sub'=>$my_open_slots>0?"$my_open_slots need people":'View opportunities','href'=>'volunteer-signup.php','color'=>'#1b5e20'];
+$sections['For You'][] = ['icon'=>'📆','label'=>'My RSVPs','sub'=>'Let us know you\'re coming','href'=>'event-rsvp.php','color'=>'#1565c0'];
+$sections['For You'][] = ['icon'=>'📷','label'=>'Submit Photos','sub'=>'Share your event photos','href'=>'submit-photo.php','color'=>'#6a1b9a'];
+$sections['For You'][] = ['icon'=>'🤝','label'=>'My Committees','sub'=>'Flag where you can help','href'=>'my-committees.php','color'=>'#f57f17'];
+$sections['For You'][] = ['icon'=>'📖','label'=>'Directory','sub'=>'Printable roster','href'=>'directory.php','color'=>'#1b5e20'];
 
 if (can_manage_members()) {
-    $actions[] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
-    $actions[] = ['icon'=>'⚙️','label'=>'Site Settings','sub'=>'Hero, dues, letter, links','href'=>'settings.php','color'=>'#37474f'];
-    $actions[] = ['icon'=>'🔁','label'=>'Automated Emails','sub'=>'Birthdays, dues, reminders','href'=>'automated-emails.php','color'=>'#00695c'];
-    $actions[] = ['icon'=>'📅','label'=>'Events','sub'=>'Manage site events','href'=>'events.php','color'=>'#1565c0'];
+    $sections['Member Management'][] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
+    $sections['Settings & Admin'][] = ['icon'=>'⚙️','label'=>'Site Settings','sub'=>'Hero, dues, letter, links','href'=>'settings.php','color'=>'#37474f'];
+    $sections['Settings & Admin'][] = ['icon'=>'🔁','label'=>'Automated Emails','sub'=>'Birthdays, dues, reminders','href'=>'automated-emails.php','color'=>'#00695c'];
+    $sections['Events & Media'][] = ['icon'=>'📅','label'=>'Events','sub'=>'Manage site events','href'=>'events.php','color'=>'#1565c0'];
     try { $vcount_v = (int)get_pdo()->query('SELECT COUNT(*) FROM volunteers')->fetchColumn(); } catch(Exception $e) { $vcount_v=0; }
-    $actions[] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vcount_v>0?"$vcount_v submission".($vcount_v>1?'s':''):'View signups','href'=>'volunteers.php','color'=>'#1b5e20','badge'=>$vcount_v>0?$vcount_v:0];
-    $actions[] = ['icon'=>'👥','label'=>'Leadership','sub'=>'Update officer profiles','href'=>'leadership.php','color'=>'#002554'];
-    $actions[] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
-    $actions[] = ['icon'=>'🖼️','label'=>'Gallery','sub'=>'Upload event photos','href'=>'gallery.php','color'=>'#1b5e20'];
-    $actions[] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Club event photo albums','href'=>'event-albums.php','color'=>'#1565c0'];
-    $actions[] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
-    $actions[] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
-    $actions[] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
+    $sections['Member Management'][] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vcount_v>0?"$vcount_v submission".($vcount_v>1?'s':''):'View signups','href'=>'volunteers.php','color'=>'#1b5e20','badge'=>$vcount_v>0?$vcount_v:0];
+    $sections['Member Management'][] = ['icon'=>'👥','label'=>'Leadership','sub'=>'Update officer profiles','href'=>'leadership.php','color'=>'#002554'];
+    $sections['Member Management'][] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
+    $sections['Events & Media'][] = ['icon'=>'🖼️','label'=>'Gallery','sub'=>'Upload event photos','href'=>'gallery.php','color'=>'#1b5e20'];
+    $sections['Events & Media'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Club event photo albums','href'=>'event-albums.php','color'=>'#1565c0'];
+    $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
+    $sections['Member Management'][] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
+    $sections['Member Management'][] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
     // Secretary tools
-    $actions[] = ['icon'=>'📝','label'=>'Minutes','sub'=>'Meeting minutes & files','href'=>'minutes.php','color'=>'#5c007a'];
-    $actions[] = ['icon'=>'✅','label'=>'Attendance','sub'=>'Track who attended','href'=>'attendance.php','color'=>'#5c007a'];
-    $actions[] = ['icon'=>'📬','label'=>'Correspondence','sub'=>'Log official comms','href'=>'correspondence.php','color'=>'#5c007a'];
-    $actions[] = ['icon'=>'🖊️','label'=>'Member Letter','sub'=>'Print status letter','href'=>'member-letter.php','color'=>'#5c007a'];
+    $sections['Secretary Tools'][] = ['icon'=>'📝','label'=>'Minutes','sub'=>'Meeting minutes & files','href'=>'minutes.php','color'=>'#5c007a'];
+    $sections['Secretary Tools'][] = ['icon'=>'✅','label'=>'Attendance','sub'=>'Track who attended','href'=>'attendance.php','color'=>'#5c007a'];
+    $sections['Secretary Tools'][] = ['icon'=>'📬','label'=>'Correspondence','sub'=>'Log official comms','href'=>'correspondence.php','color'=>'#5c007a'];
+    $sections['Secretary Tools'][] = ['icon'=>'🖊️','label'=>'Member Letter','sub'=>'Print status letter','href'=>'member-letter.php','color'=>'#5c007a'];
     // Member support features
     try { $vo_needed = (int)get_pdo()->query(
         "SELECT COUNT(*) FROM volunteer_opportunities o WHERE o.active=1
          AND (SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id=o.id) < o.spots_needed"
     )->fetchColumn(); } catch(Exception $e) { $vo_needed = 0; }
-    $actions[] = ['icon'=>'🧰','label'=>'Volunteer Opportunities','sub'=>$vo_needed>0?"$vo_needed need people":'Manage opportunities','href'=>'volunteer-opportunities.php','color'=>'#1b5e20','badge'=>$vo_needed>0?$vo_needed:0];
-    $actions[] = ['icon'=>'👀','label'=>'Event RSVPs','sub'=>'See who\'s coming','href'=>'event-rsvps.php','color'=>'#1565c0'];
+    $sections['Member Management'][] = ['icon'=>'🧰','label'=>'Volunteer Opportunities','sub'=>$vo_needed>0?"$vo_needed need people":'Manage opportunities','href'=>'volunteer-opportunities.php','color'=>'#1b5e20','badge'=>$vo_needed>0?$vo_needed:0];
+    $sections['Member Management'][] = ['icon'=>'👀','label'=>'Event RSVPs','sub'=>'See who\'s coming','href'=>'event-rsvps.php','color'=>'#1565c0'];
     try { $photo_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM photo_submissions WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $photo_pending = 0; }
-    $actions[] = ['icon'=>'🔍','label'=>'Photo Submissions','sub'=>$photo_pending>0?"$photo_pending awaiting review":'All caught up','href'=>'photo-submissions.php','color'=>$photo_pending>0?'#A6192E':'#6a1b9a','badge'=>$photo_pending>0?$photo_pending:0];
-    $actions[] = ['icon'=>'📇','label'=>'Committee Interest','sub'=>'See who volunteered','href'=>'committee-interest.php','color'=>'#f57f17'];
+    $sections['Member Management'][] = ['icon'=>'🔍','label'=>'Photo Submissions','sub'=>$photo_pending>0?"$photo_pending awaiting review":'All caught up','href'=>'photo-submissions.php','color'=>$photo_pending>0?'#A6192E':'#6a1b9a','badge'=>$photo_pending>0?$photo_pending:0];
+    $sections['Member Management'][] = ['icon'=>'📇','label'=>'Committee Interest','sub'=>'See who volunteered','href'=>'committee-interest.php','color'=>'#f57f17'];
 }
 
 if (can_manage_finances()) {
     $pending  = $stats['finance']['pending_count']  ?? 0;
     $approved = $stats['finance']['approved_count'] ?? 0;
     if (!is_member()) {
-        $actions[] = ['icon'=>'💰','label'=>'Finance','sub'=>$pending>0?"$pending need approval":'View purchases','href'=>'purchases.php','color'=>$pending>0?'#A6192E':'#1b5e20','badge'=>$pending>0?$pending:0];
+        $sections['Finance'][] = ['icon'=>'💰','label'=>'Finance','sub'=>$pending>0?"$pending need approval":'View purchases','href'=>'purchases.php','color'=>$pending>0?'#A6192E':'#1b5e20','badge'=>$pending>0?$pending:0];
     }
     $my_pending = $stats['my_pending'] ?? 0;
-    $actions[] = ['icon'=>'🧾','label'=>'Add Purchase','sub'=>$my_pending>0?"$my_pending pending":'Submit an expense','href'=>'purchase-form.php','color'=>'#003594','badge'=>$my_pending>0?$my_pending:0];
+    $sections['For You'][] = ['icon'=>'🧾','label'=>'Add Purchase','sub'=>$my_pending>0?"$my_pending pending":'Submit an expense','href'=>'purchase-form.php','color'=>'#003594','badge'=>$my_pending>0?$my_pending:0];
     if (is_treasurer()) {
-        $actions[] = ['icon'=>'💳','label'=>'Reimburse','sub'=>$approved>0?"$approved approved":'Nothing pending','href'=>'pending-reimbursements.php','color'=>$approved>0?'#003594':'#5a6a7a','badge'=>$approved>0?$approved:0];
-        $actions[] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end & budgets','href'=>'report.php','color'=>'#37474f'];
-        $actions[] = ['icon'=>'🗂️','label'=>'Receipts','sub'=>'Browse by event or vendor','href'=>'receipts-by.php','color'=>'#37474f'];
-        $actions[] = ['icon'=>'📥','label'=>'Income','sub'=>'Record & review income','href'=>'income.php','color'=>'#1b5e20'];
-        $actions[] = ['icon'=>'🏭','label'=>'Vendors','sub'=>'Spend by vendor + 1099','href'=>'vendor-summary.php','color'=>'#1565c0'];
-        $actions[] = ['icon'=>'📈','label'=>'Year Compare','sub'=>'Multi-year spending','href'=>'year-compare.php','color'=>'#6a1b9a'];
-        $actions[] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
+        $sections['Finance'][] = ['icon'=>'💳','label'=>'Reimburse','sub'=>$approved>0?"$approved approved":'Nothing pending','href'=>'pending-reimbursements.php','color'=>$approved>0?'#003594':'#5a6a7a','badge'=>$approved>0?$approved:0];
+        $sections['Finance'][] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end & budgets','href'=>'report.php','color'=>'#37474f'];
+        $sections['Finance'][] = ['icon'=>'🗂️','label'=>'Receipts','sub'=>'Browse by event or vendor','href'=>'receipts-by.php','color'=>'#37474f'];
+        $sections['Finance'][] = ['icon'=>'📥','label'=>'Income','sub'=>'Record & review income','href'=>'income.php','color'=>'#1b5e20'];
+        $sections['Finance'][] = ['icon'=>'🏭','label'=>'Vendors','sub'=>'Spend by vendor + 1099','href'=>'vendor-summary.php','color'=>'#1565c0'];
+        $sections['Finance'][] = ['icon'=>'📈','label'=>'Year Compare','sub'=>'Multi-year spending','href'=>'year-compare.php','color'=>'#6a1b9a'];
+        $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
     }
 }
 
 // Helpdesk — one card for all roles
 $open = ($stats['tickets']['open_count'] ?? 0) + ($stats['tickets']['inprog_count'] ?? 0);
 if (can_manage_tickets()) {
-    $actions[] = ['icon'=>'🎫','label'=>'Support Tickets','sub'=>$open>0?"$open open":'All clear','href'=>'helpdesk.php','color'=>$open>0?'#f57c00':'#1b5e20','badge'=>$open>0?$open:0];
+    $sections['Settings & Admin'][] = ['icon'=>'🎫','label'=>'Support Tickets','sub'=>$open>0?"$open open":'All clear','href'=>'helpdesk.php','color'=>$open>0?'#f57c00':'#1b5e20','badge'=>$open>0?$open:0];
 } else {
     $my_open = $stats['my_open_tickets'];
-    $actions[] = ['icon'=>'🎫','label'=>'Support','sub'=>$my_open>0?"$my_open open ticket".($my_open>1?'s':''):'Submit a ticket','href'=>'helpdesk.php','color'=>$my_open>0?'#f57c00':'#5a6a7a','badge'=>$my_open>0?$my_open:0];
+    $sections['For You'][] = ['icon'=>'🎫','label'=>'Support','sub'=>$my_open>0?"$my_open open ticket".($my_open>1?'s':''):'Submit a ticket','href'=>'helpdesk.php','color'=>$my_open>0?'#f57c00':'#5a6a7a','badge'=>$my_open>0?$my_open:0];
 }
 
 if (can_manage_members() || is_treasurer()) {
     try { $vcount = (int)get_pdo()->query('SELECT COUNT(*) FROM vault_documents')->fetchColumn(); } catch(Exception $e) { $vcount = 0; }
-    $actions[] = ['icon'=>'🔒','label'=>'Document Vault','sub'=>$vcount>0?"$vcount document".($vcount>1?'s':''):'Secure file storage','href'=>'vault.php','color'=>'#37474f'];
+    $sections['Settings & Admin'][] = ['icon'=>'🔒','label'=>'Document Vault','sub'=>$vcount>0?"$vcount document".($vcount>1?'s':''):'Secure file storage','href'=>'vault.php','color'=>'#37474f'];
 }
-$actions[] = ['icon'=>'👤','label'=>'My Profile','sub'=>'Photo & password','href'=>'change-password.php','color'=>'#546e7a'];
-$actions[] = ['icon'=>'📚','label'=>'Staff Guide','sub'=>'Portal orientation','href'=>'staff-guide.php','color'=>'#002554'];
+$sections['For You'][] = ['icon'=>'👤','label'=>'My Profile','sub'=>'Photo & password','href'=>'change-password.php','color'=>'#546e7a'];
+$sections['Settings & Admin'][] = ['icon'=>'📚','label'=>'Staff Guide','sub'=>'Portal orientation','href'=>'staff-guide.php','color'=>'#002554'];
 
 if (is_super_admin()) {
-    $actions[] = ['icon'=>'👤','label'=>'Users','sub'=>'Manage accounts','href'=>'users.php','color'=>'#37474f'];
+    $sections['Settings & Admin'][] = ['icon'=>'👤','label'=>'Users','sub'=>'Manage accounts','href'=>'users.php','color'=>'#37474f'];
 }
+
+// Display order — only sections with at least one visible tile are rendered.
+$section_order = ['For You', 'Member Management', 'Events & Media', 'Secretary Tools', 'Finance', 'Settings & Admin'];
 
 admin_header('Dashboard');
 ?>
@@ -223,6 +226,8 @@ admin_header('Dashboard');
 .action-label{font-size:.82rem;font-weight:700;letter-spacing:.02em}
 .action-sub{font-size:.7rem;color:#5a6a7a;line-height:1.3}
 .action-badge{position:absolute;top:-.4rem;right:-.4rem;background:#A6192E;color:#fff;font-size:.62rem;font-weight:700;padding:.15rem .4rem;border-radius:99px;min-width:18px;text-align:center}
+.section-label{font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin:1.5rem 0 .6rem}
+.section-label:first-of-type{margin-top:0}
 .alert-strip{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:1.25rem}
 .alert-chip{display:flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border-radius:6px;font-size:.82rem;font-weight:600;text-decoration:none}
 .alert-chip:hover{text-decoration:none;filter:brightness(.95)}
@@ -275,10 +280,11 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
 </div>
 <?php endif; ?>
 
-<!-- Quick actions -->
-<p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem">Quick Actions</p>
+<!-- Quick actions, grouped by section -->
+<?php foreach ($section_order as $sec_name): if (empty($sections[$sec_name])) continue; ?>
+<p class="section-label"><?= h($sec_name) ?></p>
 <div class="action-grid">
-  <?php foreach ($actions as $ac): ?>
+  <?php foreach ($sections[$sec_name] as $ac): ?>
   <a href="<?= h($ac['href']) ?>" class="action-card">
     <?php if (!empty($ac['badge'])): ?>
     <span class="action-badge"><?= (int)$ac['badge'] ?></span>
@@ -289,6 +295,7 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
   </a>
   <?php endforeach; ?>
 </div>
+<?php endforeach; ?>
 
 <!-- Mini stats -->
 
