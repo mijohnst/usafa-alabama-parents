@@ -67,6 +67,15 @@ if (!filter_var(s($payload, 'cadetEmail'), FILTER_VALIDATE_EMAIL)) {
     echo json_encode(['success' => false, 'error' => 'Invalid cadet email address.']);
     exit();
 }
+// Graduation year is a <select> of known values on membership.html — reject
+// anything else rather than writing a tampered/arbitrary class_year
+// (e.g. 'Graduate', which would wrongly exclude a new applicant from
+// dues-renewal emails and current-class filters).
+if (!in_array(s($payload, 'graduationYear'), ['2026', '2027', '2028', '2029', '2030', 'Prep School'], true)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid graduation year.']);
+    exit();
+}
 if (!filter_var(s($payload, 'parent1Email'), FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid primary contact email address.']);

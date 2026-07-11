@@ -36,12 +36,11 @@ if (can_manage_finances()) {
         FROM purchases")->fetch();
     $stats['finance'] = $fin;
 
-    // My own pending submissions (for member/secretary role)
-    if (is_member() || is_secretary()) {
-        $my_stmt = $pdo->prepare("SELECT COUNT(*) FROM purchases WHERE submitted_by=? AND status='pending'");
-        $my_stmt->execute([$_SESSION['user_id']??0]);
-        $stats['my_pending'] = (int)$my_stmt->fetchColumn();
-    }
+    // My own pending submissions — powers the Add Purchase tile's badge for
+    // whoever is looking at the dashboard, regardless of role.
+    $my_stmt = $pdo->prepare("SELECT COUNT(*) FROM purchases WHERE submitted_by=? AND status='pending'");
+    $my_stmt->execute([$_SESSION['user_id']??0]);
+    $stats['my_pending'] = (int)$my_stmt->fetchColumn();
 }
 
 // Helpdesk stats

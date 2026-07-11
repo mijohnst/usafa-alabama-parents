@@ -53,7 +53,7 @@ admin_header('Start New Membership Year');
     <strong style="color:#5f4c00">⚠️ This action cannot be undone.</strong>
     <p style="color:#5f4c00;margin-top:.4rem;font-size:.9rem">
       This will reset dues for <strong><?= $affected ?> member(s)</strong>
-      (Class of 2027–2030 only) — marking them unpaid so they can renew for the
+      (Class of <?= h($active_years[0]) ?>–<?= h(end($active_years)) ?> only) — marking them unpaid so they can renew for the
       <strong><?= h($new_year) ?></strong> dues cycle.
       Prep School and Graduate records are not changed.
       <?php if ($skipped): ?>
