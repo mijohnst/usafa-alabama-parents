@@ -109,6 +109,19 @@ $actions = [];
 $mem_total = $stats['members']['total'] ?? null;
 $actions[] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_total.' active':'View roster','href'=>'index.php','color'=>'#002554'];
 
+// Member self-service tiles — every role, including officers who may want
+// to sign up/RSVP/submit themselves too.
+try {
+    $my_open_slots = (int)$pdo->query(
+        "SELECT COUNT(*) FROM volunteer_opportunities o WHERE o.active=1
+         AND (SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id=o.id) < o.spots_needed"
+    )->fetchColumn();
+} catch (Exception $e) { $my_open_slots = 0; }
+$actions[] = ['icon'=>'🙋','label'=>'Volunteer Sign-Ups','sub'=>$my_open_slots>0?"$my_open_slots need people":'View opportunities','href'=>'volunteer-signup.php','color'=>'#1b5e20'];
+$actions[] = ['icon'=>'📆','label'=>'Event RSVP','sub'=>'Let us know you\'re coming','href'=>'event-rsvp.php','color'=>'#1565c0'];
+$actions[] = ['icon'=>'📷','label'=>'Submit Photos','sub'=>'Share your event photos','href'=>'submit-photo.php','color'=>'#6a1b9a'];
+$actions[] = ['icon'=>'🤝','label'=>'My Committees','sub'=>'Flag where you can help','href'=>'my-committees.php','color'=>'#f57f17'];
+
 if (can_manage_members()) {
     $actions[] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
     $actions[] = ['icon'=>'⚙️','label'=>'Site Settings','sub'=>'Hero, dues, letter, links','href'=>'settings.php','color'=>'#37474f'];
@@ -129,6 +142,16 @@ if (can_manage_members()) {
     $actions[] = ['icon'=>'✅','label'=>'Attendance','sub'=>'Track who attended','href'=>'attendance.php','color'=>'#5c007a'];
     $actions[] = ['icon'=>'📬','label'=>'Correspondence','sub'=>'Log official comms','href'=>'correspondence.php','color'=>'#5c007a'];
     $actions[] = ['icon'=>'🖊️','label'=>'Member Letter','sub'=>'Print status letter','href'=>'member-letter.php','color'=>'#5c007a'];
+    // Member support features
+    try { $vo_needed = (int)get_pdo()->query(
+        "SELECT COUNT(*) FROM volunteer_opportunities o WHERE o.active=1
+         AND (SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id=o.id) < o.spots_needed"
+    )->fetchColumn(); } catch(Exception $e) { $vo_needed = 0; }
+    $actions[] = ['icon'=>'🙋','label'=>'Volunteer Opportunities','sub'=>$vo_needed>0?"$vo_needed need people":'Manage opportunities','href'=>'volunteer-opportunities.php','color'=>'#1b5e20','badge'=>$vo_needed>0?$vo_needed:0];
+    $actions[] = ['icon'=>'📆','label'=>'Event RSVPs','sub'=>'See who\'s coming','href'=>'event-rsvps.php','color'=>'#1565c0'];
+    try { $photo_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM photo_submissions WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $photo_pending = 0; }
+    $actions[] = ['icon'=>'📷','label'=>'Photo Submissions','sub'=>$photo_pending>0?"$photo_pending awaiting review":'All caught up','href'=>'photo-submissions.php','color'=>$photo_pending>0?'#A6192E':'#6a1b9a','badge'=>$photo_pending>0?$photo_pending:0];
+    $actions[] = ['icon'=>'🤝','label'=>'Committee Interest','sub'=>'See who volunteered','href'=>'committee-interest.php','color'=>'#f57f17'];
 }
 
 if (can_manage_finances()) {

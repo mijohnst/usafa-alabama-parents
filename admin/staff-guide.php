@@ -780,8 +780,45 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   </div>
 </div>
 
-<!-- 19: Role Quick Reference -->
-<div class="slide s-content" id="s19" style="padding:2.25rem 4rem">
+<!-- 19: Member Support Tools -->
+<div class="slide s-content" id="s19">
+  <p class="label">Section · Member Support</p>
+  <h2>Volunteer Sign-Ups · Event RSVP · Photo Submissions · Committees</h2>
+  <div class="rule"></div>
+  <div class="three-col">
+    <div class="card">
+      <h3>Volunteer Opportunities</h3>
+      <ul>
+        <li>Officers post opportunities with a date, location, and number of spots needed</li>
+        <li>Members sign up right from their dashboard — no double sign-ups thanks to a duplicate check</li>
+        <li>Officers see a live roster of who's signed up for each opportunity, and can toggle an opportunity inactive or delete it</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Event RSVP</h3>
+      <ul>
+        <li>Members RSVP to upcoming events and note a guest count</li>
+        <li>Re-submitting updates their existing RSVP instead of creating a duplicate</li>
+        <li>Officers view RSVP counts and a full roster (with guest counts) per event</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Photo Submissions</h3>
+      <ul>
+        <li>Members upload event photos with an optional album suggestion and caption</li>
+        <li>Submissions queue for officer review — nothing appears publicly until approved</li>
+        <li><strong>Approve</strong> moves the photo into the chosen Event Album; <strong>Reject</strong> leaves it out of the gallery</li>
+        <li>Members can see the status of their own recent submissions (Pending / Approved / Rejected)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="hbox mt2">
+    <strong>Committee Interest:</strong> Members check off which committees they'd be willing to help with (Fundraising, Events &amp; Socials, Communications, Care Packages, Membership Outreach, Sendoff Support). Officers see everyone's picks grouped by committee, with a mailto link to reach out directly. All four tools are available to every logged-in role from the dashboard; the review/management side is limited to Tech Support, Officer, and Secretary.
+  </div>
+</div>
+
+<!-- 20: Role Quick Reference -->
+<div class="slide s-content" id="s20" style="padding:2.25rem 4rem">
   <p class="label">Quick Reference</p>
   <h2>Who Can Do What — Role Access Summary</h2>
   <div class="rule"></div>
@@ -815,6 +852,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <tr><td>Member Letters</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Document Vault</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Directory (opted-out members hidden)</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td>Volunteer Sign-Ups / RSVP / Photos / Committees — Submit</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td>Volunteer Sign-Ups / RSVP / Photos / Committees — Manage &amp; Review</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>User Management</td><td class="y">Tech only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
     </tbody>
@@ -822,8 +861,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   </div>
 </div>
 
-<!-- 20: Tips -->
-<div class="slide s-content" id="s20">
+<!-- 21: Tips -->
+<div class="slide s-content" id="s21">
   <p class="label">Best Practices</p>
   <h2>Tips for Day-to-Day Use</h2>
   <div class="rule"></div>
@@ -847,8 +886,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   </div>
 </div>
 
-<!-- 21: Closing -->
-<div class="slide s-close" id="s21">
+<!-- 22: Closing -->
+<div class="slide s-close" id="s22">
   <div class="accent-bar" style="margin:0 auto 1.5rem"></div>
   <h1>Questions?</h1>
   <p class="cs">USAFA Parents Club of Alabama &nbsp;·&nbsp; Club Portal</p>
