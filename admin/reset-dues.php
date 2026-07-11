@@ -4,7 +4,7 @@ require_member_admin(); // officers and admins can reset dues
 $pdo = get_pdo();
 
 $new_year     = membership_year();
-$active_years = ['2027','2028','2029','2030'];
+$active_years = current_class_years();
 $ph           = implode(',', array_fill(0, count($active_years), '?'));
 
 // Members that WILL be reset (annual, or 4-year coverage expired)

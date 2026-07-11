@@ -368,6 +368,22 @@ function membership_year(): string {
     return $m >= 7 ? $y . '-' . ($y + 1) : ($y - 1) . '-' . $y;
 }
 
+// Class year that graduates this club year (spring commencement) — the
+// "outgoing" class. The club year runs July-June, so this stays the same
+// value from July through the following June, then rolls over.
+function outgoing_class_year(): string {
+    $m = (int)date('n'); $y = (int)date('Y');
+    return (string)($m >= 7 ? $y : $y - 1);
+}
+
+// The 4 currently-enrolled undergrad class years (e.g. ['2027','2028','2029','2030']
+// from July 2026 through June 2027), computed from today's date so class-year
+// lists never need manual upkeep as classes graduate each summer.
+function current_class_years(): array {
+    $base = (int)outgoing_class_year();
+    return [(string)($base+1), (string)($base+2), (string)($base+3), (string)($base+4)];
+}
+
 function member_form(array $m = [], bool $is_edit = false): void {
     $v = function(string $k) use ($m): string {
         return h($m[$k] ?? '');

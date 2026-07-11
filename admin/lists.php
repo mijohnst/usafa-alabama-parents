@@ -3,7 +3,9 @@ require_once __DIR__ . '/auth.php';
 require_login();
 $pdo = get_pdo();
 
-$all_years = ['2026','2027','2028','2029','2030','2031','Prep School','Graduate'];
+$all_years     = ['2026','2027','2028','2029','2030','2031','Prep School','Graduate'];
+$current_years = array_merge(current_class_years(), ['Prep School']);
+$other_years   = array_values(array_diff($all_years, $current_years));
 
 $selected_years = $_POST['years']  ?? [];
 $region         = $_POST['region'] ?? '';
@@ -209,9 +211,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     }
 
+    $is_current_selection = count($selected_years) === count($current_years)
+        && empty(array_diff($current_years, $selected_years));
     $year_label = empty($selected_years) ? 'No Years' :
                   (count($selected_years) === count($all_years) ? 'All Years' :
-                   implode(', ', $selected_years));
+                   ($is_current_selection ? 'Current Years' :
+                   implode(', ', $selected_years)));
     $label   = $year_label . ' / ' . ($region ?: 'All Regions');
     $results = ['lines' => $lines, 'rows' => $rows, 'count' => count($rows), 'label' => $label];
 }
@@ -229,6 +234,7 @@ admin_header('Lists');
 .cd-panel label:hover{background:#f5f7fa}
 .cd-panel input[type=checkbox]{width:auto;accent-color:#003594;cursor:pointer}
 .cd-footer{border-top:1px solid #e1e5eb;padding:.4rem .8rem 0;display:flex;gap:.5rem;margin-top:.25rem}
+.cd-group-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9aa5b4;padding:.5rem .8rem .2rem}
 </style>
 
 <div class="page-head">
@@ -245,15 +251,26 @@ admin_header('Lists');
         <div class="cd" id="year-cd">
           <button type="button" class="cd-btn" id="year-btn">All Years</button>
           <div class="cd-panel">
-            <?php foreach ($all_years as $y): ?>
+            <div class="cd-group-label">Currently Enrolled</div>
+            <?php foreach ($current_years as $y): ?>
+            <label>
+              <input type="checkbox" name="years[]" value="<?= h($y) ?>" data-current="1"
+                     <?= in_array($y, $selected_years) ? 'checked' : '' ?>>
+              <?= h($y) ?>
+            </label>
+            <?php endforeach; ?>
+            <?php if (!empty($other_years)): ?>
+            <div class="cd-group-label">Other</div>
+            <?php foreach ($other_years as $y): ?>
             <label>
               <input type="checkbox" name="years[]" value="<?= h($y) ?>"
                      <?= in_array($y, $selected_years) ? 'checked' : '' ?>>
               <?= h($y) ?>
             </label>
             <?php endforeach; ?>
+            <?php endif; ?>
             <div class="cd-footer">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="setYears(true)">All</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setCurrentYears()">Current Years</button>
               <button type="button" class="btn btn-secondary btn-sm" onclick="setYears(false)">None</button>
             </div>
           </div>
@@ -432,9 +449,12 @@ var btn = document.getElementById('year-btn');
 var cbs = cd.querySelectorAll('input[type=checkbox]');
 
 function updateLabel() {
-  var checked = Array.from(cbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
-  btn.childNodes[0].textContent = checked.length === 0         ? 'No Years'  :
-                                  checked.length === cbs.length ? 'All Years' :
+  var checked     = Array.from(cbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+  var currentVals = Array.from(cbs).filter(function(c){ return c.dataset.current; }).map(function(c){ return c.value; });
+  var isCurrent   = checked.length === currentVals.length && currentVals.every(function(v){ return checked.indexOf(v) !== -1; });
+  btn.childNodes[0].textContent = checked.length === 0          ? 'No Years'      :
+                                  checked.length === cbs.length  ? 'All Years'     :
+                                  isCurrent                      ? 'Current Years' :
                                   checked.join(', ');
 }
 
@@ -449,6 +469,11 @@ updateLabel();
 
 function setYears(state) {
   cbs.forEach(function(cb){ cb.checked = state; });
+  updateLabel();
+}
+
+function setCurrentYears() {
+  cbs.forEach(function(cb){ cb.checked = !!cb.dataset.current; });
   updateLabel();
 }
 

@@ -124,13 +124,8 @@ $stat_unpaid = (int)$pdo->query(
 )->fetchColumn();
 
 // Class-year breakdown row shows only the 4 currently-enrolled classes plus
-// Prep School — not years that have already graduated or haven't arrived
-// yet. Computed from today's date so this never needs manual upkeep: the
-// class matching the current club year (July–June) graduates in the
-// spring, so from July onward the four active classes are next year
-// through next year+3.
-$cur_base = (int)date('n') >= 7 ? (int)date('Y') : (int)date('Y') - 1;
-$current_years = [(string)($cur_base+1), (string)($cur_base+2), (string)($cur_base+3), (string)($cur_base+4), 'Prep School'];
+// Prep School — not years that have already graduated or haven't arrived yet.
+$current_years = array_merge(current_class_years(), ['Prep School']);
 
 // New members this month
 $new_this_month = (int)$pdo->query(
@@ -214,6 +209,7 @@ echo show_flash();
     <a href="index.php?<?= http_build_query($csv_params) ?>" class="btn btn-secondary">Export CSV</a>
     <a href="directory.php" class="btn btn-secondary">Directory</a>
     <?php if (can_manage_members()): ?>
+      <a href="graduate-class.php" class="btn btn-secondary">Graduate a Class</a>
       <a href="reset-dues.php" class="btn btn-secondary">Reset Dues</a>
       <a href="add.php" class="btn btn-primary">+ Add Member</a>
     <?php endif; ?>
