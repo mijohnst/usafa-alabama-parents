@@ -117,7 +117,7 @@ function send_dues_renewal_reminders(PDO $pdo): int {
         $rows = $pdo->query(
             "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, parent1_first_name, parent1_email, parent2_email, membership_paid_through, membership_type
              FROM members
-             WHERE archived = 0 AND membership_paid = 1 AND membership_paid_through <> ''"
+             WHERE archived = 0 AND membership_paid = 1 AND membership_paid_through <> '' AND class_year <> 'Graduate'"
         )->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_dues_renewal_reminders query failed — ' . $e->getMessage());
@@ -159,7 +159,7 @@ function send_lapsed_reengagement(PDO $pdo): int {
         $rows = $pdo->query(
             "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, parent1_first_name, parent1_email, parent2_email, membership_paid_through
              FROM members
-             WHERE archived = 0 AND membership_paid_through <> ''"
+             WHERE archived = 0 AND membership_paid_through <> '' AND class_year <> 'Graduate'"
         )->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_lapsed_reengagement query failed — ' . $e->getMessage());
