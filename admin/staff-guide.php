@@ -886,6 +886,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <li><strong>The site reflects changes instantly</strong> — announcements, events, leadership, and settings update the public website as soon as you save</li>
       <li><strong>Take attendance right after posting minutes</strong> — the meeting is already in front of you, and it keeps the attendance rate accurate</li>
       <li><strong>Directory listing is opt-in</strong> — if a family wants to appear in the printable directory, they need to select "Yes" on their membership or update form</li>
+      <li><strong>My Profile</strong> — every portal user, including members, can add their own profile picture from the My Profile tile; it shows on their dashboard and on the Users page</li>
     </ul>
   </div>
 </div>

@@ -116,6 +116,8 @@ echo show_flash();
 .user-card{background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:1.1rem 1.25rem}
 .user-card.inactive{opacity:.55}
 .user-role{display:inline-block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:.15rem .5rem;border-radius:3px;background:#f0f2f5;margin-bottom:.5rem}
+.user-top{display:flex;gap:.75rem;align-items:flex-start}
+.user-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#003594;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.05rem;font-weight:700;flex-shrink:0}
 .user-name{font-size:1rem;font-weight:700;color:#002554;margin-bottom:.15rem}
 .user-meta{font-size:.78rem;color:#5a6a7a;margin-bottom:.75rem}
 .user-actions{display:flex;gap:.4rem;flex-wrap:wrap}
@@ -189,14 +191,23 @@ echo show_flash();
 <div class="user-grid">
 <?php foreach ($users as $u): ?>
   <div class="user-card <?= $u['active'] ? '' : 'inactive' ?>">
-    <div class="user-role" style="color:<?= $role_colors[$u['role']] ?>"><?= $role_labels[$u['role']] ?></div>
-    <div class="user-name"><?= h($u['name']) ?> <?= !$u['active'] ? '<span style="font-size:.7rem;color:#c62828">(Inactive)</span>' : '' ?></div>
-    <div class="user-meta">
-      @<?= h($u['username']) ?><br>
-      <?= h($u['email']) ?>
-      <?php if (!empty($u['invite_token'])): ?>
-        <br><span style="display:inline-block;margin-top:.3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.15rem .5rem;border-radius:99px;background:<?= strtotime($u['invite_expires']) < time() ? '#ffebee' : '#fff3cd' ?>;color:<?= strtotime($u['invite_expires']) < time() ? '#c62828' : '#5f4c00' ?>"><?= strtotime($u['invite_expires']) < time() ? 'Invite Expired' : 'Invite Pending' ?></span>
+    <div class="user-top">
+      <?php if (!empty($u['avatar_filename'])): ?>
+        <img class="user-avatar" src="/avatar-serve.php?id=<?= (int)$u['id'] ?>" alt="">
+      <?php else: ?>
+        <div class="user-avatar"><?= h(mb_strtoupper(mb_substr($u['name'], 0, 1))) ?></div>
       <?php endif; ?>
+      <div style="min-width:0">
+        <div class="user-role" style="color:<?= $role_colors[$u['role']] ?>"><?= $role_labels[$u['role']] ?></div>
+        <div class="user-name"><?= h($u['name']) ?> <?= !$u['active'] ? '<span style="font-size:.7rem;color:#c62828">(Inactive)</span>' : '' ?></div>
+        <div class="user-meta">
+          @<?= h($u['username']) ?><br>
+          <?= h($u['email']) ?>
+          <?php if (!empty($u['invite_token'])): ?>
+            <br><span style="display:inline-block;margin-top:.3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.15rem .5rem;border-radius:99px;background:<?= strtotime($u['invite_expires']) < time() ? '#ffebee' : '#fff3cd' ?>;color:<?= strtotime($u['invite_expires']) < time() ? '#c62828' : '#5f4c00' ?>"><?= strtotime($u['invite_expires']) < time() ? 'Invite Expired' : 'Invite Pending' ?></span>
+          <?php endif; ?>
+        </div>
+      </div>
     </div>
     <div class="user-actions">
       <a href="users.php?edit=<?= $u['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>

@@ -4,6 +4,11 @@ require_login();
 $pdo  = get_pdo();
 $role = $_SESSION['role'] ?? 'member';
 $name = current_user_name();
+try {
+    $avatar_stmt = $pdo->prepare('SELECT avatar_filename FROM users WHERE id = ?');
+    $avatar_stmt->execute([$_SESSION['user_id'] ?? 0]);
+    $my_avatar = $avatar_stmt->fetchColumn();
+} catch (Exception $e) { $my_avatar = null; }
 
 // ── Gather data for alerts and stats ──────────────────────────────────────
 $stats = [];
@@ -183,7 +188,7 @@ if (can_manage_members() || is_treasurer()) {
     try { $vcount = (int)get_pdo()->query('SELECT COUNT(*) FROM vault_documents')->fetchColumn(); } catch(Exception $e) { $vcount = 0; }
     $actions[] = ['icon'=>'🔒','label'=>'Document Vault','sub'=>$vcount>0?"$vcount document".($vcount>1?'s':''):'Secure file storage','href'=>'vault.php','color'=>'#37474f'];
 }
-$actions[] = ['icon'=>'🔑','label'=>'My Password','sub'=>'Change password','href'=>'change-password.php','color'=>'#546e7a'];
+$actions[] = ['icon'=>'👤','label'=>'My Profile','sub'=>'Photo & password','href'=>'change-password.php','color'=>'#546e7a'];
 $actions[] = ['icon'=>'📚','label'=>'Staff Guide','sub'=>'Portal orientation','href'=>'staff-guide.php','color'=>'#002554'];
 
 if (is_super_admin()) {
@@ -197,6 +202,8 @@ admin_header('Dashboard');
 .welcome-name{font-size:1.6rem;font-weight:700;line-height:1.2}
 .welcome-sub{font-size:.85rem;opacity:.7;margin-top:.25rem}
 .role-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:99px;padding:.3rem .9rem;font-size:.78rem;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.welcome-left{display:flex;align-items:center;gap:1rem}
+.welcome-avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;flex-shrink:0}
 .action-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.85rem;margin-bottom:1.5rem}
 .action-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:1.25rem 1rem;text-decoration:none;color:#1a2332;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.4rem;transition:all .2s;border:2px solid transparent;position:relative}
 .action-card:hover{border-color:#003594;box-shadow:0 4px 16px rgba(0,0,0,.12);transform:translateY(-2px);text-decoration:none;color:#002554}
@@ -216,9 +223,16 @@ admin_header('Dashboard');
 
 <!-- Welcome banner -->
 <div class="welcome-banner">
-  <div>
-    <div class="welcome-name">Welcome back, <?= h($name) ?>!</div>
-    <div class="welcome-sub"><?= date('l, F j, Y') ?></div>
+  <div class="welcome-left">
+    <?php if ($my_avatar): ?>
+      <img class="welcome-avatar" src="/avatar-serve.php?id=<?= (int)($_SESSION['user_id'] ?? 0) ?>" alt="">
+    <?php else: ?>
+      <div class="welcome-avatar"><?= h(mb_strtoupper(mb_substr($name, 0, 1))) ?></div>
+    <?php endif; ?>
+    <div>
+      <div class="welcome-name">Welcome back, <?= h($name) ?>!</div>
+      <div class="welcome-sub"><?= date('l, F j, Y') ?></div>
+    </div>
   </div>
   <span class="role-pill" style="background:<?= $role_color ?>55;border-color:<?= $role_color ?>88"><?= h($role_label) ?></span>
 </div>
