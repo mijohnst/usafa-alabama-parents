@@ -123,6 +123,15 @@ $stat_unpaid = (int)$pdo->query(
     "SELECT COUNT(*) FROM members WHERE archived = 0 AND membership_paid = 0"
 )->fetchColumn();
 
+// Class-year breakdown row shows only the 4 currently-enrolled classes plus
+// Prep School — not years that have already graduated or haven't arrived
+// yet. Computed from today's date so this never needs manual upkeep: the
+// class matching the current club year (July–June) graduates in the
+// spring, so from July onward the four active classes are next year
+// through next year+3.
+$cur_base = (int)date('n') >= 7 ? (int)date('Y') : (int)date('Y') - 1;
+$current_years = [(string)($cur_base+1), (string)($cur_base+2), (string)($cur_base+3), (string)($cur_base+4), 'Prep School'];
+
 // New members this month
 $new_this_month = (int)$pdo->query(
     "SELECT COUNT(*) FROM members WHERE archived = 0 AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
@@ -262,16 +271,17 @@ if ($dup_count) $alerts[] = ['color'=>'#fde0e0','border'=>'#e57373','text'=>'#8a
   </div>
 </div>
 
-<!-- ── Class year breakdown row ─────────────────────────────────────────── -->
-<div style="display:grid;grid-template-columns:repeat(<?= count($stat_by_year) ?>,1fr);gap:.6rem;margin-bottom:1.25rem">
-  <?php foreach ($stat_by_year as $yr => $cnt):
+<!-- ── Class year breakdown row (currently-enrolled classes only) ─────────── -->
+<div style="display:grid;grid-template-columns:repeat(<?= count($current_years) ?>,1fr);gap:.6rem;margin-bottom:1.25rem">
+  <?php foreach ($current_years as $yr):
+    $cnt  = $stat_by_year[$yr] ?? 0;
     $yp   = $stat_paid_by_year[$yr] ?? 0;
     $ypct = $cnt > 0 ? round($yp/$cnt*100) : 0;
     $col  = $ypct>=75?'#2e7d32':($ypct>=40?'#f57c00':'#c62828');
   ?>
   <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0;cursor:pointer"
        onclick="document.querySelector('[name=year]').value='<?= h($yr) ?>'; document.querySelector('.filter-bar button[type=submit]').click()">
-    <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Class of <?= h($yr) ?></div>
+    <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em"><?= $yr === 'Prep School' ? 'Prep School' : 'Class of ' . h($yr) ?></div>
     <div style="font-size:1.3rem;font-weight:700;color:<?= $col ?>;line-height:1"><?= $yp ?><span style="font-size:.8rem;color:#9aa5b4"> / <?= $cnt ?></span></div>
     <div style="font-size:.65rem;color:#9aa5b4"><?= $ypct ?>% paid</div>
     <div style="background:#e1e5eb;border-radius:99px;height:4px;overflow:hidden">
