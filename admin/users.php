@@ -12,13 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add' || $action === 'edit') {
-        $id    = (int)($_POST['id'] ?? 0);
-        $name  = trim($_POST['name']     ?? '');
-        $email = trim($_POST['email']    ?? '');
-        $uname = trim($_POST['username'] ?? '');
-        $role  = $_POST['role'] ?? 'viewer';
-        $pw    = $_POST['password']  ?? '';
-        $pw2   = $_POST['password2'] ?? '';
+        $id        = (int)($_POST['id'] ?? 0);
+        $name      = trim($_POST['name']     ?? '');
+        $email     = trim($_POST['email']    ?? '');
+        $uname     = trim($_POST['username'] ?? '');
+        $role      = $_POST['role'] ?? 'viewer';
+        $pw        = $_POST['password']  ?? '';
+        $pw2       = $_POST['password2'] ?? '';
+        $member_id = (int)($_POST['member_id'] ?? 0) ?: null;
 
         if (!$name)  $errors[] = 'Name is required.';
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
@@ -33,20 +34,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pw && $pw !== $pw2)                    $errors[] = 'Passwords do not match.';
 
         if (empty($errors)) {
-            if ($action === 'add') {
-                $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active) VALUES (?,?,?,?,?,1)')
-                    ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role]);
-                flash('success', "User '$name' added.");
-            } else {
-                if ($pw) {
+            try {
+                if ($action === 'add') {
+                    $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active,member_id) VALUES (?,?,?,?,?,1,?)')
+                        ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id]);
+                } elseif ($pw) {
+                    $pdo->prepare('UPDATE users SET name=?,email=?,username=?,password_hash=?,role=?,member_id=? WHERE id=?')
+                        ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id, $id]);
+                } else {
+                    $pdo->prepare('UPDATE users SET name=?,email=?,username=?,role=?,member_id=? WHERE id=?')
+                        ->execute([$name, $email, $uname, $role, $member_id, $id]);
+                }
+            } catch (PDOException $e) {
+                // users.member_id migration not run yet on this install — save
+                // everything except the family link, which needs that column.
+                if ($action === 'add') {
+                    $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active) VALUES (?,?,?,?,?,1)')
+                        ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role]);
+                } elseif ($pw) {
                     $pdo->prepare('UPDATE users SET name=?,email=?,username=?,password_hash=?,role=? WHERE id=?')
                         ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $id]);
                 } else {
                     $pdo->prepare('UPDATE users SET name=?,email=?,username=?,role=? WHERE id=?')
                         ->execute([$name, $email, $uname, $role, $id]);
                 }
-                flash('success', "User '$name' updated.");
+                flash('error', 'Saved, but the family link could not be set — run admin/migrate_user_member_link.sql first.');
+                header('Location: users.php'); exit;
             }
+            flash('success', "User '$name' " . ($action === 'add' ? 'added.' : 'updated.'));
             header('Location: users.php'); exit;
         }
 
@@ -124,6 +139,14 @@ if (isset($_GET['edit'])) {
 
 $users = $pdo->query('SELECT * FROM users ORDER BY role, name')->fetchAll();
 
+$linkable_members = $pdo->query(
+    "SELECT id, cadet_last_name, cadet_first_middle, class_year FROM members WHERE archived = 0 ORDER BY cadet_last_name, cadet_first_middle"
+)->fetchAll(PDO::FETCH_ASSOC);
+$member_names = [];
+foreach ($linkable_members as $lm) {
+    $member_names[$lm['id']] = trim($lm['cadet_last_name'] . ', ' . $lm['cadet_first_middle']) . ' (' . $lm['class_year'] . ')';
+}
+
 $role_labels = ['admin'=>'Admin','tech'=>'Tech Support','officer'=>'Officer','secretary'=>'Secretary','treasurer'=>'Treasurer','member'=>'Member'];
 $role_colors = ['admin'=>'#002554','tech'=>'#bf360c','officer'=>'#1a237e','secretary'=>'#5c007a','treasurer'=>'#1b5e20','member'=>'#7b3f00'];
 
@@ -187,6 +210,15 @@ echo show_flash();
         <?php endforeach; ?>
       </select>
     </div>
+    <div class="form-group">
+      <label>Linked Cadet Family <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional — powers the My Membership dashboard tile</span></label>
+      <select name="member_id">
+        <option value="">— Not linked —</option>
+        <?php foreach ($member_names as $mid => $mlabel): ?>
+          <option value="<?= $mid ?>" <?= (int)($edit_user['member_id'] ?? 0) === $mid ? 'selected' : '' ?>><?= h($mlabel) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
     <div class="form-row col-2">
       <div class="form-group">
         <label><?= $edit_user ? 'New Password' : 'Password *' ?> <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem">(min 8 chars)</span></label>
@@ -222,6 +254,9 @@ echo show_flash();
         <div class="user-meta">
           @<?= h($u['username']) ?><br>
           <?= h($u['email']) ?>
+          <?php if (!empty($u['member_id']) && isset($member_names[$u['member_id']])): ?>
+            <br><span style="color:#9aa5b4">Linked: <?= h($member_names[$u['member_id']]) ?></span>
+          <?php endif; ?>
           <?php if (!empty($u['invite_token'])): ?>
             <br><span style="display:inline-block;margin-top:.3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.15rem .5rem;border-radius:99px;background:<?= strtotime($u['invite_expires']) < time() ? '#ffebee' : '#fff3cd' ?>;color:<?= strtotime($u['invite_expires']) < time() ? '#c62828' : '#5f4c00' ?>"><?= strtotime($u['invite_expires']) < time() ? 'Invite Expired' : 'Invite Pending' ?></span>
           <?php endif; ?>
