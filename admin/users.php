@@ -140,11 +140,11 @@ if (isset($_GET['edit'])) {
 $users = $pdo->query('SELECT * FROM users ORDER BY role, name')->fetchAll();
 
 $linkable_members = $pdo->query(
-    "SELECT id, cadet_last_name, cadet_first_middle, class_year FROM members WHERE archived = 0 ORDER BY cadet_last_name, cadet_first_middle"
+    "SELECT id, cadet_last_name, cadet_first_name, cadet_middle_name, class_year FROM members WHERE archived = 0 ORDER BY cadet_last_name, cadet_first_name"
 )->fetchAll(PDO::FETCH_ASSOC);
 $member_names = [];
 foreach ($linkable_members as $lm) {
-    $member_names[$lm['id']] = trim($lm['cadet_last_name'] . ', ' . $lm['cadet_first_middle']) . ' (' . $lm['class_year'] . ')';
+    $member_names[$lm['id']] = trim($lm['cadet_last_name'] . ', ' . trim($lm['cadet_first_name'] . ' ' . $lm['cadet_middle_name'])) . ' (' . $lm['class_year'] . ')';
 }
 
 $role_labels = ['admin'=>'Admin','tech'=>'Tech Support','officer'=>'Officer','secretary'=>'Secretary','treasurer'=>'Treasurer','member'=>'Member'];
