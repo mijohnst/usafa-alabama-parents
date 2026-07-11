@@ -23,14 +23,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', 'Pick an album before approving.');
             } else {
                 $src = $submissions_dir . basename($sub['filename']);
-                if (is_file($src)) {
-                    rename($src, $photos_dir . basename($sub['filename']));
+                if (is_file($src) && rename($src, $photos_dir . basename($sub['filename']))) {
                     $pdo->prepare('INSERT INTO event_photos (album_id, filename, caption, sort_order) VALUES (?,?,?,0)')
                         ->execute([$album_id, $sub['filename'], $sub['caption']]);
+                    $pdo->prepare('UPDATE photo_submissions SET status=\'approved\', album_id=?, reviewed_by=?, reviewed_at=NOW() WHERE id=?')
+                        ->execute([$album_id, $_SESSION['user_id'] ?? null, $id]);
+                    flash('success', 'Photo approved and added to the album.');
+                } else {
+                    flash('error', 'The submitted photo file is missing on the server — could not approve. Contact tech support.');
                 }
-                $pdo->prepare('UPDATE photo_submissions SET status=\'approved\', album_id=?, reviewed_by=?, reviewed_at=NOW() WHERE id=?')
-                    ->execute([$album_id, $_SESSION['user_id'] ?? null, $id]);
-                flash('success', 'Photo approved and added to the album.');
             }
         } elseif ($action === 'reject') {
             $pdo->prepare('UPDATE photo_submissions SET status=\'rejected\', reviewed_by=?, reviewed_at=NOW() WHERE id=?')

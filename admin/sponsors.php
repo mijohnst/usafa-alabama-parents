@@ -9,11 +9,11 @@ $pdo = get_pdo(); $errors = []; $edit = null;
 function save_logo(string $key): ?string {
     if (empty($_FILES[$key]['name'])) return null;
     $file = $_FILES[$key];
-    if ($file['error'] !== UPLOAD_ERR_OK) return null;
+    if ($file['error'] !== UPLOAD_ERR_OK || $file['size'] > 5 * 1024 * 1024) return null;
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mime  = finfo_file($finfo, $file['tmp_name']); finfo_close($finfo);
-    if (!in_array($mime, ['image/jpeg','image/png','image/gif','image/webp','image/svg+xml'])) return null;
-    $ext  = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp','image/svg+xml'=>'svg'][$mime];
+    if (!in_array($mime, ['image/jpeg','image/png','image/gif','image/webp'])) return null;
+    $ext  = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'][$mime];
     $name = 'sponsor-' . bin2hex(random_bytes(4)) . '.' . $ext;
     $dir  = __DIR__ . '/../sponsor-logos/';
     if (!is_dir($dir)) mkdir($dir, 0755, true);

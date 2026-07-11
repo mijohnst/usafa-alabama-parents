@@ -29,5 +29,6 @@ if (!in_array($mime, $allowed_mime)) { header('Location: purchases.php'); exit; 
 header('Content-Type: ' . $mime);
 header('Content-Disposition: inline; filename="' . basename($file) . '"');
 header('Content-Length: ' . filesize($file));
+header('Cache-Control: private, no-store');
 readfile($file);
 exit;

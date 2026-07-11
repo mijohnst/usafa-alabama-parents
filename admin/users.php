@@ -88,6 +88,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $row->execute([$id]);
             $u = $row->fetch();
             if ($u) {
+                // Best-effort cleanup of self-service records tied to this login
+                // (no FK constraints on these tables — orphans would otherwise
+                // silently disappear from officer review queues/rosters while
+                // still counting against volunteer opportunity slot limits).
+                try {
+                    $submissions_dir = __DIR__ . '/../photo-submissions/';
+                    $pending = $pdo->prepare("SELECT filename FROM photo_submissions WHERE user_id=? AND status='pending'");
+                    $pending->execute([$id]);
+                    foreach ($pending->fetchAll(PDO::FETCH_COLUMN) as $filename) {
+                        $f = $submissions_dir . basename($filename);
+                        if (is_file($f)) unlink($f);
+                    }
+                    $pdo->prepare('DELETE FROM photo_submissions WHERE user_id=?')->execute([$id]);
+                    $pdo->prepare('DELETE FROM volunteer_signups WHERE user_id=?')->execute([$id]);
+                    $pdo->prepare('DELETE FROM event_rsvps WHERE user_id=?')->execute([$id]);
+                    $pdo->prepare('DELETE FROM committee_interest WHERE user_id=?')->execute([$id]);
+                } catch (PDOException $e) {
+                    // Member-support tables not migrated on this install — nothing to clean up.
+                }
                 $pdo->prepare('DELETE FROM users WHERE id=?')->execute([$id]);
                 flash('success', $u['name'] . ' deleted.');
             }

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_finance();
+if (!is_treasurer() && !is_super_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 $year = (int)($_GET['year'] ?? date('Y'));
