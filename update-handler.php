@@ -123,7 +123,7 @@ try {
     // tampered/garbage value falls back to COALESCE-preserving the existing
     // year instead of being written as-is.
     $grad_year = s($payload, 'graduationYear');
-    if (!in_array($grad_year, ['2026', '2027', '2028', '2029', '2030', '2031'], true)) {
+    if (!in_array($grad_year, ['2026', '2027', '2028', '2029', '2030', 'Prep School'], true)) {
         $grad_year = '';
     }
 
