@@ -139,15 +139,15 @@ $sections['For You'][] = ['icon'=>'📖','label'=>'Directory','sub'=>'Printable 
 
 if (can_manage_members()) {
     $sections['Member Management'][] = ['icon'=>'➕','label'=>'Add Member','sub'=>'Add new cadet','href'=>'add.php','color'=>'#003594'];
-    $sections['Settings & Admin'][] = ['icon'=>'⚙️','label'=>'Site Settings','sub'=>'Hero, dues, letter, links','href'=>'settings.php','color'=>'#37474f'];
-    $sections['Settings & Admin'][] = ['icon'=>'🔁','label'=>'Automated Emails','sub'=>'Birthdays, dues, reminders','href'=>'automated-emails.php','color'=>'#00695c'];
-    $sections['Events & Media'][] = ['icon'=>'📅','label'=>'Events','sub'=>'Manage site events','href'=>'events.php','color'=>'#1565c0'];
+    $sections['Site Management'][] = ['icon'=>'⚙️','label'=>'Site Settings','sub'=>'Hero, dues, letter, links','href'=>'settings.php','color'=>'#37474f'];
+    $sections['Site Management'][] = ['icon'=>'🔁','label'=>'Automated Emails','sub'=>'Birthdays, dues, reminders','href'=>'automated-emails.php','color'=>'#00695c'];
+    $sections['Site Management'][] = ['icon'=>'📅','label'=>'Events','sub'=>'Manage site events','href'=>'events.php','color'=>'#1565c0'];
     try { $vcount_v = (int)get_pdo()->query('SELECT COUNT(*) FROM volunteers')->fetchColumn(); } catch(Exception $e) { $vcount_v=0; }
     $sections['Member Management'][] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vcount_v>0?"$vcount_v submission".($vcount_v>1?'s':''):'View signups','href'=>'volunteers.php','color'=>'#1b5e20','badge'=>$vcount_v>0?$vcount_v:0];
     $sections['Member Management'][] = ['icon'=>'👥','label'=>'Leadership','sub'=>'Update officer profiles','href'=>'leadership.php','color'=>'#002554'];
-    $sections['Settings & Admin'][] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
-    $sections['Events & Media'][] = ['icon'=>'🖼️','label'=>'Gallery','sub'=>'Upload event photos','href'=>'gallery.php','color'=>'#1b5e20'];
-    $sections['Events & Media'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Club event photo albums','href'=>'event-albums.php','color'=>'#1565c0'];
+    $sections['Site Management'][] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
+    $sections['Site Management'][] = ['icon'=>'🖼️','label'=>'Gallery','sub'=>'Upload event photos','href'=>'gallery.php','color'=>'#1b5e20'];
+    $sections['Site Management'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Club event photo albums','href'=>'event-albums.php','color'=>'#1565c0'];
     $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
     $sections['Member Management'][] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
     $sections['Member Management'][] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
@@ -190,7 +190,7 @@ if (can_manage_finances()) {
 // Helpdesk — one card for all roles
 $open = ($stats['tickets']['open_count'] ?? 0) + ($stats['tickets']['inprog_count'] ?? 0);
 if (can_manage_tickets()) {
-    $sections['Settings & Admin'][] = ['icon'=>'🎫','label'=>'Support Tickets','sub'=>$open>0?"$open open":'All clear','href'=>'helpdesk.php','color'=>$open>0?'#f57c00':'#1b5e20','badge'=>$open>0?$open:0];
+    $sections['Site Management'][] = ['icon'=>'🎫','label'=>'Support Tickets','sub'=>$open>0?"$open open":'All clear','href'=>'helpdesk.php','color'=>$open>0?'#f57c00':'#1b5e20','badge'=>$open>0?$open:0];
 } else {
     $my_open = $stats['my_open_tickets'];
     $sections['For You'][] = ['icon'=>'🎫','label'=>'Support','sub'=>$my_open>0?"$my_open open ticket".($my_open>1?'s':''):'Submit a ticket','href'=>'helpdesk.php','color'=>$my_open>0?'#f57c00':'#5a6a7a','badge'=>$my_open>0?$my_open:0];
@@ -198,17 +198,17 @@ if (can_manage_tickets()) {
 
 if (can_manage_members() || is_treasurer()) {
     try { $vcount = (int)get_pdo()->query('SELECT COUNT(*) FROM vault_documents')->fetchColumn(); } catch(Exception $e) { $vcount = 0; }
-    $sections['Settings & Admin'][] = ['icon'=>'🔒','label'=>'Document Vault','sub'=>$vcount>0?"$vcount document".($vcount>1?'s':''):'Secure file storage','href'=>'vault.php','color'=>'#37474f'];
+    $sections['Site Management'][] = ['icon'=>'🔒','label'=>'Document Vault','sub'=>$vcount>0?"$vcount document".($vcount>1?'s':''):'Secure file storage','href'=>'vault.php','color'=>'#37474f'];
 }
 $sections['For You'][] = ['icon'=>'👤','label'=>'My Profile','sub'=>'Photo & password','href'=>'change-password.php','color'=>'#546e7a'];
-$sections['Settings & Admin'][] = ['icon'=>'📚','label'=>'Staff Guide','sub'=>'Portal orientation','href'=>'staff-guide.php','color'=>'#002554'];
+$sections['Site Management'][] = ['icon'=>'📚','label'=>'Staff Guide','sub'=>'Portal orientation','href'=>'staff-guide.php','color'=>'#002554'];
 
 if (is_super_admin()) {
-    $sections['Settings & Admin'][] = ['icon'=>'👤','label'=>'Users','sub'=>'Manage accounts','href'=>'users.php','color'=>'#37474f'];
+    $sections['Site Management'][] = ['icon'=>'👤','label'=>'Users','sub'=>'Manage accounts','href'=>'users.php','color'=>'#37474f'];
 }
 
 // Display order — only sections with at least one visible tile are rendered.
-$section_order = ['For You', 'Member Management', 'Events & Media', 'Secretary Tools', 'Finance', 'Settings & Admin'];
+$section_order = ['For You', 'Member Management', 'Secretary Tools', 'Finance', 'Site Management'];
 
 admin_header('Dashboard');
 ?>
