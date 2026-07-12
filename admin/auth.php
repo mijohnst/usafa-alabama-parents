@@ -1,6 +1,13 @@
 <?php
 // Shared utilities — never served directly (blocked by .htaccess)
 
+// Never leak raw PHP warnings/notices/deprecations onto the page for
+// visitors to see (exposes server file paths and looks broken) — still
+// log everything server-side so issues remain diagnosable.
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
 function start_session(): void {
     if (session_status() === PHP_SESSION_NONE) {
         // The host's default session.gc_maxlifetime is short enough (~10 min
@@ -388,6 +395,34 @@ function outgoing_class_year(): string {
 function current_class_years(): array {
     $base = (int)outgoing_class_year();
     return [(string)($base+1), (string)($base+2), (string)($base+3), (string)($base+4)];
+}
+
+// ── Homepage "Member Photos" slideshow (site_photos table) ────────────────
+// Shared by admin/gallery.php (direct uploads) and admin/photo-submissions.php
+// (approved member submissions) so both paths enforce the same 30-day /
+// max-count limits.
+function get_gallery_limit(PDO $pdo): int {
+    $row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='gallery_max_photos'")->fetch();
+    $val = $row ? (int)$row['setting_value'] : 20;
+    return max(1, min(100, $val));
+}
+
+function gallery_cleanup(PDO $pdo, string $dir, int $limit): void {
+    // Delete photos older than 30 days
+    $old = $pdo->query("SELECT id, filename FROM site_photos WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)")->fetchAll();
+    foreach ($old as $p) {
+        if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) @unlink($dir . $p['filename']);
+        $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$p['id']]);
+    }
+    // Enforce photo limit — delete oldest beyond limit
+    $count = (int)$pdo->query('SELECT COUNT(*) FROM site_photos')->fetchColumn();
+    if ($count > $limit) {
+        $excess = $pdo->query("SELECT id, filename FROM site_photos ORDER BY id ASC LIMIT " . (int)($count - $limit))->fetchAll();
+        foreach ($excess as $p) {
+            if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) @unlink($dir . $p['filename']);
+            $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$p['id']]);
+        }
+    }
 }
 
 function member_form(array $m = [], bool $is_edit = false): void {

@@ -806,9 +806,9 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
     <div class="card">
       <h3>Photo Submissions</h3>
       <ul>
-        <li>Members upload event photos with an optional album suggestion and caption</li>
+        <li>Members upload event photos with an optional caption</li>
         <li>Submissions queue for officer review — nothing appears publicly until approved</li>
-        <li><strong>Approve</strong> moves the photo into the chosen Event Album; <strong>Reject</strong> leaves it out of the gallery</li>
+        <li><strong>Approve</strong> adds the photo to the homepage <strong>Member Photos</strong> slideshow (same place/rules as Gallery uploads — 30-day auto-expiry, display limit); <strong>Reject</strong> leaves it out</li>
         <li>Members can see the status of their own recent submissions (Pending / Approved / Rejected)</li>
       </ul>
     </div>

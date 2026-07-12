@@ -3,31 +3,6 @@ require_once __DIR__ . '/auth.php';
 require_member_admin();
 $pdo = get_pdo();
 
-function get_gallery_limit(PDO $pdo): int {
-    $row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='gallery_max_photos'")->fetch();
-    $val = $row ? (int)$row['setting_value'] : 20;
-    return max(1, min(100, $val));
-}
-
-// ── Auto-cleanup: remove photos > 30 days old or keep max N ──────────────
-function gallery_cleanup(PDO $pdo, string $dir, int $limit): void {
-    // Delete photos older than 30 days
-    $old = $pdo->query("SELECT id, filename FROM site_photos WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)")->fetchAll();
-    foreach ($old as $p) {
-        if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) @unlink($dir . $p['filename']);
-        $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$p['id']]);
-    }
-    // Enforce photo limit — delete oldest beyond limit
-    $count = (int)$pdo->query('SELECT COUNT(*) FROM site_photos')->fetchColumn();
-    if ($count > $limit) {
-        $excess = $pdo->query("SELECT id, filename FROM site_photos ORDER BY id ASC LIMIT " . (int)($count - $limit))->fetchAll();
-        foreach ($excess as $p) {
-            if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) @unlink($dir . $p['filename']);
-            $pdo->prepare('DELETE FROM site_photos WHERE id=?')->execute([$p['id']]);
-        }
-    }
-}
-
 $dir = __DIR__ . '/../site-photos/';
 if (!is_dir($dir)) mkdir($dir, 0755, true);
 

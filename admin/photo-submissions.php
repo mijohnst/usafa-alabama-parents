@@ -4,7 +4,7 @@ require_member_admin();
 $pdo = get_pdo();
 
 $submissions_dir = __DIR__ . '/../photo-submissions/';
-$photos_dir       = __DIR__ . '/../event-photos/';
+$photos_dir       = __DIR__ . '/../site-photos/';
 if (!is_dir($photos_dir)) mkdir($photos_dir, 0755, true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,20 +18,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($sub) {
         if ($action === 'approve') {
-            $album_id = (int)($_POST['album_id'] ?? 0);
-            if (!$album_id) {
-                flash('error', 'Pick an album before approving.');
+            $src = $submissions_dir . basename($sub['filename']);
+            if (is_file($src) && rename($src, $photos_dir . basename($sub['filename']))) {
+                $next_sort = (int)$pdo->query('SELECT COALESCE(MAX(sort_order),0)+10 FROM site_photos')->fetchColumn();
+                $pdo->prepare('INSERT INTO site_photos (filename,caption,sort_order,active) VALUES (?,?,?,1)')
+                    ->execute([$sub['filename'], $sub['caption'], $next_sort]);
+                $pdo->prepare('UPDATE photo_submissions SET status=\'approved\', reviewed_by=?, reviewed_at=NOW() WHERE id=?')
+                    ->execute([$_SESSION['user_id'] ?? null, $id]);
+                $max_photos = get_gallery_limit($pdo);
+                gallery_cleanup($pdo, $photos_dir, $max_photos);
+                flash('success', 'Photo approved and added to the Member Photos slideshow.');
             } else {
-                $src = $submissions_dir . basename($sub['filename']);
-                if (is_file($src) && rename($src, $photos_dir . basename($sub['filename']))) {
-                    $pdo->prepare('INSERT INTO event_photos (album_id, filename, caption, sort_order) VALUES (?,?,?,0)')
-                        ->execute([$album_id, $sub['filename'], $sub['caption']]);
-                    $pdo->prepare('UPDATE photo_submissions SET status=\'approved\', album_id=?, reviewed_by=?, reviewed_at=NOW() WHERE id=?')
-                        ->execute([$album_id, $_SESSION['user_id'] ?? null, $id]);
-                    flash('success', 'Photo approved and added to the album.');
-                } else {
-                    flash('error', 'The submitted photo file is missing on the server — could not approve. Contact tech support.');
-                }
+                flash('error', 'The submitted photo file is missing on the server — could not approve. Contact tech support.');
             }
         } elseif ($action === 'reject') {
             $pdo->prepare('UPDATE photo_submissions SET status=\'rejected\', reviewed_by=?, reviewed_at=NOW() WHERE id=?')
@@ -47,8 +45,6 @@ $pending = $pdo->query(
      JOIN users u ON p.user_id = u.id WHERE p.status = 'pending' ORDER BY p.submitted_at ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
-$albums = $pdo->query("SELECT id, name FROM event_albums ORDER BY sort_order ASC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
-
 admin_header('Photo Submissions');
 echo show_flash();
 ?>
@@ -63,16 +59,14 @@ echo show_flash();
 <div class="page-head">
   <h1>Photo Submissions</h1>
   <div style="display:flex;gap:.5rem">
-    <a href="event-albums.php" class="btn btn-secondary">Event Albums</a>
+    <a href="gallery.php" class="btn btn-secondary">Member Photos Gallery</a>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
 </div>
-<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Member-submitted photos awaiting review. Approving moves the photo into the album you choose.</p>
+<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Member-submitted photos awaiting review. Approving adds the photo to the homepage Member Photos slideshow.</p>
 
 <?php if (empty($pending)): ?>
   <p style="color:#9aa5b4">No photos waiting for review.</p>
-<?php elseif (empty($albums)): ?>
-  <div class="alert alert-error">Create at least one <a href="event-albums.php">event album</a> before approving submissions.</div>
 <?php else: ?>
 <div class="sub-grid">
   <?php foreach ($pending as $s): ?>
@@ -85,14 +79,7 @@ echo show_flash();
       </div>
       <form method="POST">
         <?= csrf_field() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="<?= $s['id'] ?>">
-        <select name="album_id" style="margin-bottom:.5rem;font-size:.82rem">
-          <?php foreach ($albums as $a): ?>
-            <option value="<?= $a['id'] ?>" <?= $a['id'] == $s['album_id'] ? 'selected' : '' ?>><?= h($a['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
-        <div style="display:flex;gap:.4rem">
-          <button type="submit" class="btn btn-primary btn-sm" style="flex:1">Approve</button>
-        </div>
+        <button type="submit" class="btn btn-primary btn-sm" style="width:100%">Approve</button>
       </form>
       <form method="POST" style="margin-top:.4rem" onsubmit="return confirm('Reject this photo?')">
         <?= csrf_field() ?><input type="hidden" name="action" value="reject"><input type="hidden" name="id" value="<?= $s['id'] ?>">
