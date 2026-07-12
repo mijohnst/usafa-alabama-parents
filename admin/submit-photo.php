@@ -7,33 +7,53 @@ $user_id = $_SESSION['user_id'] ?? 0;
 $dir = __DIR__ . '/../photo-submissions/';
 if (!is_dir($dir)) mkdir($dir, 0755, true);
 
+const MAX_PHOTOS_PER_SUBMISSION = 5;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $caption = trim($_POST['caption'] ?? '');
-
-    $file = $_FILES['photo'] ?? null;
-    if (empty($file['name']) || $file['error'] !== UPLOAD_ERR_OK) {
-        flash('error', 'Please choose a photo to upload.');
-        header('Location: submit-photo.php'); exit;
-    }
-
-    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime  = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
     $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
 
-    if (!isset($allowed[$mime]) || $file['size'] > 10 * 1024 * 1024) {
-        flash('error', 'Please use a JPG, PNG, GIF, or WebP photo under 10MB.');
+    // Normalize single- and multi-file input into parallel arrays.
+    $files = $_FILES['photo'] ?? [];
+    if (!empty($files['name']) && !is_array($files['name'])) {
+        foreach ($files as $k => $v) $files[$k] = [$v];
+    }
+    $names = $files['name'] ?? [];
+
+    if (empty($names) || empty($names[0])) {
+        flash('error', 'Please choose at least one photo to upload.');
         header('Location: submit-photo.php'); exit;
     }
 
-    $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-    move_uploaded_file($file['tmp_name'], $dir . $filename);
+    $count = min(count($names), MAX_PHOTOS_PER_SUBMISSION);
+    $insert  = $pdo->prepare('INSERT INTO photo_submissions (user_id, filename, caption, status) VALUES (?,?,?,\'pending\')');
+    $uploaded = 0; $skipped = 0;
 
-    $pdo->prepare('INSERT INTO photo_submissions (user_id, filename, caption, status) VALUES (?,?,?,\'pending\')')
-        ->execute([$user_id, $filename, $caption]);
+    for ($i = 0; $i < $count; $i++) {
+        if (empty($names[$i]) || $files['error'][$i] !== UPLOAD_ERR_OK) { $skipped++; continue; }
 
-    flash('success', 'Thank you! Your photo has been submitted for review.');
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime  = finfo_file($finfo, $files['tmp_name'][$i]);
+        finfo_close($finfo);
+
+        if (!isset($allowed[$mime]) || $files['size'][$i] > 10 * 1024 * 1024) { $skipped++; continue; }
+
+        $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
+        move_uploaded_file($files['tmp_name'][$i], $dir . $filename);
+        $insert->execute([$user_id, $filename, $caption]);
+        $uploaded++;
+    }
+
+    if (count($names) > MAX_PHOTOS_PER_SUBMISSION) $skipped += count($names) - MAX_PHOTOS_PER_SUBMISSION;
+
+    if ($uploaded > 0) {
+        $msg = "Thank you! $uploaded photo" . ($uploaded !== 1 ? 's have' : ' has') . " been submitted for review.";
+        if ($skipped > 0) $msg .= " $skipped skipped (invalid file, or over the " . MAX_PHOTOS_PER_SUBMISSION . "-photo limit).";
+        flash('success', $msg);
+    } else {
+        flash('error', 'Please use JPG, PNG, GIF, or WebP photos under 10MB.');
+    }
     header('Location: submit-photo.php'); exit;
 }
 
@@ -54,22 +74,41 @@ echo show_flash();
   <h1>Submit Event Photos</h1>
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
-<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Got a great shot from a club event? Submit it here — an officer reviews it before it appears in the Member Photos slideshow on the homepage.</p>
+<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Got great shots from a club event? Submit them here — an officer reviews each one before it appears in the Member Photos slideshow on the homepage.</p>
 
 <div class="card" style="max-width:520px">
-  <form method="POST" enctype="multipart/form-data">
+  <form method="POST" enctype="multipart/form-data" id="submit-photo-form">
     <?= csrf_field() ?>
     <div class="form-group">
-      <label>Photo * <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">JPG, PNG, GIF, or WebP, under 10MB</span></label>
-      <input type="file" name="photo" accept="image/*" capture="environment" required>
+      <label>Photos * <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">up to <?= MAX_PHOTOS_PER_SUBMISSION ?> at once — JPG, PNG, GIF, or WebP, under 10MB each</span></label>
+      <input type="file" name="photo[]" id="photo-input" accept="image/*" multiple required>
+      <div id="photo-count-msg" style="font-size:.75rem;color:#c62828;margin-top:.35rem;display:none"></div>
     </div>
     <div class="form-group">
-      <label>Caption <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
+      <label>Caption <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional — applies to all selected photos</span></label>
       <input name="caption" placeholder="A short description">
     </div>
-    <button type="submit" class="btn btn-primary">Submit Photo</button>
+    <button type="submit" class="btn btn-primary" id="submit-photo-btn">Submit Photo<span id="submit-photo-plural">s</span></button>
   </form>
 </div>
+<script>
+(function() {
+  var MAX = <?= MAX_PHOTOS_PER_SUBMISSION ?>;
+  var input  = document.getElementById('photo-input');
+  var msg    = document.getElementById('photo-count-msg');
+  var plural = document.getElementById('submit-photo-plural');
+  input.addEventListener('change', function() {
+    var n = input.files.length;
+    plural.style.display = n === 1 ? 'none' : '';
+    if (n > MAX) {
+      msg.textContent = 'You selected ' + n + ' photos — only the first ' + MAX + ' will be submitted.';
+      msg.style.display = 'block';
+    } else {
+      msg.style.display = 'none';
+    }
+  });
+})();
+</script>
 
 <?php if (!empty($my_submissions)): ?>
 <p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-top:1.75rem">Your Recent Submissions</p>

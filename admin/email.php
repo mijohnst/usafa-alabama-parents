@@ -479,6 +479,10 @@ function resetFilter() {
   document.querySelector('select[name=f_region]').value = '';
   document.querySelector('select[name=f_paid]').value   = '';
   document.querySelector('select[name=f_type]').value   = 'parent_both';
+  document.getElementById('recipients').value = '';
+  updateCount();
+  document.querySelector('input[name=subject]').value = '';
+  quill.setText('');
 }
 function extract_count(text) {
   var re = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
