@@ -49,6 +49,15 @@ $pending = $pdo->query(
      JOIN users u ON p.user_id = u.id WHERE p.status = 'pending' ORDER BY p.submitted_at ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
+// Diagnostic: show the raw status value for every recent submission,
+// regardless of status, so a mismatch (NULL / unexpected value / stuck
+// row) is directly visible instead of guessed at.
+$recent_all = $pdo->query(
+    "SELECT p.id, p.status, p.caption, p.submitted_at, p.reviewed_at, u.name AS submitter_name
+     FROM photo_submissions p JOIN users u ON p.user_id = u.id
+     ORDER BY p.submitted_at DESC LIMIT 30"
+)->fetchAll(PDO::FETCH_ASSOC);
+
 admin_header('Photo Submissions');
 echo show_flash();
 ?>
@@ -94,5 +103,37 @@ echo show_flash();
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
+
+<p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-top:2rem;margin-bottom:.6rem">Diagnostic — Last 30 Submissions (raw status)</p>
+<div style="background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.1);overflow:auto">
+<table style="width:100%;border-collapse:collapse;font-size:.78rem">
+  <thead>
+    <tr style="text-align:left;border-bottom:2px solid #f0f2f5">
+      <th style="padding:.5rem .75rem">ID</th>
+      <th style="padding:.5rem .75rem">Submitter</th>
+      <th style="padding:.5rem .75rem">Caption</th>
+      <th style="padding:.5rem .75rem">Submitted</th>
+      <th style="padding:.5rem .75rem">Reviewed</th>
+      <th style="padding:.5rem .75rem">Raw Status Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <?php foreach ($recent_all as $r):
+      $raw = $r['status'];
+      $raw_display = $raw === null ? 'NULL' : ($raw === '' ? '(empty string)' : $raw);
+      $is_known = in_array($raw, ['pending','approved','rejected'], true);
+    ?>
+    <tr style="border-bottom:1px solid #f0f2f5">
+      <td style="padding:.5rem .75rem">#<?= (int)$r['id'] ?></td>
+      <td style="padding:.5rem .75rem"><?= h($r['submitter_name']) ?></td>
+      <td style="padding:.5rem .75rem"><?= h($r['caption'] ?: '(no caption)') ?></td>
+      <td style="padding:.5rem .75rem"><?= h($r['submitted_at']) ?></td>
+      <td style="padding:.5rem .75rem"><?= h($r['reviewed_at'] ?? '—') ?></td>
+      <td style="padding:.5rem .75rem;font-family:monospace;<?= $is_known ? '' : 'color:#A6192E;font-weight:700' ?>"><?= h($raw_display) ?></td>
+    </tr>
+    <?php endforeach; ?>
+  </tbody>
+</table>
+</div>
 
 <?php admin_footer(); ?>
