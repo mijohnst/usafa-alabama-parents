@@ -318,7 +318,7 @@ function admin_header(string $title): void {
     echo '<a href="dashboard.php" title="Home">🏠</a>';
     echo '<a href="../index.html" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none" title="Go to the public website">View Site</a>';
     echo '<a href="index.php">Members</a>';
-    if (can_manage_finances()) {
+    if (can_manage_finances() && !is_member()) {
         $pending_cnt = 0;
         try { $pending_cnt = (int)get_pdo()->query("SELECT COUNT(*) FROM purchases WHERE status='pending'")->fetchColumn(); } catch(Exception $e) {}
         $badge = $pending_cnt > 0 ? ' <span style="background:#A6192E;color:#fff;font-size:.6rem;padding:.1rem .4rem;border-radius:99px;vertical-align:middle;font-weight:700">' . $pending_cnt . '</span>' : '';
