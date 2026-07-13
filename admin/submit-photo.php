@@ -123,8 +123,8 @@ echo show_flash();
     [$bg, $fg] = $colors[$status] ?? ['#f0f2f5','#5a6a7a'];
   ?>
   <div class="ps-item">
-    <span><?= h($s['caption'] ?: '(no caption)') ?> <span style="color:#9aa5b4">— <?= date('M j, Y', strtotime($s['submitted_at'])) ?></span></span>
-    <span class="ps-status" style="background:<?= $bg ?>;color:<?= $fg ?>"><?= ucfirst($status) ?></span>
+    <span>#<?= (int)$s['id'] ?> — <?= h($s['caption'] ?: '(no caption)') ?> <span style="color:#9aa5b4">— <?= date('M j, Y', strtotime($s['submitted_at'])) ?></span></span>
+    <span class="ps-status" style="background:<?= $bg ?>;color:<?= $fg ?>"><?= ucfirst($status) ?> (raw: <?= h($s['status'] === null ? 'NULL' : ($s['status'] === '' ? 'empty' : $s['status'])) ?>, user_id: <?= (int)$user_id ?>)</span>
   </div>
   <?php endforeach; ?>
 </div>
