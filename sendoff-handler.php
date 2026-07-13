@@ -41,6 +41,12 @@ foreach ($required as $field) {
     }
 }
 
+if (!filter_var(trim($input['email']), FILTER_VALIDATE_EMAIL)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Please enter a valid email address.']);
+    exit;
+}
+
 // Paste your deployed Apps Script Web App URL here after following setup instructions
 define('APPS_SCRIPT_URL', 'https://script.google.com/macros/s/AKfycbz4ZSWEaO7ttsOJ2Baw9ybPl_eeHbgqXDeCwZHmW7zHqdFInul1b1BEJa82le5v2Ljv/exec');
 
