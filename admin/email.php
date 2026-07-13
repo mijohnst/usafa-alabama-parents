@@ -119,6 +119,25 @@ function collect_email_attachments(): array {
 
 // ── Build a MIME message (HTML body, optionally with attachments) ──────────
 // Returns [contentTypeHeaderLine, messageBody].
+// Quill's <p> tags carry no margin of their own, so each email client falls
+// back to its own default (often a large one) — and a manually-typed blank
+// line becomes its own <p><br></p> that gets that same oversized margin on
+// top of the paragraph before it, compounding into the huge gaps reported.
+// Pin a small, explicit margin on every paragraph so spacing is consistent
+// and controlled by us instead of whatever the recipient's client guesses.
+function fix_email_paragraph_spacing(string $html): string {
+    return preg_replace_callback('/<p\b([^>]*)>/i', function (array $m): string {
+        $attrs = $m[1];
+        if (preg_match('/style\s*=\s*"([^"]*)"/i', $attrs, $sm)) {
+            $style = rtrim(trim($sm[1]), ';') . '; margin:0 0 1em 0;';
+            $attrs = preg_replace('/style\s*=\s*"[^"]*"/i', 'style="' . $style . '"', $attrs);
+        } else {
+            $attrs .= ' style="margin:0 0 1em 0;"';
+        }
+        return '<p' . $attrs . '>';
+    }, $html);
+}
+
 function build_mime_email(string $html_body, array $attachments): array {
     if (empty($attachments)) {
         return ["Content-Type: text/html; charset=UTF-8\r\n", $html_body];
@@ -208,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
             $sig_key       = $signature_keys[$from_email] ?? '';
             $signature     = trim($signatures[$sig_key] ?? '');
             $full_body     = $signature !== '' ? $body . '<p>-- <br>' . nl2br(htmlspecialchars($signature)) . '</p>' : $body;
+            $full_body     = fix_email_paragraph_spacing($full_body);
             $clean_subject = str_replace(["\r","\n"], '', $subject);
 
             [$content_type_header, $mime_body] = build_mime_email($full_body, $attachments);
