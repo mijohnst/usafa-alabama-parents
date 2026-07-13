@@ -65,6 +65,12 @@ $mine = $pdo->prepare('SELECT * FROM photo_submissions WHERE user_id = ? ORDER B
 $mine->execute([$user_id]);
 $my_submissions = $mine->fetchAll(PDO::FETCH_ASSOC);
 
+// TEMPORARY raw debug dump — isolates whether this page's PDO connection
+// itself reads photo_submissions.status differently than other pages, or
+// whether it's something in the display logic below. Remove once resolved.
+$debug_direct = $pdo->query('SELECT id, status FROM photo_submissions WHERE id = 21')->fetch(PDO::FETCH_ASSOC);
+$debug_all_keys = !empty($my_submissions) ? array_keys($my_submissions[0]) : [];
+
 admin_header('Submit Event Photos');
 echo show_flash();
 ?>
@@ -73,6 +79,12 @@ echo show_flash();
 .ps-item{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:.6rem .9rem;font-size:.85rem}
 .ps-status{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.15rem .5rem;border-radius:99px}
 </style>
+
+<div style="background:#fff3cd;border:2px solid #ffc107;border-radius:6px;padding:1rem;margin-bottom:1.25rem;font-family:monospace;font-size:.82rem;white-space:pre-wrap">TEMP DEBUG — direct query for id=21: <?= h(var_export($debug_direct, true)) ?>
+
+Array keys from first row of $my_submissions: <?= h(implode(', ', $debug_all_keys)) ?>
+
+PHP version: <?= h(PHP_VERSION) ?> | PDO driver: <?= h($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)) ?></div>
 
 <div class="page-head">
   <h1>Submit Event Photos</h1>
