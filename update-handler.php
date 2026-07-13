@@ -48,6 +48,14 @@ function s(array $p, string $key): string {
     return trim($p[$key] ?? '');
 }
 
+// Blank means "leave the existing value alone" throughout this form's
+// COALESCE(NULLIF(...)) update pattern — treat an invalid email address
+// the same way (blank) rather than writing bad data into the column.
+function e(array $p, string $key): string {
+    $v = trim($p[$key] ?? '');
+    return ($v !== '' && filter_var($v, FILTER_VALIDATE_EMAIL)) ? $v : '';
+}
+
 require_once __DIR__ . '/admin/config.php';
 
 try {
@@ -165,12 +173,12 @@ try {
         'nickname'           => s($payload, 'nickname'),
         'cadet_birthday'     => $dob,
         'cadet_po_box'       => s($payload, 'poBox'),
-        'cadet_email'        => s($payload, 'cadetEmail'),
+        'cadet_email'        => e($payload, 'cadetEmail'),
         'cadet_cell'         => s($payload, 'cadetPhone'),
         'bct_squadron'       => s($payload, 'squadron'),
         'parent1_last_name'  => s($payload, 'parent1LastName'),
         'parent1_first_name' => s($payload, 'parent1FirstName'),
-        'parent1_email'      => s($payload, 'parent1Email'),
+        'parent1_email'      => e($payload, 'parent1Email'),
         'parent1_cell'       => s($payload, 'parent1Phone'),
         'parent1_street'     => s($payload, 'streetAddress'),
         'parent1_city'       => s($payload, 'city'),
@@ -178,7 +186,7 @@ try {
         'parent1_zip'        => s($payload, 'zipCode'),
         'parent2_last_name'  => s($payload, 'parent2LastName'),
         'parent2_first_name' => s($payload, 'parent2FirstName'),
-        'parent2_email'      => s($payload, 'parent2Email'),
+        'parent2_email'      => e($payload, 'parent2Email'),
         'parent2_cell'       => s($payload, 'parent2Phone'),
         'parent2_street'     => s($payload,'parent2AddressSame')==='Yes' ? s($payload,'streetAddress') : s($payload,'parent2Street'),
         'parent2_city'       => s($payload,'parent2AddressSame')==='Yes' ? s($payload,'city')          : s($payload,'parent2City'),

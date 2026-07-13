@@ -106,21 +106,28 @@ try {
     $dob = s($payload, 'cadetDOB');
     if ($dob === '') $dob = null;
 
-    // ── Duplicate detection: same last name + class year, AND either an exact
-    // cadet first name match or a matching parent email — a first-name *prefix*
-    // match alone would incorrectly collide siblings/twins (e.g. "Jack" vs "Jackson").
+    // ── Duplicate detection: same last name + class year, AND a matching
+    // parent email (either submitted parent against either stored parent
+    // column, so a resubmission that lists parents in the opposite order
+    // still matches). Matching on name+class-year alone — without an email
+    // check — would let two unrelated families who happen to share a last
+    // name, class year, and cadet first name silently overwrite each other.
+    $parent1_email = s($payload, 'parent1Email');
+    $parent2_email = s($payload, 'parent2Email');
     $dup = $pdo->prepare(
         'SELECT id FROM members
          WHERE cadet_last_name = :last_name AND class_year = :class_year
-           AND (cadet_first_name = :first_name
-                OR (:parent1_email <> "" AND parent1_email = :parent1_email))
+           AND (
+                (:parent1_email <> "" AND (parent1_email = :parent1_email OR parent2_email = :parent1_email))
+             OR (:parent2_email <> "" AND (parent1_email = :parent2_email OR parent2_email = :parent2_email))
+           )
          LIMIT 1'
     );
     $dup->execute([
         'last_name'     => s($payload, 'cadetLastName'),
         'class_year'    => s($payload, 'graduationYear'),
-        'first_name'    => $first,
-        'parent1_email' => s($payload, 'parent1Email'),
+        'parent1_email' => $parent1_email,
+        'parent2_email' => $parent2_email,
     ]);
     $existing_id = $dup->fetchColumn();
 

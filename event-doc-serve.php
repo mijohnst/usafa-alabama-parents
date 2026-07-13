@@ -34,6 +34,7 @@ $mime  = finfo_file($finfo, $file) ?: 'application/octet-stream';
 finfo_close($finfo);
 
 header('Content-Type: ' . $mime);
+header('X-Content-Type-Options: nosniff');
 header('Content-Length: ' . filesize($file));
 $safe_name = str_replace(["\r", "\n", '"'], '', $doc['original_name'] ?: basename($file));
 header('Content-Disposition: inline; filename="' . $safe_name . '"');
