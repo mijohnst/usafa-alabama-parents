@@ -957,6 +957,7 @@ if (document.readyState === 'loading') {
   var current  = 0;
   var ids      = [];
   var autoTimer= null;
+  var initialized = false;
 
   function buildSlide(id) {
     var slide = document.createElement('div');
@@ -979,8 +980,8 @@ if (document.readyState === 'loading') {
     counterEl.textContent = (current + 1) + ' – ' + ids.length;
   }
 
-  function startAuto() { autoTimer = setInterval(function() { goTo(current + 1); }, 10000); }
-  function resetAuto()  { clearInterval(autoTimer); startAuto(); }
+  function startAuto() { clearInterval(autoTimer); autoTimer = setInterval(function() { goTo(current + 1); }, 10000); }
+  function resetAuto()  { startAuto(); }
 
   function init(imageIds) {
     if (!imageIds || imageIds.length === 0) {
@@ -989,6 +990,8 @@ if (document.readyState === 'loading') {
       nextBtn.style.display = 'none';
       return;
     }
+    if (initialized) return;
+    initialized = true;
     ids = imageIds;
     msgEl.style.display = 'none';
     ids.forEach(function(id, i) {
