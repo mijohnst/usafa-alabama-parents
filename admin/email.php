@@ -120,12 +120,14 @@ function collect_email_attachments(): array {
 // ── Build a MIME message (HTML body, optionally with attachments) ──────────
 // Returns [contentTypeHeaderLine, messageBody].
 // Quill's <p> tags carry no margin of their own, so each email client falls
-// back to its own default (often a large one) — and a manually-typed blank
-// line becomes its own <p><br></p> that gets that same oversized margin on
-// top of the paragraph before it, compounding into the huge gaps reported.
-// Pin a small, explicit margin on every paragraph so spacing is consistent
-// and controlled by us instead of whatever the recipient's client guesses.
+// back to its own default (often a large one). Worse, a manually-typed blank
+// line becomes its own <p><br></p> — an empty line that renders *in addition
+// to* both its own margin and the margin of the paragraph before it, which
+// is what compounds into the huge gaps reported. The real paragraphs already
+// get a controlled margin below, so those blank placeholders are pure
+// redundant space — drop them, then pin an explicit margin on what's left.
 function fix_email_paragraph_spacing(string $html): string {
+    $html = preg_replace('/<p\b[^>]*>(?:\s|<br\s*\/?>|&nbsp;)*<\/p>/i', '', $html);
     return preg_replace_callback('/<p\b([^>]*)>/i', function (array $m): string {
         $attrs = $m[1];
         if (preg_match('/style\s*=\s*"([^"]*)"/i', $attrs, $sm)) {
