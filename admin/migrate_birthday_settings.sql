@@ -1,6 +1,0 @@
--- Run this in phpMyAdmin → alabkmgg_members → SQL tab
-INSERT INTO `site_settings` (setting_key, setting_value, setting_label, setting_type) VALUES
-('birthday_cadet_subject', 'Happy Birthday, {name}! 🎉', 'Cadet Email — Subject', 'text'),
-('birthday_cadet_body', 'Happy Birthday, {name}!\n\nThe USAFA Parents Club of Alabama is thinking of you today and wishing you a fantastic birthday.\nThank you for everything you do — we''re proud of you!\n\nAim High · Fly · Fight · Win\nUSAFA Parents Club of Alabama\nhttps://alabamafalcons.org/', 'Cadet Email — Body', 'textarea'),
-('birthday_parent_subject', 'Celebrating {cadet_name} Today! 🎂', 'Parent Email — Subject', 'text'),
-('birthday_parent_body', 'On behalf of the USAFA Parents Club of Alabama, we want to take a moment to recognize {cadet_name} on their birthday today.\n\nCadets like {name} inspire us with their dedication, discipline, and hard work, and we are incredibly proud of everything they''ve accomplished on their journey at the Academy. We hope today is filled with celebration, and that {name} feels the pride and support of the entire Alabama Falcons family.\n\nHappy Birthday, {name}!\n\nUSAFA Parents Club of Alabama\nhttps://alabamafalcons.org/', 'Parent Email — Body', 'textarea');
