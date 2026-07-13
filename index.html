@@ -76,7 +76,7 @@
     @media(max-width:640px){.membership-grid{grid-template-columns:1fr;}}
 
     /* EVENTS */
-    #events{background:var(--light);}
+    #events{background:var(--white);}
     #events .section-title{color:var(--navy);}
     #events .section-label{color:var(--blue);}
     #events .divider{background:linear-gradient(90deg,var(--blue),transparent);}
@@ -98,7 +98,7 @@
     .tag-volunteer{background:rgba(30,100,30,.1);color:#1a5a1a;border:1px solid rgba(30,100,30,.2);}
 
     /* NEWS */
-    #usafa-news{background:var(--white);}
+    #usafa-news{background:var(--light);}
     #news-container{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;margin-top:1.5rem;}
     .news-card{background:#ffffff;border-radius:4px;overflow:hidden;border:1px solid rgba(0,53,148,.12);box-shadow:0 2px 8px rgba(0,53,148,.06);transition:transform .2s,box-shadow .2s,background .2s,border-color .2s;}
     .news-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,53,148,.2);background:#b8cce8;border-color:rgba(166,25,46,.4);}
@@ -112,7 +112,7 @@
     .news-view-all{margin-top:2rem;text-align:center;}
 
     /* LEADERSHIP */
-    #leadership{background:var(--white);}
+    #leadership{background:var(--light);}
     .leadership-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.5rem;margin-top:1rem;}
     .officer-card{background:var(--white);border-radius:4px;padding:2rem 1.5rem;text-align:center;border:1px solid rgba(166,25,46,.25);border-top:4px solid #A6192E;transition:transform .2s,box-shadow .2s;position:relative;cursor:default;}
     .officer-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,53,148,.2);background:#b8cce8;border-top-color:#A6192E;}
@@ -131,7 +131,7 @@
     .btn-dark{background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;}
     .btn-dark:hover{background:linear-gradient(180deg,#2166cc 0%,#003080 100%);box-shadow:0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2);top:2px;}
     /* COMMUNITY PHOTOS */
-    #photos{background:var(--light);}
+    #photos{background:var(--white);}
     #photos .section-title{color:var(--navy);}
     #photos .divider{background:linear-gradient(90deg,var(--blue),transparent);}
     .slideshow-wrap{position:relative;max-width:860px;margin:0 auto;}
@@ -149,7 +149,7 @@
     .slideshow-counter{text-align:center;font-size:.78rem;color:var(--gray);margin-top:.4rem;}
     .photos-msg{text-align:center;color:var(--gray);padding:3rem 1rem;font-size:.95rem;}
     /* CONTACT */
-    #contact{background:var(--white);}
+    #volunteer{background:var(--white);}
     .contact-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:2.5rem;align-items:stretch;}
     .contact-info{background:var(--white);border-radius:4px;padding:2.5rem;box-shadow:0 4px 24px rgba(0,48,135,.08);display:flex;flex-direction:column;}
     .contact-info h3{font-family:var(--font-display);font-size:1.1rem;color:var(--navy);margin-bottom:.75rem;}
@@ -300,45 +300,6 @@
   </div>
 </section>
 
-<!-- MEMBERSHIP -->
-<section id="membership">
-  <div class="container">
-    <p class="section-label">Support Our Mission</p>
-    <h2 class="section-title">Membership &amp; Donations</h2>
-    <div class="divider"></div>
-    <div class="membership-grid">
-      <div class="membership-card">
-        <h3>Annual Membership</h3>
-        <div class="price-tag" id="membership-dues">$75 <span>/ year</span></div>
-        <div id="membership-description">
-        <p>Membership dues cover cadet support activities, club operations, and care packages for Alabama cadets throughout their Academy journey.</p>
-        <p style="margin-top:.75rem;">As a member, you'll be part of a community of Alabama families who share the unique experience of having a son or daughter at the Academy &mdash; with access to resources and a network of parents who understand the journey firsthand.</p>
-        </div>
-        <p style="margin-top:.75rem;">🎖️ <strong>Paid members will receive a club identification badge</strong></p>
-        <div class="payment-portal" style="margin-top:auto;">
-          <p>Secure online payment.</p>
-          <a href="membership.html" class="btn btn-pay">PAY ANNUAL DUES</a>
-        </div>
-      </div>
-      <div class="membership-card">
-        <h3>Donations</h3>
-        <div class="program-icon" style="font-size:2rem;margin-bottom:.75rem;">🤝</div>
-        <p>In addition to membership dues, we gratefully accept donations of any amount. Your generosity directly funds care packages, cadet recognition events, and family support activities across Alabama.</p>
-        <p style="margin-top:.75rem;">Every contribution &mdash; large or small &mdash; makes a real difference in the lives of Alabama cadets and their families.</p>
-        <div class="payment-portal" style="margin-top:auto;">
-          <p>Secure online donation.</p>
-          <a href="payment.html" class="btn btn-pay">MAKE A DONATION</a>
-        </div>
-      </div>
-    </div>
-    <div class="tax-note" style="margin-top:1.5rem;">
-      We are a <strong>501(c)(3) organization</strong> and your contributions are tax deductible.
-      <a href="https://www.irs.gov/charities-non-profits/charitable-organizations/exemption-requirements-501c3-organizations" target="_blank" rel="noopener">Learn more about 501(c)(3) requirements &rarr;</a>
-    </div>
-    <p style="margin-top:.75rem;font-size:.9rem;color:#5a6a7a;">Already a member? <a href="update.html">Update your information</a> instead.</p>
-  </div>
-</section>
-
 <!-- LEADERSHIP -->
 <section id="leadership">
   <div class="container">
@@ -394,6 +355,45 @@
       <p class="slideshow-counter" id="slideshow-counter"></p>
       <p class="photos-msg" id="photos-msg">Loading photos&#8230;</p>
     </div>
+  </div>
+</section>
+
+<!-- MEMBERSHIP -->
+<section id="membership">
+  <div class="container">
+    <p class="section-label">Support Our Mission</p>
+    <h2 class="section-title">Membership &amp; Donations</h2>
+    <div class="divider"></div>
+    <div class="membership-grid">
+      <div class="membership-card">
+        <h3>Annual Membership</h3>
+        <div class="price-tag" id="membership-dues">$75 <span>/ year</span></div>
+        <div id="membership-description">
+        <p>Membership dues cover cadet support activities, club operations, and care packages for Alabama cadets throughout their Academy journey.</p>
+        <p style="margin-top:.75rem;">As a member, you'll be part of a community of Alabama families who share the unique experience of having a son or daughter at the Academy &mdash; with access to resources and a network of parents who understand the journey firsthand.</p>
+        </div>
+        <p style="margin-top:.75rem;">🎖️ <strong>Paid members will receive a club identification badge</strong></p>
+        <div class="payment-portal" style="margin-top:auto;">
+          <p>Secure online payment.</p>
+          <a href="membership.html" class="btn btn-pay">PAY ANNUAL DUES</a>
+        </div>
+      </div>
+      <div class="membership-card">
+        <h3>Donations</h3>
+        <div class="program-icon" style="font-size:2rem;margin-bottom:.75rem;">🤝</div>
+        <p>In addition to membership dues, we gratefully accept donations of any amount. Your generosity directly funds care packages, cadet recognition events, and family support activities across Alabama.</p>
+        <p style="margin-top:.75rem;">Every contribution &mdash; large or small &mdash; makes a real difference in the lives of Alabama cadets and their families.</p>
+        <div class="payment-portal" style="margin-top:auto;">
+          <p>Secure online donation.</p>
+          <a href="payment.html" class="btn btn-pay">MAKE A DONATION</a>
+        </div>
+      </div>
+    </div>
+    <div class="tax-note" style="margin-top:1.5rem;">
+      We are a <strong>501(c)(3) organization</strong> and your contributions are tax deductible.
+      <a href="https://www.irs.gov/charities-non-profits/charitable-organizations/exemption-requirements-501c3-organizations" target="_blank" rel="noopener">Learn more about 501(c)(3) requirements &rarr;</a>
+    </div>
+    <p style="margin-top:.75rem;font-size:.9rem;color:#5a6a7a;">Already a member? <a href="update.html">Update your information</a> instead.</p>
   </div>
 </section>
 
