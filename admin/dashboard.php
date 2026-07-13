@@ -112,6 +112,11 @@ $role_color = $role_colors[$role] ?? '#5a6a7a';
 
 // ── Quick action definitions by role, grouped into dashboard sections ──────
 $sections = [];
+// Sponsors is pushed from two independent, currently mutually-exclusive
+// blocks below (can_manage_members() and is_treasurer()) since neither
+// role alone implies the other — this guard just prevents a double tile
+// if that ever stops being true (e.g. a combined officer/treasurer role).
+$sponsors_tile_added = false;
 
 // Members tile for all roles
 $mem_total = $stats['members']['total'] ?? null;
@@ -148,7 +153,10 @@ if (can_manage_members()) {
     $sections['Site Management'][] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
     $sections['Site Management'][] = ['icon'=>'🖼️','label'=>'Gallery','sub'=>'Upload event photos','href'=>'gallery.php','color'=>'#1b5e20'];
     $sections['Site Management'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Club event photo albums','href'=>'event-albums.php','color'=>'#1565c0'];
-    $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
+    if (!$sponsors_tile_added) {
+        $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
+        $sponsors_tile_added = true;
+    }
     $sections['Member Management'][] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
     $sections['Member Management'][] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
     // Secretary tools
@@ -183,7 +191,10 @@ if (can_manage_finances()) {
         $sections['Finance'][] = ['icon'=>'📥','label'=>'Income','sub'=>'Record & review income','href'=>'income.php','color'=>'#1b5e20'];
         $sections['Finance'][] = ['icon'=>'🏭','label'=>'Vendors','sub'=>'Spend by vendor + 1099','href'=>'vendor-summary.php','color'=>'#1565c0'];
         $sections['Finance'][] = ['icon'=>'📈','label'=>'Year Compare','sub'=>'Multi-year spending','href'=>'year-compare.php','color'=>'#6a1b9a'];
-        $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
+        if (!$sponsors_tile_added) {
+            $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
+            $sponsors_tile_added = true;
+        }
     }
 }
 

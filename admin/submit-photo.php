@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($allowed[$mime]) || $files['size'][$i] > 10 * 1024 * 1024) { $skipped++; continue; }
 
         $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-        move_uploaded_file($files['tmp_name'][$i], $dir . $filename);
+        if (!move_uploaded_file($files['tmp_name'][$i], $dir . $filename)) { $skipped++; continue; }
         $insert->execute([$user_id, $filename, $caption]);
         $uploaded++;
     }
