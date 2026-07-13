@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_login();
+// This page shows the submitter's own live approval status — never let a
+// browser or host-level cache serve a stale "Pending" after it's changed.
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 $pdo     = get_pdo();
 $user_id = $_SESSION['user_id'] ?? 0;
 
