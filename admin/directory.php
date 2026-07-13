@@ -3,9 +3,9 @@ require_once __DIR__ . '/auth.php';
 require_login();
 $pdo = get_pdo();
 
-$year       = $_GET['year']   ?? '';
-$region     = $_GET['region'] ?? '';
-$missing_po = isset($_GET['missing_po']);
+$year    = $_GET['year']    ?? '';
+$region  = $_GET['region']  ?? '';
+$missing = $_GET['missing'] ?? '';
 
 // Families who explicitly opted out of the member directory are excluded —
 // this page is meant to be shared/printed for members, unlike the admin
@@ -16,7 +16,8 @@ $where  = ['archived = 0', "(directory_consent IS NULL OR directory_consent <> '
 $params = [];
 if ($year   !== '') { $where[] = 'class_year = :year';   $params[':year']   = $year; }
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
-if ($missing_po)    { $where[] = "(cadet_po_box IS NULL OR cadet_po_box = '')"; }
+$missing_sql = missing_data_sql($missing);
+if ($missing_sql) { $where[] = $missing_sql; }
 
 $stmt = $pdo->prepare('SELECT * FROM members WHERE ' . implode(' AND ', $where)
     . ' ORDER BY class_year, cadet_last_name');
@@ -85,10 +86,12 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
     </select>
   </div>
   <div>
-    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:flex;align-items:center;gap:.4rem;cursor:pointer">
-      <input type="checkbox" name="missing_po" value="1" <?= $missing_po?'checked':''?> style="width:auto">
-      Missing PO Box
-    </label>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Missing Data</label>
+    <select name="missing">
+      <?php foreach (MISSING_DATA_OPTIONS as $val => $label): ?>
+        <option value="<?= h($val) ?>" <?= $missing===$val?'selected':''?>><?= h($label) ?></option>
+      <?php endforeach; ?>
+    </select>
   </div>
   <button type="submit">Filter</button>
 </form>

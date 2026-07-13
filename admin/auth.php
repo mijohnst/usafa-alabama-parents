@@ -353,6 +353,28 @@ const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', '
 const CLASS_YEARS     = ['', '2026', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
 const CLASS_YEAR_LIST = ['2026', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
 
+// "Missing Data" filter — shared by the Member Directory and Compose Email
+// pages so both stay in sync on the same set of options/SQL.
+const MISSING_DATA_OPTIONS = [
+    ''            => 'Any',
+    'po_box'      => 'PO Box',
+    'cadet_email' => 'Cadet Email',
+    'cadet_phone' => 'Cadet Phone',
+    'birthday'    => 'Birthday',
+    'squadron'    => 'Squadron',
+];
+
+function missing_data_sql(string $key): ?string {
+    switch ($key) {
+        case 'po_box':      return "(cadet_po_box IS NULL OR cadet_po_box = '')";
+        case 'cadet_email': return "(cadet_email IS NULL OR cadet_email = '')";
+        case 'cadet_phone': return "(cadet_cell IS NULL OR cadet_cell = '')";
+        case 'birthday':    return '(cadet_birthday IS NULL)';
+        case 'squadron':    return "(bct_squadron IS NULL OR bct_squadron = '') AND (fall_squadron IS NULL OR fall_squadron = '') AND (squadron_yr2_4 IS NULL OR squadron_yr2_4 = '')";
+        default:            return null;
+    }
+}
+
 const FIELDS = [
     'class_year','cadet_last_name','cadet_first_name','cadet_middle_name','nickname','cadet_birthday','cadet_po_box',
     'cadet_email','cadet_cell','bct_squadron','bct_flight','fall_squadron','squadron_yr2_4',
