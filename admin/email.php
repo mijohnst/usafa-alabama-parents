@@ -17,7 +17,7 @@ function extract_emails(string $raw): array {
 }
 
 // ── Query DB to build recipient list ──────────────────────────────────────
-function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type): string {
+function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, bool $missing_po = false): string {
     $where  = ['1=1'];
     $params = [];
 
@@ -29,6 +29,7 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     if ($region !== '') { $where[] = 'al_region = :region'; $params[':region'] = $region; }
     if ($paid   === '1') $where[] = 'membership_paid = 1';
     if ($paid   === '0') $where[] = 'membership_paid = 0';
+    if ($missing_po)     $where[] = "(cadet_po_box IS NULL OR cadet_po_box = '')";
 
     $sql  = 'SELECT parent1_email, parent2_email, cadet_email, parent1_is_board_member, parent2_is_board_member
              FROM members WHERE ' . implode(' AND ', $where);
@@ -174,14 +175,15 @@ $errors      = [];
 $valid_count = 0;
 
 // Filter state
-$f_years  = $_POST['f_years']  ?? [];
-$f_region = $_POST['f_region'] ?? '';
-$f_paid   = $_POST['f_paid']   ?? '';
-$f_type   = $_POST['f_type']   ?? 'parent_both';
+$f_years      = $_POST['f_years']  ?? [];
+$f_region     = $_POST['f_region'] ?? '';
+$f_paid       = $_POST['f_paid']   ?? '';
+$f_type       = $_POST['f_type']   ?? 'parent_both';
+$f_missing_po = !empty($_POST['f_missing_po']);
 
 // ── Handle load recipients ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['load'])) {
-    $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type);
+    $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type, $f_missing_po);
 }
 
 // ── Handle send ───────────────────────────────────────────────────────────
@@ -378,6 +380,10 @@ admin_header('Compose Email');
       </div>
 
     </div>
+    <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:#1a2332;margin-top:.75rem;cursor:pointer">
+      <input type="checkbox" name="f_missing_po" value="1" <?= $f_missing_po?'checked':''?> style="width:auto">
+      Missing PO Box only
+    </label>
   </form>
 </div>
 
@@ -389,6 +395,7 @@ admin_header('Compose Email');
     <input type="hidden" name="f_region"  value="<?= h($f_region) ?>">
     <input type="hidden" name="f_paid"    value="<?= h($f_paid) ?>">
     <input type="hidden" name="f_type"    value="<?= h($f_type) ?>">
+    <?php if ($f_missing_po): ?><input type="hidden" name="f_missing_po" value="1"><?php endif; ?>
 
     <div class="form-group" style="max-width:360px">
       <label>From</label>
@@ -479,6 +486,7 @@ function resetFilter() {
   document.querySelector('select[name=f_region]').value = '';
   document.querySelector('select[name=f_paid]').value   = '';
   document.querySelector('select[name=f_type]').value   = 'parent_both';
+  document.querySelector('input[name=f_missing_po]').checked = false;
   document.getElementById('recipients').value = '';
   updateCount();
   document.querySelector('input[name=subject]').value = '';
