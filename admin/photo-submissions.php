@@ -23,11 +23,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $next_sort = (int)$pdo->query('SELECT COALESCE(MAX(sort_order),0)+10 FROM site_photos')->fetchColumn();
                 $pdo->prepare('INSERT INTO site_photos (filename,caption,sort_order,active) VALUES (?,?,?,1)')
                     ->execute([$sub['filename'], $sub['caption'], $next_sort]);
-                $pdo->prepare('UPDATE photo_submissions SET status=\'approved\', reviewed_by=?, reviewed_at=NOW() WHERE id=?')
-                    ->execute([$_SESSION['user_id'] ?? null, $id]);
+                $upd = $pdo->prepare('UPDATE photo_submissions SET status=\'approved\', reviewed_by=?, reviewed_at=NOW() WHERE id=?');
+                $upd->execute([$_SESSION['user_id'] ?? null, $id]);
                 $max_photos = get_gallery_limit($pdo);
                 gallery_cleanup($pdo, $photos_dir, $max_photos);
-                flash('success', 'Photo approved and added to the Member Photos slideshow.');
+                if ($upd->rowCount() > 0) {
+                    flash('success', 'Photo approved and added to the Member Photos slideshow.');
+                } else {
+                    flash('error', "Photo was added to the slideshow, but its submission record (id=$id) didn't update to Approved — the submitter may still see it as Pending. Contact tech support with this id.");
+                }
             } else {
                 flash('error', 'The submitted photo file is missing on the server — could not approve. Contact tech support.');
             }
