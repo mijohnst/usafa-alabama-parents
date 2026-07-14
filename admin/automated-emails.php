@@ -51,6 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $items = $pdo->query('SELECT * FROM automated_emails ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
 
+$last_run = null;
+try {
+    $last_run = $pdo->query('SELECT * FROM automated_email_runs WHERE id=1')->fetch(PDO::FETCH_ASSOC) ?: null;
+} catch (PDOException $e) {
+    // migrate_automated_email_last_run.sql hasn't been run yet — just skip the panel
+}
+
 admin_header('Automated Emails');
 echo show_flash();
 ?>
@@ -77,6 +84,24 @@ echo show_flash();
   <code>{dues_amount}</code>, <code>{meeting_title}</code>, <code>{meeting_date}</code>,
   <code>{meeting_location}</code>, <code>{meeting_link}</code>.
 </p>
+
+<?php
+$is_stale = $last_run && (strtotime($last_run['ran_at']) < strtotime('-26 hours'));
+$lr_bg    = !$last_run ? '#fff3cd' : ($is_stale ? '#ffebee' : '#e8f5e9');
+$lr_text  = !$last_run ? '#5f4c00' : ($is_stale ? '#c62828' : '#1b5e20');
+?>
+<div style="background:<?= $lr_bg ?>;color:<?= $lr_text ?>;border-radius:6px;padding:.75rem 1rem;font-size:.82rem;margin-bottom:1.5rem">
+  <?php if (!$last_run): ?>
+    ⚠️ No cron run has been recorded yet — either the daily cron job hasn't run since this tracker was added, or <code>migrate_automated_email_last_run.sql</code> hasn't been run in phpMyAdmin.
+  <?php else: ?>
+    <?= $is_stale ? '⚠️' : '✓' ?> Last cron run: <strong><?= date('M j, Y g:i A', strtotime($last_run['ran_at'])) ?></strong><?= $is_stale ? ' — more than a day ago, check that the cron job is still running' : '' ?>
+    &mdash; Birthdays: <?= (int)$last_run['birthdays'] ?>,
+    Dues renewals: <?= (int)$last_run['dues_renewals'] ?>,
+    Meeting reminders: <?= (int)$last_run['meeting_reminders'] ?>,
+    New member welcomes: <?= (int)$last_run['new_member_welcomes'] ?>,
+    Lapsed re-engagements: <?= (int)$last_run['lapsed_reengagements'] ?>
+  <?php endif; ?>
+</div>
 
 <?php foreach ($items as $item): $key = $item['email_key']; ?>
 <div class="ae-card">

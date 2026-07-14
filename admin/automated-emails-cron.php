@@ -49,3 +49,20 @@ echo date('Y-m-d H:i:s') . " — Automated emails:\n";
 foreach ($results as $label => $count) {
     echo "  $label: $count\n";
 }
+
+// Record this run so it can be checked from admin/automated-emails.php
+// instead of depending on cron's own output-mailing, which mail providers
+// can silently reject as spam (see migrate_automated_email_last_run.sql).
+try {
+    $pdo->prepare(
+        'INSERT INTO automated_email_runs (id, ran_at, birthdays, dues_renewals, meeting_reminders, new_member_welcomes, lapsed_reengagements)
+         VALUES (1, NOW(), ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE ran_at=VALUES(ran_at), birthdays=VALUES(birthdays), dues_renewals=VALUES(dues_renewals),
+             meeting_reminders=VALUES(meeting_reminders), new_member_welcomes=VALUES(new_member_welcomes), lapsed_reengagements=VALUES(lapsed_reengagements)'
+    )->execute([
+        $results['Birthdays'], $results['Dues renewals'], $results['Meeting reminders'],
+        $results['New member welcomes'], $results['Lapsed re-engagements'],
+    ]);
+} catch (PDOException $e) {
+    echo "(Could not record last-run status — has migrate_automated_email_last_run.sql been run? " . $e->getMessage() . ")\n";
+}
