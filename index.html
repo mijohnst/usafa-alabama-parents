@@ -57,7 +57,7 @@
     #membership .section-title{color:var(--navy);}
     #membership .section-label{color:var(--blue);}
     #membership .divider{background:linear-gradient(90deg,var(--blue),transparent);}
-    .membership-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:1rem;align-items:stretch;}
+    .membership-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;margin-top:1rem;align-items:stretch;}
     .membership-card{background:var(--white);border:1px solid rgba(0,53,148,.15);border-radius:4px;padding:2.5rem;border-left:3px solid var(--blue);display:flex;flex-direction:column;}
     .membership-card h3{font-family:var(--font-display);font-size:1.2rem;color:var(--navy);margin-bottom:1rem;}
     .membership-card p{font-size:.9rem;color:#5a6a7a;margin-bottom:1rem;}
@@ -73,6 +73,7 @@
     .payment-portal p{font-size:.85rem;color:var(--gray);margin-bottom:1rem;}
     .payment-portal .btn-pay{background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:.85rem 2.5rem;font-size:.85rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;width:100%;display:block;text-align:center;}
     .payment-portal .btn-pay:hover{background:linear-gradient(180deg,#2166cc 0%,#003080 100%);box-shadow:0 2px 0 #001535,0 4px 8px rgba(0,0,0,.2);top:2px;}
+    @media(max-width:900px){.membership-grid{grid-template-columns:1fr 1fr;}}
     @media(max-width:640px){.membership-grid{grid-template-columns:1fr;}}
 
     /* EVENTS */
@@ -386,6 +387,16 @@
         <div class="payment-portal" style="margin-top:auto;">
           <p>Secure online donation.</p>
           <a href="payment.html" class="btn btn-pay">MAKE A DONATION</a>
+        </div>
+      </div>
+      <div class="membership-card">
+        <h3>Parents Weekend Shirt</h3>
+        <div class="program-icon" style="font-size:2rem;margin-bottom:.75rem;">👕</div>
+        <p>Wild Blue Merch is selling an official USAFA Parents Weekend t-shirt to unify families and show support &mdash; and they're donating $2 per shirt plus 20% of proceeds back to our club.</p>
+        <p style="margin-top:.75rem;">Order yours before Parents Weekend and help us make this an annual tradition.</p>
+        <div class="payment-portal" style="margin-top:auto;">
+          <p>Fulfilled by Wild Blue Merch (external site).</p>
+          <a href="https://wildbluemerch.com/products/the-parents-weekend-shirt" class="btn btn-pay" target="_blank" rel="noopener">SHOP THE SHIRT</a>
         </div>
       </div>
     </div>
