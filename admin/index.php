@@ -107,9 +107,13 @@ $squadrons = $pdo->query(
 )->fetchAll(PDO::FETCH_COLUMN);
 
 // ── Dashboard stats ────────────────────────────────────────────────────────
+// Graduated classes (class_year = 'Graduate') are excluded from these
+// totals — graduating a class relabels it rather than archiving it, so
+// without this exclusion "active roster" would keep counting families
+// whose cadet has already graduated.
 $stats_rows = $pdo->query(
     "SELECT class_year, membership_paid, COUNT(*) as cnt
-     FROM members WHERE archived = 0 GROUP BY class_year, membership_paid ORDER BY class_year"
+     FROM members WHERE archived = 0 AND class_year <> 'Graduate' GROUP BY class_year, membership_paid ORDER BY class_year"
 )->fetchAll();
 
 $stat_total = 0; $stat_paid = 0; $stat_by_year = []; $stat_paid_by_year = [];
@@ -120,7 +124,7 @@ foreach ($stats_rows as $s) {
     if ($s['membership_paid']) $stat_paid_by_year[$s['class_year']] = ($stat_paid_by_year[$s['class_year']] ?? 0) + $s['cnt'];
 }
 $stat_unpaid = (int)$pdo->query(
-    "SELECT COUNT(*) FROM members WHERE archived = 0 AND membership_paid = 0"
+    "SELECT COUNT(*) FROM members WHERE archived = 0 AND class_year <> 'Graduate' AND membership_paid = 0"
 )->fetchColumn();
 
 // Class-year breakdown row shows only the 4 currently-enrolled classes plus
