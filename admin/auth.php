@@ -1,6 +1,13 @@
 <?php
 // Shared utilities — never served directly (blocked by .htaccess)
 
+// The club operates in Alabama (Central) — anchor PHP's clock here
+// explicitly rather than trusting the server's default (often UTC on
+// shared hosting), which otherwise rolls "today" over hours before it
+// actually is locally and throws off every date-based feature (upcoming
+// birthdays, dues deadlines, etc).
+date_default_timezone_set('America/Chicago');
+
 // Never leak raw PHP warnings/notices/deprecations onto the page for
 // visitors to see (exposes server file paths and looks broken) — still
 // log everything server-side so issues remain diagnosable.

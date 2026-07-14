@@ -7,6 +7,11 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+// Same reasoning as auth.php — this file is also the entry point for the
+// CLI cron job, which never includes auth.php, so the timezone needs to be
+// anchored here too, independently.
+date_default_timezone_set('America/Chicago');
+
 define('CLUB_NAME',  'USAFA Parents Club of Alabama');
 define('CLUB_FROM',  'USAFA Parents Club of Alabama <info@alabamafalcons.org>');
 define('ADMIN_URL',  'https://alabamafalcons.org/admin/');
@@ -66,12 +71,17 @@ function send_birthday_emails(PDO $pdo): int {
     if (!$cadet_on && !$parent_on) return 0;
 
     try {
-        $rows = $pdo->query(
+        // Bind PHP's own month/day rather than trusting MySQL's CURDATE() —
+        // the two can disagree if the DB server's timezone isn't the same
+        // as the one set above, silently shifting "today" by hours.
+        $stmt = $pdo->prepare(
             "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, nickname, cadet_email, parent1_email, parent2_email
              FROM members
              WHERE archived = 0 AND cadet_birthday IS NOT NULL
-               AND MONTH(cadet_birthday) = MONTH(CURDATE()) AND DAY(cadet_birthday) = DAY(CURDATE())"
-        )->fetchAll(PDO::FETCH_ASSOC);
+               AND MONTH(cadet_birthday) = :month AND DAY(cadet_birthday) = :day"
+        );
+        $stmt->execute(['month' => (int)date('n'), 'day' => (int)date('j')]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_birthday_emails query failed — ' . $e->getMessage());
         return 0;
@@ -202,9 +212,9 @@ function send_new_member_welcome(PDO $pdo): int {
             "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, parent1_first_name, parent1_email, parent2_email
              FROM members
              WHERE archived = 0 AND created_at IS NOT NULL
-               AND DATEDIFF(CURDATE(), created_at) BETWEEN ? AND ?"
+               AND DATEDIFF(?, created_at) BETWEEN ? AND ?"
         );
-        $stmt->execute([$offset, $offset + 6]); // small window so a missed cron day doesn't skip anyone
+        $stmt->execute([date('Y-m-d'), $offset, $offset + 6]); // small window so a missed cron day doesn't skip anyone
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_new_member_welcome query failed — ' . $e->getMessage());
@@ -238,7 +248,9 @@ function send_meeting_reminders(PDO $pdo): int {
     if (!$cfg || !$cfg['enabled']) return 0;
 
     try {
-        $meetings = $pdo->query("SELECT * FROM club_meetings WHERE meeting_date = CURDATE()")->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare("SELECT * FROM club_meetings WHERE meeting_date = ?");
+        $stmt->execute([date('Y-m-d')]);
+        $meetings = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_meeting_reminders query failed — ' . $e->getMessage());
         return 0;

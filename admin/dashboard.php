@@ -94,10 +94,14 @@ $stats['my_open_tickets'] = (int)$mt_stmt->fetchColumn();
 $bday_soon = 0;
 if (!is_member()) {
     try {
-        $b_stmt = $pdo->query("SELECT COUNT(*) FROM members WHERE archived=0
+        // Bind PHP's own date rather than MySQL's NOW() — the two can
+        // disagree if the DB server's timezone isn't Central, silently
+        // shifting "today" by hours.
+        $b_stmt = $pdo->prepare("SELECT COUNT(*) FROM members WHERE archived=0
             AND cadet_birthday IS NOT NULL AND cadet_birthday!=''
-            AND (DAYOFYEAR(cadet_birthday)-DAYOFYEAR(NOW()) BETWEEN 0 AND 7
-                 OR DAYOFYEAR(cadet_birthday)-DAYOFYEAR(NOW())+365 BETWEEN 0 AND 7)");
+            AND (DAYOFYEAR(cadet_birthday)-DAYOFYEAR(:today) BETWEEN 0 AND 7
+                 OR DAYOFYEAR(cadet_birthday)-DAYOFYEAR(:today)+365 BETWEEN 0 AND 7)");
+        $b_stmt->execute(['today' => date('Y-m-d')]);
         $bday_soon = (int)$b_stmt->fetchColumn();
     } catch(Exception $e) {}
 }
