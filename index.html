@@ -1069,5 +1069,26 @@ if (document.readyState === 'loading') {
   });
 })();
 </script>
+
+<script>
+// Leadership, Events, USAFA News, and Photos all replace short "Loading…"
+// placeholders with much taller real content after an async fetch. If this
+// page is opened fresh with a hash like #membership already in the URL
+// (rather than clicked while already on the page), the browser's native
+// jump-to-anchor fires before that content grows in — landing on whatever
+// section ends up at that original, too-short scroll position instead.
+// Re-scroll to the real target once things have had time to settle.
+(function() {
+  if (!location.hash) return;
+  var target;
+  try { target = document.querySelector(location.hash); } catch (e) { return; }
+  if (!target) return;
+  function rescroll() { target.scrollIntoView(); }
+  window.addEventListener('load', function() {
+    setTimeout(rescroll, 400);
+    setTimeout(rescroll, 1200);
+  });
+})();
+</script>
 </body>
 </html>
