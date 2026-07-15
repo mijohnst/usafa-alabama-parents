@@ -50,20 +50,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cid         = (int)($_POST['candidate_id'] ?? 0);
         $election_id = (int)($_POST['election_id'] ?? 0);
         $position    = $_POST['position'] ?? '';
-        $name        = trim($_POST['name'] ?? '');
         $bio         = trim($_POST['bio'] ?? '');
+
+        // The picked value is "<member_id>:<parent_slot>" — resolve the
+        // candidate's name server-side from the member record rather than
+        // trusting a client-supplied name, so it always matches the roster.
+        $member_id = 0; $slot = 0; $name = '';
+        if (preg_match('/^(\d+):([12])$/', trim($_POST['member_pick'] ?? ''), $mm)) {
+            $ms = $pdo->prepare('SELECT * FROM members WHERE id=? AND archived=0');
+            $ms->execute([(int)$mm[1]]);
+            if ($mrow = $ms->fetch(PDO::FETCH_ASSOC)) {
+                $member_id = (int)$mm[1];
+                $slot      = (int)$mm[2];
+                $name      = trim(($mrow["parent{$slot}_first_name"] ?? '') . ' ' . ($mrow["parent{$slot}_last_name"] ?? ''));
+            }
+        }
 
         if (in_array($position, ELECTION_POSITIONS, true) && $name && $election_id) {
             if ($cid) {
-                $pdo->prepare('UPDATE election_candidates SET name=?, bio=? WHERE id=? AND election_id=?')
-                    ->execute([$name, $bio, $cid, $election_id]);
+                $pdo->prepare('UPDATE election_candidates SET member_id=?, parent_slot=?, name=?, bio=? WHERE id=? AND election_id=?')
+                    ->execute([$member_id, $slot, $name, $bio, $cid, $election_id]);
             } else {
-                $pdo->prepare('INSERT INTO election_candidates (election_id, position, name, bio) VALUES (?,?,?,?)')
-                    ->execute([$election_id, $position, $name, $bio]);
+                $pdo->prepare('INSERT INTO election_candidates (election_id, position, member_id, parent_slot, name, bio) VALUES (?,?,?,?,?,?)')
+                    ->execute([$election_id, $position, $member_id, $slot, $name, $bio]);
             }
             flash('success', 'Candidate saved.');
         } else {
-            flash('error', 'Candidate name is required.');
+            flash('error', 'Choose a member to add as a candidate.');
         }
         header('Location: elections.php?manage=' . $election_id); exit;
     } elseif ($action === 'delete_candidate') {
@@ -143,6 +156,28 @@ echo show_flash();
     $edit_candidate_id = isset($_GET['edit_candidate']) ? (int)$_GET['edit_candidate'] : 0;
     $edit_candidate = null;
     foreach ($candidates as $c) if ((int)$c['id'] === $edit_candidate_id) { $edit_candidate = $c; break; }
+
+    // Every parent on an active member record, as a "<member_id>:<slot>" pick
+    // list — mirrors how parent1_is_board_member / parent2_is_board_member
+    // already tag individual parents on a family record.
+    $parent_options = [];
+    $mem_rows = $pdo->query(
+        "SELECT id, cadet_first_name, cadet_last_name, class_year,
+                parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name
+         FROM members WHERE archived=0"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($mem_rows as $m) {
+        $cadet = trim($m['cadet_first_name'] . ' ' . $m['cadet_last_name']);
+        foreach ([1, 2] as $slot) {
+            $fn = trim($m["parent{$slot}_first_name"] ?? '');
+            $ln = trim($m["parent{$slot}_last_name"] ?? '');
+            if ($fn === '' && $ln === '') continue;
+            $label = trim("$ln, $fn");
+            if ($cadet !== '') $label .= ' — ' . $cadet . (!empty($m['class_year']) ? ' (' . $m['class_year'] . ')' : '');
+            $parent_options[] = ['value' => $m['id'] . ':' . $slot, 'label' => $label];
+        }
+    }
+    usort($parent_options, fn($a, $b) => strcasecmp($a['label'], $b['label']));
 ?>
   <div class="page-head">
     <h1><?= h($manage['title']) ?></h1>
@@ -213,8 +248,17 @@ echo show_flash();
       <input type="hidden" name="election_id" value="<?= $manage_id ?>">
       <input type="hidden" name="position" value="<?= h($position) ?>">
       <?php if ($ec): ?><input type="hidden" name="candidate_id" value="<?= $ec['id'] ?>"><?php endif; ?>
+      <?php $ec_pick = $ec ? $ec['member_id'] . ':' . $ec['parent_slot'] : ''; ?>
       <div class="form-row col-3">
-        <div class="form-group"><label>Name</label><input name="name" value="<?= h($ec['name'] ?? '') ?>" placeholder="Candidate name"></div>
+        <div class="form-group">
+          <label>Member</label>
+          <select name="member_pick">
+            <option value="">— select a member —</option>
+            <?php foreach ($parent_options as $opt): ?>
+              <option value="<?= h($opt['value']) ?>" <?= $opt['value'] === $ec_pick ? 'selected' : '' ?>><?= h($opt['label']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
         <div class="form-group" style="grid-column:span 2"><label>Short Bio <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label><input name="bio" value="<?= h($ec['bio'] ?? '') ?>" placeholder="A sentence or two"></div>
       </div>
       <button type="submit" class="btn btn-secondary btn-sm"><?= $ec ? 'Save Changes' : '+ Add Candidate' ?></button>
