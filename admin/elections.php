@@ -79,6 +79,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'Choose a member to add as a candidate.');
         }
         header('Location: elections.php?manage=' . $election_id); exit;
+    } elseif ($action === 'approve_candidate') {
+        $cid         = (int)($_POST['candidate_id'] ?? 0);
+        $election_id = (int)($_POST['election_id'] ?? 0);
+        if ($cid) {
+            $pdo->prepare("UPDATE election_candidates SET status='approved' WHERE id=? AND election_id=?")->execute([$cid, $election_id]);
+            flash('success', 'Nomination approved.');
+        }
+        header('Location: elections.php?manage=' . $election_id); exit;
     } elseif ($action === 'delete_candidate') {
         $cid         = (int)($_POST['candidate_id'] ?? 0);
         $election_id = (int)($_POST['election_id'] ?? 0);
@@ -178,6 +186,7 @@ echo show_flash();
         }
     }
     usort($parent_options, fn($a, $b) => strcasecmp($a['label'], $b['label']));
+    $pending_count = count(array_filter($candidates, fn($c) => $c['status'] === 'pending'));
 ?>
   <div class="page-head">
     <h1><?= h($manage['title']) ?></h1>
@@ -193,6 +202,9 @@ echo show_flash();
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
       <a href="elections.php?edit=<?= $manage_id ?>" class="btn btn-secondary btn-sm">Edit Details</a>
       <?php if ($manage['status'] === 'draft'): ?>
+        <?php if ($pending_count > 0): ?>
+          <span style="font-size:.78rem;color:#5f4c00;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.3rem .6rem"><?= $pending_count ?> nomination<?= $pending_count == 1 ? '' : 's' ?> still pending approval — won't appear on the ballot until approved</span>
+        <?php endif; ?>
         <form method="POST" style="display:flex;gap:.5rem;align-items:center;margin:0" onsubmit="return confirm('Open voting now? Candidates can’t be changed once voting is open.')">
           <?= csrf_field() ?><input type="hidden" name="action" value="open_voting"><input type="hidden" name="id" value="<?= $manage_id ?>">
           <label style="display:flex;align-items:center;gap:.35rem;font-weight:400;text-transform:none;font-size:.82rem;color:#5a6a7a;cursor:pointer">
@@ -222,17 +234,25 @@ echo show_flash();
       <div class="cand-row" style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem">
         <div>
           <strong style="color:#1a2332"><?= h($c['name']) ?></strong>
+          <?php if ($c['status'] === 'pending'): ?><span class="badge" style="background:#fff3cd;color:#5f4c00;margin-left:.4rem">Pending Approval</span><?php endif; ?>
           <?php if ($c['bio']): ?><div style="font-size:.82rem;color:#5a6a7a;margin-top:.1rem"><?= h($c['bio']) ?></div><?php endif; ?>
         </div>
         <?php if ($manage['status'] !== 'draft'): ?>
           <span style="font-weight:700;color:#003594;white-space:nowrap"><?= $vote_counts[$c['id']] ?? 0 ?> vote<?= (($vote_counts[$c['id']] ?? 0) == 1 ? '' : 's') ?></span>
         <?php else: ?>
           <div class="btn-group" style="flex-shrink:0">
+            <?php if ($c['status'] === 'pending'): ?>
+              <form method="POST" style="margin:0">
+                <?= csrf_field() ?><input type="hidden" name="action" value="approve_candidate">
+                <input type="hidden" name="candidate_id" value="<?= $c['id'] ?>"><input type="hidden" name="election_id" value="<?= $manage_id ?>">
+                <button type="submit" class="btn btn-primary btn-sm">Approve</button>
+              </form>
+            <?php endif; ?>
             <a href="elections.php?manage=<?= $manage_id ?>&edit_candidate=<?= $c['id'] ?>#candidate-form-<?= h(str_replace(' ', '-', $position)) ?>" class="btn btn-secondary btn-sm">Edit</a>
-            <form method="POST" style="margin:0" onsubmit="return confirm('Remove this candidate?')">
+            <form method="POST" style="margin:0" onsubmit="return confirm('<?= $c['status'] === 'pending' ? 'Reject' : 'Remove' ?> this candidate?')">
               <?= csrf_field() ?><input type="hidden" name="action" value="delete_candidate">
               <input type="hidden" name="candidate_id" value="<?= $c['id'] ?>"><input type="hidden" name="election_id" value="<?= $manage_id ?>">
-              <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+              <button type="submit" class="btn btn-danger btn-sm"><?= $c['status'] === 'pending' ? 'Reject' : 'Remove' ?></button>
             </form>
           </div>
         <?php endif; ?>
