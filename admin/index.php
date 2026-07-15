@@ -22,6 +22,24 @@ if (!in_array($sort, $allowed_sorts)) $sort = 'class_year';
 if (!in_array($dir, ['asc','desc']))  $dir  = 'asc';
 $next_dir = $dir === 'asc' ? 'desc' : 'asc';
 
+// Possible-duplicate detection — same last name + class year among active
+// members. Compared in PHP against a normalized last name (punctuation and
+// whitespace stripped) rather than SQL `=`, so "Jimmerson, Jr" and
+// "Jimmerson, Jr." are still caught as likely the same family — the same
+// gap that let that exact pair slip through the public application form's
+// dedup check. Computed once here and reused by the ?dup=1 filter, the
+// per-row "DUP?" badge, and the alert count below.
+$dup_ids = []; // member id => true, for every member that's part of a group
+$dup_groups = [];
+foreach ($pdo->query("SELECT id, cadet_last_name, class_year FROM members WHERE archived = 0")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $key = normalize_name($row['cadet_last_name']) . '|' . $row['class_year'];
+    $dup_groups[$key][] = (int)$row['id'];
+}
+foreach ($dup_groups as $ids) {
+    if (count($ids) > 1) foreach ($ids as $id) $dup_ids[$id] = true;
+}
+$dup_count = count($dup_ids);
+
 $where  = ['1=1'];
 $params = [];
 
@@ -48,8 +66,13 @@ if ($squadron !== '') {
 }
 if ($split_only) { $where[] = "cadet_first_name LIKE '% %'"; }
 if ($dup_only) {
-    $where[] = "EXISTS (SELECT 1 FROM members m2 WHERE m2.archived = 0 AND m2.id <> members.id
-                         AND m2.cadet_last_name = members.cadet_last_name AND m2.class_year = members.class_year)";
+    if ($dup_ids) {
+        $ph = [];
+        foreach (array_keys($dup_ids) as $i => $id) { $ph[] = ":dup$i"; $params[":dup$i"] = $id; }
+        $where[] = 'id IN (' . implode(',', $ph) . ')';
+    } else {
+        $where[] = '1=0';
+    }
 }
 $where[] = $archived === '1' ? 'archived = 1' : 'archived = 0';
 
@@ -63,14 +86,6 @@ $sql = 'SELECT * FROM members WHERE ' . implode(' AND ', $where) . " ORDER BY $o
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $members = $stmt->fetchAll();
-
-// Flag rows sharing a last name + class year with another row in this same
-// result set, so a "possible duplicate" badge can be shown while browsing.
-$dup_key_counts = [];
-foreach ($members as $m) {
-    $k = strtolower($m['cadet_last_name']) . '|' . $m['class_year'];
-    $dup_key_counts[$k] = ($dup_key_counts[$k] ?? 0) + 1;
-}
 
 // ── CSV export ─────────────────────────────────────────────────────────────
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
@@ -140,15 +155,6 @@ $new_this_month = (int)$pdo->query(
 // "First Middle" value left over from before the name fields were separated.
 $needs_split_count = (int)$pdo->query(
     "SELECT COUNT(*) FROM members WHERE archived = 0 AND cadet_first_name LIKE '% %'"
-)->fetchColumn();
-
-// Possible duplicate cadets — same last name + class year appearing more than once.
-$dup_count = (int)$pdo->query(
-    "SELECT COUNT(*) FROM members m WHERE archived = 0 AND EXISTS (
-        SELECT 1 FROM members m2
-        WHERE m2.archived = 0 AND m2.id <> m.id
-          AND m2.cadet_last_name = m.cadet_last_name AND m2.class_year = m.class_year
-    )"
 )->fetchColumn();
 
 // Dues progress bar (active years 2027-2030 only)
@@ -482,7 +488,7 @@ function setYrs(state) {
       <?php endif; ?>
       <td><?= h($m['class_year']) ?></td>
       <td>
-        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><?php if (strpos(trim($m['cadet_first_name']), ' ') !== false): ?> <span title="First Name still contains a space — likely needs to be split into First/Middle" style="font-size:.65rem;font-weight:700;color:#5f4c00;background:#fff3cd;padding:.05rem .35rem;border-radius:3px">✂️ SPLIT?</span><?php endif; ?><?php if (($dup_key_counts[strtolower($m['cadet_last_name']) . '|' . $m['class_year']] ?? 0) > 1): ?> <span title="Another active cadet shares this last name + class year — possible duplicate" style="font-size:.65rem;font-weight:700;color:#8a1425;background:#fde0e0;padding:.05rem .35rem;border-radius:3px">👥 DUP?</span><?php endif; ?><br>
+        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><?php if (strpos(trim($m['cadet_first_name']), ' ') !== false): ?> <span title="First Name still contains a space — likely needs to be split into First/Middle" style="font-size:.65rem;font-weight:700;color:#5f4c00;background:#fff3cd;padding:.05rem .35rem;border-radius:3px">✂️ SPLIT?</span><?php endif; ?><?php if (isset($dup_ids[(int)$m['id']])): ?> <span title="Another active cadet shares this last name + class year — possible duplicate" style="font-size:.65rem;font-weight:700;color:#8a1425;background:#fde0e0;padding:.05rem .35rem;border-radius:3px">👥 DUP?</span><?php endif; ?><br>
         <?php if ($m['cadet_email']): ?><a href="mailto:<?= h($m['cadet_email']) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($m['cadet_email']) ?></a><?php endif; ?>
       </td>
       <td><?php if ($m['al_region']): ?><span class="badge <?= h($region_cls) ?>"><?= h($m['al_region']) ?></span><?php endif; ?></td>
