@@ -1,6 +1,12 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_login();
+// This page shows un-redacted contact info (parent emails/cells, dues
+// status) for every member regardless of directory_consent — that consent
+// field is only honored by directory.php, the member-safe printable
+// roster. Gate here to whoever can act on that data: staff who manage
+// members, plus Treasurer (who marks dues paid/unpaid from this same page).
+if (!can_mark_dues()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 // ── Filters ────────────────────────────────────────────────────────────────

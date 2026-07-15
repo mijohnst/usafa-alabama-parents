@@ -37,6 +37,7 @@ if (!in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
 }
 
 header('Content-Type: ' . $mime);
+header('X-Content-Type-Options: nosniff');
 header('Content-Length: ' . filesize($file));
 header('Cache-Control: private, no-store');
 readfile($file);

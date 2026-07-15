@@ -122,9 +122,13 @@ $sections = [];
 // if that ever stops being true (e.g. a combined officer/treasurer role).
 $sponsors_tile_added = false;
 
-// Members tile for all roles
-$mem_total = $stats['members']['total'] ?? null;
-$sections['For You'][] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_total.' active':'View roster','href'=>'index.php','color'=>'#002554'];
+// Members tile — full admin roster with un-redacted contact info, so it's
+// staff/Treasurer only (see index.php's own guard). Regular members already
+// have the consent-filtered "Directory" tile below for the same purpose.
+if (can_mark_dues()) {
+    $mem_total = $stats['members']['total'] ?? null;
+    $sections['For You'][] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_total.' active':'View roster','href'=>'index.php','color'=>'#002554'];
+}
 
 // My Membership — only for accounts linked to (or email-matched to) a
 // cadet family record. Staff-only accounts with no family match won't see it.

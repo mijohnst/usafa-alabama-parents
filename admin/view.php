@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_login();
+// Same audience as index.php (which every row here is reached from) — this
+// page shows a member's full home address, birthday, and contact info with
+// no consent filtering, so it's restricted to staff/Treasurer, not every
+// logged-in portal account.
+if (!can_mark_dues()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 $id = (int)($_GET['id'] ?? 0);

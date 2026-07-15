@@ -40,6 +40,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $active               = isset($_POST['active'])             ? 1 : 0;
         $new_logo             = save_logo('logo');
         if (!$name) $errors[] = 'Sponsor name is required.';
+        // The public sponsorship page inserts this straight into an <a href>
+        // — HTML-escaping alone doesn't stop a javascript: URL from being a
+        // valid (and dangerous) href value, so the scheme itself needs to be
+        // restricted to what a "visit our sponsor" link should ever be.
+        if ($website_url !== '' && !preg_match('#^https?://#i', $website_url)) {
+            $errors[] = 'Sponsor website must start with http:// or https://.';
+        }
         if (empty($errors)) {
             if ($id) {
                 $cur = $pdo->prepare('SELECT logo_filename FROM sponsors WHERE id=?'); $cur->execute([$id]); $existing=$cur->fetchColumn();

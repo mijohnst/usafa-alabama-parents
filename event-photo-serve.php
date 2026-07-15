@@ -4,7 +4,11 @@
 // hidden albums in the admin panel).
 require_once __DIR__ . '/admin/auth.php';
 start_session();
-$is_admin_session = !empty($_SESSION['logged_in']);
+// Was previously "any logged-in session" — that let a plain member account
+// bypass the visible=1 check and view hidden/unpublished albums just by
+// knowing a filename. Hidden-album preview should be limited to whoever can
+// actually manage albums (event-albums.php's own guard), same as admin.
+$is_admin_session = !empty($_SESSION['logged_in']) && can_manage_members();
 $pdo = get_pdo();
 
 $filename = basename($_GET['f'] ?? '');
@@ -36,6 +40,7 @@ if (!in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
 }
 
 header('Content-Type: ' . $mime);
+header('X-Content-Type-Options: nosniff');
 header('Content-Length: ' . filesize($file));
 header('Cache-Control: ' . ($is_admin_session ? 'private, no-store' : 'public, max-age=86400'));
 readfile($file);
