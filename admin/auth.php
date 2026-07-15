@@ -227,6 +227,13 @@ function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+// Strips punctuation/whitespace differences so "Jimmerson, Jr" and
+// "Jimmerson, Jr." compare equal for duplicate-member detection.
+function normalize_name(string $s): string {
+    $s = preg_replace('/[.,]/', '', $s);
+    return strtolower(trim(preg_replace('/\s+/', ' ', $s)));
+}
+
 function csrf_field(): string {
     if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
     return '<input type="hidden" name="csrf" value="' . $_SESSION['csrf'] . '">';

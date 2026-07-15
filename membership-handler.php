@@ -112,24 +112,36 @@ try {
     // still matches). Matching on name+class-year alone — without an email
     // check — would let two unrelated families who happen to share a last
     // name, class year, and cadet first name silently overwrite each other.
+    //
+    // Last-name comparison is done in PHP against a normalized form (strip
+    // punctuation, collapse whitespace, lowercase) rather than a strict SQL
+    // `=` — a name typed as "Jimmerson, Jr" vs "Jimmerson, Jr." on separate
+    // submissions is the same family, but a literal `=` treats them as two
+    // different rows and silently inserts a duplicate instead of updating.
+    function normalize_name(string $s): string {
+        $s = preg_replace('/[.,]/', '', $s);
+        return strtolower(trim(preg_replace('/\s+/', ' ', $s)));
+    }
     $parent1_email = s($payload, 'parent1Email');
     $parent2_email = s($payload, 'parent2Email');
-    $dup = $pdo->prepare(
-        'SELECT id FROM members
-         WHERE cadet_last_name = :last_name AND class_year = :class_year
+    $cand = $pdo->prepare(
+        'SELECT id, cadet_last_name FROM members
+         WHERE class_year = :class_year
            AND (
                 (:parent1_email <> "" AND (parent1_email = :parent1_email OR parent2_email = :parent1_email))
              OR (:parent2_email <> "" AND (parent1_email = :parent2_email OR parent2_email = :parent2_email))
-           )
-         LIMIT 1'
+           )'
     );
-    $dup->execute([
-        'last_name'     => s($payload, 'cadetLastName'),
+    $cand->execute([
         'class_year'    => s($payload, 'graduationYear'),
         'parent1_email' => $parent1_email,
         'parent2_email' => $parent2_email,
     ]);
-    $existing_id = $dup->fetchColumn();
+    $target_norm = normalize_name(s($payload, 'cadetLastName'));
+    $existing_id = null;
+    foreach ($cand->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if (normalize_name($row['cadet_last_name']) === $target_norm) { $existing_id = $row['id']; break; }
+    }
 
     if ($existing_id) {
         // Returning member — update their record instead of inserting

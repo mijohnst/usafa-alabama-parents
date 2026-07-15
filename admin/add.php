@@ -4,6 +4,7 @@ require_member_admin();
 
 $errors = [];
 $m = [];
+$duplicates = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -18,8 +19,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($m['cadet_last_name'] === '') $errors[] = 'Cadet Last Name is required.';
     if ($m['cadet_birthday'] === '') $m['cadet_birthday'] = null;
 
+    $pdo = get_pdo();
+
+    // Manual entry has no automatic dedup like the public application form
+    // (membership-handler.php) does — warn (don't block, since same
+    // last name + class year can legitimately be two different cadets)
+    // if an active member already looks like this one.
     if (empty($errors)) {
-        $pdo = get_pdo();
+        $cand = $pdo->prepare('SELECT id, cadet_first_name, cadet_last_name, al_region, parent1_first_name, parent1_last_name FROM members WHERE archived=0 AND class_year=?');
+        $cand->execute([$m['class_year']]);
+        $target_norm = normalize_name($m['cadet_last_name']);
+        foreach ($cand->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if (normalize_name($row['cadet_last_name']) === $target_norm) $duplicates[] = $row;
+        }
+    }
+
+    if (empty($errors) && (!$duplicates || !empty($_POST['confirm_duplicate']))) {
         $cols = implode(', ', array_map(fn($f) => "`$f`", FIELDS));
         $placeholders = implode(', ', array_map(fn($f) => ":$f", FIELDS));
         $stmt = $pdo->prepare("INSERT INTO members ($cols) VALUES ($placeholders)");
@@ -40,12 +55,25 @@ admin_header('Add Member');
   <div class="alert alert-error"><?= implode('<br>', array_map('htmlspecialchars', $errors)) ?></div>
 <?php endif; ?>
 
+<?php if ($duplicates): ?>
+  <div class="alert alert-error">
+    <strong>Possible duplicate<?= count($duplicates) > 1 ? 's' : '' ?>:</strong> an active member with the same last name and class year already exists.
+    <ul style="margin:.5rem 0 0 1.25rem">
+      <?php foreach ($duplicates as $d): ?>
+        <li><a href="edit.php?id=<?= (int)$d['id'] ?>" target="_blank"><?= h(trim($d['cadet_first_name'] . ' ' . $d['cadet_last_name'])) ?></a> — Parent: <?= h(trim($d['parent1_first_name'] . ' ' . $d['parent1_last_name'])) ?><?= $d['al_region'] ? ' (' . h($d['al_region']) . ')' : '' ?></li>
+      <?php endforeach; ?>
+    </ul>
+    <p style="margin-top:.5rem">Double-check this isn't the same family before saving. If you're sure this is a different cadet, submit again to save anyway.</p>
+  </div>
+<?php endif; ?>
+
 <div class="card">
   <form method="POST">
     <?= csrf_field() ?>
+    <?php if ($duplicates): ?><input type="hidden" name="confirm_duplicate" value="1"><?php endif; ?>
     <?php member_form($m, false) ?>
     <div style="display:flex;gap:.75rem;margin-top:.5rem">
-      <button type="submit" class="btn btn-primary">Save Member</button>
+      <button type="submit" class="btn <?= $duplicates ? 'btn-danger' : 'btn-primary' ?>"><?= $duplicates ? 'Save Anyway' : 'Save Member' ?></button>
       <a href="index.php" class="btn btn-secondary">Cancel</a>
     </div>
   </form>
