@@ -2,7 +2,7 @@
 require_once __DIR__ . '/auth.php';
 start_session();
 
-if (!empty($_SESSION['logged_in'])) { header('Location: index.php'); exit; }
+if (!empty($_SESSION['logged_in'])) { header('Location: dashboard.php'); exit; }
 
 $pdo   = get_pdo();
 $error = '';
