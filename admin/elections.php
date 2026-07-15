@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $status_colors = [
-    'draft'  => ['bg' => '#f0f2f5', 'fg' => '#5a6a7a'],
+    'draft'  => ['bg' => '#e1e5eb', 'fg' => '#37474f'],
     'open'   => ['bg' => '#e8f5e9', 'fg' => '#1b5e20'],
     'closed' => ['bg' => '#ffebee', 'fg' => '#c62828'],
 ];
