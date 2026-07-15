@@ -662,6 +662,64 @@ function notify_status_change(PDO $pdo, array $purchase, string $old_status, str
     send_notification($user['email'], $subject, $body);
 }
 
+// ── Notify all paid members that nominations are open for an election ────
+// Emails parent1_email/parent2_email straight from the members table
+// (rather than the users/portal accounts) so it reaches every paid family,
+// including ones who haven't set up a portal login yet — matching the same
+// membership_paid=1 pool that's eligible to actually run (see elections.php's
+// member picker and vote.php's self-nomination check).
+function notify_nominations_open(PDO $pdo, array $election): int {
+    $open_positions = ELECTION_POSITIONS;
+    try {
+        $filled = $pdo->prepare("SELECT DISTINCT position FROM election_candidates WHERE election_id=? AND status='approved'");
+        $filled->execute([$election['id']]);
+        $open_positions = array_values(array_diff(ELECTION_POSITIONS, $filled->fetchAll(PDO::FETCH_COLUMN)));
+    } catch (PDOException $e) {
+        error_log('mailer: notify_nominations_open position query failed — ' . $e->getMessage());
+    }
+    if (empty($open_positions)) return 0; // every seat already has an approved candidate
+
+    try {
+        $rows = $pdo->query(
+            "SELECT parent1_email AS email FROM members WHERE archived=0 AND membership_paid=1 AND parent1_email <> ''
+             UNION
+             SELECT parent2_email AS email FROM members WHERE archived=0 AND membership_paid=1 AND parent2_email <> ''"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('mailer: notify_nominations_open recipient query failed — ' . $e->getMessage());
+        return 0;
+    }
+    if (empty($rows)) return 0;
+
+    $seen = []; $emails = [];
+    foreach ($rows as $r) {
+        $email = strtolower(trim($r['email'] ?? ''));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || isset($seen[$email])) continue;
+        $seen[$email] = true;
+        $emails[] = $email;
+    }
+    if (empty($emails)) return 0;
+
+    $url     = ADMIN_URL . 'vote.php';
+    $subject = 'Board Elections — Nominations Now Open';
+    $body    = CLUB_NAME . "\n"
+             . "Officer Election — Nominations Open\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "{$election['title']} is coming up, and nominations are now open. The following "
+             . "board position" . (count($open_positions) === 1 ? ' is' : 's are') . " still open:\n\n";
+    foreach ($open_positions as $p) $body .= "  • $p\n";
+    $body .= "\nAs a paid member, you're eligible to nominate yourself for any open position. "
+           . "The Secretary reviews and approves nominations before voting opens.\n\n"
+           . "Nominate yourself:  $url\n\n"
+           . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
+
+    $sent = 0;
+    foreach ($emails as $email) {
+        if (send_notification($email, $subject, $body)) $sent++;
+    }
+    return $sent;
+}
+
 // ── Notify all active portal accounts that voting has opened ─────────────
 function notify_election_open(PDO $pdo, array $election): int {
     try {

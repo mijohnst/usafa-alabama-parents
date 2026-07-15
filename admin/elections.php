@@ -96,6 +96,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Candidate removed.');
         }
         header('Location: elections.php?manage=' . $election_id); exit;
+    } elseif ($action === 'announce_nominations') {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id) {
+            $es = $pdo->prepare('SELECT * FROM elections WHERE id=?');
+            $es->execute([$id]);
+            $election = $es->fetch(PDO::FETCH_ASSOC);
+            $sent = $election ? notify_nominations_open($pdo, $election) : 0;
+            flash('success', $sent > 0
+                ? "Notified $sent paid member" . ($sent == 1 ? '' : 's') . " that nominations are open."
+                : 'Nothing to announce — either every position already has an approved candidate, or there are no paid members to notify.');
+        }
+        header('Location: elections.php?manage=' . $id); exit;
     } elseif ($action === 'open_voting') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
@@ -203,6 +215,10 @@ echo show_flash();
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
       <a href="elections.php?edit=<?= $manage_id ?>" class="btn btn-secondary btn-sm">Edit Details</a>
       <?php if ($manage['status'] === 'draft'): ?>
+        <form method="POST" style="margin:0">
+          <?= csrf_field() ?><input type="hidden" name="action" value="announce_nominations"><input type="hidden" name="id" value="<?= $manage_id ?>">
+          <button type="submit" class="btn btn-secondary btn-sm" title="Emails every paid member about the open position(s) and how to self-nominate">📧 Announce Nominations</button>
+        </form>
         <?php if ($pending_count > 0): ?>
           <span style="font-size:.78rem;color:#5f4c00;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.3rem .6rem"><?= $pending_count ?> nomination<?= $pending_count == 1 ? '' : 's' ?> still pending approval — won't appear on the ballot until approved</span>
         <?php endif; ?>
