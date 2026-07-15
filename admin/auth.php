@@ -1,6 +1,8 @@
 <?php
 // Shared utilities — never served directly (blocked by .htaccess)
 
+require_once __DIR__ . '/lib.php';
+
 // The club operates in Alabama (Central) — anchor PHP's clock here
 // explicitly rather than trusting the server's default (often UTC on
 // shared hosting), which otherwise rolls "today" over hours before it
@@ -225,13 +227,6 @@ function get_pdo(): PDO {
 
 function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-}
-
-// Strips punctuation/whitespace differences so "Jimmerson, Jr" and
-// "Jimmerson, Jr." compare equal for duplicate-member detection.
-function normalize_name(string $s): string {
-    $s = preg_replace('/[.,]/', '', $s);
-    return strtolower(trim(preg_replace('/\s+/', ' ', $s)));
 }
 
 function csrf_field(): string {

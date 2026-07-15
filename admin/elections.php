@@ -2,7 +2,7 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/mailer.php';
 require_login();
-if (!can_manage_members()) { header('Location: dashboard.php?denied=1'); exit; }
+if (!can_manage_members() && !is_treasurer()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -83,7 +83,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cid         = (int)($_POST['candidate_id'] ?? 0);
         $election_id = (int)($_POST['election_id'] ?? 0);
         if ($cid) {
-            $pdo->prepare("UPDATE election_candidates SET status='approved' WHERE id=? AND election_id=?")->execute([$cid, $election_id]);
+            // A pending nomination stays approvable up until the election is
+            // closed (see comment below near the row template) — but this
+            // must be enforced here too, not just by which buttons the UI
+            // renders, or a stale tab / replayed request could approve a
+            // candidate after voting has closed.
+            $pdo->prepare(
+                "UPDATE election_candidates ec
+                 JOIN elections e ON e.id = ec.election_id
+                 SET ec.status='approved'
+                 WHERE ec.id=? AND ec.election_id=? AND ec.status='pending' AND e.status <> 'closed'"
+            )->execute([$cid, $election_id]);
             flash('success', 'Nomination approved.');
         }
         header('Location: elections.php?manage=' . $election_id); exit;
@@ -91,9 +101,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cid         = (int)($_POST['candidate_id'] ?? 0);
         $election_id = (int)($_POST['election_id'] ?? 0);
         if ($cid) {
-            $pdo->prepare('DELETE FROM election_votes WHERE candidate_id=?')->execute([$cid]);
-            $pdo->prepare('DELETE FROM election_candidates WHERE id=?')->execute([$cid]);
-            flash('success', 'Candidate removed.');
+            // Mirror the UI's rule server-side: a pending nomination can be
+            // rejected any time before the election closes, but an already-
+            // approved candidate can only be removed while still in draft
+            // (once voting opens, the ballot roster is locked).
+            $chk = $pdo->prepare(
+                "SELECT ec.status AS cand_status, e.status AS election_status
+                 FROM election_candidates ec JOIN elections e ON e.id = ec.election_id
+                 WHERE ec.id=? AND ec.election_id=?"
+            );
+            $chk->execute([$cid, $election_id]);
+            $row = $chk->fetch(PDO::FETCH_ASSOC);
+            $allowed = $row && (
+                ($row['cand_status'] === 'pending' && $row['election_status'] !== 'closed') ||
+                ($row['cand_status'] === 'approved' && $row['election_status'] === 'draft')
+            );
+            if ($allowed) {
+                $pdo->prepare('DELETE FROM election_votes WHERE candidate_id=?')->execute([$cid]);
+                $pdo->prepare('DELETE FROM election_candidates WHERE id=?')->execute([$cid]);
+                flash('success', 'Candidate removed.');
+            } else {
+                flash('error', 'That candidate can no longer be removed.');
+            }
         }
         header('Location: elections.php?manage=' . $election_id); exit;
     } elseif ($action === 'test_nominations_email') {
@@ -195,25 +224,29 @@ echo show_flash();
     // Every parent on an active, dues-paid member record, as a
     // "<member_id>:<slot>" pick list — mirrors how parent1_is_board_member /
     // parent2_is_board_member already tag individual parents on a family
-    // record. Only paid members are eligible to run for office.
+    // record. Only paid members are eligible to run for office. Only needed
+    // for the add-candidate form below, which itself only renders while
+    // status='draft' — skip the full-roster scan otherwise.
     $parent_options = [];
-    $mem_rows = $pdo->query(
-        "SELECT id, cadet_first_name, cadet_last_name, class_year,
-                parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name
-         FROM members WHERE archived=0 AND membership_paid=1"
-    )->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($mem_rows as $m) {
-        $cadet = trim($m['cadet_first_name'] . ' ' . $m['cadet_last_name']);
-        foreach ([1, 2] as $slot) {
-            $fn = trim($m["parent{$slot}_first_name"] ?? '');
-            $ln = trim($m["parent{$slot}_last_name"] ?? '');
-            if ($fn === '' && $ln === '') continue;
-            $label = trim("$ln, $fn");
-            if ($cadet !== '') $label .= ' — ' . $cadet . (!empty($m['class_year']) ? ' (' . $m['class_year'] . ')' : '');
-            $parent_options[] = ['value' => $m['id'] . ':' . $slot, 'label' => $label];
+    if ($manage['status'] === 'draft') {
+        $mem_rows = $pdo->query(
+            "SELECT id, cadet_first_name, cadet_last_name, class_year,
+                    parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name
+             FROM members WHERE archived=0 AND membership_paid=1"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($mem_rows as $m) {
+            $cadet = trim($m['cadet_first_name'] . ' ' . $m['cadet_last_name']);
+            foreach ([1, 2] as $slot) {
+                $fn = trim($m["parent{$slot}_first_name"] ?? '');
+                $ln = trim($m["parent{$slot}_last_name"] ?? '');
+                if ($fn === '' && $ln === '') continue;
+                $label = trim("$ln, $fn");
+                if ($cadet !== '') $label .= ' — ' . $cadet . (!empty($m['class_year']) ? ' (' . $m['class_year'] . ')' : '');
+                $parent_options[] = ['value' => $m['id'] . ':' . $slot, 'label' => $label];
+            }
         }
+        usort($parent_options, fn($a, $b) => strcasecmp($a['label'], $b['label']));
     }
-    usort($parent_options, fn($a, $b) => strcasecmp($a['label'], $b['label']));
     $pending_count = count(array_filter($candidates, fn($c) => $c['status'] === 'pending'));
 ?>
   <div class="page-head">

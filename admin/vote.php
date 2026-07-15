@@ -4,24 +4,34 @@ require_login();
 $pdo     = get_pdo();
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 
-$my_user_stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
-$my_user_stmt->execute([$user_id]);
-$my_user   = $my_user_stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-$my_member = $my_user ? find_linked_member($pdo, $my_user) : null;
-
 // Which parent slot (1 or 2) on the linked member record is *this* logged-in
 // account — matched by login email against parent1_email/parent2_email, same
-// linkage find_linked_member() already uses. Falls back to whichever slot
-// has a name filled in if the email doesn't match either (e.g. an account
-// created before the email link existed).
+// linkage find_linked_member() already uses. Returns 0 (no match) rather than
+// guessing when neither matches — e.g. an account linked via member_id
+// directly (admin/users.php supports this) whose login email was never
+// synced to the member record. Callers already treat 0 as "can't identify
+// which parent this is" and block the action, which is correct: silently
+// guessing slot 1 would risk attributing a nomination to the wrong parent.
 function my_parent_slot(array $user, ?array $member): int {
     if (!$member) return 0;
     $email = strtolower(trim($user['email'] ?? ''));
     if ($email !== '' && $email === strtolower(trim($member['parent1_email'] ?? ''))) return 1;
     if ($email !== '' && $email === strtolower(trim($member['parent2_email'] ?? ''))) return 2;
-    return !empty($member['parent1_first_name']) ? 1 : 2;
+    return 0;
 }
-$my_slot = $my_member ? my_parent_slot($my_user, $my_member) : 0;
+
+// The linked member record is only needed for self-nomination (POST) and the
+// "Run for Office" section (GET) — skip the lookup on the far more frequent
+// plain ballot-cast POST, which never reads it.
+$my_user = []; $my_member = null; $my_slot = 0;
+$is_plain_vote_post = $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? 'vote') === 'vote';
+if (!$is_plain_vote_post) {
+    $my_user_stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
+    $my_user_stmt->execute([$user_id]);
+    $my_user   = $my_user_stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $my_member = $my_user ? find_linked_member($pdo, $my_user) : null;
+    $my_slot   = $my_member ? my_parent_slot($my_user, $my_member) : 0;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -66,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$election) {
         flash('error', 'Voting is not currently open.');
     } else {
-        $valid = $pdo->prepare('SELECT id FROM election_candidates WHERE id=? AND election_id=? AND position=?');
+        $valid = $pdo->prepare("SELECT id FROM election_candidates WHERE id=? AND election_id=? AND position=? AND status='approved'");
         $ins   = $pdo->prepare('INSERT INTO election_votes (election_id, position, candidate_id, voter_user_id) VALUES (?,?,?,?)');
         $cast = 0; $skipped = 0;
         foreach (ELECTION_POSITIONS as $position) {
@@ -138,6 +148,23 @@ echo show_flash();
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
 
+<script>
+// Shared by both the "voting closes in" and "voting opens in" countdowns
+// below — only one .countdown element is ever on the page at a time.
+function startVoteCountdown(icon, label, expiredText) {
+  var el = document.querySelector('.countdown');
+  if (!el) return;
+  var deadline = parseInt(el.getAttribute('data-deadline'), 10);
+  function tick() {
+    var diff = deadline - Date.now();
+    if (diff <= 0) { el.textContent = expiredText; return; }
+    var d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000);
+    el.innerHTML = icon + ' ' + label + ' <strong style="margin-left:.25rem">' + d + 'd ' + h + 'h ' + m + 'm</strong>';
+  }
+  tick(); setInterval(tick, 60000);
+}
+</script>
+
 <?php if ($open): ?>
   <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1rem">
     <?= h($open['title']) ?> — voting closes <?= date('F j, Y \a\t g:ia', strtotime($open['voting_closes_at'])) ?>.
@@ -172,20 +199,7 @@ echo show_flash();
     <button type="submit" class="btn btn-primary">Submit Ballot</button>
   </form>
 
-  <script>
-  (function() {
-    var el = document.querySelector('.countdown');
-    if (!el) return;
-    var deadline = parseInt(el.getAttribute('data-deadline'), 10);
-    function tick() {
-      var diff = deadline - Date.now();
-      if (diff <= 0) { el.textContent = 'Voting has closed.'; return; }
-      var d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000);
-      el.innerHTML = '🗳️ Voting closes in <strong style="margin-left:.25rem">' + d + 'd ' + h + 'h ' + m + 'm</strong>';
-    }
-    tick(); setInterval(tick, 60000);
-  })();
-  </script>
+  <script>startVoteCountdown('🗳️', 'Voting closes in', 'Voting has closed.');</script>
 
 <?php elseif ($upcoming): ?>
   <div class="card" style="max-width:480px">
@@ -194,22 +208,14 @@ echo show_flash();
     <div class="countdown" data-deadline="<?= strtotime($upcoming['voting_opens_at']) * 1000 ?>" style="display:inline-flex;align-items:center;gap:.5rem;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;padding:.5rem 1rem;font-size:.85rem;font-weight:700;color:#0d47a1">Loading…</div>
   </div>
 
-  <script>
-  (function() {
-    var el = document.querySelector('.countdown');
-    if (!el) return;
-    var deadline = parseInt(el.getAttribute('data-deadline'), 10);
-    function tick() {
-      var diff = deadline - Date.now();
-      if (diff <= 0) { el.textContent = 'Voting is now open — refresh this page.'; return; }
-      var d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000);
-      el.innerHTML = '⏰ Voting opens in <strong style="margin-left:.25rem">' + d + 'd ' + h + 'h ' + m + 'm</strong>';
-    }
-    tick(); setInterval(tick, 60000);
-  })();
-  </script>
+  <script>startVoteCountdown('⏰', 'Voting opens in', 'Voting is now open — refresh this page.');</script>
 
-  <?php if ($my_member && $my_member['membership_paid']): ?>
+  <?php if ($my_member && $my_member['membership_paid'] && !$my_slot): ?>
+  <div class="card" style="max-width:480px;margin-top:1.25rem">
+    <h2>Run for Office</h2>
+    <p style="color:#5a6a7a;font-size:.85rem">We couldn't match your login email to a parent on your family's member record, so we can't confirm which parent you are. Contact <a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a> to self-nominate.</p>
+  </div>
+  <?php elseif ($my_member && $my_member['membership_paid']): ?>
   <div class="card" style="max-width:480px;margin-top:1.25rem">
     <h2>Run for Office</h2>
     <p style="color:#5a6a7a;font-size:.85rem;margin-bottom:1rem">Nominate yourself for a position — the Secretary reviews nominations before voting opens.</p>

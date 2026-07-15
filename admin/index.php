@@ -22,16 +22,22 @@ if (!in_array($sort, $allowed_sorts)) $sort = 'class_year';
 if (!in_array($dir, ['asc','desc']))  $dir  = 'asc';
 $next_dir = $dir === 'asc' ? 'desc' : 'asc';
 
-// Possible-duplicate detection — same last name + class year among active
-// members. Compared in PHP against a normalized last name (punctuation and
-// whitespace stripped) rather than SQL `=`, so "Jimmerson, Jr" and
-// "Jimmerson, Jr." are still caught as likely the same family — the same
-// gap that let that exact pair slip through the public application form's
-// dedup check. Computed once here and reused by the ?dup=1 filter, the
-// per-row "DUP?" badge, and the alert count below.
+// Possible-duplicate detection — same last name + class year among members
+// in the archived state currently being viewed (active by default). Compared
+// in PHP against a normalized last name (punctuation and whitespace stripped)
+// rather than SQL `=`, so "Jimmerson, Jr" and "Jimmerson, Jr." are still
+// caught as likely the same family — the same gap that let that exact pair
+// slip through the public application form's dedup check. Scoped to match
+// $archived (rather than hardcoded to active-only) so the DUP? badge and the
+// ?dup=1 filter both still work when browsing the archived list, and so
+// ?dup=1&archived=1 isn't a guaranteed-empty contradiction. Computed once
+// here and reused by the ?dup=1 filter, the per-row "DUP?" badge, and the
+// alert count below.
 $dup_ids = []; // member id => true, for every member that's part of a group
 $dup_groups = [];
-foreach ($pdo->query("SELECT id, cadet_last_name, class_year FROM members WHERE archived = 0")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+$dup_scan = $pdo->prepare('SELECT id, cadet_last_name, class_year FROM members WHERE archived = ?');
+$dup_scan->execute([$archived === '1' ? 1 : 0]);
+foreach ($dup_scan->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $key = normalize_name($row['cadet_last_name']) . '|' . $row['class_year'];
     $dup_groups[$key][] = (int)$row['id'];
 }

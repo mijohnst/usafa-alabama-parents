@@ -31,6 +31,7 @@ if (!$payload) {
 }
 
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/lib.php';
 
 // Honeypot — bots fill this hidden field, real visitors never see it.
 // Pretend success so bots don't learn to avoid the field.
@@ -118,10 +119,8 @@ try {
     // `=` — a name typed as "Jimmerson, Jr" vs "Jimmerson, Jr." on separate
     // submissions is the same family, but a literal `=` treats them as two
     // different rows and silently inserts a duplicate instead of updating.
-    function normalize_name(string $s): string {
-        $s = preg_replace('/[.,]/', '', $s);
-        return strtolower(trim(preg_replace('/\s+/', ' ', $s)));
-    }
+    // normalize_name() lives in admin/lib.php, shared with the admin panel's
+    // own duplicate check, so the two never disagree on what counts as a match.
     $parent1_email = s($payload, 'parent1Email');
     $parent2_email = s($payload, 'parent2Email');
     $cand = $pdo->prepare(

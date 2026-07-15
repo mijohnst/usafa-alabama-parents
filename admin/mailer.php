@@ -662,6 +662,35 @@ function notify_status_change(PDO $pdo, array $purchase, string $old_status, str
     send_notification($user['email'], $subject, $body);
 }
 
+// Deduped, validated email addresses for every active, dues-paid member —
+// pulled straight from members.parent1_email/parent2_email rather than the
+// users/portal-accounts table, so it reaches every paid family including
+// ones who haven't set up a portal login yet. Shared by every election email
+// (nominations-open and voting-open alike) so a paid member without a portal
+// account gets invited to nominate AND reminded to vote, not just one or the
+// other — both previously used different, inconsistent recipient pools.
+function paid_member_emails(PDO $pdo): array {
+    try {
+        $rows = $pdo->query(
+            "SELECT parent1_email AS email FROM members WHERE archived=0 AND membership_paid=1 AND parent1_email <> ''
+             UNION
+             SELECT parent2_email AS email FROM members WHERE archived=0 AND membership_paid=1 AND parent2_email <> ''"
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('mailer: paid_member_emails query failed — ' . $e->getMessage());
+        return [];
+    }
+
+    $seen = []; $emails = [];
+    foreach ($rows as $r) {
+        $addr = strtolower(trim($r['email'] ?? ''));
+        if ($addr === '' || !filter_var($addr, FILTER_VALIDATE_EMAIL) || isset($seen[$addr])) continue;
+        $seen[$addr] = true;
+        $emails[] = $addr;
+    }
+    return $emails;
+}
+
 // Builds the subject/body for the nominations-open email — shared by the
 // real send (notify_nominations_open) and the Secretary's test-send
 // (send_nominations_open_test) so a preview always matches what members
@@ -689,42 +718,18 @@ function build_nominations_open_email(PDO $pdo, array $election): ?array {
     $body .= "\nAs a paid member, you're eligible to nominate yourself for any open position. "
            . "The Secretary reviews and approves nominations before voting opens.\n\n"
            . "Nominate yourself:  $url\n\n"
+           . "Don't have a portal login yet? Email info@alabamafalcons.org and we'll get you set up.\n\n"
            . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
 
     return ['subject' => $subject, 'body' => $body];
 }
 
 // ── Notify all paid members that nominations are open for an election ────
-// Emails parent1_email/parent2_email straight from the members table
-// (rather than the users/portal accounts) so it reaches every paid family,
-// including ones who haven't set up a portal login yet — matching the same
-// membership_paid=1 pool that's eligible to actually run (see elections.php's
-// member picker and vote.php's self-nomination check).
 function notify_nominations_open(PDO $pdo, array $election): int {
     $email = build_nominations_open_email($pdo, $election);
     if (!$email) return 0; // every seat already has an approved candidate
 
-    try {
-        $rows = $pdo->query(
-            "SELECT parent1_email AS email FROM members WHERE archived=0 AND membership_paid=1 AND parent1_email <> ''
-             UNION
-             SELECT parent2_email AS email FROM members WHERE archived=0 AND membership_paid=1 AND parent2_email <> ''"
-        )->fetchAll();
-    } catch (PDOException $e) {
-        error_log('mailer: notify_nominations_open recipient query failed — ' . $e->getMessage());
-        return 0;
-    }
-    if (empty($rows)) return 0;
-
-    $seen = []; $emails = [];
-    foreach ($rows as $r) {
-        $addr = strtolower(trim($r['email'] ?? ''));
-        if ($addr === '' || !filter_var($addr, FILTER_VALIDATE_EMAIL) || isset($seen[$addr])) continue;
-        $seen[$addr] = true;
-        $emails[] = $addr;
-    }
-    if (empty($emails)) return 0;
-
+    $emails = paid_member_emails($pdo);
     $sent = 0;
     foreach ($emails as $addr) {
         if (send_notification($addr, $email['subject'], $email['body'])) $sent++;
@@ -741,15 +746,15 @@ function send_nominations_open_test(PDO $pdo, array $election, string $to): bool
     return send_notification($to, '[TEST] ' . $email['subject'], $email['body']);
 }
 
-// ── Notify all active portal accounts that voting has opened ─────────────
+// ── Notify all paid members that voting has opened ────────────────────────
+// Uses the same paid_member_emails() pool as notify_nominations_open() —
+// previously this queried the users/portal-accounts table instead, so a
+// paid member without a portal login would get invited to nominate
+// themselves but never hear that voting had opened (and had no way to vote
+// regardless, since that also requires a login).
 function notify_election_open(PDO $pdo, array $election): int {
-    try {
-        $recipients = $pdo->query("SELECT name, email FROM users WHERE active = 1")->fetchAll();
-    } catch (PDOException $e) {
-        error_log('mailer: notify_election_open query failed — ' . $e->getMessage());
-        return 0;
-    }
-    if (empty($recipients)) return 0;
+    $emails = paid_member_emails($pdo);
+    if (empty($emails)) return 0;
 
     $closes  = date('F j, Y \a\t g:ia', strtotime($election['voting_closes_at']));
     $url     = ADMIN_URL . 'vote.php';
@@ -761,12 +766,12 @@ function notify_election_open(PDO $pdo, array $election): int {
              . "President, Vice President, Secretary, and Treasurer.\n\n"
              . "Voting closes: $closes\n\n"
              . "Vote now:  $url\n\n"
-             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+             . "Don't have a portal login yet? Email info@alabamafalcons.org and we'll get you set up.\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
 
     $sent = 0;
-    foreach ($recipients as $r) {
-        $email = trim($r['email'] ?? '');
-        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) && send_notification($email, $subject, $body)) $sent++;
+    foreach ($emails as $addr) {
+        if (send_notification($addr, $subject, $body)) $sent++;
     }
     return $sent;
 }
