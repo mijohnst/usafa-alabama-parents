@@ -8,7 +8,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rows = $pdo->query('SELECT setting_key, setting_type FROM site_settings')->fetchAll();
     foreach ($rows as $row) {
         $key = $row['setting_key'];
-        $val = trim($_POST[$key] ?? '');
+        // Windows browsers submit textarea line breaks as \r\n — normalize to
+        // \n so stored values are consistent regardless of the editor's OS,
+        // and so the front-end's paragraph-split logic (which looks for a
+        // literal blank line, "\n\n") reliably matches.
+        $val = trim(str_replace(["\r\n", "\r"], "\n", $_POST[$key] ?? ''));
         $pdo->prepare('UPDATE site_settings SET setting_value=? WHERE setting_key=?')->execute([$val, $key]);
     }
     flash('success', 'Settings saved. Changes will appear on the site within a few minutes.');

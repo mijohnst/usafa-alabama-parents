@@ -762,7 +762,7 @@ fetch('/settings-feed.php').then(function(r){return r.json();}).then(function(da
   }
   if (s.membership_description) {
     var md = document.getElementById('membership-description');
-    if (md) md.innerHTML = s.membership_description.split('\n\n').map(function(p){ return '<p>' + escHtml(p.trim()) + '</p>'; }).join('');
+    if (md) md.innerHTML = s.membership_description.split(/\r?\n\s*\r?\n/).map(function(p){ return '<p>' + escHtml(p.trim()) + '</p>'; }).join('');
   }
   // Facebook
   if (s.facebook_url) {
