@@ -662,6 +662,36 @@ function notify_status_change(PDO $pdo, array $purchase, string $old_status, str
     send_notification($user['email'], $subject, $body);
 }
 
+// ── Notify all active portal accounts that voting has opened ─────────────
+function notify_election_open(PDO $pdo, array $election): int {
+    try {
+        $recipients = $pdo->query("SELECT name, email FROM users WHERE active = 1")->fetchAll();
+    } catch (PDOException $e) {
+        error_log('mailer: notify_election_open query failed — ' . $e->getMessage());
+        return 0;
+    }
+    if (empty($recipients)) return 0;
+
+    $closes  = date('F j, Y \a\t g:ia', strtotime($election['voting_closes_at']));
+    $url     = ADMIN_URL . 'vote.php';
+    $subject = 'Voting Is Open: ' . $election['title'];
+    $body    = CLUB_NAME . "\n"
+             . "Officer Election — Voting Is Open\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "{$election['title']} is now open for voting. Cast your ballot for "
+             . "President, Vice President, Secretary, and Treasurer.\n\n"
+             . "Voting closes: $closes\n\n"
+             . "Vote now:  $url\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+
+    $sent = 0;
+    foreach ($recipients as $r) {
+        $email = trim($r['email'] ?? '');
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) && send_notification($email, $subject, $body)) $sent++;
+    }
+    return $sent;
+}
+
 // ── Invite a paid member to set up their own portal login ────────────────
 function send_portal_invite(string $to, string $name, string $token): bool {
     $url     = SITE_URL . 'portal-signup.php?token=' . $token;

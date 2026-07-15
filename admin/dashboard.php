@@ -132,6 +132,31 @@ if ($my_member) {
     $sections['For You'][] = ['icon'=>'🪪','label'=>'My Membership','sub'=>$my_member['membership_paid']?'✓ Paid':'✗ Unpaid — pay now','href'=>'my-membership.php','color'=>$my_member['membership_paid']?'#1b5e20':'#A6192E'];
 }
 
+// Officer election — shown only while there's something to act on: an open
+// ballot (with days-left / voted state) or a scheduled election to await.
+try {
+    $now_str = date('Y-m-d H:i:s');
+    $today   = date('Y-m-d');
+    $election = $pdo->prepare(
+        "SELECT * FROM elections
+         WHERE (status='open' AND voting_opens_at <= ? AND voting_closes_at >= ?)
+            OR (status='draft' AND election_date >= ?)
+         ORDER BY (status='open') DESC, election_date ASC LIMIT 1"
+    );
+    $election->execute([$now_str, $now_str, $today]);
+    $election = $election->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) { $election = null; }
+
+if ($election && $election['status'] === 'open') {
+    $voted_stmt = $pdo->prepare('SELECT COUNT(*) FROM election_votes WHERE election_id=? AND voter_user_id=?');
+    $voted_stmt->execute([$election['id'], $_SESSION['user_id'] ?? 0]);
+    $has_voted = (int)$voted_stmt->fetchColumn() > 0;
+    $days_left = max(0, (int)ceil((strtotime($election['voting_closes_at']) - time()) / 86400));
+    $sections['For You'][] = ['icon'=>'🗳️','label'=>'Election','sub'=>$has_voted?'✓ Voted':"Vote now — closes in {$days_left}d",'href'=>'vote.php','color'=>$has_voted?'#1b5e20':'#A6192E'];
+} elseif ($election) {
+    $sections['For You'][] = ['icon'=>'🗳️','label'=>'Election','sub'=>'Voting opens '.date('M j', strtotime($election['voting_opens_at'])),'href'=>'vote.php','color'=>'#1565c0'];
+}
+
 // Member self-service tiles — every role, including officers who may want
 // to sign up/RSVP/submit themselves too.
 try {
@@ -168,6 +193,7 @@ if (can_manage_members()) {
     $sections['Secretary Tools'][] = ['icon'=>'✅','label'=>'Attendance','sub'=>'Track who attended','href'=>'attendance.php','color'=>'#5c007a'];
     $sections['Secretary Tools'][] = ['icon'=>'📬','label'=>'Correspondence','sub'=>'Log official comms','href'=>'correspondence.php','color'=>'#5c007a'];
     $sections['Secretary Tools'][] = ['icon'=>'🖊️','label'=>'Member Letter','sub'=>'Print status letter','href'=>'member-letter.php','color'=>'#5c007a'];
+    $sections['Secretary Tools'][] = ['icon'=>'🗳️','label'=>'Elections','sub'=>'Set up officer voting','href'=>'elections.php','color'=>'#5c007a'];
     // Member support features
     try { $vo_needed = (int)get_pdo()->query(
         "SELECT COUNT(*) FROM volunteer_opportunities o WHERE o.active=1

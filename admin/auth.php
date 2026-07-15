@@ -345,6 +345,8 @@ function admin_footer(): void {
     echo '</div></body></html>';
 }
 
+const ELECTION_POSITIONS = ['President', 'Vice President', 'Secretary', 'Treasurer'];
+
 const REGIONS = ['', 'North', 'Central', 'South'];
 const PAYMENT_METHODS   = ['', 'Check', 'Internet Transfer', 'Other'];
 const TICKET_CATEGORIES = ['', 'Website Issue', 'Admin Portal Issue', 'Email / Google Workspace', 'Login / Password Help', 'Add Event to Calendar', 'Site Suggestion', 'Other'];
