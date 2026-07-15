@@ -148,6 +148,10 @@ echo show_flash();
     $candidates = $pdo->prepare('SELECT * FROM election_candidates WHERE election_id=? ORDER BY position, name');
     $candidates->execute([$manage_id]);
     $candidates = $candidates->fetchAll(PDO::FETCH_ASSOC);
+    echo '<pre style="background:#000;color:#0f0;padding:1rem;font-size:.8rem;white-space:pre-wrap">DEBUG manage_id=' . var_export($manage_id, true)
+       . ' manage.status=' . var_export($manage['status'] ?? null, true)
+       . ' candidate_count=' . count($candidates)
+       . "\ncandidates=" . var_export($candidates, true) . '</pre>';
     $by_position = [];
     foreach (ELECTION_POSITIONS as $p) $by_position[$p] = [];
     foreach ($candidates as $c) $by_position[$c['position']][] = $c;
