@@ -96,6 +96,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Candidate removed.');
         }
         header('Location: elections.php?manage=' . $election_id); exit;
+    } elseif ($action === 'test_nominations_email') {
+        $id         = (int)($_POST['id'] ?? 0);
+        $test_email = trim($_POST['test_email'] ?? '');
+        if (!filter_var($test_email, FILTER_VALIDATE_EMAIL)) {
+            flash('error', 'Enter a valid email address for the test.');
+        } else {
+            $es = $pdo->prepare('SELECT * FROM elections WHERE id=?');
+            $es->execute([$id]);
+            $election = $es->fetch(PDO::FETCH_ASSOC);
+            $ok = $election && send_nominations_open_test($pdo, $election, $test_email);
+            flash($ok ? 'success' : 'error', $ok
+                ? "Test email sent to $test_email."
+                : 'Nothing to preview — every position already has an approved candidate.');
+        }
+        header('Location: elections.php?manage=' . $id); exit;
     } elseif ($action === 'announce_nominations') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
@@ -218,6 +233,11 @@ echo show_flash();
         <form method="POST" style="margin:0">
           <?= csrf_field() ?><input type="hidden" name="action" value="announce_nominations"><input type="hidden" name="id" value="<?= $manage_id ?>">
           <button type="submit" class="btn btn-secondary btn-sm" title="Emails every paid member about the open position(s) and how to self-nominate">📧 Announce Nominations</button>
+        </form>
+        <form method="POST" style="display:flex;gap:.4rem;align-items:center;margin:0">
+          <?= csrf_field() ?><input type="hidden" name="action" value="test_nominations_email"><input type="hidden" name="id" value="<?= $manage_id ?>">
+          <input type="email" name="test_email" required placeholder="you@example.com" value="<?= h($_SESSION['user_email'] ?? '') ?>" style="width:auto;font-size:.82rem;padding:.35rem .55rem">
+          <button type="submit" class="btn btn-secondary btn-sm">Send Test</button>
         </form>
         <?php if ($pending_count > 0): ?>
           <span style="font-size:.78rem;color:#5f4c00;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.3rem .6rem"><?= $pending_count ?> nomination<?= $pending_count == 1 ? '' : 's' ?> still pending approval — won't appear on the ballot until approved</span>
