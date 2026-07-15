@@ -237,24 +237,36 @@ echo show_flash();
           <?php if ($c['status'] === 'pending'): ?><span class="badge" style="background:#fff3cd;color:#5f4c00;margin-left:.4rem">Pending Approval</span><?php endif; ?>
           <?php if ($c['bio']): ?><div style="font-size:.82rem;color:#5a6a7a;margin-top:.1rem"><?= h($c['bio']) ?></div><?php endif; ?>
         </div>
-        <?php if ($manage['status'] !== 'draft'): ?>
-          <span style="font-weight:700;color:#003594;white-space:nowrap"><?= $vote_counts[$c['id']] ?? 0 ?> vote<?= (($vote_counts[$c['id']] ?? 0) == 1 ? '' : 's') ?></span>
-        <?php else: ?>
+        <?php if ($c['status'] === 'pending' && $manage['status'] !== 'closed'): ?>
+          <!-- A pending nomination stays approvable regardless of whether
+               voting has already opened — otherwise a late self-nomination
+               that arrives after "Open Voting" is clicked would be stuck
+               forever with no way to review it. -->
           <div class="btn-group" style="flex-shrink:0">
-            <?php if ($c['status'] === 'pending'): ?>
-              <form method="POST" style="margin:0">
-                <?= csrf_field() ?><input type="hidden" name="action" value="approve_candidate">
-                <input type="hidden" name="candidate_id" value="<?= $c['id'] ?>"><input type="hidden" name="election_id" value="<?= $manage_id ?>">
-                <button type="submit" class="btn btn-primary btn-sm">Approve</button>
-              </form>
-            <?php endif; ?>
-            <a href="elections.php?manage=<?= $manage_id ?>&edit_candidate=<?= $c['id'] ?>#candidate-form-<?= h(str_replace(' ', '-', $position)) ?>" class="btn btn-secondary btn-sm">Edit</a>
-            <form method="POST" style="margin:0" onsubmit="return confirm('<?= $c['status'] === 'pending' ? 'Reject' : 'Remove' ?> this candidate?')">
+            <form method="POST" style="margin:0">
+              <?= csrf_field() ?><input type="hidden" name="action" value="approve_candidate">
+              <input type="hidden" name="candidate_id" value="<?= $c['id'] ?>"><input type="hidden" name="election_id" value="<?= $manage_id ?>">
+              <button type="submit" class="btn btn-primary btn-sm">Approve</button>
+            </form>
+            <form method="POST" style="margin:0" onsubmit="return confirm('Reject this nomination?')">
               <?= csrf_field() ?><input type="hidden" name="action" value="delete_candidate">
               <input type="hidden" name="candidate_id" value="<?= $c['id'] ?>"><input type="hidden" name="election_id" value="<?= $manage_id ?>">
-              <button type="submit" class="btn btn-danger btn-sm"><?= $c['status'] === 'pending' ? 'Reject' : 'Remove' ?></button>
+              <button type="submit" class="btn btn-danger btn-sm">Reject</button>
             </form>
           </div>
+        <?php elseif ($manage['status'] === 'draft'): ?>
+          <div class="btn-group" style="flex-shrink:0">
+            <a href="elections.php?manage=<?= $manage_id ?>&edit_candidate=<?= $c['id'] ?>#candidate-form-<?= h(str_replace(' ', '-', $position)) ?>" class="btn btn-secondary btn-sm">Edit</a>
+            <form method="POST" style="margin:0" onsubmit="return confirm('Remove this candidate?')">
+              <?= csrf_field() ?><input type="hidden" name="action" value="delete_candidate">
+              <input type="hidden" name="candidate_id" value="<?= $c['id'] ?>"><input type="hidden" name="election_id" value="<?= $manage_id ?>">
+              <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+          </div>
+        <?php elseif ($c['status'] === 'approved'): ?>
+          <span style="font-weight:700;color:#003594;white-space:nowrap"><?= $vote_counts[$c['id']] ?? 0 ?> vote<?= (($vote_counts[$c['id']] ?? 0) == 1 ? '' : 's') ?></span>
+        <?php else: ?>
+          <span style="font-size:.78rem;color:#9aa5b4">Never approved</span>
         <?php endif; ?>
       </div>
     <?php endforeach; endif; ?>

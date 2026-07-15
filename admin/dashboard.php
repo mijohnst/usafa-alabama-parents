@@ -193,7 +193,8 @@ if (can_manage_members()) {
     $sections['Secretary Tools'][] = ['icon'=>'✅','label'=>'Attendance','sub'=>'Track who attended','href'=>'attendance.php','color'=>'#5c007a'];
     $sections['Secretary Tools'][] = ['icon'=>'📬','label'=>'Correspondence','sub'=>'Log official comms','href'=>'correspondence.php','color'=>'#5c007a'];
     $sections['Secretary Tools'][] = ['icon'=>'🖊️','label'=>'Member Letter','sub'=>'Print status letter','href'=>'member-letter.php','color'=>'#5c007a'];
-    $sections['Secretary Tools'][] = ['icon'=>'🗳️','label'=>'Elections','sub'=>'Set up officer voting','href'=>'elections.php','color'=>'#5c007a'];
+    try { $pending_noms = (int)get_pdo()->query("SELECT COUNT(*) FROM election_candidates WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $pending_noms = 0; }
+    $sections['Secretary Tools'][] = ['icon'=>'🗳️','label'=>'Elections','sub'=>$pending_noms>0?"$pending_noms nomination".($pending_noms>1?'s':'')." to review":'Set up officer voting','href'=>'elections.php','color'=>'#5c007a','badge'=>$pending_noms>0?$pending_noms:0];
     // Member support features
     try { $vo_needed = (int)get_pdo()->query(
         "SELECT COUNT(*) FROM volunteer_opportunities o WHERE o.active=1
