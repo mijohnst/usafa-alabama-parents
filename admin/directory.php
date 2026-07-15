@@ -109,7 +109,7 @@ foreach ($by_year as $yr => $group):
     $v = fn(string $k) => h((string)($m[$k] ?? ''));
   ?>
   <div class="card">
-    <div class="cadet-name"><?= $v('cadet_last_name') ?>, <?= h(trim(($m['cadet_first_name'] ?? '') . ' ' . ($m['cadet_middle_name'] ?? ''))) ?></div>
+    <div class="cadet-name"><?= $v('cadet_last_name') ?><?= !empty($m['cadet_suffix']) ? ' ' . $v('cadet_suffix') : '' ?>, <?= h(trim(($m['cadet_first_name'] ?? '') . ' ' . ($m['cadet_middle_name'] ?? ''))) ?></div>
     <div class="cadet-meta">
       <?= h((string)($sqd ?? '')) ?><?= $sqd && $m['al_region'] ? ' &bull; ' : '' ?><?= $v('al_region') ?>
       <?php if ($m['cadet_po_box']): ?>&bull; PO <?= $v('cadet_po_box') ?><?php endif; ?>

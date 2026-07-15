@@ -103,6 +103,7 @@ try {
     // Map form field names → DB columns
     $first  = s($payload, 'cadetFirstName');
     $middle = s($payload, 'cadetMiddleName');
+    $suffix = s($payload, 'cadetSuffix');
 
     $dob = s($payload, 'cadetDOB');
     if ($dob === '') $dob = null;
@@ -194,7 +195,7 @@ try {
     } else {
     $stmt = $pdo->prepare("
         INSERT INTO members (
-            class_year, cadet_last_name, cadet_first_name, cadet_middle_name, nickname,
+            class_year, cadet_last_name, cadet_suffix, cadet_first_name, cadet_middle_name, nickname,
             cadet_birthday, cadet_po_box, cadet_email, cadet_cell,
             bct_squadron,
             parent1_last_name, parent1_first_name, parent1_email, parent1_cell,
@@ -204,7 +205,7 @@ try {
             photo_consent, directory_consent,
             membership_paid, membership_year
         ) VALUES (
-            :class_year, :cadet_last_name, :cadet_first_name, :cadet_middle_name, :nickname,
+            :class_year, :cadet_last_name, :cadet_suffix, :cadet_first_name, :cadet_middle_name, :nickname,
             :cadet_birthday, :cadet_po_box, :cadet_email, :cadet_cell,
             :bct_squadron,
             :parent1_last_name, :parent1_first_name, :parent1_email, :parent1_cell,
@@ -219,6 +220,7 @@ try {
     $stmt->execute([
         'class_year'          => s($payload, 'graduationYear'),
         'cadet_last_name'     => s($payload, 'cadetLastName'),
+        'cadet_suffix'        => s($payload, 'cadetSuffix'),
         'cadet_first_name'    => $first,
         'cadet_middle_name'   => $middle,
         'nickname'            => s($payload, 'nickname'),
@@ -268,11 +270,12 @@ if (!$db_success) {
 $secretary_email = 'secretary@alabamafalcons.org';
 $subject = 'New Membership Application: '
          . sanitize_header(s($payload, 'cadetFirstName')) . ' '
-         . sanitize_header(s($payload, 'cadetLastName'));
+         . sanitize_header(s($payload, 'cadetLastName'))
+         . ($suffix !== '' ? ' ' . sanitize_header($suffix) : '');
 
 $email_body  = "New membership application received:\n\n";
 $email_body .= "CADET INFORMATION\n";
-$email_body .= "Name: " . s($payload,'cadetFirstName') . " " . s($payload,'cadetMiddleName') . " " . s($payload,'cadetLastName') . "\n";
+$email_body .= "Name: " . s($payload,'cadetFirstName') . " " . s($payload,'cadetMiddleName') . " " . s($payload,'cadetLastName') . ($suffix !== '' ? " $suffix" : '') . "\n";
 $email_body .= "Nickname: " . s($payload,'nickname') . "\n";
 $email_body .= "Email: " . s($payload,'cadetEmail') . "\n";
 $email_body .= "Phone: " . s($payload,'cadetPhone') . "\n";
@@ -303,7 +306,7 @@ mail($secretary_email, $subject, $email_body, $headers);
 $parent_email = s($payload, 'parent1Email');
 if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
     $parent_name  = s($payload, 'parent1FirstName');
-    $cadet_name   = trim(preg_replace('/\s+/', ' ', "$first $middle " . s($payload, 'cadetLastName')));
+    $cadet_name   = trim(preg_replace('/\s+/', ' ', "$first $middle " . s($payload, 'cadetLastName') . " $suffix"));
     $conf_subject = 'Membership Application Received — USAFA Parents Club of Alabama';
     $conf_body    = "Dear $parent_name,\n\n"
                   . "We have received your membership application for $cadet_name (Class of " . s($payload,'graduationYear') . ").\n\n"

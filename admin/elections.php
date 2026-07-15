@@ -230,12 +230,12 @@ echo show_flash();
     $parent_options = [];
     if ($manage['status'] === 'draft') {
         $mem_rows = $pdo->query(
-            "SELECT id, cadet_first_name, cadet_last_name, class_year,
+            "SELECT id, cadet_first_name, cadet_last_name, cadet_suffix, class_year,
                     parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name
              FROM members WHERE archived=0 AND membership_paid=1"
         )->fetchAll(PDO::FETCH_ASSOC);
         foreach ($mem_rows as $m) {
-            $cadet = trim($m['cadet_first_name'] . ' ' . $m['cadet_last_name']);
+            $cadet = trim($m['cadet_first_name'] . ' ' . $m['cadet_last_name'] . ' ' . ($m['cadet_suffix'] ?? ''));
             foreach ([1, 2] as $slot) {
                 $fn = trim($m["parent{$slot}_first_name"] ?? '');
                 $ln = trim($m["parent{$slot}_last_name"] ?? '');

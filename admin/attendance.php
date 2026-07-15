@@ -152,11 +152,11 @@ $meeting = $mq->fetch(PDO::FETCH_ASSOC);
 if (!$meeting) { header('Location: attendance.php'); exit; }
 
 // Load members and build one attendee "slot" per parent on file
-$members = $pdo->query("SELECT id, parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name, cadet_first_name, cadet_middle_name, cadet_last_name, parent1_is_board_member, parent2_is_board_member FROM members WHERE archived=0 ORDER BY parent1_last_name ASC, parent1_first_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$members = $pdo->query("SELECT id, parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, parent1_is_board_member, parent2_is_board_member FROM members WHERE archived=0 ORDER BY parent1_last_name ASC, parent1_first_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $slots = [];
 foreach ($members as $mem) {
-    $cadet = trim(preg_replace('/\s+/', ' ', ($mem['cadet_first_name']??'') . ' ' . ($mem['cadet_middle_name']??'') . ' ' . ($mem['cadet_last_name']??'')));
+    $cadet = trim(preg_replace('/\s+/', ' ', ($mem['cadet_first_name']??'') . ' ' . ($mem['cadet_middle_name']??'') . ' ' . ($mem['cadet_last_name']??'') . ' ' . ($mem['cadet_suffix']??'')));
     $p1 = trim($mem['parent1_first_name'] . ' ' . $mem['parent1_last_name']);
     $p2 = trim(($mem['parent2_first_name']??'') . ' ' . ($mem['parent2_last_name']??''));
     if ($p1 !== '') $slots[] = ['member_id'=>(int)$mem['id'], 'slot'=>1, 'name'=>$p1, 'cadet'=>$cadet, 'board'=>!empty($mem['parent1_is_board_member'])];

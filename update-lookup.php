@@ -88,6 +88,7 @@ echo json_encode([
         'cadetFirstName'   => $g('cadet_first_name'),
         'cadetMiddleName'  => $g('cadet_middle_name'),
         'cadetLastName'    => $g('cadet_last_name'),
+        'cadetSuffix'      => $g('cadet_suffix'),
         'graduationYear'   => $g('class_year'),
         'nickname'         => $g('nickname'),
         'poBox'            => $g('cadet_po_box'),

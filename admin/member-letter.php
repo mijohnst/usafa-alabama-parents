@@ -32,7 +32,7 @@ if ($member_id > 0) {
 
 if (!$member && $q !== '') {
     $like = '%' . $q . '%';
-    $s = $pdo->prepare("SELECT id, parent1_first_name, parent1_last_name, cadet_first_name, cadet_middle_name, cadet_last_name, membership_year, membership_paid
+    $s = $pdo->prepare("SELECT id, parent1_first_name, parent1_last_name, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, membership_year, membership_paid
         FROM members WHERE archived=0
         AND (parent1_first_name LIKE ? OR parent1_last_name LIKE ? OR cadet_first_name LIKE ? OR cadet_last_name LIKE ?)
         ORDER BY parent1_last_name ASC, parent1_first_name ASC LIMIT 30");
@@ -46,7 +46,7 @@ if ($member) {
     $amount     = $member['membership_type'] === '4year' ? '$275' : '$75';
     $paid_label = $member['membership_paid'] ? 'Paid' : 'Unpaid';
     $paid_color = $member['membership_paid'] ? '#1b5e20' : '#A6192E';
-    $cadet_full = trim(preg_replace('/\s+/', ' ', ($member['cadet_first_name']??'') . ' ' . ($member['cadet_middle_name']??'') . ' ' . ($member['cadet_last_name']??'')));
+    $cadet_full = trim(preg_replace('/\s+/', ' ', ($member['cadet_first_name']??'') . ' ' . ($member['cadet_middle_name']??'') . ' ' . ($member['cadet_last_name']??'') . ' ' . ($member['cadet_suffix']??'')));
     $parent_full = trim($member['parent1_first_name'] . ' ' . $member['parent1_last_name']);
     $squadron = $member['squadron_yr2_4'] ?: ($member['fall_squadron'] ?: $member['bct_squadron']);
     $mem_year    = $member['membership_year'] ?? '';
@@ -224,7 +224,7 @@ admin_header('Member Status Letter');
   <?php foreach ($results as $r): ?>
   <tr>
     <td style="font-weight:600"><?= h($r['parent1_first_name'] . ' ' . $r['parent1_last_name']) ?></td>
-    <td><?= h(trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name']??'') . ' ' . ($r['cadet_middle_name']??'') . ' ' . ($r['cadet_last_name']??'')))) ?: '<span style="color:#c0c8d4">—</span>' ?></td>
+    <td><?= h(trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name']??'') . ' ' . ($r['cadet_middle_name']??'') . ' ' . ($r['cadet_last_name']??'') . ' ' . ($r['cadet_suffix']??'')))) ?: '<span style="color:#c0c8d4">—</span>' ?></td>
     <td><?= $r['membership_year'] ? h($r['membership_year']) : '<span style="color:#c0c8d4">—</span>' ?></td>
     <td>
       <?php if ($r['membership_paid']): ?>

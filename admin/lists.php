@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($paid === '0')  { $where[] = 'membership_paid = 0'; }
     if ($type === 'new_members') { $where[] = "created_at >= DATE_SUB(NOW(), INTERVAL $days DAY)"; }
 
-    $sql = 'SELECT cadet_last_name, cadet_first_name, cadet_middle_name, class_year, al_region,
+    $sql = 'SELECT cadet_last_name, cadet_suffix, cadet_first_name, cadet_middle_name, class_year, al_region,
                    cadet_po_box, cadet_birthday, bct_squadron, bct_flight, fall_squadron, squadron_yr2_4,
                    parent1_first_name, parent1_last_name, parent1_email, parent1_cell,
                    parent1_street, parent1_city, parent1_state, parent1_zip,
@@ -55,8 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sqd_groups = [];
     foreach ($rows as $r) {
         $cadet_fm   = trim($r['cadet_first_name'] . ' ' . $r['cadet_middle_name']);
-        $cadet_full = trim($cadet_fm . ' ' . $r['cadet_last_name']);
-        $cadet_last = trim($r['cadet_last_name'] . ', ' . $cadet_fm);
+        $cadet_last_suffixed = trim($r['cadet_last_name'] . ' ' . ($r['cadet_suffix'] ?? ''));
+        $cadet_full = trim($cadet_fm . ' ' . $cadet_last_suffixed);
+        $cadet_last = trim($cadet_last_suffixed . ', ' . $cadet_fm);
 
         $addr = function(string $prefix) use ($r): string {
             $street = trim($r[$prefix . '_street'] ?? '');
@@ -363,7 +364,7 @@ admin_header('Lists');
 <?php
 // Build TSV for copy-to-spreadsheet
 $roster_cols = [
-    'Year','Last Name','First Name','Middle Name','Birthday','PO Box',
+    'Year','Last Name','Suffix','First Name','Middle Name','Birthday','PO Box',
     'BCT Sqd','BCT Flight','Fall Sqd','Yr 2-4 Sqd',
     'Cadet Email','Cadet Cell',
     'P1 Last','P1 First','P1 Email','P1 Cell','P1 Street','P1 City','P1 State','P1 Zip',
@@ -371,7 +372,7 @@ $roster_cols = [
     'AL Region','Remarks'
 ];
 $roster_fields = [
-    'class_year','cadet_last_name','cadet_first_name','cadet_middle_name','cadet_birthday','cadet_po_box',
+    'class_year','cadet_last_name','cadet_suffix','cadet_first_name','cadet_middle_name','cadet_birthday','cadet_po_box',
     'bct_squadron','bct_flight','fall_squadron','squadron_yr2_4',
     'cadet_email','cadet_cell',
     'parent1_last_name','parent1_first_name','parent1_email','parent1_cell',

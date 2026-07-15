@@ -140,6 +140,7 @@ try {
             class_year        = COALESCE(NULLIF(:class_year, ''), class_year),
             cadet_first_name  = COALESCE(NULLIF(:cadet_first_name, ''), cadet_first_name),
             cadet_middle_name = COALESCE(NULLIF(:cadet_middle_name, ''), cadet_middle_name),
+            cadet_suffix      = COALESCE(NULLIF(:cadet_suffix, ''), cadet_suffix),
             nickname          = COALESCE(NULLIF(:nickname, ''), nickname),
             cadet_birthday    = COALESCE(:cadet_birthday, cadet_birthday),
             cadet_po_box      = COALESCE(NULLIF(:cadet_po_box, ''), cadet_po_box),
@@ -170,6 +171,7 @@ try {
         'class_year'         => $grad_year,
         'cadet_first_name'   => $first,
         'cadet_middle_name'  => $middle,
+        'cadet_suffix'       => s($payload, 'cadetSuffix'),
         'nickname'           => s($payload, 'nickname'),
         'cadet_birthday'     => $dob,
         'cadet_po_box'       => s($payload, 'poBox'),
@@ -219,6 +221,7 @@ $diff_labels = [
     'class_year'          => 'Graduation Year',
     'cadet_first_name'   => 'Cadet First Name',
     'cadet_middle_name'  => 'Cadet Middle Name',
+    'cadet_suffix'        => 'Cadet Suffix',
     'nickname'            => 'Nickname',
     'cadet_po_box'        => 'USAFA Mailbox / PO Box',
     'cadet_email'         => 'Cadet Email',
@@ -252,14 +255,15 @@ foreach ($diff_labels as $col => $label) {
 
 // ── Notify secretary of the update ────────────────────────────────────────
 $secretary_email = 'secretary@alabamafalcons.org';
-$subject = 'Member Info Updated: ' . sanitize_header($g('cadet_first_name')) . ' ' . sanitize_header($g('cadet_last_name'));
+$subject = 'Member Info Updated: ' . sanitize_header($g('cadet_first_name')) . ' ' . sanitize_header($g('cadet_last_name'))
+         . ($g('cadet_suffix') !== '' ? ' ' . sanitize_header($g('cadet_suffix')) : '');
 
 $email_body  = "A member updated their information via the Update Your Information form.\n\n";
 $email_body .= "WHAT CHANGED\n";
 $email_body .= empty($changes) ? "(No fields actually changed — everything submitted matched what was already on file.)\n\n" : implode("\n", $changes) . "\n\n";
 $email_body .= "Fields left blank on the form kept their existing value — the full record below reflects how it now stands:\n\n";
 $email_body .= "CADET INFORMATION\n";
-$email_body .= "Name: " . trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name')) . "\n";
+$email_body .= "Name: " . trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name') . ' ' . $g('cadet_suffix')) . "\n";
 $email_body .= "Nickname: " . $g('nickname') . "\n";
 $email_body .= "Email: " . $g('cadet_email') . "\n";
 $email_body .= "Phone: " . $g('cadet_cell') . "\n";
@@ -291,7 +295,7 @@ mail($secretary_email, $subject, $email_body, $headers);
 $parent_email = $g('parent1_email');
 if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
     $parent_name  = $g('parent1_first_name') ?: 'there';
-    $cadet_name   = trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name')) ?: 'your cadet';
+    $cadet_name   = trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name') . ' ' . $g('cadet_suffix')) ?: 'your cadet';
     $conf_subject = 'Your Information Has Been Updated — USAFA Parents Club of Alabama';
     $conf_body    = "Dear $parent_name,\n\n"
                   . "Your family's information for $cadet_name has been updated in our records.\n\n"

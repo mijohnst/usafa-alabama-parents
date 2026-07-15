@@ -104,13 +104,13 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="members-' . date('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['Year','Last Name','First Name','Middle Name','Squadron','Region',
+    fputcsv($out, ['Year','Last Name','Suffix','First Name','Middle Name','Squadron','Region',
                    'P1 Name','P1 Email','P1 Cell','P2 Name','P2 Email','P2 Cell',
                    'Dues','Dues Year','Remarks']);
     foreach ($members as $m) {
         $sqd = $m['squadron_yr2_4'] ?: ($m['fall_squadron'] ?: $m['bct_squadron']);
         fputcsv($out, [
-            $m['class_year'], $m['cadet_last_name'], $m['cadet_first_name'], $m['cadet_middle_name'],
+            $m['class_year'], $m['cadet_last_name'], $m['cadet_suffix'] ?? '', $m['cadet_first_name'], $m['cadet_middle_name'],
             $sqd, $m['al_region'],
             trim($m['parent1_first_name'].' '.$m['parent1_last_name']),
             $m['parent1_email'], $m['parent1_cell'],
@@ -185,7 +185,7 @@ if (can_manage_finances() && !is_member()) {
 
 // Upcoming birthdays (next 30 days)
 $bday_rows = $pdo->query(
-    "SELECT cadet_last_name, cadet_first_name, cadet_middle_name, cadet_birthday, cadet_po_box
+    "SELECT cadet_last_name, cadet_suffix, cadet_first_name, cadet_middle_name, cadet_birthday, cadet_po_box
      FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL AND cadet_birthday != ''"
 )->fetchAll();
 $upcoming_bdays = [];
@@ -197,7 +197,7 @@ foreach ($bday_rows as $b) {
         if ($next < $today) $next->modify('+1 year');
         $days = (int)$today->diff($next)->days;
         if ($days <= 30) {
-            $upcoming_bdays[] = ['name'  => $b['cadet_last_name'] . ', ' . trim($b['cadet_first_name'] . ' ' . $b['cadet_middle_name']),
+            $upcoming_bdays[] = ['name'  => $b['cadet_last_name'] . (!empty($b['cadet_suffix']) ? ' ' . $b['cadet_suffix'] : '') . ', ' . trim($b['cadet_first_name'] . ' ' . $b['cadet_middle_name']),
                                   'box'   => $b['cadet_po_box'],
                                   'fmt'   => $next->format('M j'),
                                   'days'  => $days];
@@ -500,7 +500,7 @@ function setYrs(state) {
       <?php endif; ?>
       <td><?= h($m['class_year']) ?></td>
       <td>
-        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><?php if (strpos(trim($m['cadet_first_name']), ' ') !== false): ?> <span title="First Name still contains a space — likely needs to be split into First/Middle" style="font-size:.65rem;font-weight:700;color:#5f4c00;background:#fff3cd;padding:.05rem .35rem;border-radius:3px">✂️ SPLIT?</span><?php endif; ?><?php if (isset($dup_ids[(int)$m['id']])): ?> <span title="Another active cadet shares this last name + class year — possible duplicate" style="font-size:.65rem;font-weight:700;color:#8a1425;background:#fde0e0;padding:.05rem .35rem;border-radius:3px">👥 DUP?</span><?php endif; ?><br>
+        <a href="view.php?id=<?= (int)$m['id'] ?>" style="font-weight:700;color:#002554"><?= h($m['cadet_last_name']) ?></a><?= !empty($m['cadet_suffix']) ? ' ' . h($m['cadet_suffix']) : '' ?><?php $cadet_fm = trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name']); ?><?= $cadet_fm ? ', ' . h($cadet_fm) : '' ?><?php if (strpos(trim($m['cadet_first_name']), ' ') !== false): ?> <span title="First Name still contains a space — likely needs to be split into First/Middle" style="font-size:.65rem;font-weight:700;color:#5f4c00;background:#fff3cd;padding:.05rem .35rem;border-radius:3px">✂️ SPLIT?</span><?php endif; ?><?php if (isset($dup_ids[(int)$m['id']])): ?> <span title="Another active cadet shares this last name + class year — possible duplicate" style="font-size:.65rem;font-weight:700;color:#8a1425;background:#fde0e0;padding:.05rem .35rem;border-radius:3px">👥 DUP?</span><?php endif; ?><br>
         <?php if ($m['cadet_email']): ?><a href="mailto:<?= h($m['cadet_email']) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($m['cadet_email']) ?></a><?php endif; ?>
       </td>
       <td><?php if ($m['al_region']): ?><span class="badge <?= h($region_cls) ?>"><?= h($m['al_region']) ?></span><?php endif; ?></td>

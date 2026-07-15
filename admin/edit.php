@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 admin_header('Edit Member');
 ?>
 <div class="page-head">
-  <h1>Edit — <?= h($member['cadet_last_name']) ?>, <?= h(trim($member['cadet_first_name'] . ' ' . $member['cadet_middle_name'])) ?></h1>
+  <h1>Edit — <?= h($member['cadet_last_name']) ?><?= !empty($member['cadet_suffix']) ? ' ' . h($member['cadet_suffix']) : '' ?>, <?= h(trim($member['cadet_first_name'] . ' ' . $member['cadet_middle_name'])) ?></h1>
   <a href="index.php" class="btn btn-secondary">← Back</a>
 </div>
 

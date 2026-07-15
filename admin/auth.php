@@ -388,7 +388,7 @@ function missing_data_sql(string $key): ?string {
 }
 
 const FIELDS = [
-    'class_year','cadet_last_name','cadet_first_name','cadet_middle_name','nickname','cadet_birthday','cadet_po_box',
+    'class_year','cadet_last_name','cadet_suffix','cadet_first_name','cadet_middle_name','nickname','cadet_birthday','cadet_po_box',
     'cadet_email','cadet_cell','bct_squadron','bct_flight','fall_squadron','squadron_yr2_4',
     'parent1_last_name','parent1_first_name','parent1_email','parent1_cell',
     'parent1_street','parent1_city','parent1_state','parent1_zip',
@@ -486,6 +486,7 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>Cell</label><input type="tel" name="cadet_cell" value="' . $v('cadet_cell') . '"></div>';
     echo '</div>';
     echo '<div class="form-row col-2">';
+    echo '<div class="form-group"><label>Suffix <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">e.g. Jr., III</span></label><input name="cadet_suffix" value="' . $v('cadet_suffix') . '" maxlength="20"></div>';
     echo '<div class="form-group"><label>Email</label><input type="email" name="cadet_email" value="' . $v('cadet_email') . '"></div>';
     echo '</div>';
     echo '</fieldset>';

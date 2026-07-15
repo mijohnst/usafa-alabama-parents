@@ -43,7 +43,7 @@ a.vf-val{color:#003594}
 </style>
 
 <div class="page-head">
-  <h1><?= h($m['cadet_last_name']) ?>, <?= h(trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name'])) ?>
+  <h1><?= h($m['cadet_last_name']) ?><?= !empty($m['cadet_suffix']) ? ' ' . h($m['cadet_suffix']) : '' ?>, <?= h(trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name'])) ?>
     <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">· Class of <?= h($m['class_year']) ?></span>
   </h1>
   <div style="display:flex;gap:.5rem">
@@ -77,6 +77,7 @@ a.vf-val{color:#003594}
     <h3>Cadet</h3>
     <?php
     field('Last Name',      $m['cadet_last_name']);
+    field('Suffix',         $m['cadet_suffix'] ?? '');
     field('First Name',     $m['cadet_first_name']);
     field('Middle Name',    $m['cadet_middle_name']);
     field('Nickname',       $m['nickname'] ?? '');

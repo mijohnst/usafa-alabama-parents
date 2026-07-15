@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // last name + class year can legitimately be two different cadets)
     // if an active member already looks like this one.
     if (empty($errors)) {
-        $cand = $pdo->prepare('SELECT id, cadet_first_name, cadet_last_name, al_region, parent1_first_name, parent1_last_name FROM members WHERE archived=0 AND class_year=?');
+        $cand = $pdo->prepare('SELECT id, cadet_first_name, cadet_last_name, cadet_suffix, al_region, parent1_first_name, parent1_last_name FROM members WHERE archived=0 AND class_year=?');
         $cand->execute([$m['class_year']]);
         $target_norm = normalize_name($m['cadet_last_name']);
         foreach ($cand->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -60,7 +60,7 @@ admin_header('Add Member');
     <strong>Possible duplicate<?= count($duplicates) > 1 ? 's' : '' ?>:</strong> an active member with the same last name and class year already exists.
     <ul style="margin:.5rem 0 0 1.25rem">
       <?php foreach ($duplicates as $d): ?>
-        <li><a href="edit.php?id=<?= (int)$d['id'] ?>" target="_blank"><?= h(trim($d['cadet_first_name'] . ' ' . $d['cadet_last_name'])) ?></a> — Parent: <?= h(trim($d['parent1_first_name'] . ' ' . $d['parent1_last_name'])) ?><?= $d['al_region'] ? ' (' . h($d['al_region']) . ')' : '' ?></li>
+        <li><a href="edit.php?id=<?= (int)$d['id'] ?>" target="_blank"><?= h(trim($d['cadet_first_name'] . ' ' . $d['cadet_last_name'] . ' ' . ($d['cadet_suffix'] ?? ''))) ?></a> — Parent: <?= h(trim($d['parent1_first_name'] . ' ' . $d['parent1_last_name'])) ?><?= $d['al_region'] ? ' (' . h($d['al_region']) . ')' : '' ?></li>
       <?php endforeach; ?>
     </ul>
     <p style="margin-top:.5rem">Double-check this isn't the same family before saving. If you're sure this is a different cadet, submit again to save anyway.</p>

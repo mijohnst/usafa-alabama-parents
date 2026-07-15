@@ -30,8 +30,9 @@
     .form-section > p { color: var(--gray); margin-bottom: 1.5rem; font-size: 0.95rem; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 0.6fr; gap: 1rem; }
     @media (max-width: 600px) {
-      .form-row, .form-row-3 { grid-template-columns: 1fr; }
+      .form-row, .form-row-3, .form-row-4 { grid-template-columns: 1fr; }
     }
     .form-group { margin-bottom: 1.25rem; }
     .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--navy); font-size: 0.9rem; }
@@ -191,7 +192,7 @@
         <!-- CADET INFORMATION -->
         <div class="form-divider-label" id="fs-cadet">Cadet Information</div>
 
-        <div class="form-row-3">
+        <div class="form-row-4">
           <div class="form-group">
             <label for="cadetFirstName">Cadet First Name *</label>
             <input type="text" id="cadetFirstName" name="cadetFirstName" required />
@@ -203,6 +204,10 @@
           <div class="form-group">
             <label for="cadetLastName">Cadet Last Name *</label>
             <input type="text" id="cadetLastName" name="cadetLastName" required />
+          </div>
+          <div class="form-group">
+            <label for="cadetSuffix">Suffix</label>
+            <input type="text" id="cadetSuffix" name="cadetSuffix" maxlength="20" placeholder="Jr., III" />
           </div>
         </div>
 
