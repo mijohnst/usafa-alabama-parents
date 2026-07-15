@@ -316,6 +316,10 @@ echo show_flash();
             $closes_val = str_replace(' ', 'T', substr($edit['voting_closes_at'], 0, 16));
     }
     $elections = $pdo->query('SELECT * FROM elections ORDER BY election_date DESC')->fetchAll(PDO::FETCH_ASSOC);
+    $pending_by_election = [];
+    foreach ($pdo->query("SELECT election_id, COUNT(*) AS cnt FROM election_candidates WHERE status='pending' GROUP BY election_id")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $pending_by_election[$row['election_id']] = (int)$row['cnt'];
+    }
 ?>
   <div class="page-head">
     <h1>Elections</h1>
@@ -362,12 +366,13 @@ echo show_flash();
     <p style="color:#9aa5b4">No elections yet.</p>
   <?php else: ?>
   <table>
-    <tr><th>Title</th><th>Election Day</th><th>Status</th><th class="actions-head">Actions</th></tr>
-    <?php foreach ($elections as $e): ?>
+    <tr><th>Title</th><th>Election Day</th><th>Status</th><th>Pending</th><th class="actions-head">Actions</th></tr>
+    <?php foreach ($elections as $e): $pend = $pending_by_election[$e['id']] ?? 0; ?>
     <tr>
       <td style="font-weight:700"><?= h($e['title']) ?></td>
       <td><?= date('M j, Y', strtotime($e['election_date'])) ?></td>
       <td><span class="badge" style="background:<?= $status_colors[$e['status']]['bg'] ?>;color:<?= $status_colors[$e['status']]['fg'] ?>"><?= ucfirst($e['status']) ?></span></td>
+      <td><?php if ($pend > 0): ?><span class="badge" style="background:#fff3cd;color:#5f4c00"><?= $pend ?> pending</span><?php endif; ?></td>
       <td class="actions">
         <div class="btn-group">
           <a href="elections.php?manage=<?= $e['id'] ?>" class="btn btn-primary btn-sm">Manage</a>
