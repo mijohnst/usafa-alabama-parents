@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // trusting a client-supplied name, so it always matches the roster.
         $member_id = 0; $slot = 0; $name = '';
         if (preg_match('/^(\d+):([12])$/', trim($_POST['member_pick'] ?? ''), $mm)) {
-            $ms = $pdo->prepare('SELECT * FROM members WHERE id=? AND archived=0');
+            $ms = $pdo->prepare('SELECT * FROM members WHERE id=? AND archived=0 AND membership_paid=1');
             $ms->execute([(int)$mm[1]]);
             if ($mrow = $ms->fetch(PDO::FETCH_ASSOC)) {
                 $member_id = (int)$mm[1];
@@ -165,14 +165,15 @@ echo show_flash();
     $edit_candidate = null;
     foreach ($candidates as $c) if ((int)$c['id'] === $edit_candidate_id) { $edit_candidate = $c; break; }
 
-    // Every parent on an active member record, as a "<member_id>:<slot>" pick
-    // list — mirrors how parent1_is_board_member / parent2_is_board_member
-    // already tag individual parents on a family record.
+    // Every parent on an active, dues-paid member record, as a
+    // "<member_id>:<slot>" pick list — mirrors how parent1_is_board_member /
+    // parent2_is_board_member already tag individual parents on a family
+    // record. Only paid members are eligible to run for office.
     $parent_options = [];
     $mem_rows = $pdo->query(
         "SELECT id, cadet_first_name, cadet_last_name, class_year,
                 parent1_first_name, parent1_last_name, parent2_first_name, parent2_last_name
-         FROM members WHERE archived=0"
+         FROM members WHERE archived=0 AND membership_paid=1"
     )->fetchAll(PDO::FETCH_ASSOC);
     foreach ($mem_rows as $m) {
         $cadet = trim($m['cadet_first_name'] . ' ' . $m['cadet_last_name']);

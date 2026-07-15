@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$es->fetch() || !$my_member || !$my_slot || !in_array($nom_position, ELECTION_POSITIONS, true)) {
             flash('error', 'Unable to submit that nomination.');
+        } elseif (!$my_member['membership_paid']) {
+            flash('error', 'Only paid members can run for office. Pay your dues to become eligible.');
         } else {
             $nom_name = trim(($my_member["parent{$my_slot}_first_name"] ?? '') . ' ' . ($my_member["parent{$my_slot}_last_name"] ?? ''));
             if ($nom_name === '') {
@@ -207,7 +209,7 @@ echo show_flash();
   })();
   </script>
 
-  <?php if ($my_member): ?>
+  <?php if ($my_member && $my_member['membership_paid']): ?>
   <div class="card" style="max-width:480px;margin-top:1.25rem">
     <h2>Run for Office</h2>
     <p style="color:#5a6a7a;font-size:.85rem;margin-bottom:1rem">Nominate yourself for a position — the Secretary reviews nominations before voting opens.</p>
@@ -229,6 +231,11 @@ echo show_flash();
         <?php endif; ?>
       </div>
     <?php endforeach; ?>
+  </div>
+  <?php elseif ($my_member): ?>
+  <div class="card" style="max-width:480px;margin-top:1.25rem">
+    <h2>Run for Office</h2>
+    <p style="color:#5a6a7a;font-size:.85rem">Only paid members are eligible to run for office. <a href="/payment.html" style="font-weight:700">Pay your dues</a> to become eligible.</p>
   </div>
   <?php else: ?>
   <p style="font-size:.82rem;color:#9aa5b4;margin-top:1rem">We couldn't find a membership record linked to your account, so you can't self-nominate. Contact <a href="mailto:info@alabamafalcons.org">info@alabamafalcons.org</a> if you believe this is an error.</p>
