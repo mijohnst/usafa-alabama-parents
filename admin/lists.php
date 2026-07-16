@@ -55,9 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sqd_groups = [];
     foreach ($rows as $r) {
         $cadet_fm   = trim($r['cadet_first_name'] . ' ' . $r['cadet_middle_name']);
-        $cadet_last_suffixed = trim($r['cadet_last_name'] . ' ' . ($r['cadet_suffix'] ?? ''));
-        $cadet_full = trim($cadet_fm . ' ' . $cadet_last_suffixed);
-        $cadet_last = trim($cadet_last_suffixed . ', ' . $cadet_fm);
+        $cadet_full = cadet_full_name($r);
+        $cadet_last = trim(cadet_last_name_suffixed($r) . ', ' . $cadet_fm);
 
         $addr = function(string $prefix) use ($r): string {
             $street = trim($r[$prefix . '_street'] ?? '');

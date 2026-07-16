@@ -9,8 +9,11 @@
 
 // Same reasoning as auth.php — this file is also the entry point for the
 // CLI cron job, which never includes auth.php, so the timezone needs to be
-// anchored here too, independently.
+// anchored here too, independently. lib.php is required directly (not via
+// auth.php) for the same reason — cadet_full_name() etc. must stay
+// available in the standalone-cron path.
 date_default_timezone_set('America/Chicago');
+require_once __DIR__ . '/lib.php';
 
 define('CLUB_NAME',  'USAFA Parents Club of Alabama');
 define('CLUB_FROM',  'USAFA Parents Club of Alabama <info@alabamafalcons.org>');
@@ -95,8 +98,7 @@ function send_birthday_emails(PDO $pdo): int {
         if (!mark_automated_sent($pdo, 'birthday', (int)$r['id'], (string)$year)) continue; // already wished this year
         $count++;
 
-        $full_name = trim(($r['cadet_first_name'] ?? '') . ' ' . ($r['cadet_middle_name'] ?? '') . ' ' . ($r['cadet_last_name'] ?? '') . ' ' . ($r['cadet_suffix'] ?? ''));
-        $full_name = preg_replace('/\s+/', ' ', $full_name);
+        $full_name = cadet_full_name($r);
         $nickname  = trim((string)($r['nickname'] ?? ''));
         $nick_or_first = $nickname !== '' ? $nickname : trim((string)($r['cadet_first_name'] ?? ''));
         if ($nick_or_first === '') $nick_or_first = $full_name ?: 'Cadet';
@@ -144,7 +146,7 @@ function send_dues_renewal_reminders(PDO $pdo): int {
         if (!mark_automated_sent($pdo, 'dues_renewal', (int)$r['id'], $r['membership_paid_through'])) continue;
         $count++;
 
-        $full_name = trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name'] ?? '') . ' ' . ($r['cadet_middle_name'] ?? '') . ' ' . ($r['cadet_last_name'] ?? '') . ' ' . ($r['cadet_suffix'] ?? '')));
+        $full_name = cadet_full_name($r);
         $replace = [
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',
@@ -186,7 +188,7 @@ function send_lapsed_reengagement(PDO $pdo): int {
         if (!mark_automated_sent($pdo, 'lapsed_reengagement', (int)$r['id'], $r['membership_paid_through'])) continue;
         $count++;
 
-        $full_name = trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name'] ?? '') . ' ' . ($r['cadet_middle_name'] ?? '') . ' ' . ($r['cadet_last_name'] ?? '') . ' ' . ($r['cadet_suffix'] ?? '')));
+        $full_name = cadet_full_name($r);
         $replace = [
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',
@@ -226,7 +228,7 @@ function send_new_member_welcome(PDO $pdo): int {
         if (!mark_automated_sent($pdo, 'new_member_welcome', (int)$r['id'], 'once')) continue;
         $count++;
 
-        $full_name = trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name'] ?? '') . ' ' . ($r['cadet_middle_name'] ?? '') . ' ' . ($r['cadet_last_name'] ?? '') . ' ' . ($r['cadet_suffix'] ?? '')));
+        $full_name = cadet_full_name($r);
         $replace = [
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',

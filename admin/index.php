@@ -4,9 +4,8 @@ require_login();
 // This page shows un-redacted contact info (parent emails/cells, dues
 // status) for every member regardless of directory_consent — that consent
 // field is only honored by directory.php, the member-safe printable
-// roster. Gate here to whoever can act on that data: staff who manage
-// members, plus Treasurer (who marks dues paid/unpaid from this same page).
-if (!can_mark_dues()) { header('Location: dashboard.php?denied=1'); exit; }
+// roster. Gate here to whoever may see that PII (see can_view_member_pii()).
+if (!can_view_member_pii()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 // ── Filters ────────────────────────────────────────────────────────────────
@@ -197,7 +196,7 @@ foreach ($bday_rows as $b) {
         if ($next < $today) $next->modify('+1 year');
         $days = (int)$today->diff($next)->days;
         if ($days <= 30) {
-            $upcoming_bdays[] = ['name'  => $b['cadet_last_name'] . (!empty($b['cadet_suffix']) ? ' ' . $b['cadet_suffix'] : '') . ', ' . trim($b['cadet_first_name'] . ' ' . $b['cadet_middle_name']),
+            $upcoming_bdays[] = ['name'  => cadet_last_name_suffixed($b) . ', ' . trim($b['cadet_first_name'] . ' ' . $b['cadet_middle_name']),
                                   'box'   => $b['cadet_po_box'],
                                   'fmt'   => $next->format('M j'),
                                   'days'  => $days];

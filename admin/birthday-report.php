@@ -12,6 +12,7 @@ if (php_sapi_name() !== 'cli') {
 }
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib.php';
 
 $month      = (int)date('n');
 $month_name = date('F');
@@ -53,7 +54,7 @@ if (empty($cadets)) {
     $body .= "No cadets have birthdays in $month_name.\n";
 } else {
     foreach ($cadets as $c) {
-        $name = trim(preg_replace('/\s+/', ' ', $c['cadet_first_name'] . ' ' . $c['cadet_middle_name'] . ' ' . $c['cadet_last_name'] . ' ' . ($c['cadet_suffix'] ?? '')));
+        $name = cadet_full_name($c);
         $day  = $c['cadet_birthday'] ? date('F j', strtotime($c['cadet_birthday'])) : '—';
         $box  = $c['cadet_po_box'] ?: 'No PO Box on file';
         $body .= "$day\n";

@@ -916,7 +916,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   <div class="nb-progress" id="dots"></div>
   <span class="nb-ctr" id="ctr"></span>
   <button class="nb-btn" id="btn-next" onclick="go(1)">Next →</button>
-  <a class="nb-btn nb-exit" href="index.php">✕ Exit to Portal</a>
+  <a class="nb-btn nb-exit" href="dashboard.php">✕ Exit to Portal</a>
 </div>
 
 <script>

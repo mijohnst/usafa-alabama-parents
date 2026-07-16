@@ -144,8 +144,7 @@ $linkable_members = $pdo->query(
 )->fetchAll(PDO::FETCH_ASSOC);
 $member_names = [];
 foreach ($linkable_members as $lm) {
-    $last_suffixed = trim($lm['cadet_last_name'] . ' ' . ($lm['cadet_suffix'] ?? ''));
-    $member_names[$lm['id']] = trim($last_suffixed . ', ' . trim($lm['cadet_first_name'] . ' ' . $lm['cadet_middle_name'])) . ' (' . $lm['class_year'] . ')';
+    $member_names[$lm['id']] = trim(cadet_last_name_suffixed($lm) . ', ' . trim($lm['cadet_first_name'] . ' ' . $lm['cadet_middle_name'])) . ' (' . $lm['class_year'] . ')';
 }
 
 $role_labels = ['admin'=>'Admin','tech'=>'Tech Support','officer'=>'Officer','secretary'=>'Secretary','treasurer'=>'Treasurer','member'=>'Member'];

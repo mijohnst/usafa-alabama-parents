@@ -46,7 +46,7 @@ if ($member) {
     $amount     = $member['membership_type'] === '4year' ? '$275' : '$75';
     $paid_label = $member['membership_paid'] ? 'Paid' : 'Unpaid';
     $paid_color = $member['membership_paid'] ? '#1b5e20' : '#A6192E';
-    $cadet_full = trim(preg_replace('/\s+/', ' ', ($member['cadet_first_name']??'') . ' ' . ($member['cadet_middle_name']??'') . ' ' . ($member['cadet_last_name']??'') . ' ' . ($member['cadet_suffix']??'')));
+    $cadet_full = cadet_full_name($member);
     $parent_full = trim($member['parent1_first_name'] . ' ' . $member['parent1_last_name']);
     $squadron = $member['squadron_yr2_4'] ?: ($member['fall_squadron'] ?: $member['bct_squadron']);
     $mem_year    = $member['membership_year'] ?? '';
@@ -224,7 +224,7 @@ admin_header('Member Status Letter');
   <?php foreach ($results as $r): ?>
   <tr>
     <td style="font-weight:600"><?= h($r['parent1_first_name'] . ' ' . $r['parent1_last_name']) ?></td>
-    <td><?= h(trim(preg_replace('/\s+/', ' ', ($r['cadet_first_name']??'') . ' ' . ($r['cadet_middle_name']??'') . ' ' . ($r['cadet_last_name']??'') . ' ' . ($r['cadet_suffix']??'')))) ?: '<span style="color:#c0c8d4">—</span>' ?></td>
+    <td><?= h(cadet_full_name($r)) ?: '<span style="color:#c0c8d4">—</span>' ?></td>
     <td><?= $r['membership_year'] ? h($r['membership_year']) : '<span style="color:#c0c8d4">—</span>' ?></td>
     <td>
       <?php if ($r['membership_paid']): ?>

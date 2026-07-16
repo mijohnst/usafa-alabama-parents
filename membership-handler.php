@@ -122,6 +122,11 @@ try {
     // different rows and silently inserts a duplicate instead of updating.
     // normalize_name() lives in admin/lib.php, shared with the admin panel's
     // own duplicate check, so the two never disagree on what counts as a match.
+    // Also stripped of a trailing suffix token via strip_name_suffix() — a
+    // legacy record whose suffix is still crammed into cadet_last_name (the
+    // exact "Jimmerson, Jr" case this field exists to fix) would otherwise
+    // never match the same family's new clean-last-name submission, and get
+    // inserted as a duplicate instead of updated.
     $parent1_email = s($payload, 'parent1Email');
     $parent2_email = s($payload, 'parent2Email');
     $cand = $pdo->prepare(
@@ -137,16 +142,17 @@ try {
         'parent1_email' => $parent1_email,
         'parent2_email' => $parent2_email,
     ]);
-    $target_norm = normalize_name(s($payload, 'cadetLastName'));
+    $target_norm = strip_name_suffix(normalize_name(s($payload, 'cadetLastName')));
     $existing_id = null;
     foreach ($cand->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        if (normalize_name($row['cadet_last_name']) === $target_norm) { $existing_id = $row['id']; break; }
+        if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target_norm) { $existing_id = $row['id']; break; }
     }
 
     if ($existing_id) {
         // Returning member — update their record instead of inserting
         $upd = $pdo->prepare("
             UPDATE members SET
+                cadet_suffix=:cadet_suffix,
                 cadet_first_name=:cadet_first_name, cadet_middle_name=:cadet_middle_name, nickname=:nickname,
                 cadet_birthday=:cadet_birthday, cadet_po_box=:cadet_po_box,
                 cadet_email=:cadet_email, cadet_cell=:cadet_cell,
@@ -163,6 +169,7 @@ try {
             WHERE id = :id
         ");
         $upd->execute([
+            'cadet_suffix'       => $suffix,
             'cadet_first_name'   => $first,
             'cadet_middle_name'  => $middle,
             'nickname'           => s($payload,'nickname'),
@@ -275,7 +282,7 @@ $subject = 'New Membership Application: '
 
 $email_body  = "New membership application received:\n\n";
 $email_body .= "CADET INFORMATION\n";
-$email_body .= "Name: " . s($payload,'cadetFirstName') . " " . s($payload,'cadetMiddleName') . " " . s($payload,'cadetLastName') . ($suffix !== '' ? " $suffix" : '') . "\n";
+$email_body .= "Name: " . trim(preg_replace('/\s+/', ' ', s($payload,'cadetFirstName') . " " . s($payload,'cadetMiddleName') . " " . s($payload,'cadetLastName') . " $suffix")) . "\n";
 $email_body .= "Nickname: " . s($payload,'nickname') . "\n";
 $email_body .= "Email: " . s($payload,'cadetEmail') . "\n";
 $email_body .= "Phone: " . s($payload,'cadetPhone') . "\n";

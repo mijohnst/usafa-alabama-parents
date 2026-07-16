@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $label = trim($_POST['link_label'] ?? '');
         $url   = trim($_POST['link_url']   ?? '');
         if (!$label || !$url) { flash('error','Label and URL are both required.'); header('Location: event-docs.php?album_id='.$album_id); exit; }
-        if (!preg_match('/^https?:\/\//i', $url)) { flash('error','URL must start with https:// or http://'); header('Location: event-docs.php?album_id='.$album_id); exit; }
+        if (!is_safe_http_url($url)) { flash('error','URL must start with https:// or http://'); header('Location: event-docs.php?album_id='.$album_id); exit; }
         $max_sort_row = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0) FROM event_documents WHERE album_id=?');
         $max_sort_row->execute([$album_id]);
         $next_sort = (int)$max_sort_row->fetchColumn() + 10;
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $row->execute([$id]); $d = $row->fetch(PDO::FETCH_ASSOC);
         if ($d && $d['type'] === 'link') {
             $url = trim($_POST['url'] ?? '');
-            if ($url && !preg_match('/^https?:\/\//i', $url)) { flash('error','URL must start with https:// or http://'); header('Location: event-docs.php?album_id='.$album_id); exit; }
+            if ($url && !is_safe_http_url($url)) { flash('error','URL must start with https:// or http://'); header('Location: event-docs.php?album_id='.$album_id); exit; }
             $pdo->prepare('UPDATE event_documents SET label=?,url=?,sort_order=? WHERE id=?')
                 ->execute([trim($_POST['label']??''), $url ?: null, (int)$_POST['sort_order'], $id]);
         } else {

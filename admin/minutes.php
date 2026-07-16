@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Meeting date is required.';
         } elseif ($title === '') {
             $error = 'Title is required.';
-        } elseif ($link !== '' && !preg_match('/^https?:\/\//i', $link)) {
+        } elseif ($link !== '' && !is_safe_http_url($link)) {
             $error = 'Meeting link must start with https:// or http://';
         } else {
             $s = $pdo->prepare("INSERT INTO club_meetings (meeting_date, meeting_type, title, location, meeting_link, notes, created_by) VALUES (?,?,?,?,?,?,?)");
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Invalid input.';
         } elseif ($title === '') {
             $error = 'Title is required.';
-        } elseif ($link !== '' && !preg_match('/^https?:\/\//i', $link)) {
+        } elseif ($link !== '' && !is_safe_http_url($link)) {
             $error = 'Meeting link must start with https:// or http://';
         } else {
             $s = $pdo->prepare("UPDATE club_meetings SET meeting_date=?, meeting_type=?, title=?, location=?, meeting_link=?, notes=? WHERE id=?");

@@ -63,14 +63,22 @@ if ($last === '' || $year === '' || $email === '' || !filter_var($email, FILTER_
     exit();
 }
 
+// Matched in PHP against a normalized, suffix-stripped last name rather
+// than a strict SQL `=` — a legacy record whose suffix is still crammed
+// into cadet_last_name (e.g. "Jimmerson Jr", from before cadet_suffix
+// existed) would otherwise never match a lookup for the clean "Jimmerson"
+// a parent naturally types now that Suffix is its own field.
 $stmt = $pdo->prepare(
     'SELECT * FROM members
-     WHERE archived = 0 AND cadet_last_name = :last_name AND class_year = :class_year
-       AND (parent1_email = :email OR parent2_email = :email)
-     LIMIT 1'
+     WHERE archived = 0 AND class_year = :class_year
+       AND (parent1_email = :email OR parent2_email = :email)'
 );
-$stmt->execute(['last_name' => $last, 'class_year' => $year, 'email' => $email]);
-$m = $stmt->fetch(PDO::FETCH_ASSOC);
+$stmt->execute(['class_year' => $year, 'email' => $email]);
+$target_norm = strip_name_suffix(normalize_name($last));
+$m = null;
+foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target_norm) { $m = $row; break; }
+}
 
 if (!$m) {
     echo json_encode([

@@ -62,7 +62,7 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
   </div>
   <div style="display:flex;gap:.5rem">
     <button onclick="window.print()" style="padding:.5rem 1.1rem;background:#003594;color:#fff;border:none;border-radius:4px;font-size:.85rem;cursor:pointer">Print / Save PDF</button>
-    <a href="index.php" style="padding:.5rem 1.1rem;background:#f0f2f5;color:#333;border:1px solid #d0d5dd;border-radius:4px;font-size:.85rem;text-decoration:none">← Back</a>
+    <a href="dashboard.php" style="padding:.5rem 1.1rem;background:#f0f2f5;color:#333;border:1px solid #d0d5dd;border-radius:4px;font-size:.85rem;text-decoration:none">← Back</a>
   </div>
 </div>
 
@@ -109,7 +109,7 @@ foreach ($by_year as $yr => $group):
     $v = fn(string $k) => h((string)($m[$k] ?? ''));
   ?>
   <div class="card">
-    <div class="cadet-name"><?= $v('cadet_last_name') ?><?= !empty($m['cadet_suffix']) ? ' ' . $v('cadet_suffix') : '' ?>, <?= h(trim(($m['cadet_first_name'] ?? '') . ' ' . ($m['cadet_middle_name'] ?? ''))) ?></div>
+    <div class="cadet-name"><?= h(cadet_last_name_suffixed($m)) ?>, <?= h(trim(($m['cadet_first_name'] ?? '') . ' ' . ($m['cadet_middle_name'] ?? ''))) ?></div>
     <div class="cadet-meta">
       <?= h((string)($sqd ?? '')) ?><?= $sqd && $m['al_region'] ? ' &bull; ' : '' ?><?= $v('al_region') ?>
       <?php if ($m['cadet_po_box']): ?>&bull; PO <?= $v('cadet_po_box') ?><?php endif; ?>

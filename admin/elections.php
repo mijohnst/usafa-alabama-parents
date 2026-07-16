@@ -235,7 +235,7 @@ echo show_flash();
              FROM members WHERE archived=0 AND membership_paid=1"
         )->fetchAll(PDO::FETCH_ASSOC);
         foreach ($mem_rows as $m) {
-            $cadet = trim($m['cadet_first_name'] . ' ' . $m['cadet_last_name'] . ' ' . ($m['cadet_suffix'] ?? ''));
+            $cadet = cadet_full_name($m);
             foreach ([1, 2] as $slot) {
                 $fn = trim($m["parent{$slot}_first_name"] ?? '');
                 $ln = trim($m["parent{$slot}_last_name"] ?? '');

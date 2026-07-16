@@ -60,7 +60,7 @@ admin_header('Add Member');
     <strong>Possible duplicate<?= count($duplicates) > 1 ? 's' : '' ?>:</strong> an active member with the same last name and class year already exists.
     <ul style="margin:.5rem 0 0 1.25rem">
       <?php foreach ($duplicates as $d): ?>
-        <li><a href="edit.php?id=<?= (int)$d['id'] ?>" target="_blank"><?= h(trim($d['cadet_first_name'] . ' ' . $d['cadet_last_name'] . ' ' . ($d['cadet_suffix'] ?? ''))) ?></a> — Parent: <?= h(trim($d['parent1_first_name'] . ' ' . $d['parent1_last_name'])) ?><?= $d['al_region'] ? ' (' . h($d['al_region']) . ')' : '' ?></li>
+        <li><a href="edit.php?id=<?= (int)$d['id'] ?>" target="_blank"><?= h(cadet_full_name($d)) ?></a> — Parent: <?= h(trim($d['parent1_first_name'] . ' ' . $d['parent1_last_name'])) ?><?= $d['al_region'] ? ' (' . h($d['al_region']) . ')' : '' ?></li>
       <?php endforeach; ?>
     </ul>
     <p style="margin-top:.5rem">Double-check this isn't the same family before saving. If you're sure this is a different cadet, submit again to save anyway.</p>

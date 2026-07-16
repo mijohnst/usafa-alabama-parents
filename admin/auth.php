@@ -106,6 +106,17 @@ function can_mark_dues(): bool {
     return can_manage_members() || is_treasurer();
 }
 
+// Who may see a member's un-redacted PII (home address, birthday, both
+// parents' contact info) — index.php and view.php's guard. Today this is
+// the same population as can_mark_dues() (Treasurer's only current
+// interface for marking dues happens to be that same page), but it's a
+// distinct concern from "may toggle a dues flag": if a narrower dues-only
+// surface is ever built for Treasurer, this can be redefined without
+// touching every PII-gated page's guard.
+function can_view_member_pii(): bool {
+    return can_mark_dues();
+}
+
 function can_manage_finances(): bool {
     return in_array($_SESSION['role'] ?? '', ['admin', 'tech', 'officer', 'treasurer', 'member', 'secretary']);
 }
@@ -229,6 +240,14 @@ function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+// Whether a URL is safe to save/link out to (http/https only) — used
+// everywhere an admin-entered URL ends up in a public <a href>, since
+// HTML-escaping alone doesn't stop a javascript: URL from being a valid
+// (and dangerous) href value.
+function is_safe_http_url(string $url): bool {
+    return (bool)preg_match('#^https?://#i', $url);
+}
+
 function csrf_field(): string {
     if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
     return '<input type="hidden" name="csrf" value="' . $_SESSION['csrf'] . '">';
@@ -326,7 +345,7 @@ function admin_header(string $title): void {
     echo '<nav>';
     echo '<a href="dashboard.php" title="Home">🏠</a>';
     echo '<a href="../index.html" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none" title="Go to the public website">View Site</a>';
-    echo '<a href="index.php">Members</a>';
+    if (can_view_member_pii()) echo '<a href="index.php">Members</a>';
     if (can_manage_finances() && !is_member()) {
         $pending_cnt = 0;
         try { $pending_cnt = (int)get_pdo()->query("SELECT COUNT(*) FROM purchases WHERE status='pending'")->fetchColumn(); } catch(Exception $e) {}

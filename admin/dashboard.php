@@ -17,8 +17,10 @@ try {
 // ── Gather data for alerts and stats ──────────────────────────────────────
 $stats = [];
 
-// Member stats — load for all roles (Members tile shown to everyone)
-if (true) {
+// Member stats — only needed to feed the Members tile's subtitle, which is
+// itself only shown to whoever can view member PII (see below) — skip the
+// full-table aggregate for everyone else.
+if (can_view_member_pii()) {
     $ms = $pdo->query("SELECT COUNT(*) as total,
                               SUM(membership_paid) as paid,
                               SUM(CASE WHEN membership_paid=0 THEN 1 ELSE 0 END) as unpaid,
@@ -123,9 +125,9 @@ $sections = [];
 $sponsors_tile_added = false;
 
 // Members tile — full admin roster with un-redacted contact info, so it's
-// staff/Treasurer only (see index.php's own guard). Regular members already
-// have the consent-filtered "Directory" tile below for the same purpose.
-if (can_mark_dues()) {
+// gated the same as index.php's own guard. Regular members already have
+// the consent-filtered "Directory" tile below for the same purpose.
+if (can_view_member_pii()) {
     $mem_total = $stats['members']['total'] ?? null;
     $sections['For You'][] = ['icon'=>'👥','label'=>'Members','sub'=>$mem_total!==null?$mem_total.' active':'View roster','href'=>'index.php','color'=>'#002554'];
 }

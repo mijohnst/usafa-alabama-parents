@@ -263,7 +263,7 @@ $email_body .= "WHAT CHANGED\n";
 $email_body .= empty($changes) ? "(No fields actually changed — everything submitted matched what was already on file.)\n\n" : implode("\n", $changes) . "\n\n";
 $email_body .= "Fields left blank on the form kept their existing value — the full record below reflects how it now stands:\n\n";
 $email_body .= "CADET INFORMATION\n";
-$email_body .= "Name: " . trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name') . ' ' . $g('cadet_suffix')) . "\n";
+$email_body .= "Name: " . trim(preg_replace('/\s+/', ' ', $g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name') . ' ' . $g('cadet_suffix'))) . "\n";
 $email_body .= "Nickname: " . $g('nickname') . "\n";
 $email_body .= "Email: " . $g('cadet_email') . "\n";
 $email_body .= "Phone: " . $g('cadet_cell') . "\n";
@@ -295,7 +295,7 @@ mail($secretary_email, $subject, $email_body, $headers);
 $parent_email = $g('parent1_email');
 if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
     $parent_name  = $g('parent1_first_name') ?: 'there';
-    $cadet_name   = trim($g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name') . ' ' . $g('cadet_suffix')) ?: 'your cadet';
+    $cadet_name   = trim(preg_replace('/\s+/', ' ', $g('cadet_first_name') . ' ' . $g('cadet_middle_name') . ' ' . $g('cadet_last_name') . ' ' . $g('cadet_suffix'))) ?: 'your cadet';
     $conf_subject = 'Your Information Has Been Updated — USAFA Parents Club of Alabama';
     $conf_body    = "Dear $parent_name,\n\n"
                   . "Your family's information for $cadet_name has been updated in our records.\n\n"

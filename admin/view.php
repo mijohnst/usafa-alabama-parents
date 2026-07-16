@@ -3,9 +3,8 @@ require_once __DIR__ . '/auth.php';
 require_login();
 // Same audience as index.php (which every row here is reached from) — this
 // page shows a member's full home address, birthday, and contact info with
-// no consent filtering, so it's restricted to staff/Treasurer, not every
-// logged-in portal account.
-if (!can_mark_dues()) { header('Location: dashboard.php?denied=1'); exit; }
+// no consent filtering, so it's restricted to whoever may see that PII.
+if (!can_view_member_pii()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 $id = (int)($_GET['id'] ?? 0);
@@ -43,7 +42,7 @@ a.vf-val{color:#003594}
 </style>
 
 <div class="page-head">
-  <h1><?= h($m['cadet_last_name']) ?><?= !empty($m['cadet_suffix']) ? ' ' . h($m['cadet_suffix']) : '' ?>, <?= h(trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name'])) ?>
+  <h1><?= h(cadet_last_name_suffixed($m)) ?>, <?= h(trim($m['cadet_first_name'] . ' ' . $m['cadet_middle_name'])) ?>
     <span style="font-size:.85rem;font-weight:400;color:#5a6a7a">· Class of <?= h($m['class_year']) ?></span>
   </h1>
   <div style="display:flex;gap:.5rem">

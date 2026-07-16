@@ -33,7 +33,7 @@ admin_header('My Membership');
   <div class="mm-card">
     <div class="mm-row">
       <span class="mm-label">Cadet</span>
-      <span class="mm-value"><?= h(trim($member['cadet_first_name'] . ' ' . $member['cadet_middle_name'] . ' ' . $member['cadet_last_name'] . ' ' . ($member['cadet_suffix'] ?? ''))) ?></span>
+      <span class="mm-value"><?= h(cadet_full_name($member)) ?></span>
     </div>
     <div class="mm-row">
       <span class="mm-label">Class Year</span>
