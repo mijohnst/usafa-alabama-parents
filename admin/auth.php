@@ -236,8 +236,11 @@ function get_pdo(): PDO {
     return $pdo;
 }
 
-function h(string $s): string {
-    return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+function h(?string $s): string {
+    // Every current write path sanitizes with trim($x ?? '') before storage,
+    // so no app-driven flow actually stores NULL in a nullable column — but
+    // a direct DB edit/import could, and that shouldn't fatal a whole page.
+    return htmlspecialchars($s ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
 // Whether a URL is safe to save/link out to (http/https only) — used

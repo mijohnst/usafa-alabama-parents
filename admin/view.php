@@ -15,7 +15,8 @@ $stmt->execute([$id]);
 $m = $stmt->fetch();
 if (!$m) { flash('error', 'Member not found.'); header('Location: index.php'); exit; }
 
-function field(string $label, string $value, bool $email = false, bool $phone = false): void {
+function field(string $label, ?string $value, bool $email = false, bool $phone = false): void {
+    $value = $value ?? '';
     if ($value === '') { return; }
     echo '<div class="vf">';
     echo '<span class="vf-label">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>';
