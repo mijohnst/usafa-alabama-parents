@@ -33,6 +33,7 @@ if (!$payload) {
 }
 
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/lib.php';
 
 // Honeypot — bots fill this hidden field, real visitors never see it.
 if (honeypot_tripped($payload)) {
@@ -96,18 +97,29 @@ try {
         exit();
     }
 
-    $dup = $pdo->prepare(
-        'SELECT id FROM members
-         WHERE archived = 0 AND cadet_last_name = :last_name AND class_year = :class_year
-           AND (parent1_email = :email OR parent2_email = :email)
-         LIMIT 1'
+    // Matched the same way update-lookup.php matches it — normalized and
+    // suffix-stripped, not a strict SQL `=` — since $verified_last carries
+    // whatever the visitor literally typed into the lookup box (e.g. "Joseph
+    // III"), which no longer equals cadet_last_name now that suffix lives in
+    // its own column. A strict match here would silently re-lose the record
+    // that the fuzzy lookup above just found.
+    $cand = $pdo->prepare(
+        'SELECT id, cadet_last_name FROM members
+         WHERE archived = 0 AND class_year = :class_year
+           AND (parent1_email = :email OR parent2_email = :email)'
     );
-    $dup->execute([
-        'last_name'  => $verified_last,
+    $cand->execute([
         'class_year' => $verified_year,
         'email'      => $verified_email,
     ]);
-    $existing_id = $dup->fetchColumn();
+    $target_norm = strip_name_suffix(normalize_name($verified_last));
+    $existing_id = null;
+    foreach ($cand->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target_norm) {
+            $existing_id = $row['id'];
+            break;
+        }
+    }
 
     if (!$existing_id) {
         echo json_encode([
