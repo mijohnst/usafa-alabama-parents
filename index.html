@@ -44,13 +44,7 @@
 
     /* PROGRAMS */
     #programs{background:var(--white);}
-    .programs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;margin-top:1rem;}
-    .program-card{background:var(--light);border-radius:4px;padding:2rem;border-left:3px solid var(--blue);transition:transform .2s,box-shadow .2s,background .2s,border-left-color .2s;}
-    .program-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,53,148,.2);background:#b8cce8;border-left-color:#A6192E;}
     .program-icon{font-size:1.8rem;margin-bottom:.75rem;}
-    .program-card h3{font-family:var(--font-display);font-size:1rem;color:var(--navy);margin-bottom:.5rem;}
-    .program-card p{font-size:.9rem;color:#5a6a7a;}
-    .coming-soon{display:inline-block;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--blue);border:1px solid var(--blue);padding:2px 8px;border-radius:2px;margin-top:.75rem;}
 
     /* MEMBERSHIP */
     #membership{background:var(--light);}
@@ -67,8 +61,6 @@
     .payment-note a{color:var(--blue);}
     .tax-note{font-size:.82rem;color:#5a6a7a;margin-top:1rem;padding:.75rem 1rem;background:rgba(0,53,148,.04);border:1px solid rgba(0,53,148,.12);border-radius:3px;}
     .tax-note a{color:var(--blue);text-decoration:underline;}
-    .badge-note{display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--navy);margin-top:.75rem;font-weight:600;}
-    .badge-note::before{content:'🏅';}
     .payment-portal{margin-top:auto;padding:1.5rem;background:rgba(0,53,148,.04);border:1px dashed rgba(0,53,148,.3);border-radius:4px;text-align:center;}
     .payment-portal p{font-size:.85rem;color:var(--gray);margin-bottom:1rem;}
     .payment-portal .btn-pay{background:linear-gradient(180deg,#1a5cbf 0%,#002554 100%);color:#ffffff;border:none;padding:.85rem 1.5rem;font-size:.85rem;box-shadow:0 4px 0 #001535,0 6px 12px rgba(0,0,0,.25);border-radius:4px;position:relative;top:0;transition:all .15s ease;width:100%;display:block;text-align:center;white-space:nowrap;}
@@ -99,7 +91,6 @@
     .event-info h3{font-family:var(--font-display);font-size:1rem;color:var(--navy);margin-bottom:.25rem;}
     .event-info p{font-size:.85rem;color:#5a6a7a;}
     .event-tag{display:inline-block;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;padding:2px 8px;border-radius:2px;margin-top:.4rem;}
-    .tag-meeting{background:rgba(0,53,148,.12);color:#002554;border:1px solid rgba(0,53,148,.2);}
     .tag-social{background:rgba(107,110,112,.12);color:#3a3d3f;border:1px solid rgba(107,110,112,.2);}
     .tag-volunteer{background:rgba(30,100,30,.1);color:#1a5a1a;border:1px solid rgba(30,100,30,.2);}
 
@@ -607,30 +598,6 @@ function fetchWithTimeout(url, ms) {
   return fetch(url, { signal: ctrl.signal }).finally(function() { clearTimeout(timer); });
 }
 
-function parseRSS(xmlText) {
-  var parser = new DOMParser();
-  var xml = parser.parseFromString(xmlText, 'text/xml');
-  var items = Array.from(xml.querySelectorAll('item')).slice(0, 4);
-  return items.map(function(item) {
-    var raw = (item.querySelector('description') || {}).textContent || '';
-    var tmp = document.createElement('div');
-    tmp.innerHTML = raw;
-    var text = tmp.textContent.trim();
-    var summary = text.length > 180 ? text.slice(0, 180) + '...' : text;
-    var pubDate = (item.querySelector('pubDate') || {}).textContent || '';
-    var date = '';
-    if (pubDate) {
-      try { date = new Date(pubDate).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}); } catch(ex) {}
-    }
-    return {
-      title:   (item.querySelector('title') || {}).textContent || '',
-      url:     (item.querySelector('link') || {}).textContent || '',
-      date:    date,
-      summary: summary
-    };
-  });
-}
-
 function escHtml(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -938,23 +905,6 @@ if (document.readyState === 'loading') {
   loadEvents();
 }
 
-// Ticket discount countdown — Aug 30 2026 11:59pm MDT (UTC-6)
-(function() {
-  var el = document.getElementById('ticket-countdown');
-  if (!el) return;
-  var deadline = new Date('2026-08-31T05:59:00Z');
-  function update() {
-    var diff = deadline - Date.now();
-    if (diff <= 0) { el.style.display = 'none'; return; }
-    var d = Math.floor(diff / 86400000);
-    var h = Math.floor((diff % 86400000) / 3600000);
-    var m = Math.floor((diff % 3600000) / 60000);
-    el.innerHTML = '&#9200; Discount ends in <strong style="margin-left:.25rem">' +
-      d + 'd ' + h + 'h ' + m + 'm</strong>';
-  }
-  update();
-  setInterval(update, 60000);
-})();
 </script>
 
 

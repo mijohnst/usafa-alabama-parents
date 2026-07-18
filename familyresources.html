@@ -109,87 +109,6 @@
       font-size: 1rem;
     }
 
-    /* CONGRESS CARDS */
-    .congress-group-title {
-      font-family: var(--font-display);
-      font-size: 1.5rem;
-      color: var(--navy);
-      margin-bottom: 1.25rem;
-      text-align: center;
-      position: relative;
-      padding-bottom: 0.75rem;
-    }
-
-    .congress-group-title::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 60px;
-      height: 3px;
-      background: var(--accent);
-      border-radius: 2px;
-    }
-
-    .congress-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 3rem;
-    }
-
-    .congress-card {
-      background: var(--white);
-      border-radius: 4px;
-      padding: 2rem 1.5rem;
-      text-align: center;
-      border: 1px solid rgba(166, 25, 46, 0.25);
-      border-top: 4px solid #A6192E;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .congress-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 10px 28px rgba(0, 53, 148, 0.2);
-      background: #b8cce8;
-    }
-
-    .congress-card h3 {
-      font-family: var(--font-display);
-      font-size: 1.05rem;
-      margin-bottom: 0.25rem;
-    }
-
-    .congress-card .role {
-      font-size: 0.78rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-    }
-
-    .congress-card .phone {
-      font-size: 0.85rem;
-      color: var(--gray);
-      margin: 0.5rem 0;
-    }
-
-    .congress-card .website-link {
-      display: inline-block;
-      margin-top: 0.5rem;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--blue);
-      border-bottom: 1px solid transparent;
-      transition: border-color 0.2s, color 0.2s;
-    }
-
-    .congress-card .website-link:hover {
-      border-bottom-color: var(--blue);
-    }
-
     /* INFO HIGHLIGHT */
     .info-box {
       background: var(--light);
@@ -214,41 +133,6 @@
 
     .info-box p:last-child {
       margin-bottom: 0;
-    }
-
-    /* FAQ */
-    .faq-item {
-      border-bottom: 1px solid rgba(0, 53, 148, 0.15);
-      padding: 1rem 0;
-    }
-
-    .faq-question {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 1rem;
-      color: var(--navy);
-      padding: 0.5rem 0;
-    }
-
-    .faq-toggle {
-      font-size: 1.5rem;
-      font-weight: 300;
-      color: var(--accent);
-      transition: transform 0.2s;
-    }
-
-    .faq-answer {
-      display: none;
-      padding: 0.5rem 0 1rem;
-      color: var(--gray);
-      line-height: 1.7;
-    }
-
-    .faq-answer.open {
-      display: block;
     }
 
     /* FOOTER */
@@ -510,29 +394,5 @@
       <span>Aim High &middot; Fly &middot; Fight &middot; Win</span>
     </div>
   </footer>
-
-  <script>
-
-    // FAQ toggle
-    document.querySelectorAll('.faq-question').forEach(question => {
-      question.addEventListener('click', function() {
-        const faqItem = this.parentElement;
-        const answer = faqItem.querySelector('.faq-answer');
-        const isOpen = answer.classList.contains('open');
-
-        // Close all FAQ items
-        document.querySelectorAll('.faq-item').forEach(item => {
-          item.classList.remove('active');
-          item.querySelector('.faq-answer').classList.remove('open');
-        });
-
-        // Open clicked item if it wasn't open
-        if (!isOpen) {
-          faqItem.classList.add('active');
-          answer.classList.add('open');
-        }
-      });
-    });
-  </script>
 </body>
 </html>

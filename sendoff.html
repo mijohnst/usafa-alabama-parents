@@ -20,28 +20,7 @@
     .form-card{background:#fff;border:1px solid rgba(0,53,148,.12);border-radius:10px;padding:2.5rem 2.5rem 2rem;box-shadow:0 4px 24px rgba(0,37,84,.08);}
     .form-card h2{font-family:var(--font-display);font-size:1.15rem;color:var(--navy);letter-spacing:.06em;margin-bottom:1.75rem;padding-bottom:.75rem;border-bottom:2px solid var(--light);}
 
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem 1.5rem;margin-bottom:1.25rem;}
-    .form-group{display:flex;flex-direction:column;gap:.35rem;}
-    .form-group.full{grid-column:1/-1;}
-
-    label{font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);}
-    input,select{width:100%;padding:.6rem .85rem;border:1px solid #c8d0dc;border-radius:5px;font-family:var(--font-body);font-size:.95rem;color:var(--navy);background:#fff;transition:border-color .2s,box-shadow .2s;appearance:none;-webkit-appearance:none;}
-    input:focus,select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(0,53,148,.12);}
-    select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23003594' d='M6 8L0 0h12z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .85rem center;padding-right:2.25rem;cursor:pointer;}
-    input[type="date"]{color:var(--navy);}
-
-    .form-note{font-size:.8rem;color:var(--gray);margin-top:.25rem;}
-
-    .btn-submit{display:block;width:100%;margin-top:2rem;padding:.85rem 1.5rem;background:var(--navy);color:#fff;font-family:var(--font-display);font-size:.9rem;letter-spacing:.1em;text-transform:uppercase;border:none;border-radius:5px;cursor:pointer;transition:background .2s,transform .1s;}
-    .btn-submit:hover{background:#002554;}
-    .btn-submit:active{transform:scale(.99);}
-
-    #form-status{display:none;margin-top:1.25rem;padding:.85rem 1rem;border-radius:5px;font-size:.9rem;text-align:center;}
-    #form-status.success{display:block;background:#e6f4ea;color:#2d6a4f;border:1px solid #b7dfc8;}
-    #form-status.error{display:block;background:#fde8e8;color:#9b2226;border:1px solid #f5b7b7;}
-
     @media(max-width:560px){
-      .form-row{grid-template-columns:1fr;}
       .form-card{padding:1.75rem 1.25rem 1.5rem;}
     }
 

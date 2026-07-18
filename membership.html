@@ -172,9 +172,6 @@
 
       <!-- Progress indicator -->
       <div style="display:flex;gap:0;margin-bottom:1.75rem;overflow:hidden;border-radius:4px">
-        <?php /* JS updates active step */ ?>
-        <?php $steps = ['Cadet','Consent','Parents','Address','Contact']; ?>
-        <script>var _formSteps=['Cadet','Consent','Parents','Address','Contact'];</script>
         <div id="form-progress" style="display:flex;width:100%">
           <div style="flex:1;padding:.45rem .5rem;text-align:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:#003594;color:#fff;border-right:1px solid rgba(255,255,255,.2)">① Cadet</div>
           <div style="flex:1;padding:.45rem .5rem;text-align:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:#e1e5eb;color:#5a6a7a;border-right:1px solid rgba(255,255,255,.4)">② Consent</div>
@@ -523,8 +520,6 @@
       }
 
       try {
-        console.log('Submitting to PHP backend...');
-        
         // Submit to PHP backend
         var resp = await fetch('membership-handler.php', {
           method: 'POST',
@@ -542,9 +537,7 @@
           statusEl.style.display = 'block';
           btn.textContent = 'Submit Application';
           btn.disabled = false;
-          
-          console.log('Form submitted successfully');
-          
+
           // Redirect to payment page after 2 seconds
           setTimeout(function() {
             window.location.href = 'payment.html';

@@ -328,7 +328,7 @@ if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
     mail($parent_email, $conf_subject, $conf_body, $conf_headers);
 }
 
-// ── 5. Forward to Google Sheets as backup (fire-and-forget) ───────────────
+// ── 4. Forward to Google Sheets as backup (fire-and-forget) ───────────────
 $apps_script_url = 'https://script.google.com/macros/s/AKfycbzFG0SKrECB1toC6rMckgNQxsUuc_QsCvPr1TMfWztUNM_3plG3J9XnxhTvGdq2faAc/exec';
 $json_data = json_encode($payload);
 $ch = curl_init();
@@ -341,8 +341,8 @@ curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 curl_setopt($ch, CURLOPT_TIMEOUT, 60);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-$sheets_response = curl_exec($ch);
-$sheets_error    = curl_error($ch);
+curl_exec($ch);
+$sheets_error = curl_error($ch);
 curl_close($ch);
 if ($sheets_error) {
     error_log("Membership handler: Google Sheets backup failed: $sheets_error");

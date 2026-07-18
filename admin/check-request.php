@@ -23,12 +23,11 @@ $setting = function(string $key) use ($pdo): string {
 };
 $club_name = $setting('club_name') ?: 'USAFA Parents Club of Alabama';
 
-admin_header('Check Request #' . $id, true);
+admin_header('Check Request #' . $id);
 ?>
 <style>
 @media print {
-  .admin-sidebar, .admin-topbar, .page-head .btn, .no-print { display: none !important; }
-  .admin-main { margin: 0 !important; padding: 0 !important; }
+  .page-head .btn, .no-print { display: none !important; }
   body { background: #fff !important; }
   .cr-wrapper { box-shadow: none !important; border: none !important; max-width: 100% !important; }
   .print-btn { display: none !important; }

@@ -79,7 +79,6 @@ $docs->execute($params);
 $docs = $docs->fetchAll();
 
 $size_fmt = fn($b) => $b>=1048576 ? round($b/1048576,1).'MB' : round($b/1024,0).'KB';
-$icon_map  = ['pdf'=>'📄','doc'=>'📝','docx'=>'📝','xls'=>'📊','xlsx'=>'📊','jpg'=>'🖼️','png'=>'🖼️','gif'=>'🖼️','txt'=>'📋'];
 $get_icon  = fn($mime) => match(true) {
     str_contains($mime,'pdf')    => '📄',
     str_contains($mime,'word')   => '📝',

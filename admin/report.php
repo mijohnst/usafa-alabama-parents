@@ -10,7 +10,6 @@ $years_avail = $pdo->query("SELECT DISTINCT YEAR(purchase_date) y FROM purchases
 if (empty($years_avail)) $years_avail = [date('Y')];
 
 // All purchases for selected year
-$purchases = $pdo->prepare("SELECT * FROM purchases WHERE YEAR(purchase_date) = ? ORDER BY purchase_date")->execute([$year]) ? null : null;
 $stmt = $pdo->prepare("SELECT * FROM purchases WHERE YEAR(purchase_date) = ? ORDER BY purchase_date");
 $stmt->execute([$year]);
 $all = $stmt->fetchAll();

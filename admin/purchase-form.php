@@ -309,7 +309,7 @@ if (!empty($real_errors)): ?>
           if (!is_admin()) unset($allowed_statuses['approved']); // only admins can approve
           if (is_member())  $allowed_statuses = [$cur_status => PURCHASE_STATUSES[$cur_status]]; // members can't change status
           ?>
-          <select name="status" onchange="updateFlow(this.value)" <?= is_member()?'disabled':'' ?>>
+          <select name="status" <?= is_member()?'disabled':'' ?>>
             <?php foreach ($allowed_statuses as $k => $v2): ?>
               <option value="<?= h($k) ?>" <?= $cur_status===$k?'selected':''?>><?= h($v2) ?></option>
             <?php endforeach; ?>
@@ -415,15 +415,6 @@ function calcTotal() {
   var ship = parseFloat(document.getElementById('shipping_amt').value) || 0;
   document.getElementById('total-display').textContent = '$' + (pre + tax + ship).toFixed(2);
 }
-function updateFlow(val) {
-  // Reload page with new status to refresh flow indicator
-  var form = document.querySelector('form');
-  var hidden = document.createElement('input');
-  hidden.type='hidden'; hidden.name='_preview_status'; hidden.value=val;
-  form.appendChild(hidden);
-  // Just let the select change reflect visually on submit
-}
-
 function previewReceipt(input) {
   var wrap = document.getElementById('receipt-preview-wrap');
   var img  = document.getElementById('receipt-img-preview');
