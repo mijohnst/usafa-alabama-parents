@@ -5,6 +5,7 @@
   --topbar:#002554;
   --silver:#8A8D8F; --silver2:#A7A9AC; --white:#f5f5f0;
   --gray:#6B6E70; --light:#e8edf4;
+  --accent:#A6192E;
   --font-display:'Cinzel',serif; --font-body:'Source Sans 3',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
