@@ -883,20 +883,44 @@ function renderEvents(events) {
   });
 }
 
+var EVENTS_CACHE_KEY = 'usafa_events_cache_v1';
+
 async function loadEvents() {
+  var list = document.getElementById('events-list');
+  var renderedFromCache = false;
+
+  // Render last-known events instantly from localStorage (stale-while-
+  // revalidate) so returning visitors never wait on a cold server or see the
+  // "coming soon" flash. Fresh data from the feed swaps in below.
+  try {
+    var cached = JSON.parse(localStorage.getItem(EVENTS_CACHE_KEY) || 'null');
+    if (cached && cached.length) { renderEvents(cached); renderedFromCache = true; }
+  } catch(e) {}
+
   try {
     var r = await fetchWithTimeout('/events-feed.php', 6000);
     if (r.ok) {
       var data = await r.json();
       if (data.success && data.events && data.events.length > 0) {
         renderEvents(data.events);
+        try { localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(data.events)); } catch(e) {}
+        return;
+      }
+      // Feed reachable but genuinely empty — drop stale cache so we don't keep
+      // showing events that were removed, and show the placeholder.
+      if (data.success) {
+        try { localStorage.removeItem(EVENTS_CACHE_KEY); } catch(e) {}
+        if (list) list.innerHTML = '<p style="color:#5a6a7a">Events coming soon. Check back often.</p>';
         return;
       }
     }
   } catch(e) {}
-  // Fallback: hide the loading text
-  var list = document.getElementById('events-list');
-  if (list) list.innerHTML = '<p style="color:#5a6a7a">Events coming soon. Check back often.</p>';
+
+  // Network/server failure: keep whatever we already rendered from cache; only
+  // fall back to the placeholder if we had nothing to show.
+  if (!renderedFromCache && list) {
+    list.innerHTML = '<p style="color:#5a6a7a">Events coming soon. Check back often.</p>';
+  }
 }
 
 if (document.readyState === 'loading') {
