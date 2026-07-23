@@ -854,7 +854,8 @@ function renderEvents(events) {
       if (e.cta_deadline) {
         var dl = new Date(e.cta_deadline);
         if (dl > new Date()) {
-          info += '<div class="ev-countdown" data-deadline="' + dl.getTime() + '" style="display:inline-flex;align-items:center;gap:.5rem;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.4rem .8rem;margin:.5rem 0;font-size:.85rem;font-weight:700;color:#5f4c00">Loading…</div>';
+          var cdVerb = (e.countdown_type === 'starts') ? 'Starts in' : 'Ends in';
+          info += '<div class="ev-countdown" data-deadline="' + dl.getTime() + '" data-verb="' + cdVerb + '" style="display:inline-flex;align-items:center;gap:.5rem;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:.4rem .8rem;margin:.5rem 0;font-size:.85rem;font-weight:700;color:#5f4c00">Loading…</div>';
         }
       }
       if (e.cta_text && e.cta_url) {
@@ -873,11 +874,12 @@ function renderEvents(events) {
   // Start countdowns now that divs are in the DOM
   list.querySelectorAll('.ev-countdown').forEach(function(el) {
     var deadline = parseInt(el.getAttribute('data-deadline'), 10);
+    var verb = el.getAttribute('data-verb') || 'Ends in';
     function tick() {
       var diff = deadline - Date.now();
       if (diff <= 0) { el.style.display = 'none'; return; }
       var d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), m=Math.floor((diff%3600000)/60000);
-      el.innerHTML = '⏰ Ends in <strong style="margin-left:.25rem">' + d + 'd ' + h + 'h ' + m + 'm</strong>';
+      el.innerHTML = '⏰ ' + verb + ' <strong style="margin-left:.25rem">' + d + 'd ' + h + 'h ' + m + 'm</strong>';
     }
     tick(); setInterval(tick, 60000);
   });
