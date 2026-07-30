@@ -14,15 +14,22 @@ header('Cache-Control: max-age=1800'); // 30 minutes
 $cacheFile = dirname(__FILE__) . '/usafa-news-cache.json';
 $cacheTime = 1800; // Cache for 30 minutes (1800 seconds)
 
-// Check if cache exists and is still valid
-if (file_exists($cacheFile)) {
-    $cacheAge = time() - filemtime($cacheFile);
-    if ($cacheAge < $cacheTime) {
-        // Serve from cache with proper headers
-        header('X-Cache: hit');
-        echo file_get_contents($cacheFile);
-        exit;
-    }
+// Returns the cache file's content only if it's non-empty and contains real news items, else null
+function readValidCache($cacheFile) {
+    if (!file_exists($cacheFile)) return null;
+    $content = file_get_contents($cacheFile);
+    $decoded = json_decode($content, true);
+    if ($content === '' || !is_array($decoded) || empty($decoded['items'])) return null;
+    return $content;
+}
+
+// Check if cache exists, is still valid, and actually contains usable JSON
+$cacheContent = readValidCache($cacheFile);
+if ($cacheContent !== null && (time() - filemtime($cacheFile)) < $cacheTime) {
+    // Serve from cache with proper headers
+    header('X-Cache: hit');
+    echo $cacheContent;
+    exit;
 }
 
 // Cache expired or doesn't exist - fetch fresh data
@@ -54,9 +61,10 @@ if ($httpCode != 200 || !$xmlContent) {
     error_log("USAFA Feed Error - HTTP Code: $httpCode, cURL Error: $curlError");
     
     // If fetch failed, try to serve old cache if it exists
-    if (file_exists($cacheFile)) {
+    $staleCache = readValidCache($cacheFile);
+    if ($staleCache !== null) {
         header('X-Cache: stale');
-        echo file_get_contents($cacheFile);
+        echo $staleCache;
     } else {
         http_response_code(503);
         echo json_encode([
@@ -79,9 +87,10 @@ if (!$xml) {
     error_log("USAFA Feed XML Parse Error - Content length: " . strlen($xmlContent));
     
     // Try to serve cache on parse failure
-    if (file_exists($cacheFile)) {
+    $staleCache = readValidCache($cacheFile);
+    if ($staleCache !== null) {
         header('X-Cache: stale');
-        echo file_get_contents($cacheFile);
+        echo $staleCache;
     } else {
         http_response_code(502);
         echo json_encode(['error' => 'Unable to parse RSS feed']);
@@ -126,9 +135,10 @@ foreach ($xml->channel->item as $item) {
 // If we got no items, serve stale cache instead of empty response
 if (empty($newsItems)) {
     error_log("USAFA Feed: XML parsed OK but 0 items extracted");
-    if (file_exists($cacheFile)) {
+    $staleCache = readValidCache($cacheFile);
+    if ($staleCache !== null) {
         header('X-Cache: stale-empty-parse');
-        echo file_get_contents($cacheFile);
+        echo $staleCache;
         exit;
     }
 }
@@ -143,9 +153,11 @@ $response = [
 
 $jsonResponse = json_encode($response, JSON_PRETTY_PRINT);
 
-// Save to cache if we got valid items
-if (!empty($newsItems)) {
+// Save to cache only if we got valid items and encoding actually succeeded
+if (!empty($newsItems) && $jsonResponse !== false) {
     @file_put_contents($cacheFile, $jsonResponse);
+} elseif ($jsonResponse === false) {
+    error_log("USAFA Feed: json_encode failed - " . json_last_error_msg());
 }
 
 // Output response
