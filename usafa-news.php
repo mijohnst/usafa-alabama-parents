@@ -151,7 +151,9 @@ $response = [
     'fetched_at' => date('Y-m-d H:i:s')
 ];
 
-$jsonResponse = json_encode($response, JSON_PRETTY_PRINT);
+// JSON_INVALID_UTF8_SUBSTITUTE keeps a single malformed byte in the RSS feed
+// (which simplexml won't sanitize) from failing the entire encode
+$jsonResponse = json_encode($response, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE);
 
 // Save to cache only if we got valid items and encoding actually succeeded
 if (!empty($newsItems) && $jsonResponse !== false) {
