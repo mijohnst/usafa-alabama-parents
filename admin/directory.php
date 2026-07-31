@@ -11,8 +11,15 @@ $missing = $_GET['missing'] ?? '';
 // this page is meant to be shared/printed for members, unlike the admin
 // member list, so directory_consent must be honored. Blank/unanswered
 // (common for members who joined before this question existed) is treated
-// as included, not opted out.
-$where  = ['archived = 0', "(directory_consent IS NULL OR directory_consent <> 'No')"];
+// as included, not opted out — but only for board/officer roles who already
+// have PII access elsewhere. Regular members only see cadets who explicitly
+// opted in.
+$where  = ['archived = 0'];
+if (can_view_member_pii()) {
+    $where[] = "(directory_consent IS NULL OR directory_consent <> 'No')";
+} else {
+    $where[] = "directory_consent = 'Yes'";
+}
 $params = [];
 if ($year   !== '') { $where[] = 'class_year = :year';   $params[':year']   = $year; }
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
@@ -58,7 +65,7 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
 <div class="no-print" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem">
   <div>
     <h1>Member Directory</h1>
-    <div class="subtitle">USAFA Parents Club of Alabama &mdash; <?= date('F Y') ?> &mdash; excludes families who opted out of directory listing</div>
+    <div class="subtitle">USAFA Parents Club of Alabama &mdash; <?= date('F Y') ?> &mdash; <?= can_view_member_pii() ? 'excludes families who opted out of directory listing' : 'shows only families who opted in to directory listing' ?></div>
   </div>
   <div style="display:flex;gap:.5rem">
     <button onclick="window.print()" style="padding:.5rem 1.1rem;background:#003594;color:#fff;border:none;border-radius:4px;font-size:.85rem;cursor:pointer">Print / Save PDF</button>
