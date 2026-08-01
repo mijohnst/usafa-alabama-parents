@@ -168,6 +168,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$r['cadet_email'])    $missing[] = 'cadet email';
                 if ($missing) $lines[] = $cadet_last . ' (' . $r['class_year'] . ') — Missing: ' . implode(', ', $missing);
                 break;
+            case 'missing_po_box':
+                if (!trim($r['cadet_po_box'] ?? '')) {
+                    $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $lines[] = $cadet_last . ' (' . $r['class_year'] . ')' . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : ($p1 ? ' — ' . $p1 : ''));
+                }
+                break;
             case 'care_labels':
                 $box = trim($r['cadet_po_box'] ?? '');
                 if ($box) {
@@ -325,7 +331,8 @@ admin_header('Lists');
             <option value="dues_unpaid"  <?= $type==='dues_unpaid'  ?'selected':''?>>Unpaid Members List</option>
           </optgroup>
           <optgroup label="Data &amp; Rosters">
-            <option value="missing_data" <?= $type==='missing_data' ?'selected':''?>>Missing Data Report</option>
+            <option value="missing_data"    <?= $type==='missing_data'    ?'selected':''?>>Missing Data Report</option>
+            <option value="missing_po_box"  <?= $type==='missing_po_box'  ?'selected':''?>>Missing PO Box</option>
             <option value="care_labels"  <?= $type==='care_labels'  ?'selected':''?>>Care Package Labels</option>
             <option value="sqd_roster"   <?= $type==='sqd_roster'   ?'selected':''?>>Squadron Roster</option>
           </optgroup>
