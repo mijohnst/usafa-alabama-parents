@@ -156,6 +156,7 @@ $stat_unpaid = (int)$pdo->query(
 // Class-year breakdown row shows only the 4 currently-enrolled classes plus
 // Prep School — not years that have already graduated or haven't arrived yet.
 $current_years = array_merge(current_class_years(), ['Prep School']);
+$other_years   = array_values(array_diff(CLASS_YEAR_LIST, $current_years));
 
 // New members this month
 $new_this_month = (int)$pdo->query(
@@ -360,6 +361,7 @@ function openBirthdays() {
 .cd-panel label:hover{background:#f5f7fa}
 .cd-panel input[type=checkbox]{width:auto;accent-color:#003594;cursor:pointer}
 .cd-footer{border-top:1px solid #e1e5eb;padding:.4rem .8rem 0;display:flex;gap:.5rem;margin-top:.25rem}
+.cd-group-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9aa5b4;padding:.5rem .8rem .2rem}
 </style>
 
 <!-- Filters -->
@@ -376,14 +378,24 @@ function openBirthdays() {
       <div class="cd" id="yr-cd">
         <button type="button" class="cd-btn" id="yr-btn">All Years</button>
         <div class="cd-panel">
-          <?php foreach (CLASS_YEAR_LIST as $y): ?>
+          <div class="cd-group-label">Currently Enrolled</div>
+          <?php foreach ($current_years as $y): ?>
+            <label>
+              <input type="checkbox" name="year[]" value="<?= h($y) ?>" data-current="1" <?= in_array($y,$years)?'checked':''?>>
+              <?= h($y) ?>
+            </label>
+          <?php endforeach; ?>
+          <?php if (!empty($other_years)): ?>
+          <div class="cd-group-label">Other</div>
+          <?php foreach ($other_years as $y): ?>
             <label>
               <input type="checkbox" name="year[]" value="<?= h($y) ?>" <?= in_array($y,$years)?'checked':''?>>
               <?= h($y) ?>
             </label>
           <?php endforeach; ?>
+          <?php endif; ?>
           <div class="cd-footer">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="setYrs(true)">All</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setCurrentYrs()">Current Years</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="setYrs(false)">None</button>
           </div>
         </div>
@@ -439,9 +451,12 @@ var yrBtn = document.getElementById('yr-btn');
 var yrCbs = yrCd.querySelectorAll('input[type=checkbox]');
 
 function updateYrLabel() {
-  var checked = Array.from(yrCbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
-  yrBtn.childNodes[0].textContent = checked.length === 0            ? 'All Years' :
-                                    checked.length === yrCbs.length ? 'All Years' :
+  var checked     = Array.from(yrCbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+  var currentVals = Array.from(yrCbs).filter(function(c){ return c.dataset.current; }).map(function(c){ return c.value; });
+  var isCurrent   = checked.length === currentVals.length && currentVals.every(function(v){ return checked.indexOf(v) !== -1; });
+  yrBtn.childNodes[0].textContent = checked.length === 0            ? 'All Years'     :
+                                    checked.length === yrCbs.length ? 'All Years'     :
+                                    isCurrent                        ? 'Current Years' :
                                     checked.join(', ');
 }
 yrBtn.addEventListener('click', function(e){ e.stopPropagation(); yrCd.classList.toggle('open'); });
@@ -452,6 +467,10 @@ updateYrLabel();
 
 function setYrs(state) {
   yrCbs.forEach(function(cb){ cb.checked = state; });
+  updateYrLabel();
+}
+function setCurrentYrs() {
+  yrCbs.forEach(function(cb){ cb.checked = !!cb.dataset.current; });
   updateYrLabel();
 }
 </script>
