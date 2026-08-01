@@ -3,7 +3,11 @@ require_once __DIR__ . '/auth.php';
 require_login();
 $pdo = get_pdo();
 
-$year    = $_GET['year']    ?? '';
+$all_years      = CLASS_YEAR_LIST;
+$current_years  = array_merge(current_class_years(), ['Prep School']);
+$other_years    = array_values(array_diff($all_years, $current_years));
+$selected_years = array_intersect((array)($_GET['years'] ?? []), $all_years);
+
 $region  = $_GET['region']  ?? '';
 $missing = $_GET['missing'] ?? '';
 
@@ -21,7 +25,15 @@ if (can_view_member_pii()) {
     $where[] = "directory_consent = 'Yes'";
 }
 $params = [];
-if ($year   !== '') { $where[] = 'class_year = :year';   $params[':year']   = $year; }
+if (!empty($selected_years) && count($selected_years) < count($all_years)) {
+    $ph = [];
+    foreach (array_values($selected_years) as $i => $y) {
+        $key = ':yr' . $i;
+        $ph[]         = $key;
+        $params[$key] = $y;
+    }
+    $where[] = 'class_year IN (' . implode(', ', $ph) . ')';
+}
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
 $missing_sql = missing_data_sql($missing);
 if ($missing_sql) { $where[] = $missing_sql; }
@@ -42,6 +54,18 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
 .filters{display:flex;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;align-items:flex-end}
 .filters select,.filters a{padding:.4rem .65rem;border:1px solid #d0d5dd;border-radius:4px;font-size:.82rem;font-family:inherit;background:#fff;color:#1a2332;cursor:pointer;text-decoration:none}
 .filters button{padding:.4rem .9rem;background:#003594;color:#fff;border:none;border-radius:4px;font-size:.82rem;cursor:pointer}
+.cd{position:relative;width:180px}
+.cd-btn{width:100%;text-align:left;background:#fff;border:1px solid #d0d5dd;border-radius:4px;padding:.4rem .65rem;cursor:pointer;font-size:.82rem;color:#1a2332;display:flex;justify-content:space-between;align-items:center;font-family:inherit}
+.cd-btn::after{content:'▾';font-size:.75rem;color:#5a6a7a;flex-shrink:0}
+.cd-btn:focus{outline:none;border-color:#003594;box-shadow:0 0 0 2px rgba(0,53,148,.15)}
+.cd-panel{display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid #d0d5dd;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:200;padding:.4rem 0;min-width:160px}
+.cd.open .cd-panel{display:block}
+.cd-panel label{display:flex;align-items:center;gap:.55rem;padding:.32rem .7rem;cursor:pointer;font-size:.8rem;color:#1a2332;white-space:nowrap}
+.cd-panel label:hover{background:#f5f7fa}
+.cd-panel input[type=checkbox]{width:auto;accent-color:#003594;cursor:pointer}
+.cd-footer{border-top:1px solid #e1e5eb;padding:.4rem .7rem 0;display:flex;gap:.4rem;margin-top:.25rem}
+.cd-group-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9aa5b4;padding:.45rem .7rem .15rem}
+.cd-footer button{padding:.28rem .55rem;font-size:.7rem;border-radius:4px;cursor:pointer;border:1px solid #d0d5dd;background:#f0f2f5;color:#333}
 .yr-group{margin-bottom:1.5rem}
 .yr-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#003594;border-bottom:2px solid #003594;padding-bottom:.25rem;margin-bottom:.75rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.65rem}
@@ -76,12 +100,33 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
 <form class="filters no-print" method="GET">
   <div>
     <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Year</label>
-    <select name="year">
-      <option value="">All years</option>
-      <?php foreach (['2026','2027','2028','2029','2030','Prep School'] as $y): ?>
-        <option value="<?= h($y) ?>" <?= $year===$y?'selected':''?>><?= h($y) ?></option>
-      <?php endforeach; ?>
-    </select>
+    <div class="cd" id="year-cd">
+      <button type="button" class="cd-btn" id="year-btn">All Years</button>
+      <div class="cd-panel">
+        <div class="cd-group-label">Currently Enrolled</div>
+        <?php foreach ($current_years as $y): ?>
+        <label>
+          <input type="checkbox" name="years[]" value="<?= h($y) ?>" data-current="1"
+                 <?= in_array($y, $selected_years) ? 'checked' : '' ?>>
+          <?= h($y) ?>
+        </label>
+        <?php endforeach; ?>
+        <?php if (!empty($other_years)): ?>
+        <div class="cd-group-label">Other</div>
+        <?php foreach ($other_years as $y): ?>
+        <label>
+          <input type="checkbox" name="years[]" value="<?= h($y) ?>"
+                 <?= in_array($y, $selected_years) ? 'checked' : '' ?>>
+          <?= h($y) ?>
+        </label>
+        <?php endforeach; ?>
+        <?php endif; ?>
+        <div class="cd-footer">
+          <button type="button" onclick="setCurrentYears()">Current Years</button>
+          <button type="button" onclick="setYears(false)">None</button>
+        </div>
+      </div>
+    </div>
   </div>
   <div>
     <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Region</label>
@@ -152,5 +197,40 @@ foreach ($by_year as $yr => $group):
 <?php if (empty($members)): ?>
 <p style="color:#5a6a7a;font-size:.9rem">No members found.</p>
 <?php endif; ?>
+
+<script>
+var cd  = document.getElementById('year-cd');
+var btn = document.getElementById('year-btn');
+var cbs = cd.querySelectorAll('input[type=checkbox]');
+
+function updateLabel() {
+  var checked     = Array.from(cbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+  var currentVals = Array.from(cbs).filter(function(c){ return c.dataset.current; }).map(function(c){ return c.value; });
+  var isCurrent   = checked.length === currentVals.length && currentVals.every(function(v){ return checked.indexOf(v) !== -1; });
+  btn.childNodes[0].textContent = checked.length === 0          ? 'All Years'     :
+                                  checked.length === cbs.length  ? 'All Years'     :
+                                  isCurrent                      ? 'Current Years' :
+                                  checked.join(', ');
+}
+
+btn.addEventListener('click', function(e){
+  e.stopPropagation();
+  cd.classList.toggle('open');
+});
+document.addEventListener('click', function(){ cd.classList.remove('open'); });
+cd.querySelector('.cd-panel').addEventListener('click', function(e){ e.stopPropagation(); });
+cbs.forEach(function(cb){ cb.addEventListener('change', updateLabel); });
+updateLabel();
+
+function setYears(state) {
+  cbs.forEach(function(cb){ cb.checked = state; });
+  updateLabel();
+}
+
+function setCurrentYears() {
+  cbs.forEach(function(cb){ cb.checked = !!cb.dataset.current; });
+  updateLabel();
+}
+</script>
 
 </body></html>
