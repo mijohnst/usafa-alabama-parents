@@ -2,8 +2,12 @@
 /**
  * Centralized email sender
  * ─────────────────────────────────────────────────────────────────────────────
- * Currently uses PHP mail(). When Google Workspace SMTP is ready, replace the
- * body of send_notification() with PHPMailer — nothing else needs to change.
+ * Sends via Google Workspace's SMTP relay service (smtp-relay.gmail.com),
+ * authenticated by the sending server's IP being allowlisted in the Google
+ * Admin console — no password/app-password is stored here. Replaced PHP's
+ * bare mail(), which broke once alabamafalcons.org's MX moved to Google:
+ * cPanel's mail routing no longer considered itself authoritative for the
+ * domain, so local mail() delivery silently failed.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -14,20 +18,48 @@
 // available in the standalone-cron path.
 date_default_timezone_set('America/Chicago');
 require_once __DIR__ . '/lib.php';
+require_once __DIR__ . '/lib/PHPMailer/Exception.php';
+require_once __DIR__ . '/lib/PHPMailer/PHPMailer.php';
+require_once __DIR__ . '/lib/PHPMailer/SMTP.php';
 
-define('CLUB_NAME',  'USAFA Parents Club of Alabama');
-define('CLUB_FROM',  'USAFA Parents Club of Alabama <info@alabamafalcons.org>');
-define('ADMIN_URL',  'https://alabamafalcons.org/admin/');
-define('SITE_URL',   'https://alabamafalcons.org/');
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
+
+define('CLUB_NAME',       'USAFA Parents Club of Alabama');
+define('CLUB_FROM_EMAIL', 'info@alabamafalcons.org');
+define('CLUB_FROM',       'USAFA Parents Club of Alabama <info@alabamafalcons.org>');
+define('ADMIN_URL',       'https://alabamafalcons.org/admin/');
+define('SITE_URL',        'https://alabamafalcons.org/');
+
+// Shared SMTP relay setup — used here and by email.php's Compose Email tool.
+function configure_smtp_relay(PHPMailer $mail): void {
+    $mail->isSMTP();
+    $mail->Host       = 'smtp-relay.gmail.com';
+    $mail->Port       = 587;
+    $mail->SMTPAuth   = false; // authenticated by the server's IP being allowlisted in Google Admin
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->CharSet    = 'UTF-8';
+}
 
 function send_notification(string $to, string $subject, string $body): bool {
-    $headers  = "From: " . CLUB_FROM . "\r\n";
-    $headers .= "Reply-To: info@alabamafalcons.org\r\n";
-    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
     // Strip all control characters from subject to prevent header injection
     $clean_subject = preg_replace('/[\x00-\x1F\x7F]/', '', $subject);
     $clean_subject = mb_substr($clean_subject, 0, 200); // cap length
-    return mail($to, $clean_subject, $body, $headers);
+
+    $mail = new PHPMailer(true);
+    try {
+        configure_smtp_relay($mail);
+        $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+        $mail->addReplyTo(CLUB_FROM_EMAIL, CLUB_NAME);
+        $mail->addAddress($to);
+        $mail->isHTML(false);
+        $mail->Subject = $clean_subject;
+        $mail->Body    = $body;
+        return $mail->send();
+    } catch (PHPMailerException $e) {
+        error_log("send_notification: PHPMailer error for to='$to' — " . $mail->ErrorInfo);
+        return false;
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────

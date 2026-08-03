@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
 require_member_admin(); // admin, tech, officer, secretary
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 $all_years     = CLASS_YEAR_LIST;
 $current_years = array_merge(current_class_years(), ['Prep School']);
@@ -142,27 +146,6 @@ function fix_email_paragraph_spacing(string $html): string {
     }, $html);
 }
 
-function build_mime_email(string $html_body, array $attachments): array {
-    if (empty($attachments)) {
-        return ["Content-Type: text/html; charset=UTF-8\r\n", $html_body];
-    }
-    $boundary = md5(uniqid((string)mt_rand(), true));
-    $msg  = "--$boundary\r\n";
-    $msg .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $msg .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
-    $msg .= $html_body . "\r\n\r\n";
-    foreach ($attachments as $att) {
-        $safe_name = str_replace(['"', "\r", "\n"], '', $att['name']);
-        $msg .= "--$boundary\r\n";
-        $msg .= "Content-Type: {$att['mime']}; name=\"$safe_name\"\r\n";
-        $msg .= "Content-Transfer-Encoding: base64\r\n";
-        $msg .= "Content-Disposition: attachment; filename=\"$safe_name\"\r\n\r\n";
-        $msg .= chunk_split(base64_encode($att['content'])) . "\r\n";
-    }
-    $msg .= "--$boundary--";
-    return ["Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n", $msg];
-}
-
 $from_options = [
     'president@alabamafalcons.org' => 'President',
     'vp@alabamafalcons.org'        => 'Vice President',
@@ -234,30 +217,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
             $full_body     = fix_email_paragraph_spacing($full_body);
             $clean_subject = str_replace(["\r","\n"], '', $subject);
 
-            [$content_type_header, $mime_body] = build_mime_email($full_body, $attachments);
-
-            // The mail server rejects any single send with too many recipients
-            // (hit at 113). Batch BCC into chunks well under that ceiling —
-            // each batch is its own separate send to info@alabamafalcons.org,
-            // reusing the same MIME body/attachments for every batch.
+            // Batch BCC into chunks well under Google's SMTP relay per-message
+            // recipient limits — each batch is its own separate send to
+            // info@alabamafalcons.org, reusing the same body/attachments.
             $batches      = array_chunk($valid, 90);
             $sent_count   = 0;
             $failed_count = 0;
 
             foreach ($batches as $batch) {
-                $headers  = "From: USAFA Parents Club of Alabama <{$from_email}>\r\n";
-                $headers .= "Reply-To: {$from_email}\r\n";
-                $headers .= "BCC: " . implode(', ', $batch) . "\r\n";
-                $headers .= "MIME-Version: 1.0\r\n";
-                $headers .= $content_type_header;
+                $mail = new PHPMailer(true);
+                try {
+                    configure_smtp_relay($mail);
+                    $mail->setFrom($from_email, CLUB_NAME);
+                    $mail->addReplyTo($from_email, CLUB_NAME);
+                    $mail->addAddress(CLUB_FROM_EMAIL);
+                    foreach ($batch as $bcc) $mail->addBCC($bcc);
+                    foreach ($attachments as $att) {
+                        $mail->addStringAttachment($att['content'], $att['name'], PHPMailer::ENCODING_BASE64, $att['mime']);
+                    }
+                    $mail->isHTML(true);
+                    $mail->Subject = $clean_subject;
+                    $mail->Body    = $full_body;
 
-                if (mail('info@alabamafalcons.org', $clean_subject, $mime_body, $headers)) {
+                    $mail->send();
                     $sent_count += count($batch);
-                } else {
+                } catch (PHPMailerException $e) {
                     $failed_count += count($batch);
-                    $mail_err = error_get_last();
-                    error_log('Compose Email: mail() failed for a batch of ' . count($batch) . ' recipient(s) from ' . $from_email
-                        . '. Last PHP error: ' . ($mail_err['message'] ?? 'none captured'));
+                    error_log('Compose Email: PHPMailer error for a batch of ' . count($batch) . ' recipient(s) from ' . $from_email
+                        . ' — ' . $mail->ErrorInfo);
                 }
             }
 
