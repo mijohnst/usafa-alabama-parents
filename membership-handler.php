@@ -32,6 +32,10 @@ if (!$payload) {
 
 require_once __DIR__ . '/admin/form-guard.php';
 require_once __DIR__ . '/admin/lib.php';
+require_once __DIR__ . '/admin/mailer.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 // Honeypot — bots fill this hidden field, real visitors never see it.
 // Pretend success so bots don't learn to avoid the field.
@@ -304,10 +308,19 @@ $email_body .= "CONSENTS\n";
 $email_body .= "Photo: " . s($payload,'photoConsent') . "\n";
 $email_body .= "Directory: " . s($payload,'directoryConsent') . "\n";
 
-$headers  = "From: info@alabamafalcons.org\r\n";
-$headers .= "Reply-To: " . sanitize_header(s($payload,'parent1Email')) . "\r\n";
-$headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-mail($secretary_email, $subject, $email_body, $headers);
+$mail = new PHPMailer(true);
+try {
+    configure_smtp_relay($mail);
+    $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+    $mail->addReplyTo(s($payload,'parent1Email'));
+    $mail->addAddress($secretary_email);
+    $mail->isHTML(false);
+    $mail->Subject = $subject;
+    $mail->Body    = $email_body;
+    $mail->send();
+} catch (PHPMailerException $e) {
+    error_log('membership-handler: PHPMailer error (secretary notify) - ' . $mail->ErrorInfo);
+}
 
 // ── 3. Confirmation email to parent ──────────────────────────────────────
 $parent_email = s($payload, 'parent1Email');
@@ -322,10 +335,19 @@ if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
                   . "Aim High · Fly · Fight · Win\n"
                   . "USAFA Parents Club of Alabama\n"
                   . "alabamafalcons.org";
-    $conf_headers = "From: USAFA Parents Club of Alabama <info@alabamafalcons.org>\r\n"
-                  . "Reply-To: info@alabamafalcons.org\r\n"
-                  . "Content-Type: text/plain; charset=UTF-8\r\n";
-    mail($parent_email, $conf_subject, $conf_body, $conf_headers);
+    $conf_mail = new PHPMailer(true);
+    try {
+        configure_smtp_relay($conf_mail);
+        $conf_mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+        $conf_mail->addReplyTo(CLUB_FROM_EMAIL, CLUB_NAME);
+        $conf_mail->addAddress($parent_email);
+        $conf_mail->isHTML(false);
+        $conf_mail->Subject = $conf_subject;
+        $conf_mail->Body    = $conf_body;
+        $conf_mail->send();
+    } catch (PHPMailerException $e) {
+        error_log('membership-handler: PHPMailer error (parent confirmation) - ' . $conf_mail->ErrorInfo);
+    }
 }
 
 // ── 4. Forward to Google Sheets as backup (fire-and-forget) ───────────────

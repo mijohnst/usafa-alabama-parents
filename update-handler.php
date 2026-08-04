@@ -34,6 +34,10 @@ if (!$payload) {
 
 require_once __DIR__ . '/admin/form-guard.php';
 require_once __DIR__ . '/admin/lib.php';
+require_once __DIR__ . '/admin/mailer.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 // Honeypot — bots fill this hidden field, real visitors never see it.
 if (honeypot_tripped($payload)) {
@@ -298,10 +302,22 @@ $email_body .= "CONSENTS\n";
 $email_body .= "Photo: " . $g('photo_consent') . "\n";
 $email_body .= "Directory: " . $g('directory_consent') . "\n";
 
-$headers  = "From: info@alabamafalcons.org\r\n";
-$headers .= "Reply-To: " . sanitize_header($g('parent1_email')) . "\r\n";
-$headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-mail($secretary_email, $subject, $email_body, $headers);
+$mail = new PHPMailer(true);
+try {
+    configure_smtp_relay($mail);
+    $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+    // parent1_email can be blank here (an unrelated field may have been the
+    // one actually updated) — only set Reply-To when there's a real address,
+    // since PHPMailer rejects an empty one and would abort the whole send.
+    if ($g('parent1_email') !== '') $mail->addReplyTo($g('parent1_email'));
+    $mail->addAddress($secretary_email);
+    $mail->isHTML(false);
+    $mail->Subject = $subject;
+    $mail->Body    = $email_body;
+    $mail->send();
+} catch (PHPMailerException $e) {
+    error_log('update-handler: PHPMailer error (secretary notify) - ' . $mail->ErrorInfo);
+}
 
 // ── Confirmation email to parent ──────────────────────────────────────────
 $parent_email = $g('parent1_email');
@@ -315,10 +331,19 @@ if (filter_var($parent_email, FILTER_VALIDATE_EMAIL)) {
                   . "Aim High · Fly · Fight · Win\n"
                   . "USAFA Parents Club of Alabama\n"
                   . "alabamafalcons.org";
-    $conf_headers = "From: USAFA Parents Club of Alabama <secretary@alabamafalcons.org>\r\n"
-                  . "Reply-To: secretary@alabamafalcons.org\r\n"
-                  . "Content-Type: text/plain; charset=UTF-8\r\n";
-    mail($parent_email, $conf_subject, $conf_body, $conf_headers);
+    $conf_mail = new PHPMailer(true);
+    try {
+        configure_smtp_relay($conf_mail);
+        $conf_mail->setFrom('secretary@alabamafalcons.org', CLUB_NAME);
+        $conf_mail->addReplyTo('secretary@alabamafalcons.org', CLUB_NAME);
+        $conf_mail->addAddress($parent_email);
+        $conf_mail->isHTML(false);
+        $conf_mail->Subject = $conf_subject;
+        $conf_mail->Body    = $conf_body;
+        $conf_mail->send();
+    } catch (PHPMailerException $e) {
+        error_log('update-handler: PHPMailer error (parent confirmation) - ' . $conf_mail->ErrorInfo);
+    }
 }
 
 http_response_code(200);

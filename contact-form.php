@@ -1,11 +1,15 @@
 <?php
 /**
  * Contact Form Handler for USAFA Alabama Parents Club
- * Sends emails via PHP mail() function
+ * Sends via Google SMTP relay (see admin/mailer.php)
  */
 
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/mailer.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 // Set headers
 header('Content-Type: application/json');
@@ -83,13 +87,21 @@ $email_body .= "Sent from: alabamafalcons.org contact form\n";
 $email_body .= "Submitted: " . date('Y-m-d H:i:s T') . "\n";
 $email_body .= "IP Address: " . $_SERVER['REMOTE_ADDR'] . "\n";
 
-// Email headers
-$headers = "From: info@alabamafalcons.org\r\n";
-$headers .= "Reply-To: $email\r\n";
-$headers .= "X-Mailer: PHP/" . phpversion();
-
 // Send email
-$mail_sent = mail($to_email, $subject, $email_body, $headers);
+$mail_sent = false;
+$mail = new PHPMailer(true);
+try {
+    configure_smtp_relay($mail);
+    $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+    $mail->addReplyTo($email);
+    $mail->addAddress($to_email);
+    $mail->isHTML(false);
+    $mail->Subject = $subject;
+    $mail->Body    = $email_body;
+    $mail_sent = $mail->send();
+} catch (PHPMailerException $e) {
+    error_log('contact-form: PHPMailer error - ' . $mail->ErrorInfo);
+}
 
 if ($mail_sent) {
     echo json_encode([
