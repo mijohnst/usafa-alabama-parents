@@ -436,9 +436,9 @@ function openBirthdays() {
         <?php endforeach; ?>
       </select>
     </div>
-    <div class="form-group" style="flex:0">
+    <div class="form-group" style="flex:0;min-width:170px">
       <label>&nbsp;</label>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <div style="display:flex;gap:.5rem;flex-wrap:nowrap">
         <button type="submit" class="btn btn-primary">Search</button>
         <a href="index.php" class="btn btn-secondary">Clear</a>
       </div>
