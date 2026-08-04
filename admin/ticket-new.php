@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
 require_login();
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 $pdo    = get_pdo();
 $errors = [];
 
@@ -25,8 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ->execute([$ticket_num, $category, $subject, $description, $priority, 'open', $_SESSION['user_id'] ?? null]);
         $ticket_id = (int)$pdo->lastInsertId();
 
-        $url     = 'https://alabamafalcons.org/admin/ticket-view.php?id=' . $ticket_id;
-        $headers = "From: USAFA Parents Club of Alabama <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n";
+        $url = 'https://alabamafalcons.org/admin/ticket-view.php?id=' . $ticket_id;
 
         // Notify all Tech Support and Admin users
         try {
@@ -41,7 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       . "Respond here: $url\n\n"
                       . str_repeat('─',48) . "\nalabamafalcons.org/admin/";
                 $clean_sub = preg_replace('/[\x00-\x1F\x7F]/', '', "New Support Ticket $ticket_num: $subject");
-                mail($t['email'], $clean_sub, $body, $headers);
+                $mail = new PHPMailer(true);
+                try {
+                    configure_smtp_relay($mail);
+                    $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+                    $mail->addAddress($t['email']);
+                    $mail->isHTML(false);
+                    $mail->Subject = $clean_sub;
+                    $mail->Body    = $body;
+                    $mail->send();
+                } catch (PHPMailerException $e) {
+                    error_log("ticket-new: PHPMailer error (notify {$t['email']}) - " . $mail->ErrorInfo);
+                }
             }
         } catch (Exception $e) { error_log('ticket-new: notify failed — ' . $e->getMessage()); }
 
@@ -60,7 +74,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   . "Track your ticket: $url\n\n"
                   . str_repeat('─',48) . "\nalabamafalcons.org/admin/";
             $clean_sub = preg_replace('/[\x00-\x1F\x7F]/', '', "Support Ticket $ticket_num Received: $subject");
-            mail($submitter_email, $clean_sub, $body, $headers);
+            $conf_mail = new PHPMailer(true);
+            try {
+                configure_smtp_relay($conf_mail);
+                $conf_mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+                $conf_mail->addAddress($submitter_email);
+                $conf_mail->isHTML(false);
+                $conf_mail->Subject = $clean_sub;
+                $conf_mail->Body    = $body;
+                $conf_mail->send();
+            } catch (PHPMailerException $e) {
+                error_log('ticket-new: PHPMailer error (submitter confirmation) - ' . $conf_mail->ErrorInfo);
+            }
         }
 
         flash('success', "Ticket $ticket_num submitted. Tech support has been notified.");

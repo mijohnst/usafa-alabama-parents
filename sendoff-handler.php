@@ -3,6 +3,10 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/mailer.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -121,12 +125,19 @@ $body    = "A new registration has been submitted for the Cadet Class of 2030 Se
          . "Phone:                      " . $data['phone']          . "\n"
          . "Email:                      " . ($data['email']          ?: '—') . "\n";
 
-$safe_reply_to = str_replace(["\r", "\n"], '', $data['email'] ?: 'no-reply@alabamafalcons.org');
-$headers = "From: no-reply@alabamafalcons.org\r\n"
-         . "Reply-To: " . $safe_reply_to . "\r\n"
-         . "Content-Type: text/plain; charset=UTF-8\r\n";
-
-mail($to, $subject, $body, $headers);
+$mail = new PHPMailer(true);
+try {
+    configure_smtp_relay($mail);
+    $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+    $mail->addReplyTo($data['email']);
+    $mail->addAddress($to);
+    $mail->isHTML(false);
+    $mail->Subject = $subject;
+    $mail->Body    = $body;
+    $mail->send();
+} catch (PHPMailerException $e) {
+    error_log('sendoff-handler: PHPMailer error (secretary notify) - ' . $mail->ErrorInfo);
+}
 
 // Confirmation email to registrant
 if (!empty($data['email'])) {
@@ -145,10 +156,19 @@ if (!empty($data['email'])) {
                   . "We look forward to celebrating with you!\n\n"
                   . "USAFA Parents Club of Alabama\n"
                   . "alabamafalcons.org";
-    $conf_headers = "From: no-reply@alabamafalcons.org\r\n"
-                  . "Reply-To: secretary@alabamafalcons.org\r\n"
-                  . "Content-Type: text/plain; charset=UTF-8\r\n";
-    mail($conf_to, $conf_subject, $conf_body, $conf_headers);
+    $conf_mail = new PHPMailer(true);
+    try {
+        configure_smtp_relay($conf_mail);
+        $conf_mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+        $conf_mail->addReplyTo('secretary@alabamafalcons.org', CLUB_NAME);
+        $conf_mail->addAddress($conf_to);
+        $conf_mail->isHTML(false);
+        $conf_mail->Subject = $conf_subject;
+        $conf_mail->Body    = $conf_body;
+        $conf_mail->send();
+    } catch (PHPMailerException $e) {
+        error_log('sendoff-handler: PHPMailer error (registrant confirmation) - ' . $conf_mail->ErrorInfo);
+    }
 }
 
 echo json_encode(['success' => true, 'message' => 'Registration submitted! We look forward to seeing you at the sendoff.']);

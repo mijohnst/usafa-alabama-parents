@@ -13,6 +13,10 @@ if (php_sapi_name() !== 'cli') {
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/lib.php';
+require_once __DIR__ . '/mailer.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 $month      = (int)date('n');
 $month_name = date('F');
@@ -76,11 +80,20 @@ if (empty($cadets)) {
 $body .= "\n— USAFA Parents Club of Alabama Admin System\n";
 $body .= "   alabamafalcons.org\n";
 
-$headers  = "From: USAFA Parents Club Admin <info@alabamafalcons.org>\r\n";
-$headers .= "Reply-To: info@alabamafalcons.org\r\n";
-$headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-
-$sent = mail('info@alabamafalcons.org', $subject, $body, $headers);
+$sent = false;
+$mail = new PHPMailer(true);
+try {
+    configure_smtp_relay($mail);
+    $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+    $mail->addReplyTo(CLUB_FROM_EMAIL, CLUB_NAME);
+    $mail->addAddress(CLUB_FROM_EMAIL);
+    $mail->isHTML(false);
+    $mail->Subject = $subject;
+    $mail->Body    = $body;
+    $sent = $mail->send();
+} catch (PHPMailerException $e) {
+    error_log('birthday-report: PHPMailer error - ' . $mail->ErrorInfo);
+}
 
 echo date('Y-m-d H:i:s') . " — Birthday report for $month_name $year: "
    . count($cadets) . " cadet(s). Mail " . ($sent ? "sent." : "FAILED.") . "\n";

@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/mailer.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 header('Content-Type: application/json');
 
@@ -73,12 +77,21 @@ $body     = "USAFA Parents Club of Alabama\nNew Volunteer Interest Submission\n"
            . ($comments     ? "\nComments:\n$comments\n"      : '')
            . "\n" . str_repeat('─',48) . "\nalabamafalcons.org/admin/";
 
-$headers  = "From: USAFA Parents Club <info@alabamafalcons.org>\r\n";
-$headers .= "Reply-To: " . sanitize_hdr($email) . "\r\n";
-$headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-
-mail('secretary@alabamafalcons.org', $subject, $body, $headers);
-mail('president@alabamafalcons.org', $subject, $body, $headers);
+foreach (['secretary@alabamafalcons.org', 'president@alabamafalcons.org'] as $notify_to) {
+    $mail = new PHPMailer(true);
+    try {
+        configure_smtp_relay($mail);
+        $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+        $mail->addReplyTo($email);
+        $mail->addAddress($notify_to);
+        $mail->isHTML(false);
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+        $mail->send();
+    } catch (PHPMailerException $e) {
+        error_log("volunteer-handler: PHPMailer error (notify $notify_to) - " . $mail->ErrorInfo);
+    }
+}
 
 // Confirmation to volunteer
 $conf = "Thank you for your interest in volunteering with the USAFA Parents Club of Alabama!\n\n"
@@ -88,7 +101,18 @@ $conf = "Thank you for your interest in volunteering with the USAFA Parents Club
       . "  Availability: " . ($availability ?: 'Not specified') . "\n\n"
       . "Aim High · Fly · Fight · Win\n"
       . "USAFA Parents Club of Alabama\nalabamafalcons.org";
-mail($email, 'Volunteer Interest Received — USAFA Parents Club of Alabama', $conf, "From: USAFA Parents Club <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n");
+$conf_mail = new PHPMailer(true);
+try {
+    configure_smtp_relay($conf_mail);
+    $conf_mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+    $conf_mail->addAddress($email);
+    $conf_mail->isHTML(false);
+    $conf_mail->Subject = 'Volunteer Interest Received — USAFA Parents Club of Alabama';
+    $conf_mail->Body    = $conf;
+    $conf_mail->send();
+} catch (PHPMailerException $e) {
+    error_log('volunteer-handler: PHPMailer error (confirmation) - ' . $conf_mail->ErrorInfo);
+}
 
 http_response_code(200);
 echo json_encode(['success'=>true,'message'=>'Thank you! We\'ll be in touch soon.']);

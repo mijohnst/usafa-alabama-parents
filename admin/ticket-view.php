@@ -2,6 +2,9 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/mailer.php';
 require_login();
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 $pdo = get_pdo();
 
 $id = (int)($_GET['id'] ?? $_POST['id_override'] ?? 0);
@@ -63,8 +66,19 @@ function send_to_submitter(PDO $pdo, array $ticket, string $subject_prefix, stri
     $raw_subject = $subject_prefix . ' — ' . $ticket['ticket_number'] . ': ' . $ticket['subject'];
     $subject     = preg_replace('/[\x00-\x1F\x7F]/', '', $raw_subject); // prevent header injection
     $body        = build_ticket_email($pdo, $ticket, $event_line);
-    mail($email, $subject, $body,
-         "From: USAFA Parents Club <info@alabamafalcons.org>\r\nContent-Type: text/plain; charset=UTF-8\r\n");
+
+    $mail = new PHPMailer(true);
+    try {
+        configure_smtp_relay($mail);
+        $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
+        $mail->addAddress($email);
+        $mail->isHTML(false);
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+        $mail->send();
+    } catch (PHPMailerException $e) {
+        error_log("ticket-view: PHPMailer error (notify submitter) - " . $mail->ErrorInfo);
+    }
 }
 
 // ── Handle POST actions ───────────────────────────────────────────────────
