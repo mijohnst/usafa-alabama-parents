@@ -362,6 +362,8 @@ function openBirthdays() {
 .cd-panel input[type=checkbox]{width:auto;accent-color:#003594;cursor:pointer}
 .cd-footer{border-top:1px solid #e1e5eb;padding:.4rem .8rem 0;display:flex;gap:.5rem;margin-top:.25rem}
 .cd-group-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9aa5b4;padding:.5rem .8rem .2rem}
+/* Cap filter field growth so the Search/Clear buttons fit on the same row instead of wrapping alone beneath six full-width fields */
+.filter-bar .form-group{max-width:190px}
 </style>
 
 <!-- Filters -->
@@ -437,7 +439,7 @@ function openBirthdays() {
     <div class="form-group" style="flex:0">
       <label>&nbsp;</label>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-        <button type="submit" class="btn btn-primary">Filter</button>
+        <button type="submit" class="btn btn-primary">Search</button>
         <a href="index.php" class="btn btn-secondary">Clear</a>
       </div>
     </div>
