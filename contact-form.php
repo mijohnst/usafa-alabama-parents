@@ -84,7 +84,7 @@ $email_body .= "Submitted: " . date('Y-m-d H:i:s T') . "\n";
 $email_body .= "IP Address: " . $_SERVER['REMOTE_ADDR'] . "\n";
 
 // Email headers
-$headers = "From: noreply@alabamafalcons.org\r\n";
+$headers = "From: info@alabamafalcons.org\r\n";
 $headers .= "Reply-To: $email\r\n";
 $headers .= "X-Mailer: PHP/" . phpversion();
 

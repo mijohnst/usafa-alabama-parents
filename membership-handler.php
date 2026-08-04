@@ -304,7 +304,7 @@ $email_body .= "CONSENTS\n";
 $email_body .= "Photo: " . s($payload,'photoConsent') . "\n";
 $email_body .= "Directory: " . s($payload,'directoryConsent') . "\n";
 
-$headers  = "From: noreply@alabamafalcons.org\r\n";
+$headers  = "From: info@alabamafalcons.org\r\n";
 $headers .= "Reply-To: " . sanitize_header(s($payload,'parent1Email')) . "\r\n";
 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 mail($secretary_email, $subject, $email_body, $headers);

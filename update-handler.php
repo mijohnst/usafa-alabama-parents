@@ -298,7 +298,7 @@ $email_body .= "CONSENTS\n";
 $email_body .= "Photo: " . $g('photo_consent') . "\n";
 $email_body .= "Directory: " . $g('directory_consent') . "\n";
 
-$headers  = "From: noreply@alabamafalcons.org\r\n";
+$headers  = "From: info@alabamafalcons.org\r\n";
 $headers .= "Reply-To: " . sanitize_header($g('parent1_email')) . "\r\n";
 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 mail($secretary_email, $subject, $email_body, $headers);
