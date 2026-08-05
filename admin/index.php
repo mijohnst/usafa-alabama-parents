@@ -11,8 +11,18 @@ $pdo = get_pdo();
 // ── Filters ────────────────────────────────────────────────────────────────
 $search  = trim($_GET['q']       ?? '');
 // Accepts either the new multi-select year[]=... or an old bookmarked
-// single year=... link — both land here as an array either way.
-$years   = array_values(array_filter((array)($_GET['year'] ?? [])));
+// single year=... link — both land here as an array either way. A
+// completely bare load (no query string at all — e.g. clicking "Members"
+// in the nav) defaults to current cadets + Prep School rather than every
+// graduate ever entered into the system. Any query string at all —
+// including other pages' links like index.php?dup=1, ?split=1, or
+// income.php's ?year=2024 — is treated as an explicit request and left
+// alone, so those existing links keep working exactly as before.
+if (empty($_GET)) {
+    $years = array_merge(current_class_years(), ['Prep School']);
+} else {
+    $years = array_values(array_filter((array)($_GET['year'] ?? [])));
+}
 $region  = $_GET['region']       ?? '';
 $paid    = $_GET['paid']         ?? '';
 $squadron  = trim($_GET['squadron']  ?? '');
