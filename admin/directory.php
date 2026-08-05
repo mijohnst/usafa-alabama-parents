@@ -68,6 +68,7 @@ $members = $stmt->fetchAll();
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Member Directory — USAFA Parents Club of Alabama</title>
+<link rel="icon" type="image/png" href="../logo01.png" />
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Segoe UI",Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:1.5rem}

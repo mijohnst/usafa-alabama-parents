@@ -7,6 +7,7 @@ require_login();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Club Portal — Staff Guide · USAFA Parents Club of Alabama</title>
+<link rel="icon" type="image/png" href="../logo01.png" />
 <style>
 /* ── Tokens ── */
 :root {

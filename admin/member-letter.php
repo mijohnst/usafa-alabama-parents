@@ -57,6 +57,7 @@ if ($member) {
 <head>
 <meta charset="UTF-8">
 <title>Membership Letter — <?= h($parent_full) ?></title>
+<link rel="icon" type="image/png" href="../logo01.png" />
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Times New Roman',Times,serif;font-size:12pt;color:#000;background:#fff;padding:0.75in}
