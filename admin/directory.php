@@ -8,24 +8,13 @@ $current_years  = array_merge(current_class_years(), ['Prep School']);
 $other_years    = array_values(array_diff($all_years, $current_years));
 $selected_years = array_intersect((array)($_GET['years'] ?? []), $all_years);
 
-$search   = trim($_GET['q']        ?? '');
-$region   = $_GET['region']        ?? '';
-$missing  = $_GET['missing']       ?? '';
-$bmonth   = $_GET['bmonth']        ?? '';
-$squadron = $_GET['squadron']      ?? '';
-$paid     = $_GET['paid']          ?? '';
-$board    = isset($_GET['board']) ? '1' : '';
-$newdays  = $_GET['newdays']       ?? '';
-$photo    = $_GET['photo']         ?? '';
-
-// Distinct squadrons for the filter dropdown — same source query as index.php
-$squadrons = $pdo->query(
-    "SELECT DISTINCT s FROM (
-        SELECT squadron_yr2_4 s FROM members WHERE squadron_yr2_4 != ''
-        UNION SELECT fall_squadron FROM members WHERE fall_squadron != ''
-        UNION SELECT bct_squadron  FROM members WHERE bct_squadron  != ''
-    ) sq ORDER BY s"
-)->fetchAll(PDO::FETCH_COLUMN);
+$search  = trim($_GET['q']    ?? '');
+$region  = $_GET['region']    ?? '';
+$missing = $_GET['missing']   ?? '';
+$bmonth  = $_GET['bmonth']    ?? '';
+$paid    = $_GET['paid']      ?? '';
+$board   = $_GET['board']     ?? '';
+$photo   = $_GET['photo']     ?? '';
 
 // Families who explicitly opted out of the member directory are excluded —
 // this page is meant to be shared/printed for members, unlike the admin
@@ -65,16 +54,9 @@ if ($bmonth !== '' && (int)$bmonth >= 1 && (int)$bmonth <= 12) {
     $where[] = 'MONTH(cadet_birthday) = :bmonth';
     $params[':bmonth'] = (int)$bmonth;
 }
-if ($squadron !== '') {
-    $where[] = '(bct_squadron = :sqd OR fall_squadron = :sqd OR squadron_yr2_4 = :sqd)';
-    $params[':sqd'] = $squadron;
-}
 if ($paid === '1') { $where[] = 'membership_paid = 1'; }
 if ($paid === '0') { $where[] = 'membership_paid = 0'; }
 if ($board === '1') { $where[] = '(parent1_is_board_member = 1 OR parent2_is_board_member = 1)'; }
-if (in_array($newdays, ['30','60','90','365'], true)) {
-    $where[] = "created_at >= DATE_SUB(NOW(), INTERVAL $newdays DAY)";
-}
 if ($photo === 'Yes' || $photo === 'No') { $where[] = 'photo_consent = :photo'; $params[':photo'] = $photo; }
 
 $stmt = $pdo->prepare('SELECT * FROM members WHERE ' . implode(' AND ', $where)
@@ -198,30 +180,11 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
     </select>
   </div>
   <div>
-    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Squadron</label>
-    <select name="squadron">
-      <option value="">All</option>
-      <?php foreach ($squadrons as $s): ?>
-        <option value="<?= h($s) ?>" <?= $squadron===$s?'selected':''?>><?= h($s) ?></option>
-      <?php endforeach; ?>
-    </select>
-  </div>
-  <div>
     <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Dues Status</label>
     <select name="paid">
       <option value="">All</option>
       <option value="1" <?= $paid==='1'?'selected':''?>>Paid</option>
       <option value="0" <?= $paid==='0'?'selected':''?>>Not Paid</option>
-    </select>
-  </div>
-  <div>
-    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">New Members</label>
-    <select name="newdays">
-      <option value="">Any time</option>
-      <option value="30"  <?= $newdays==='30' ?'selected':''?>>Last 30 days</option>
-      <option value="60"  <?= $newdays==='60' ?'selected':''?>>Last 60 days</option>
-      <option value="90"  <?= $newdays==='90' ?'selected':''?>>Last 90 days</option>
-      <option value="365" <?= $newdays==='365'?'selected':''?>>Last year</option>
     </select>
   </div>
   <div>
@@ -233,13 +196,14 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
     </select>
   </div>
   <div>
-    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">&nbsp;</label>
-    <label style="display:flex;align-items:center;gap:.4rem;padding:.4rem 0;font-size:.82rem;color:#1a2332;cursor:pointer;white-space:nowrap">
-      <input type="checkbox" name="board" value="1" <?= $board==='1'?'checked':''?> style="width:auto">
-      Board members only
-    </label>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Board Members</label>
+    <select name="board">
+      <option value="">Any</option>
+      <option value="1" <?= $board==='1'?'selected':''?>>Board Members Only</option>
+    </select>
   </div>
   <button type="submit">Filter</button>
+  <a href="directory.php">Reset</a>
 </form>
 
 <?php
