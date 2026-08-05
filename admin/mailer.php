@@ -106,6 +106,18 @@ function send_birthday_emails(PDO $pdo): int {
     if (!$cadet_on && !$parent_on) return 0;
 
     try {
+        // Only currently-enrolled cadets (the 4 active class years + Prep
+        // School) — graduates keep their birthday on file but shouldn't
+        // keep getting club birthday emails after commissioning.
+        $eligible_years = array_merge(current_class_years(), ['Prep School']);
+        $year_ph = [];
+        $params  = ['month' => (int)date('n'), 'day' => (int)date('j')];
+        foreach ($eligible_years as $i => $y) {
+            $key = ':cy' . $i;
+            $year_ph[]     = $key;
+            $params[$key]  = $y;
+        }
+
         // Bind PHP's own month/day rather than trusting MySQL's CURDATE() —
         // the two can disagree if the DB server's timezone isn't the same
         // as the one set above, silently shifting "today" by hours.
@@ -113,9 +125,10 @@ function send_birthday_emails(PDO $pdo): int {
             "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, nickname, cadet_email, parent1_email, parent2_email
              FROM members
              WHERE archived = 0 AND cadet_birthday IS NOT NULL
-               AND MONTH(cadet_birthday) = :month AND DAY(cadet_birthday) = :day"
+               AND MONTH(cadet_birthday) = :month AND DAY(cadet_birthday) = :day
+               AND class_year IN (" . implode(',', $year_ph) . ")"
         );
-        $stmt->execute(['month' => (int)date('n'), 'day' => (int)date('j')]);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_birthday_emails query failed — ' . $e->getMessage());
