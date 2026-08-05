@@ -219,6 +219,7 @@ foreach ($by_year as $yr => $group):
     <div class="cadet-meta">
       <?= h((string)($sqd ?? '')) ?><?= $sqd && $m['al_region'] ? ' &bull; ' : '' ?><?= $v('al_region') ?>
       <?php if ($m['cadet_po_box']): ?>&bull; PO <?= $v('cadet_po_box') ?><?php endif; ?>
+      <?php if ($m['cadet_birthday']): ?>&bull; 🎂 <?= h(date('M j', strtotime($m['cadet_birthday']))) ?><?php endif; ?>
     </div>
 
     <?php if ($m['parent1_first_name'] || $m['parent1_last_name']): ?>
