@@ -183,11 +183,26 @@ if (can_manage_finances() && !is_member()) {
     } catch (Exception $e) {}
 }
 
-// Upcoming birthdays (next 30 days)
-$bday_rows = $pdo->query(
+// Upcoming birthdays (next 30 days) — currently-enrolled cadets only
+// (the 4 active class years + Prep School), same scope as the automated
+// birthday email cron. Graduates keep their birthday on file but don't
+// belong in this panel anymore.
+$bday_years = array_merge(current_class_years(), ['Prep School']);
+$bday_ph    = [];
+$bday_params = [];
+foreach ($bday_years as $i => $y) {
+    $key = ':by' . $i;
+    $bday_ph[]        = $key;
+    $bday_params[$key] = $y;
+}
+$bday_stmt = $pdo->prepare(
     "SELECT cadet_last_name, cadet_suffix, cadet_first_name, cadet_middle_name, cadet_birthday, cadet_po_box
-     FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL AND cadet_birthday != ''"
-)->fetchAll();
+     FROM members
+     WHERE archived = 0 AND cadet_birthday IS NOT NULL AND cadet_birthday != ''
+       AND class_year IN (" . implode(',', $bday_ph) . ")"
+);
+$bday_stmt->execute($bday_params);
+$bday_rows = $bday_stmt->fetchAll();
 $upcoming_bdays = [];
 $today = new DateTime('today');
 foreach ($bday_rows as $b) {
