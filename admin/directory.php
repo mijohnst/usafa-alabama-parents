@@ -8,8 +8,24 @@ $current_years  = array_merge(current_class_years(), ['Prep School']);
 $other_years    = array_values(array_diff($all_years, $current_years));
 $selected_years = array_intersect((array)($_GET['years'] ?? []), $all_years);
 
-$region  = $_GET['region']  ?? '';
-$missing = $_GET['missing'] ?? '';
+$search   = trim($_GET['q']        ?? '');
+$region   = $_GET['region']        ?? '';
+$missing  = $_GET['missing']       ?? '';
+$bmonth   = $_GET['bmonth']        ?? '';
+$squadron = $_GET['squadron']      ?? '';
+$paid     = $_GET['paid']          ?? '';
+$board    = isset($_GET['board']) ? '1' : '';
+$newdays  = $_GET['newdays']       ?? '';
+$photo    = $_GET['photo']         ?? '';
+
+// Distinct squadrons for the filter dropdown — same source query as index.php
+$squadrons = $pdo->query(
+    "SELECT DISTINCT s FROM (
+        SELECT squadron_yr2_4 s FROM members WHERE squadron_yr2_4 != ''
+        UNION SELECT fall_squadron FROM members WHERE fall_squadron != ''
+        UNION SELECT bct_squadron  FROM members WHERE bct_squadron  != ''
+    ) sq ORDER BY s"
+)->fetchAll(PDO::FETCH_COLUMN);
 
 // Families who explicitly opted out of the member directory are excluded —
 // this page is meant to be shared/printed for members, unlike the admin
@@ -25,6 +41,14 @@ if (can_view_member_pii()) {
     $where[] = "directory_consent = 'Yes'";
 }
 $params = [];
+if ($search !== '') {
+    $where[] = '(cadet_last_name LIKE :q OR cadet_first_name LIKE :q OR cadet_middle_name LIKE :q
+                 OR parent1_last_name LIKE :q OR parent1_first_name LIKE :q
+                 OR parent2_last_name LIKE :q OR parent2_first_name LIKE :q
+                 OR cadet_email LIKE :q OR parent1_email LIKE :q OR parent2_email LIKE :q
+                 OR cadet_cell LIKE :q OR parent1_cell LIKE :q)';
+    $params[':q'] = '%' . $search . '%';
+}
 if (!empty($selected_years) && count($selected_years) < count($all_years)) {
     $ph = [];
     foreach (array_values($selected_years) as $i => $y) {
@@ -37,6 +61,21 @@ if (!empty($selected_years) && count($selected_years) < count($all_years)) {
 if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $region; }
 $missing_sql = missing_data_sql($missing);
 if ($missing_sql) { $where[] = $missing_sql; }
+if ($bmonth !== '' && (int)$bmonth >= 1 && (int)$bmonth <= 12) {
+    $where[] = 'MONTH(cadet_birthday) = :bmonth';
+    $params[':bmonth'] = (int)$bmonth;
+}
+if ($squadron !== '') {
+    $where[] = '(bct_squadron = :sqd OR fall_squadron = :sqd OR squadron_yr2_4 = :sqd)';
+    $params[':sqd'] = $squadron;
+}
+if ($paid === '1') { $where[] = 'membership_paid = 1'; }
+if ($paid === '0') { $where[] = 'membership_paid = 0'; }
+if ($board === '1') { $where[] = '(parent1_is_board_member = 1 OR parent2_is_board_member = 1)'; }
+if (in_array($newdays, ['30','60','90','365'], true)) {
+    $where[] = "created_at >= DATE_SUB(NOW(), INTERVAL $newdays DAY)";
+}
+if ($photo === 'Yes' || $photo === 'No') { $where[] = 'photo_consent = :photo'; $params[':photo'] = $photo; }
 
 $stmt = $pdo->prepare('SELECT * FROM members WHERE ' . implode(' AND ', $where)
     . ' ORDER BY class_year, cadet_last_name');
@@ -99,6 +138,10 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
 
 <form class="filters no-print" method="GET">
   <div>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Search</label>
+    <input type="text" name="q" value="<?= h($search) ?>" placeholder="Name, email, phone…" style="padding:.4rem .65rem;border:1px solid #d0d5dd;border-radius:4px;font-size:.82rem;font-family:inherit">
+  </div>
+  <div>
     <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Year</label>
     <div class="cd" id="year-cd">
       <button type="button" class="cd-btn" id="year-btn">All Years</button>
@@ -144,6 +187,57 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
         <option value="<?= h($val) ?>" <?= $missing===$val?'selected':''?>><?= h($label) ?></option>
       <?php endforeach; ?>
     </select>
+  </div>
+  <div>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Birthday Month</label>
+    <select name="bmonth">
+      <option value="">Any month</option>
+      <?php foreach (range(1,12) as $m): ?>
+        <option value="<?= $m ?>" <?= $bmonth==(string)$m?'selected':''?>><?= h(date('F', mktime(0,0,0,$m,1))) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
+  <div>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Squadron</label>
+    <select name="squadron">
+      <option value="">All</option>
+      <?php foreach ($squadrons as $s): ?>
+        <option value="<?= h($s) ?>" <?= $squadron===$s?'selected':''?>><?= h($s) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
+  <div>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Dues Status</label>
+    <select name="paid">
+      <option value="">All</option>
+      <option value="1" <?= $paid==='1'?'selected':''?>>Paid</option>
+      <option value="0" <?= $paid==='0'?'selected':''?>>Not Paid</option>
+    </select>
+  </div>
+  <div>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">New Members</label>
+    <select name="newdays">
+      <option value="">Any time</option>
+      <option value="30"  <?= $newdays==='30' ?'selected':''?>>Last 30 days</option>
+      <option value="60"  <?= $newdays==='60' ?'selected':''?>>Last 60 days</option>
+      <option value="90"  <?= $newdays==='90' ?'selected':''?>>Last 90 days</option>
+      <option value="365" <?= $newdays==='365'?'selected':''?>>Last year</option>
+    </select>
+  </div>
+  <div>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Photo Consent</label>
+    <select name="photo">
+      <option value="">Any</option>
+      <option value="Yes" <?= $photo==='Yes'?'selected':''?>>Yes</option>
+      <option value="No"  <?= $photo==='No' ?'selected':''?>>No</option>
+    </select>
+  </div>
+  <div>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">&nbsp;</label>
+    <label style="display:flex;align-items:center;gap:.4rem;padding:.4rem 0;font-size:.82rem;color:#1a2332;cursor:pointer;white-space:nowrap">
+      <input type="checkbox" name="board" value="1" <?= $board==='1'?'checked':''?> style="width:auto">
+      Board members only
+    </label>
   </div>
   <button type="submit">Filter</button>
 </form>
