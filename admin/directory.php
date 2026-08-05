@@ -8,13 +8,12 @@ $current_years  = array_merge(current_class_years(), ['Prep School']);
 $other_years    = array_values(array_diff($all_years, $current_years));
 $selected_years = array_intersect((array)($_GET['years'] ?? []), $all_years);
 
-$search  = trim($_GET['q']    ?? '');
-$region  = $_GET['region']    ?? '';
-$missing = $_GET['missing']   ?? '';
-$bmonth  = $_GET['bmonth']    ?? '';
-$paid    = $_GET['paid']      ?? '';
-$board   = $_GET['board']     ?? '';
-$photo   = $_GET['photo']     ?? '';
+$search        = trim($_GET['q']       ?? '');
+$region        = $_GET['region']       ?? '';
+$missing       = $_GET['missing']      ?? '';
+$bmonth        = $_GET['bmonth']       ?? '';
+$member_status = $_GET['member']       ?? '';
+$consent       = $_GET['consent']      ?? '';
 
 // Families who explicitly opted out of the member directory are excluded —
 // this page is meant to be shared/printed for members, unlike the admin
@@ -54,10 +53,12 @@ if ($bmonth !== '' && (int)$bmonth >= 1 && (int)$bmonth <= 12) {
     $where[] = 'MONTH(cadet_birthday) = :bmonth';
     $params[':bmonth'] = (int)$bmonth;
 }
-if ($paid === '1') { $where[] = 'membership_paid = 1'; }
-if ($paid === '0') { $where[] = 'membership_paid = 0'; }
-if ($board === '1') { $where[] = '(parent1_is_board_member = 1 OR parent2_is_board_member = 1)'; }
-if ($photo === 'Yes' || $photo === 'No') { $where[] = 'photo_consent = :photo'; $params[':photo'] = $photo; }
+if ($member_status === 'board')  { $where[] = '(parent1_is_board_member = 1 OR parent2_is_board_member = 1)'; }
+if ($member_status === 'paid')   { $where[] = 'membership_paid = 1'; }
+if ($member_status === 'unpaid') { $where[] = 'membership_paid = 0'; }
+if ($consent === 'photo_yes')     { $where[] = "photo_consent = 'Yes'"; }
+if ($consent === 'photo_no')      { $where[] = "photo_consent = 'No'"; }
+if ($consent === 'directory_yes') { $where[] = "directory_consent = 'Yes'"; }
 
 $stmt = $pdo->prepare('SELECT * FROM members WHERE ' . implode(' AND ', $where)
     . ' ORDER BY class_year, cadet_last_name');
@@ -180,26 +181,21 @@ h1{font-size:1.2rem;color:#002554;margin-bottom:.25rem}
     </select>
   </div>
   <div>
-    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Dues Status</label>
-    <select name="paid">
-      <option value="">All</option>
-      <option value="1" <?= $paid==='1'?'selected':''?>>Paid</option>
-      <option value="0" <?= $paid==='0'?'selected':''?>>Not Paid</option>
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Consents</label>
+    <select name="consent">
+      <option value="">Any</option>
+      <option value="photo_yes"     <?= $consent==='photo_yes'    ?'selected':''?>>Photo Consent: Yes</option>
+      <option value="photo_no"      <?= $consent==='photo_no'     ?'selected':''?>>Photo Consent: No</option>
+      <option value="directory_yes" <?= $consent==='directory_yes'?'selected':''?>>Directory Consent: Yes</option>
     </select>
   </div>
   <div>
-    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Photo Consent</label>
-    <select name="photo">
+    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Members</label>
+    <select name="member">
       <option value="">Any</option>
-      <option value="Yes" <?= $photo==='Yes'?'selected':''?>>Yes</option>
-      <option value="No"  <?= $photo==='No' ?'selected':''?>>No</option>
-    </select>
-  </div>
-  <div>
-    <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7a;display:block;margin-bottom:.2rem">Board Members</label>
-    <select name="board">
-      <option value="">Any</option>
-      <option value="1" <?= $board==='1'?'selected':''?>>Board Members Only</option>
+      <option value="board"  <?= $member_status==='board' ?'selected':''?>>Board Members</option>
+      <option value="paid"   <?= $member_status==='paid'  ?'selected':''?>>Members</option>
+      <option value="unpaid" <?= $member_status==='unpaid'?'selected':''?>>Non-Paid Members</option>
     </select>
   </div>
   <button type="submit">Filter</button>
