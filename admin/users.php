@@ -265,6 +265,14 @@ echo show_flash();
     </div>
     <div class="user-actions">
       <a href="users.php?edit=<?= $u['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
+      <?php if (is_admin() && $u['role'] !== 'admin' && $u['active'] && $u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
+      <form method="POST" action="impersonate.php" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="start">
+        <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+        <button type="submit" class="btn btn-secondary btn-sm" title="View the portal as this user">🔀 Login As</button>
+      </form>
+      <?php endif; ?>
       <?php if (!empty($u['invite_token'])): ?>
       <form method="POST" style="margin:0">
         <?= csrf_field() ?>

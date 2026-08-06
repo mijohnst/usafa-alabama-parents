@@ -48,6 +48,15 @@ function is_admin(): bool {
     return ($_SESSION['role'] ?? '') === 'admin';
 }
 
+// True while an admin is using "Login As" (impersonate.php) to view the
+// portal as another user — see admin_header()'s banner and impersonate.php.
+// Deliberately checks impersonator_id rather than the active role/is_admin(),
+// since impersonating flips $_SESSION['role'] to the target user's role for
+// the whole point of the feature: seeing exactly what that role sees.
+function is_impersonating(): bool {
+    return !empty($_SESSION['impersonator_id']);
+}
+
 function is_treasurer(): bool {
     return ($_SESSION['role'] ?? '') === 'treasurer';
 }
@@ -363,6 +372,14 @@ function admin_header(string $title): void {
     echo '<form method="POST" action="logout.php" style="display:inline;margin:0">' . csrf_field()
        . '<button type="submit" style="background:none;border:none;padding:0;font:inherit;color:rgba(255,255,255,.8);font-size:.85rem;cursor:pointer">Log Out</button></form>';
     echo '</nav></div>';
+    if (is_impersonating()) {
+        echo '<div style="background:#f57c00;color:#fff;padding:.6rem 1.5rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;font-size:.85rem;flex-wrap:wrap">';
+        echo '<span>🔀 Viewing as <strong>' . h(current_user_name()) . '</strong> (' . h(ucfirst($_SESSION['role'] ?? '')) . ') — testing what this role sees.</span>';
+        echo '<form method="POST" action="impersonate.php" style="margin:0">' . csrf_field()
+           . '<input type="hidden" name="action" value="stop">'
+           . '<button type="submit" style="background:#fff;color:#bf360c;border:none;padding:.35rem .9rem;border-radius:4px;font-size:.8rem;font-weight:700;cursor:pointer">Return to Admin</button></form>';
+        echo '</div>';
+    }
     echo '<div class="main">';
 }
 
