@@ -4,8 +4,6 @@ require_login();
 $pdo     = get_pdo();
 $user_id = $_SESSION['user_id'] ?? 0;
 
-const COMMITTEES = ['Fundraising', 'Events & Socials', 'Communications', 'Care Packages', 'Membership Outreach', 'Sendoff Support'];
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $selected = array_intersect((array)($_POST['committees'] ?? []), COMMITTEES);

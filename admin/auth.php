@@ -389,6 +389,10 @@ function admin_footer(): void {
 
 const ELECTION_POSITIONS = ['President', 'Vice President', 'Secretary', 'Treasurer'];
 
+// Shared by my-committees.php (member self-service) and volunteers.php
+// (admin tagging raw public submissions) so both stay in sync.
+const COMMITTEES = ['Fundraising', 'Events & Socials', 'Communications', 'Care Packages', 'Membership Outreach', 'Sendoff Support'];
+
 const REGIONS = ['', 'North', 'Central', 'South'];
 const PAYMENT_METHODS   = ['', 'Check', 'Internet Transfer', 'Other'];
 const TICKET_CATEGORIES = ['', 'Website Issue', 'Admin Portal Issue', 'Email / Google Workspace', 'Login / Password Help', 'Add Event to Calendar', 'Site Suggestion', 'Other'];
