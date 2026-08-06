@@ -18,6 +18,15 @@ $board_eligible = is_board_role();
 
 if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+
+    // Same rule as vote.php's officer elections — Login As is for seeing
+    // what a role sees, not for an admin to cast a real vote on someone
+    // else's behalf.
+    if (is_impersonating()) {
+        flash('error', 'Voting is disabled while using Login As.');
+        header('Location: polls.php'); exit;
+    }
+
     $poll_id   = (int)($_POST['poll_id'] ?? 0);
     $option_id = (int)($_POST['option_id'] ?? 0);
 
