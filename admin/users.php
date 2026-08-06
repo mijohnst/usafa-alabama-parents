@@ -12,14 +12,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add' || $action === 'edit') {
-        $id        = (int)($_POST['id'] ?? 0);
-        $name      = trim($_POST['name']     ?? '');
-        $email     = trim($_POST['email']    ?? '');
-        $uname     = trim($_POST['username'] ?? '');
-        $role      = $_POST['role'] ?? 'viewer';
-        $pw        = $_POST['password']  ?? '';
-        $pw2       = $_POST['password2'] ?? '';
-        $member_id = (int)($_POST['member_id'] ?? 0) ?: null;
+        $id           = (int)($_POST['id'] ?? 0);
+        $name         = trim($_POST['name']     ?? '');
+        $email        = trim($_POST['email']    ?? '');
+        $uname        = trim($_POST['username'] ?? '');
+        $role         = $_POST['role'] ?? 'viewer';
+        $pw           = $_POST['password']  ?? '';
+        $pw2          = $_POST['password2'] ?? '';
+        $member_id    = (int)($_POST['member_id'] ?? 0) ?: null;
+        $send_invite  = $action === 'add' && !empty($_POST['send_invite']);
 
         if (!$name)  $errors[] = 'Name is required.';
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
@@ -30,14 +31,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dup_check = $pdo->prepare('SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?');
         $dup_check->execute([$uname, $email, $id ?: 0]);
         if ($dup_check->fetch()) $errors[] = 'That username or email is already in use by another account.';
-        if ($action === 'add' && strlen($pw) < 8)  $errors[] = 'Password must be at least 8 characters.';
+        if ($action === 'add' && !$send_invite && strlen($pw) < 8) $errors[] = 'Password must be at least 8 characters.';
         if ($pw && $pw !== $pw2)                    $errors[] = 'Passwords do not match.';
 
         if (empty($errors)) {
+            // A send-invite account gets a random throwaway password (never
+            // shown to anyone) plus an invite token, same as the bulk portal
+            // invite on the Members page — they set their own real password
+            // via the emailed link instead of an admin typing one in.
+            $invite_token = null;
+            if ($send_invite) {
+                $pw = bin2hex(random_bytes(32));
+                $invite_token = bin2hex(random_bytes(24));
+            }
             try {
                 if ($action === 'add') {
-                    $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active,member_id) VALUES (?,?,?,?,?,1,?)')
-                        ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id]);
+                    if ($send_invite) {
+                        $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active,member_id,invite_token,invite_expires) VALUES (?,?,?,?,?,1,?,?,DATE_ADD(NOW(), INTERVAL 14 DAY))')
+                            ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id, $invite_token]);
+                    } else {
+                        $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active,member_id) VALUES (?,?,?,?,?,1,?)')
+                            ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id]);
+                    }
                 } elseif ($pw) {
                     $pdo->prepare('UPDATE users SET name=?,email=?,username=?,password_hash=?,role=?,member_id=? WHERE id=?')
                         ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id, $id]);
@@ -49,8 +64,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // users.member_id migration not run yet on this install — save
                 // everything except the family link, which needs that column.
                 if ($action === 'add') {
-                    $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active) VALUES (?,?,?,?,?,1)')
-                        ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role]);
+                    if ($send_invite) {
+                        $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active,invite_token,invite_expires) VALUES (?,?,?,?,?,1,?,DATE_ADD(NOW(), INTERVAL 14 DAY))')
+                            ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $invite_token]);
+                    } else {
+                        $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active) VALUES (?,?,?,?,?,1)')
+                            ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role]);
+                    }
                 } elseif ($pw) {
                     $pdo->prepare('UPDATE users SET name=?,email=?,username=?,password_hash=?,role=? WHERE id=?')
                         ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $id]);
@@ -61,7 +81,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', 'Saved, but the family link could not be set — run admin/migrate_user_member_link.sql first.');
                 header('Location: users.php'); exit;
             }
-            flash('success', "User '$name' " . ($action === 'add' ? 'added.' : 'updated.'));
+
+            if ($send_invite) {
+                require_once __DIR__ . '/mailer.php';
+                send_portal_invite($email, $name, $invite_token);
+                flash('success', "User '$name' added — invite email sent.");
+            } else {
+                flash('success', "User '$name' " . ($action === 'add' ? 'added.' : 'updated.'));
+            }
             header('Location: users.php'); exit;
         }
 
@@ -219,10 +246,18 @@ echo show_flash();
         <?php endforeach; ?>
       </select>
     </div>
-    <div class="form-row col-2">
+    <?php if (!$edit_user): ?>
+    <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="send_invite" id="send_invite" value="1" style="width:auto"
+             onchange="document.getElementById('pw_section').style.display = this.checked ? 'none' : '';
+                       document.getElementById('pw_field').required = !this.checked;">
+      <label for="send_invite" style="font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;margin:0;font-size:.9rem">Email an invite to let them set their own password, instead of setting one now</label>
+    </div>
+    <?php endif; ?>
+    <div class="form-row col-2" id="pw_section">
       <div class="form-group">
         <label><?= $edit_user ? 'New Password' : 'Password *' ?> <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem">(min 8 chars)</span></label>
-        <input type="password" name="password" <?= $edit_user?'':'required' ?> minlength="8" autocomplete="new-password">
+        <input type="password" name="password" id="pw_field" <?= $edit_user?'':'required' ?> minlength="8" autocomplete="new-password">
       </div>
       <div class="form-group">
         <label>Confirm Password</label>
