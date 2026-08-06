@@ -44,8 +44,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $pdo->prepare('INSERT INTO leadership (name,role_title,bio,photo_filename,email,sort_order,active) VALUES (?,?,?,?,?,?,?)')
                     ->execute([$name,$role,$bio,$new_photo,$email,$sort_order,$active]);
+                $id = (int)$pdo->lastInsertId();
                 flash('success','Officer added.');
             }
+
+            // Only one active officer per role title at a time — saving this
+            // one as active automatically retires whoever previously held
+            // the title, so the public site can't show two people in the
+            // same seat.
+            if ($active) {
+                $pdo->prepare('UPDATE leadership SET active=0 WHERE id<>? AND active=1 AND LOWER(TRIM(role_title))=LOWER(TRIM(?))')
+                    ->execute([$id, $role]);
+            }
+
+            // Keep the matching login account's display name in sync.
+            // leadership and users are separate tables, linked only by the
+            // shared role email (e.g. treasurer@alabamafalcons.org) — this is
+            // the one place that connects "who the public site shows" to
+            // "who's actually logged in," so the nav bar doesn't keep
+            // showing whoever previously held the position.
+            if ($email !== '') {
+                $pdo->prepare('UPDATE users SET name=? WHERE LOWER(email)=LOWER(?) AND name<>?')
+                    ->execute([$name, $email, $name]);
+            }
+
             header('Location: leadership.php'); exit;
         }
     } elseif ($action === 'delete') {
