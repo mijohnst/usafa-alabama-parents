@@ -823,6 +823,31 @@ function notify_election_open(PDO $pdo, array $election): int {
     return $sent;
 }
 
+// ── Notify every portal user that a new poll is open for voting ──────────
+// Sent once, when a President/VP opens a poll (see admin/polls-manage.php).
+// Links to the login page rather than the poll directly, matching how the
+// portal already works — no per-poll magic link, just a reminder.
+function send_poll_notifications(PDO $pdo, array $poll): int {
+    $url     = SITE_URL . 'admin/login.php';
+    $subject = 'New Vote Open: ' . $poll['title'];
+    $expires = date('F j, Y g:ia', strtotime($poll['expires_at']));
+    $body    = CLUB_NAME . "\n"
+             . "A New Vote Is Open\n"
+             . str_repeat('─', 48) . "\n\n"
+             . '"' . $poll['title'] . "\"\n\n"
+             . ($poll['description'] !== '' ? $poll['description'] . "\n\n" : '')
+             . "Log in to the member portal to cast your vote:\n$url\n\n"
+             . "Voting closes: $expires\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+
+    $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> ''")->fetchAll(PDO::FETCH_COLUMN);
+    $sent = 0;
+    foreach ($emails as $email) {
+        if (send_notification($email, $subject, $body)) $sent++;
+    }
+    return $sent;
+}
+
 // ── Invite a paid member to set up their own portal login ────────────────
 function send_portal_invite(string $to, string $name, string $token): bool {
     $url     = SITE_URL . 'portal-signup.php?token=' . $token;

@@ -1,0 +1,206 @@
+<?php
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
+require_login();
+
+// President/VP share the generic 'officer' login role (Secretary and
+// Treasurer have their own distinct roles) — see the polls feature's design
+// note: today that role is held by exactly President + VP, so gating on it
+// achieves "only President/VP can create a vote." Admin kept as an override,
+// matching every other manage-page in this codebase.
+if (!is_officer() && !is_admin()) { header('Location: dashboard.php?denied=1'); exit; }
+$pdo = get_pdo();
+
+$db_ready = true;
+try { $pdo->query('SELECT 1 FROM polls LIMIT 1'); } catch (PDOException $e) { $db_ready = false; }
+
+if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'create') {
+        $title       = trim($_POST['title'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $poll_type   = ($_POST['poll_type'] ?? 'yesno') === 'multiple' ? 'multiple' : 'yesno';
+        $expires_at  = str_replace('T', ' ', trim($_POST['expires_at'] ?? ''));
+        $options_raw = trim($_POST['options'] ?? '');
+
+        $errors = [];
+        if (!$title) $errors[] = 'Title is required.';
+        if (!$expires_at) $errors[] = 'Expiration is required.';
+        $custom_options = array_values(array_filter(array_map('trim', explode("\n", $options_raw))));
+        if ($poll_type === 'multiple' && count($custom_options) < 2) {
+            $errors[] = 'Multiple choice polls need at least 2 options (one per line).';
+        }
+
+        if ($errors) {
+            flash('error', implode(' ', $errors));
+            header('Location: polls-manage.php?new=1'); exit;
+        }
+
+        $pdo->prepare('INSERT INTO polls (title,description,poll_type,status,expires_at,created_by) VALUES (?,?,?,\'open\',?,?)')
+            ->execute([$title, $description, $poll_type, $expires_at, $_SESSION['user_id'] ?? null]);
+        $poll_id = (int)$pdo->lastInsertId();
+
+        $options = $poll_type === 'multiple' ? $custom_options : ['Yes', 'No'];
+        $ins = $pdo->prepare('INSERT INTO poll_options (poll_id, option_text, sort_order) VALUES (?,?,?)');
+        foreach ($options as $i => $opt) $ins->execute([$poll_id, $opt, $i]);
+
+        $poll = ['title' => $title, 'description' => $description, 'expires_at' => $expires_at];
+        $sent = send_poll_notifications($pdo, $poll);
+
+        flash('success', "Poll created and $sent notification email(s) sent.");
+        header('Location: polls-manage.php'); exit;
+
+    } elseif ($action === 'close') {
+        $id = (int)($_POST['id'] ?? 0);
+        $pdo->prepare("UPDATE polls SET status='closed' WHERE id=?")->execute([$id]);
+        flash('success', 'Poll closed.');
+        header('Location: polls-manage.php'); exit;
+
+    } elseif ($action === 'delete') {
+        $id = (int)($_POST['id'] ?? 0);
+        $pdo->prepare('DELETE FROM poll_votes WHERE poll_id=?')->execute([$id]);
+        $pdo->prepare('DELETE FROM poll_options WHERE poll_id=?')->execute([$id]);
+        $pdo->prepare('DELETE FROM polls WHERE id=?')->execute([$id]);
+        flash('success', 'Poll deleted.');
+        header('Location: polls-manage.php'); exit;
+    }
+}
+
+$polls = [];
+if ($db_ready) {
+    $polls = $pdo->query(
+        "SELECT * FROM polls ORDER BY (status='open') DESC, expires_at DESC"
+    )->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Options + tallies for every poll on this page
+$options_by_poll = []; $tallies = [];
+if (!empty($polls)) {
+    $ids = array_column($polls, 'id');
+    $ph  = implode(',', array_fill(0, count($ids), '?'));
+    $orows = $pdo->prepare("SELECT * FROM poll_options WHERE poll_id IN ($ph) ORDER BY sort_order ASC");
+    $orows->execute($ids);
+    foreach ($orows->fetchAll(PDO::FETCH_ASSOC) as $o) $options_by_poll[$o['poll_id']][] = $o;
+
+    $trows = $pdo->prepare("SELECT option_id, COUNT(*) AS cnt FROM poll_votes WHERE poll_id IN ($ph) GROUP BY option_id");
+    $trows->execute($ids);
+    foreach ($trows->fetchAll(PDO::FETCH_ASSOC) as $t) $tallies[$t['option_id']] = (int)$t['cnt'];
+}
+
+// Eligible-voter count (paid, non-archived families) for a "X of Y voted" gauge
+$eligible_count = (int)$pdo->query("SELECT COUNT(*) FROM members WHERE archived=0 AND membership_paid=1")->fetchColumn();
+
+admin_header('Manage Polls');
+echo show_flash();
+?>
+<style>
+.poll-card{border-left:3px solid #003594;padding:.85rem 1rem;margin-bottom:.75rem;background:#fff;border-radius:0 4px 4px 0}
+.poll-card.closed{border-left-color:#9aa5b4;opacity:.75}
+.poll-meta{font-size:.78rem;color:#5a6a7a;margin-top:.15rem}
+.poll-bar-row{display:flex;align-items:center;gap:.6rem;margin-top:.35rem;font-size:.82rem}
+.poll-bar-track{flex:1;height:10px;background:#f0f2f5;border-radius:99px;overflow:hidden}
+.poll-bar-fill{height:100%;background:#003594;border-radius:99px}
+</style>
+
+<div class="page-head">
+  <h1>Manage Polls</h1>
+  <div style="display:flex;gap:.5rem">
+    <?php if ($db_ready && !isset($_GET['new'])): ?><a href="polls-manage.php?new=1" class="btn btn-primary">+ New Poll</a><?php endif; ?>
+    <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  </div>
+</div>
+
+<?php if (!$db_ready): ?>
+  <div class="alert alert-error">Polls aren't set up yet — run admin/migrate_polls.sql first.</div>
+<?php endif; ?>
+
+<?php if ($db_ready && isset($_GET['new'])): ?>
+<div class="card" style="max-width:640px;margin-bottom:1.5rem">
+  <h2 style="margin-bottom:1.25rem">New Poll</h2>
+  <form method="POST" id="poll-form">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="create">
+    <div class="form-group">
+      <label>Title *</label>
+      <input name="title" required placeholder="e.g. Should we move the Sendoff to Falcon Stadium?">
+    </div>
+    <div class="form-group">
+      <label>Description <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional — context for members</span></label>
+      <textarea name="description" rows="3"></textarea>
+    </div>
+    <div class="form-row col-2">
+      <div class="form-group">
+        <label>Type</label>
+        <select name="poll_type" id="poll_type" onchange="document.getElementById('options_group').style.display = this.value === 'multiple' ? 'block' : 'none';">
+          <option value="yesno">Yes / No</option>
+          <option value="multiple">Multiple Choice</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Voting Closes *</label>
+        <input type="datetime-local" name="expires_at" required>
+      </div>
+    </div>
+    <div class="form-group" id="options_group" style="display:none">
+      <label>Options <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">one per line, at least 2</span></label>
+      <textarea name="options" rows="4" placeholder="Falcon Stadium&#10;Clark Field&#10;Keep current location"></textarea>
+    </div>
+    <p style="font-size:.78rem;color:#5a6a7a;margin-bottom:1rem">Every portal user gets an email as soon as this is created — there's no separate "publish" step.</p>
+    <div style="display:flex;gap:.75rem">
+      <button type="submit" class="btn btn-primary">Create &amp; Notify Members</button>
+      <a href="polls-manage.php" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+<?php endif; ?>
+
+<?php if ($db_ready): ?>
+<?php if (empty($polls)): ?>
+  <p style="color:#9aa5b4">No polls yet.</p>
+<?php else: ?>
+  <?php foreach ($polls as $p):
+    $opts = $options_by_poll[$p['id']] ?? [];
+    $total_votes = array_sum(array_map(fn($o) => $tallies[$o['id']] ?? 0, $opts));
+    $is_open = $p['status'] === 'open' && strtotime($p['expires_at']) > time();
+  ?>
+  <div class="poll-card <?= $is_open ? '' : 'closed' ?>">
+    <div style="display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <strong style="color:#002554"><?= h($p['title']) ?></strong>
+        <?php if (!$is_open): ?><span style="color:#9aa5b4;font-size:.75rem"> · Closed</span><?php endif; ?>
+        <div class="poll-meta">
+          <?= $is_open ? 'Closes' : 'Closed' ?> <?= date('M j, Y g:ia', strtotime($p['expires_at'])) ?>
+          &bull; <?= $total_votes ?> of <?= $eligible_count ?> eligible members voted
+        </div>
+        <?php if ($p['description']): ?><div class="poll-meta"><?= h($p['description']) ?></div><?php endif; ?>
+        <div style="margin-top:.6rem">
+          <?php foreach ($opts as $o): $cnt = $tallies[$o['id']] ?? 0; $pct = $total_votes > 0 ? round($cnt / $total_votes * 100) : 0; ?>
+          <div class="poll-bar-row">
+            <span style="min-width:110px"><?= h($o['option_text']) ?></span>
+            <div class="poll-bar-track"><div class="poll-bar-fill" style="width:<?= $pct ?>%"></div></div>
+            <span style="color:#5a6a7a;min-width:70px;text-align:right"><?= $cnt ?> (<?= $pct ?>%)</span>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-shrink:0;align-items:flex-start">
+        <?php if ($is_open): ?>
+        <form method="POST" style="margin:0" onsubmit="return confirm('Close this poll early? Members will no longer be able to vote.')">
+          <?= csrf_field() ?><input type="hidden" name="action" value="close"><input type="hidden" name="id" value="<?= $p['id'] ?>">
+          <button type="submit" class="btn btn-secondary btn-sm">Close Early</button>
+        </form>
+        <?php endif; ?>
+        <form method="POST" style="margin:0" onsubmit="return confirm('Delete this poll and all its votes? This cannot be undone.')">
+          <?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $p['id'] ?>">
+          <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <?php endforeach; ?>
+<?php endif; ?>
+<?php endif; ?>
+
+<?php admin_footer(); ?>
