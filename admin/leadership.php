@@ -62,10 +62,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // shared role email (e.g. treasurer@alabamafalcons.org) — this is
             // the one place that connects "who the public site shows" to
             // "who's actually logged in," so the nav bar doesn't keep
-            // showing whoever previously held the position.
+            // showing whoever previously held the position. Only fires when
+            // the name is actually changing (a real handoff to someone new,
+            // not just re-saving the same officer) — in that case the old
+            // holder's avatar photo and linked cadet family are person-
+            // specific and must NOT carry over to whoever takes the account
+            // next; clear them so the new holder starts clean rather than
+            // silently inheriting the previous person's photo/family.
             if ($email !== '') {
-                $pdo->prepare('UPDATE users SET name=? WHERE LOWER(email)=LOWER(?) AND name<>?')
-                    ->execute([$name, $email, $name]);
+                try {
+                    $pdo->prepare('UPDATE users SET name=?, avatar_filename=NULL, member_id=NULL WHERE LOWER(email)=LOWER(?) AND name<>?')
+                        ->execute([$name, $email, $name]);
+                } catch (PDOException $e) {
+                    // users.member_id migration not run yet on this install
+                    $pdo->prepare('UPDATE users SET name=?, avatar_filename=NULL WHERE LOWER(email)=LOWER(?) AND name<>?')
+                        ->execute([$name, $email, $name]);
+                }
             }
 
             header('Location: leadership.php'); exit;
