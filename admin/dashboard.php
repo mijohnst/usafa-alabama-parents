@@ -163,6 +163,26 @@ if ($election && $election['status'] === 'open') {
     $sections['For You'][] = ['icon'=>'🗳️','label'=>'Election','sub'=>'Voting opens '.date('M j', strtotime($election['voting_opens_at'])),'href'=>'vote.php','color'=>'#1565c0'];
 }
 
+// Member decision polls — separate from officer elections above. Always
+// shown (unlike Election, which only appears when there's something to
+// act on) so everyone can find past results too, not just open ballots.
+try {
+    $pv_stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM polls p WHERE p.status='open' AND p.expires_at > NOW()
+         AND p.id NOT IN (SELECT poll_id FROM poll_votes WHERE user_id = ?)"
+    );
+    $pv_stmt->execute([$_SESSION['user_id'] ?? 0]);
+    $open_polls_unvoted = (int)$pv_stmt->fetchColumn();
+} catch (Exception $e) { $open_polls_unvoted = 0; }
+$sections['For You'][] = [
+    'icon'  => '📊',
+    'label' => 'Vote',
+    'sub'   => $open_polls_unvoted > 0 ? "$open_polls_unvoted vote" . ($open_polls_unvoted > 1 ? 's' : '') . ' waiting' : 'View polls',
+    'href'  => 'polls.php',
+    'color' => $open_polls_unvoted > 0 ? '#A6192E' : '#1565c0',
+    'badge' => $open_polls_unvoted > 0 ? $open_polls_unvoted : 0,
+];
+
 // Member self-service tiles — every role, including officers who may want
 // to sign up/RSVP/submit themselves too.
 try {

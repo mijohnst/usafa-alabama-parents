@@ -358,19 +358,6 @@ function admin_header(string $title): void {
     echo '<a href="dashboard.php" title="Home">🏠</a>';
     echo '<a href="../index.html" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none" title="Go to the public website">View Site</a>';
     if (can_view_member_pii()) echo '<a href="index.php">Members</a>';
-    $poll_badge = '';
-    try {
-        $pb = get_pdo()->prepare(
-            "SELECT COUNT(*) FROM polls p WHERE p.status='open' AND p.expires_at > NOW()
-             AND p.id NOT IN (SELECT poll_id FROM poll_votes WHERE user_id = ?)"
-        );
-        $pb->execute([(int)($_SESSION['user_id'] ?? 0)]);
-        $open_unvoted = (int)$pb->fetchColumn();
-        if ($open_unvoted > 0) {
-            $poll_badge = ' <span style="background:#f57c00;color:#fff;font-size:.6rem;padding:.1rem .4rem;border-radius:99px;vertical-align:middle;font-weight:700">' . $open_unvoted . '</span>';
-        }
-    } catch (Exception $e) {}
-    echo '<a href="polls.php">🗳️ Vote' . $poll_badge . '</a>';
     if (can_manage_finances() && !is_member()) {
         $pending_cnt = 0;
         try { $pending_cnt = (int)get_pdo()->query("SELECT COUNT(*) FROM purchases WHERE status='pending'")->fetchColumn(); } catch(Exception $e) {}
