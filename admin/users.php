@@ -300,7 +300,7 @@ echo show_flash();
     </div>
     <div class="user-actions">
       <a href="users.php?edit=<?= $u['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
-      <?php if (is_admin() && $u['role'] !== 'admin' && $u['active'] && $u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
+      <?php if (is_super_admin() && !in_array($u['role'], ['admin', 'tech'], true) && $u['active'] && $u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
       <form method="POST" action="impersonate.php" style="margin:0">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="start">

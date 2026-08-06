@@ -12,11 +12,12 @@ $pdo    = get_pdo();
 $action = $_POST['action'] ?? '';
 
 if ($action === 'start') {
-    // Must be a real admin, from their own session — impersonating already
-    // flips $_SESSION['role'] away from 'admin', so this also blocks
-    // starting a second, nested impersonation.
-    if (($_SESSION['role'] ?? '') !== 'admin') {
-        flash('error', 'Only an admin can switch users.');
+    // Must be a real admin or tech support account, from their own session
+    // — impersonating already flips $_SESSION['role'] to the target's role
+    // (never admin/tech, see below), so this also blocks starting a second,
+    // nested impersonation.
+    if (!is_super_admin()) {
+        flash('error', 'Only Admin or Tech Support can switch users.');
         header('Location: users.php'); exit;
     }
 
@@ -27,19 +28,20 @@ if ($action === 'start') {
 
     if (!$target) {
         flash('error', 'User not found.');
-    } elseif ($target['role'] === 'admin') {
-        flash('error', 'Cannot switch into another admin account.');
+    } elseif (in_array($target['role'], ['admin', 'tech'], true)) {
+        flash('error', 'Cannot switch into another Admin or Tech Support account.');
     } elseif (!$target['active']) {
         flash('error', 'That account is deactivated.');
     } else {
         $_SESSION['impersonator_id']    = $_SESSION['user_id'];
         $_SESSION['impersonator_name']  = $_SESSION['user_name'];
         $_SESSION['impersonator_email'] = $_SESSION['user_email'];
+        $_SESSION['impersonator_role']  = $_SESSION['role'];
         $_SESSION['user_id']    = $target['id'];
         $_SESSION['role']       = $target['role'];
         $_SESSION['user_name']  = $target['name'];
         $_SESSION['user_email'] = $target['email'];
-        error_log('impersonate: admin id=' . $_SESSION['impersonator_id']
+        error_log('impersonate: user id=' . $_SESSION['impersonator_id']
             . " started viewing as user id={$target['id']} ({$target['name']}, role={$target['role']})");
         flash('success', 'Now viewing as ' . $target['name'] . ' (' . ucfirst($target['role']) . ').');
     }
@@ -47,14 +49,14 @@ if ($action === 'start') {
 
 } elseif ($action === 'stop') {
     if (is_impersonating()) {
-        error_log('impersonate: admin id=' . $_SESSION['impersonator_id']
+        error_log('impersonate: user id=' . $_SESSION['impersonator_id']
             . ' stopped viewing as user id=' . $_SESSION['user_id']);
         $_SESSION['user_id']    = $_SESSION['impersonator_id'];
         $_SESSION['user_name']  = $_SESSION['impersonator_name'];
         $_SESSION['user_email'] = $_SESSION['impersonator_email'];
-        $_SESSION['role']       = 'admin';
-        unset($_SESSION['impersonator_id'], $_SESSION['impersonator_name'], $_SESSION['impersonator_email']);
-        flash('success', 'Back to your admin account.');
+        $_SESSION['role']       = $_SESSION['impersonator_role'];
+        unset($_SESSION['impersonator_id'], $_SESSION['impersonator_name'], $_SESSION['impersonator_email'], $_SESSION['impersonator_role']);
+        flash('success', 'Back to your account.');
     }
     header('Location: users.php'); exit;
 }

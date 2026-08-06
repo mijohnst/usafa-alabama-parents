@@ -377,7 +377,7 @@ function admin_header(string $title): void {
         echo '<span>🔀 Viewing as <strong>' . h(current_user_name()) . '</strong> (' . h(ucfirst($_SESSION['role'] ?? '')) . ') — testing what this role sees.</span>';
         echo '<form method="POST" action="impersonate.php" style="margin:0">' . csrf_field()
            . '<input type="hidden" name="action" value="stop">'
-           . '<button type="submit" style="background:#fff;color:#bf360c;border:none;padding:.35rem .9rem;border-radius:4px;font-size:.8rem;font-weight:700;cursor:pointer">Return to Admin</button></form>';
+           . '<button type="submit" style="background:#fff;color:#bf360c;border:none;padding:.35rem .9rem;border-radius:4px;font-size:.8rem;font-weight:700;cursor:pointer">Return to My Account</button></form>';
         echo '</div>';
     }
     echo '<div class="main">';
