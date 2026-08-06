@@ -37,6 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? 'vote';
 
+    // Login As is for seeing what a role/position sees, not for an admin to
+    // cast a real vote or self-nomination on someone else's behalf — block
+    // both while impersonating, regardless of who's actually clicking.
+    if (is_impersonating()) {
+        flash('error', 'Voting and nominations are disabled while using Login As.');
+        header('Location: vote.php'); exit;
+    }
+
     if ($action === 'nominate') {
         $nom_election_id = (int)($_POST['election_id'] ?? 0);
         $nom_position     = $_POST['position'] ?? '';
