@@ -167,11 +167,14 @@ if ($election && $election['status'] === 'open') {
 // shown (unlike Election, which only appears when there's something to
 // act on) so everyone can find past results too, not just open ballots.
 try {
+    $poll_paid_ok  = $my_member && !empty($my_member['membership_paid']);
+    $poll_board_ok = is_board_role();
     $pv_stmt = $pdo->prepare(
         "SELECT COUNT(*) FROM polls p WHERE p.status='open' AND p.expires_at > NOW()
+         AND ((p.audience='board' AND ?) OR (p.audience<>'board' AND ?))
          AND p.id NOT IN (SELECT poll_id FROM poll_votes WHERE user_id = ?)"
     );
-    $pv_stmt->execute([$_SESSION['user_id'] ?? 0]);
+    $pv_stmt->execute([$poll_board_ok ? 1 : 0, $poll_paid_ok ? 1 : 0, $_SESSION['user_id'] ?? 0]);
     $open_polls_unvoted = (int)$pv_stmt->fetchColumn();
 } catch (Exception $e) { $open_polls_unvoted = 0; }
 $sections['For You'][] = [

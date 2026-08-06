@@ -7,40 +7,42 @@ $user_id = (int)($_SESSION['user_id'] ?? 0);
 $db_ready = true;
 try { $pdo->query('SELECT 1 FROM polls LIMIT 1'); } catch (PDOException $e) { $db_ready = false; }
 
-// Paid-member eligibility — same linkage vote.php already uses for elections.
+// Two separate eligibility checks — which one applies depends on each
+// poll's audience ('all_paid' vs 'board'), checked per-poll below.
 $my_user_stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
 $my_user_stmt->execute([$user_id]);
-$my_user   = $my_user_stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-$my_member = $my_user ? find_linked_member($pdo, $my_user) : null;
-$eligible  = $my_member && !empty($my_member['membership_paid']);
+$my_user      = $my_user_stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+$my_member    = $my_user ? find_linked_member($pdo, $my_user) : null;
+$paid_eligible  = $my_member && !empty($my_member['membership_paid']);
+$board_eligible = is_board_role();
 
 if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $poll_id   = (int)($_POST['poll_id'] ?? 0);
     $option_id = (int)($_POST['option_id'] ?? 0);
 
-    if (!$eligible) {
-        flash('error', 'Only paid members can vote.');
-    } else {
-        $p = $pdo->prepare("SELECT * FROM polls WHERE id=? AND status='open'");
-        $p->execute([$poll_id]);
-        $poll = $p->fetch(PDO::FETCH_ASSOC);
+    $p = $pdo->prepare("SELECT * FROM polls WHERE id=? AND status='open'");
+    $p->execute([$poll_id]);
+    $poll = $p->fetch(PDO::FETCH_ASSOC);
 
-        if (!$poll || strtotime($poll['expires_at']) <= time()) {
-            flash('error', 'Voting is not currently open for that poll.');
+    $poll_eligible = $poll && (($poll['audience'] ?? 'all_paid') === 'board' ? $board_eligible : $paid_eligible);
+
+    if (!$poll_eligible) {
+        flash('error', ($poll['audience'] ?? 'all_paid') === 'board' ? 'Only board members can vote on that poll.' : 'Only paid members can vote.');
+    } elseif (strtotime($poll['expires_at']) <= time()) {
+        flash('error', 'Voting is not currently open for that poll.');
+    } else {
+        $o = $pdo->prepare('SELECT id FROM poll_options WHERE id=? AND poll_id=?');
+        $o->execute([$option_id, $poll_id]);
+        if (!$o->fetch()) {
+            flash('error', 'Invalid option.');
         } else {
-            $o = $pdo->prepare('SELECT id FROM poll_options WHERE id=? AND poll_id=?');
-            $o->execute([$option_id, $poll_id]);
-            if (!$o->fetch()) {
-                flash('error', 'Invalid option.');
-            } else {
-                try {
-                    $pdo->prepare('INSERT INTO poll_votes (poll_id, option_id, user_id) VALUES (?,?,?)')
-                        ->execute([$poll_id, $option_id, $user_id]);
-                    flash('success', 'Vote recorded — thank you!');
-                } catch (PDOException $e) {
-                    flash('error', "You've already voted on that poll.");
-                }
+            try {
+                $pdo->prepare('INSERT INTO poll_votes (poll_id, option_id, user_id) VALUES (?,?,?)')
+                    ->execute([$poll_id, $option_id, $user_id]);
+                flash('success', 'Vote recorded — thank you!');
+            } catch (PDOException $e) {
+                flash('error', "You've already voted on that poll.");
             }
         }
     }
@@ -100,24 +102,28 @@ echo show_flash();
 <?php elseif (empty($polls)): ?>
   <p style="color:#9aa5b4">No polls right now — check back later.</p>
 <?php else: ?>
-  <?php if (!$eligible): ?>
-  <div class="alert alert-error">Only paid members can vote — you can still see results below.</div>
-  <?php endif; ?>
   <?php foreach ($polls as $p):
     $opts = $options_by_poll[$p['id']] ?? [];
     $total_votes = array_sum(array_map(fn($o) => $tallies[$o['id']] ?? 0, $opts));
     $is_open   = $p['status'] === 'open' && strtotime($p['expires_at']) > time();
     $already   = isset($my_votes[$p['id']]);
-    $show_ballot = $is_open && $eligible && !$already;
+    $audience      = $p['audience'] ?? 'all_paid';
+    $poll_eligible = $audience === 'board' ? $board_eligible : $paid_eligible;
+    $show_ballot   = $is_open && $poll_eligible && !$already;
   ?>
   <div class="poll-card <?= $is_open ? '' : 'closed' ?>">
     <strong style="color:#002554"><?= h($p['title']) ?></strong>
     <?php if (!$is_open): ?><span style="color:#9aa5b4;font-size:.75rem"> · Closed</span>
     <?php elseif ($already): ?><span style="color:#1b5e20;font-size:.75rem"> · ✓ You voted</span><?php endif; ?>
+    <?php if ($audience === 'board'): ?><span style="color:#A6192E;font-size:.75rem"> · Board Only</span><?php endif; ?>
     <div class="poll-meta">
       <?= $is_open ? 'Voting closes' : 'Closed' ?> <?= date('M j, Y g:ia', strtotime($p['expires_at'])) ?>
       <?php if ($p['description']): ?><br><?= h($p['description']) ?><?php endif; ?>
     </div>
+
+    <?php if ($is_open && !$poll_eligible && !$already): ?>
+      <div class="alert alert-error" style="margin:.5rem 0 0"><?= $audience === 'board' ? 'Only board members (President, VP, Secretary, Treasurer) can vote on this.' : 'Only paid members can vote on this.' ?> You can still see results below.</div>
+    <?php endif; ?>
 
     <?php if ($show_ballot): ?>
       <form method="POST">

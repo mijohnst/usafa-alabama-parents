@@ -90,6 +90,15 @@ function is_officer(): bool {
     return ($_SESSION['role'] ?? '') === 'officer';
 }
 
+// The 4 board positions (President, VP, Secretary, Treasurer) — President
+// and VP share the generic 'officer' role, Secretary and Treasurer have
+// their own. Used to gate "board members only" polls (see polls.php/
+// polls-manage.php). Deliberately excludes admin/tech — holding one of
+// those login roles doesn't by itself make someone a board member.
+function is_board_role(): bool {
+    return in_array($_SESSION['role'] ?? '', ['officer', 'secretary', 'treasurer'], true);
+}
+
 // Admin or Tech have full super-admin access (users mgmt + helpdesk mgmt)
 function is_super_admin(): bool {
     return is_admin() || is_tech();

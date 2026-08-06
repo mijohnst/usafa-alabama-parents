@@ -823,11 +823,13 @@ function notify_election_open(PDO $pdo, array $election): int {
     return $sent;
 }
 
-// ── Notify every portal user that a new poll is open for voting ──────────
+// ── Notify portal users that a new poll is open for voting ───────────────
 // Sent once, when a President/VP opens a poll (see admin/polls-manage.php).
 // Links to the login page rather than the poll directly, matching how the
-// portal already works — no per-poll magic link, just a reminder.
-function send_poll_notifications(PDO $pdo, array $poll): int {
+// portal already works — no per-poll magic link, just a reminder. A
+// 'board' audience only emails the 4 board roles, since everyone else
+// can't vote on it anyway.
+function send_poll_notifications(PDO $pdo, array $poll, string $audience = 'all_paid'): int {
     $url     = SITE_URL . 'admin/login.php';
     $subject = 'New Vote Open: ' . $poll['title'];
     $expires = date('F j, Y g:ia', strtotime($poll['expires_at']));
@@ -840,7 +842,11 @@ function send_poll_notifications(PDO $pdo, array $poll): int {
              . "Voting closes: $expires\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
 
-    $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> ''")->fetchAll(PDO::FETCH_COLUMN);
+    if ($audience === 'board') {
+        $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> '' AND role IN ('officer','secretary','treasurer')")->fetchAll(PDO::FETCH_COLUMN);
+    } else {
+        $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> ''")->fetchAll(PDO::FETCH_COLUMN);
+    }
     $sent = 0;
     foreach ($emails as $email) {
         if (send_notification($email, $subject, $body)) $sent++;

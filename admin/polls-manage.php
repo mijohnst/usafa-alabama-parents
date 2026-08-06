@@ -22,6 +22,7 @@ if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $title       = trim($_POST['title'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $poll_type   = ($_POST['poll_type'] ?? 'yesno') === 'multiple' ? 'multiple' : 'yesno';
+        $audience    = ($_POST['audience'] ?? 'all_paid') === 'board' ? 'board' : 'all_paid';
         $expires_at  = str_replace('T', ' ', trim($_POST['expires_at'] ?? ''));
         $options_raw = trim($_POST['options'] ?? '');
 
@@ -38,8 +39,15 @@ if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: polls-manage.php?new=1'); exit;
         }
 
-        $pdo->prepare('INSERT INTO polls (title,description,poll_type,status,expires_at,created_by) VALUES (?,?,?,\'open\',?,?)')
-            ->execute([$title, $description, $poll_type, $expires_at, $_SESSION['user_id'] ?? null]);
+        try {
+            $pdo->prepare('INSERT INTO polls (title,description,poll_type,audience,status,expires_at,created_by) VALUES (?,?,?,?,\'open\',?,?)')
+                ->execute([$title, $description, $poll_type, $audience, $expires_at, $_SESSION['user_id'] ?? null]);
+        } catch (PDOException $e) {
+            // audience column not migrated yet on this install
+            $pdo->prepare('INSERT INTO polls (title,description,poll_type,status,expires_at,created_by) VALUES (?,?,?,\'open\',?,?)')
+                ->execute([$title, $description, $poll_type, $expires_at, $_SESSION['user_id'] ?? null]);
+            $audience = 'all_paid';
+        }
         $poll_id = (int)$pdo->lastInsertId();
 
         $options = $poll_type === 'multiple' ? $custom_options : ['Yes', 'No'];
@@ -47,7 +55,7 @@ if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($options as $i => $opt) $ins->execute([$poll_id, $opt, $i]);
 
         $poll = ['title' => $title, 'description' => $description, 'expires_at' => $expires_at];
-        $sent = send_poll_notifications($pdo, $poll);
+        $sent = send_poll_notifications($pdo, $poll, $audience);
 
         flash('success', "Poll created and $sent notification email(s) sent.");
         header('Location: polls-manage.php'); exit;
@@ -89,8 +97,12 @@ if (!empty($polls)) {
     foreach ($trows->fetchAll(PDO::FETCH_ASSOC) as $t) $tallies[$t['option_id']] = (int)$t['cnt'];
 }
 
-// Eligible-voter count (paid, non-archived families) for a "X of Y voted" gauge
-$eligible_count = (int)$pdo->query("SELECT COUNT(*) FROM members WHERE archived=0 AND membership_paid=1")->fetchColumn();
+// Eligible-voter counts for the "X of Y voted" gauge — depends on each
+// poll's audience (all paid members, or just the 4 board roles).
+$eligible_counts = [
+    'all_paid' => (int)$pdo->query("SELECT COUNT(*) FROM members WHERE archived=0 AND membership_paid=1")->fetchColumn(),
+    'board'    => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE active=1 AND role IN ('officer','secretary','treasurer')")->fetchColumn(),
+];
 
 admin_header('Manage Polls');
 echo show_flash();
@@ -130,6 +142,13 @@ echo show_flash();
       <label>Description <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional — context for members</span></label>
       <textarea name="description" rows="3"></textarea>
     </div>
+    <div class="form-group">
+      <label>Who Can Vote?</label>
+      <select name="audience">
+        <option value="all_paid">All Paid Members</option>
+        <option value="board">Board Members Only (President, VP, Secretary, Treasurer)</option>
+      </select>
+    </div>
     <div class="form-row col-2">
       <div class="form-group">
         <label>Type</label>
@@ -164,15 +183,18 @@ echo show_flash();
     $opts = $options_by_poll[$p['id']] ?? [];
     $total_votes = array_sum(array_map(fn($o) => $tallies[$o['id']] ?? 0, $opts));
     $is_open = $p['status'] === 'open' && strtotime($p['expires_at']) > time();
+    $audience = $p['audience'] ?? 'all_paid';
+    $eligible_count = $eligible_counts[$audience];
   ?>
   <div class="poll-card <?= $is_open ? '' : 'closed' ?>">
     <div style="display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
         <strong style="color:#002554"><?= h($p['title']) ?></strong>
         <?php if (!$is_open): ?><span style="color:#9aa5b4;font-size:.75rem"> · Closed</span><?php endif; ?>
+        <?php if ($audience === 'board'): ?><span style="color:#A6192E;font-size:.75rem"> · Board Only</span><?php endif; ?>
         <div class="poll-meta">
           <?= $is_open ? 'Closes' : 'Closed' ?> <?= date('M j, Y g:ia', strtotime($p['expires_at'])) ?>
-          &bull; <?= $total_votes ?> of <?= $eligible_count ?> eligible members voted
+          &bull; <?= $total_votes ?> of <?= $eligible_count ?> eligible <?= $audience === 'board' ? 'board members' : 'members' ?> voted
         </div>
         <?php if ($p['description']): ?><div class="poll-meta"><?= h($p['description']) ?></div><?php endif; ?>
         <div style="margin-top:.6rem">
