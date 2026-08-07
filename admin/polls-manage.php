@@ -196,7 +196,11 @@ echo show_flash();
   <?php foreach ($polls as $p):
     $opts = $options_by_poll[$p['id']] ?? [];
     $total_votes = array_sum(array_map(fn($o) => $tallies[$o['id']] ?? 0, $opts));
-    $is_open = $p['status'] === 'open' && strtotime($p['expires_at']) > time();
+    // Some existing databases created this column as uppercase `STATUS`.
+    // PDO preserves column-name casing in associative result keys, so accept
+    // either spelling until every installation has normalized its schema.
+    $poll_status = strtolower(trim((string)($p['status'] ?? $p['STATUS'] ?? '')));
+    $is_open = $poll_status === 'open' && strtotime($p['expires_at']) > time();
     $audience = $p['audience'] ?? 'all_paid';
     $eligible_count = $eligible_counts[$audience];
   ?>
