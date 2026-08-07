@@ -3,12 +3,10 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/mailer.php';
 require_login();
 
-// President/VP share the generic 'officer' login role (Secretary and
-// Treasurer have their own distinct roles) — see the polls feature's design
-// note: today that role is held by exactly President + VP, so gating on it
-// achieves "only President/VP can create a vote." Admin kept as an override,
-// matching every other manage-page in this codebase.
-if (!is_officer() && !is_admin()) { header('Location: dashboard.php?denied=1'); exit; }
+// Any of the 4 board roles (President/VP via 'officer', Secretary,
+// Treasurer — see is_board_role()) can create a poll. Admin kept as an
+// override, matching every other manage-page in this codebase.
+if (!is_board_role() && !is_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
 $db_ready = true;

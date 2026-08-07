@@ -118,11 +118,11 @@ echo show_flash();
 <div class="page-head">
   <h1>Vote</h1>
   <div style="display:flex;gap:.5rem">
-    <?php if (is_officer() || is_admin()): ?><a href="polls-manage.php" class="btn btn-primary">Manage Polls</a><?php endif; ?>
+    <?php if (is_board_role() || is_admin()): ?><a href="polls-manage.php" class="btn btn-primary">Manage Polls</a><?php endif; ?>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
 </div>
-<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Club decisions the President or VP have opened up for a member vote.</p>
+<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Club decisions a board member has opened up for a vote.</p>
 
 <?php if (!$db_ready): ?>
   <p style="color:#9aa5b4">No polls have been set up yet.</p>

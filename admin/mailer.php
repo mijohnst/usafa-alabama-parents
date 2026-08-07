@@ -824,7 +824,7 @@ function notify_election_open(PDO $pdo, array $election): int {
 }
 
 // ── Notify portal users that a new poll is open for voting ───────────────
-// Sent once, when a President/VP opens a poll (see admin/polls-manage.php).
+// Sent once, when a board member opens a poll (see admin/polls-manage.php).
 // Links to the login page rather than the poll directly, matching how the
 // portal already works — no per-poll magic link, just a reminder. A
 // 'board' audience only emails the 4 board roles, since everyone else
