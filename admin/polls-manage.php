@@ -37,6 +37,7 @@ if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $description = trim($_POST['description'] ?? '');
         $poll_type   = ($_POST['poll_type'] ?? 'yesno') === 'multiple' ? 'multiple' : 'yesno';
         $audience    = ($_POST['audience'] ?? 'all_paid') === 'board' ? 'board' : 'all_paid';
+        $anonymous   = !empty($_POST['anonymous']) ? 1 : 0;
         $expires_at  = str_replace('T', ' ', trim($_POST['expires_at'] ?? ''));
         $options_raw = trim($_POST['options'] ?? '');
 
@@ -54,13 +55,19 @@ if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            $pdo->prepare('INSERT INTO polls (title,description,poll_type,audience,status,expires_at,created_by) VALUES (?,?,?,?,\'open\',?,?)')
-                ->execute([$title, $description, $poll_type, $audience, $expires_at, $_SESSION['user_id'] ?? null]);
+            $pdo->prepare('INSERT INTO polls (title,description,poll_type,audience,anonymous,status,expires_at,created_by) VALUES (?,?,?,?,?,\'open\',?,?)')
+                ->execute([$title, $description, $poll_type, $audience, $anonymous, $expires_at, $_SESSION['user_id'] ?? null]);
         } catch (PDOException $e) {
-            // audience column not migrated yet on this install
-            $pdo->prepare('INSERT INTO polls (title,description,poll_type,status,expires_at,created_by) VALUES (?,?,?,\'open\',?,?)')
-                ->execute([$title, $description, $poll_type, $expires_at, $_SESSION['user_id'] ?? null]);
-            $audience = 'all_paid';
+            // audience/anonymous columns not migrated yet on this install
+            try {
+                $pdo->prepare('INSERT INTO polls (title,description,poll_type,audience,status,expires_at,created_by) VALUES (?,?,?,?,\'open\',?,?)')
+                    ->execute([$title, $description, $poll_type, $audience, $expires_at, $_SESSION['user_id'] ?? null]);
+            } catch (PDOException $e2) {
+                $pdo->prepare('INSERT INTO polls (title,description,poll_type,status,expires_at,created_by) VALUES (?,?,?,\'open\',?,?)')
+                    ->execute([$title, $description, $poll_type, $expires_at, $_SESSION['user_id'] ?? null]);
+                $audience = 'all_paid';
+            }
+            $anonymous = 0;
         }
         $poll_id = (int)$pdo->lastInsertId();
 
@@ -82,6 +89,7 @@ if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
+        try { $pdo->prepare('DELETE FROM poll_voters WHERE poll_id=?')->execute([$id]); } catch (PDOException $e) {}
         $pdo->prepare('DELETE FROM poll_votes WHERE poll_id=?')->execute([$id]);
         $pdo->prepare('DELETE FROM poll_options WHERE poll_id=?')->execute([$id]);
         $pdo->prepare('DELETE FROM polls WHERE id=?')->execute([$id]);
@@ -163,6 +171,10 @@ echo show_flash();
         <option value="board">Board Members Only (President, VP, Secretary, Treasurer)</option>
       </select>
     </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="anonymous" id="poll_anonymous" value="1" style="width:auto">
+      <label for="poll_anonymous" style="font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;margin:0;font-size:.9rem">Anonymous — don't record who voted for what, only the counts</label>
+    </div>
     <div class="form-row col-2">
       <div class="form-group">
         <label>Type</label>
@@ -210,6 +222,7 @@ echo show_flash();
         <strong style="color:#002554"><?= h($p['title']) ?></strong>
         <?php if (!$is_open): ?><span style="color:#9aa5b4;font-size:.75rem"> · Closed</span><?php endif; ?>
         <?php if ($audience === 'board'): ?><span style="color:#A6192E;font-size:.75rem"> · Board Only</span><?php endif; ?>
+        <?php if (!empty($p['anonymous'])): ?><span style="color:#5a6a7a;font-size:.75rem"> · 🔒 Anonymous</span><?php endif; ?>
         <div class="poll-meta">
           <?= $is_open ? 'Closes' : 'Closed' ?> <?= date('M j, Y g:ia', strtotime($p['expires_at'])) ?>
           &bull; <?= $total_votes ?> of <?= $eligible_count ?> eligible <?= $audience === 'board' ? 'board members' : 'members' ?> voted
