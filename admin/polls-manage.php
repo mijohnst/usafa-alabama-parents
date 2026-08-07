@@ -16,6 +16,20 @@ try { $pdo->query('SELECT 1 FROM polls LIMIT 1'); } catch (PDOException $e) { $d
 
 if ($db_ready && $_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+
+    // impersonate.php only blocks impersonating another Admin/Tech account,
+    // not Officer/Secretary/Treasurer — by design, since Login As is meant
+    // to let an admin test what every position sees. But creating/closing/
+    // deleting a poll while impersonating one of those would misattribute
+    // (created_by) a real, visible action to whoever's being impersonated
+    // instead of the admin actually clicking the button — same reasoning as
+    // the voting guard in polls.php/vote.php, just for writes here instead
+    // of votes.
+    if (is_impersonating()) {
+        flash('error', 'Managing polls is disabled while using Login As.');
+        header('Location: polls-manage.php'); exit;
+    }
+
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create') {
