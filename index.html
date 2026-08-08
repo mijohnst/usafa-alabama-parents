@@ -819,12 +819,19 @@ fetch('settings-feed.php').then(function(r){return r.json();}).then(function(dat
 }).catch(function(){});
 
 // ── Latest sponsors (right half of the Spotlight section) ─────────────────
-// Reuses the same public feed as sponsorship.html; "latest" = highest ids
-// among active sponsors, since there's no created_at column to sort by.
+// Reuses the same public feed as sponsorship.html; "latest" = most recent
+// created_at. Falls back to id ordering on installs that haven't run
+// migrate_sponsors_created_at.sql yet (id order isn't reliable long-term —
+// bulk-imported sponsors all share one id sequence regardless of when the
+// sponsorship deal was actually made).
 // Uses about_text (the public-facing blurb) — description is internal notes only.
 fetch('sponsors-feed.php').then(function(r){return r.json();}).then(function(data){
   if (!data.success || !data.sponsors || !data.sponsors.length) return;
-  var latest = data.sponsors.slice().sort(function(a, b){ return (+b.id) - (+a.id); }).slice(0, 2);
+  var latest = data.sponsors.slice().sort(function(a, b){
+    var at = a.created_at ? new Date(a.created_at.replace(' ', 'T')).getTime() : a.id;
+    var bt = b.created_at ? new Date(b.created_at.replace(' ', 'T')).getTime() : b.id;
+    return bt - at;
+  }).slice(0, 2);
   document.getElementById('spotlight-sponsor-list').innerHTML = latest.map(function(sp){
     var logoHtml = '';
     if (sp.logo_filename && /^[a-zA-Z0-9._-]+$/.test(sp.logo_filename)) {
