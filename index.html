@@ -175,7 +175,8 @@
 
     /* PARENT SPOTLIGHT / LATEST SPONSOR — each half hidden until its feed supplies data */
     #spotlight{background:var(--light);display:none;}
-    .spotlight-split{display:flex;gap:3rem;justify-content:center;align-items:flex-start;flex-wrap:wrap;}
+    .spotlight-split{display:flex;gap:3rem;justify-content:center;align-items:flex-start;flex-wrap:wrap;position:relative;}
+    .spotlight-split.has-divider::after{content:'';position:absolute;top:.25rem;bottom:.25rem;left:50%;width:1px;background:linear-gradient(180deg,transparent,rgba(0,53,148,.2) 15%,rgba(0,53,148,.2) 85%,transparent);}
     .spotlight-col{flex:1;min-width:260px;max-width:420px;text-align:center;display:none;}
     .spotlight-col .divider{margin:.5rem auto 1.5rem;}
     .spotlight-col .section-title{font-size:1.3rem;margin-bottom:1.25rem;}
@@ -185,7 +186,7 @@
     .spotlight-description{color:var(--gray);font-size:.96rem;line-height:1.75;white-space:pre-line;}
     .spotlight-link{display:inline-block;margin-top:1rem;color:var(--navy);font-weight:600;font-size:.85rem;}
     .spotlight-link:hover{text-decoration:underline;}
-    @media(max-width:768px){.spotlight-split{flex-direction:column;align-items:center;}}
+    @media(max-width:768px){.spotlight-split{flex-direction:column;align-items:center;}.spotlight-split.has-divider::after{display:none;}}
 
     /* FOOTER */
     footer{background:#002554;border-top:1px solid rgba(138,141,143,.2);padding:4rem 2rem 2rem;}
@@ -750,6 +751,13 @@ if (document.readyState === 'loading') {
   loadNews();
 }
 
+// ── Spotlight divider — shown only once BOTH halves have data ─────────────
+function updateSpotlightDivider() {
+  var parentOn = document.getElementById('spotlight-parent-col').style.display === 'block';
+  var sponsorOn = document.getElementById('spotlight-sponsor-col').style.display === 'block';
+  document.querySelector('.spotlight-split').classList.toggle('has-divider', parentOn && sponsorOn);
+}
+
 // ── Site settings loader ───────────────────────────────────────────────────
 fetch('settings-feed.php').then(function(r){return r.json();}).then(function(data){
   if (!data.success || !data.settings) return;
@@ -771,6 +779,7 @@ fetch('settings-feed.php').then(function(r){return r.json();}).then(function(dat
     }
     document.getElementById('spotlight-parent-col').style.display = 'block';
     document.getElementById('spotlight').style.display = 'block';
+    updateSpotlightDivider();
   }
   // Membership
   if (s.membership_dues) {
@@ -818,6 +827,7 @@ fetch('sponsors-feed.php').then(function(r){return r.json();}).then(function(dat
   if (latest.website_url) document.getElementById('spotlight-sponsor-link').href = safeHref(latest.website_url);
   document.getElementById('spotlight-sponsor-col').style.display = 'block';
   document.getElementById('spotlight').style.display = 'block';
+  updateSpotlightDivider();
 }).catch(function(){});
 
 // ── Announcement banner ────────────────────────────────────────────────────
