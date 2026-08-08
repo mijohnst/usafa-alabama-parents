@@ -9,7 +9,8 @@ try {
     // Whitelist keys safe for public consumption — never dump the full table
     $public_keys = ['hero_subtitle','hero_cta_text','hero_cta_url','membership_dues',
                     'membership_description','president_letter','president_name',
-                    'president_title','facebook_url','footer_resources'];
+                    'president_title','facebook_url','footer_resources',
+                    'spotlight_name','spotlight_photo','spotlight_description'];
     $ph   = implode(',', array_fill(0, count($public_keys), '?'));
     $stmt = $pdo->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ($ph)");
     $stmt->execute($public_keys);
