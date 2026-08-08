@@ -179,7 +179,7 @@
     var html = '';
     sponsors.forEach(function(s, idx) {
       var logoHtml = s.logo_filename
-        ? '<img src="' + (s.logo_filename.match(/^[a-zA-Z0-9._-]+$/) ? '/' + escH(s.logo_filename) : '') + '" alt="' + escH(s.name) + ' Logo" class="sponsor-logo-large" />'
+        ? '<img src="' + (s.logo_filename.match(/^[a-zA-Z0-9._-]+$/) ? '/sponsor-logos/' + escH(s.logo_filename) : '') + '" alt="' + escH(s.name) + ' Logo" class="sponsor-logo-large" />'
         : '';
       var locationHtml = s.location ? '<p class="company-location">' + escH(s.location) + '</p>' : '';
       var aboutParas = s.about_text

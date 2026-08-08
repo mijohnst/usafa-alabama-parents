@@ -182,7 +182,9 @@
     .spotlight-col .divider{margin:.5rem auto 1.5rem;}
     .spotlight-col .section-title{font-size:1.3rem;margin-bottom:1.25rem;}
     .spotlight-photo{width:150px;height:150px;border-radius:50%;object-fit:cover;margin:0 auto 1.25rem;border:4px solid var(--navy);box-shadow:0 8px 24px rgba(0,53,148,.15);display:none;}
-    .spotlight-sponsor-logo{max-width:180px;max-height:110px;object-fit:contain;margin:0 auto 1.25rem;display:none;}
+    .spotlight-sponsor-item{margin-bottom:2rem;padding-bottom:2rem;border-bottom:1px solid rgba(0,53,148,.12);}
+    .spotlight-sponsor-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+    .spotlight-sponsor-logo{max-width:180px;max-height:100px;object-fit:contain;margin:0 auto 1rem;}
     .spotlight-name{font-family:var(--font-display);font-size:1.15rem;color:var(--navy);margin-bottom:.6rem;}
     .spotlight-description{color:var(--gray);font-size:.96rem;line-height:1.75;white-space:pre-line;text-align:justify;}
     .spotlight-link{display:inline-block;margin-top:1rem;color:var(--navy);font-weight:600;font-size:.85rem;}
@@ -324,13 +326,11 @@
         <p class="spotlight-description" id="spotlight-description"></p>
       </div>
       <div class="spotlight-col" id="spotlight-sponsor-col">
-        <p class="section-label">Featured Sponsor</p>
-        <h2 class="section-title">Latest Club Sponsor</h2>
+        <p class="section-label">Featured Sponsors</p>
+        <h2 class="section-title">Latest Club Sponsors</h2>
         <div class="divider"></div>
-        <img class="spotlight-sponsor-logo" id="spotlight-sponsor-logo" src="" alt="">
-        <h3 class="spotlight-name" id="spotlight-sponsor-name"></h3>
-        <p class="spotlight-description" id="spotlight-sponsor-description"></p>
-        <a class="spotlight-link" id="spotlight-sponsor-link" href="sponsorship.html">View All Sponsors &rarr;</a>
+        <div id="spotlight-sponsor-list"></div>
+        <a class="spotlight-link" href="sponsorship.html">View All Sponsors &rarr;</a>
       </div>
     </div>
   </div>
@@ -813,21 +813,24 @@ fetch('settings-feed.php').then(function(r){return r.json();}).then(function(dat
   }
 }).catch(function(){});
 
-// ── Latest sponsor (right half of the Spotlight section) ──────────────────
-// Reuses the same public feed as sponsorship.html; "latest" = highest id
+// ── Latest sponsors (right half of the Spotlight section) ─────────────────
+// Reuses the same public feed as sponsorship.html; "latest" = highest ids
 // among active sponsors, since there's no created_at column to sort by.
+// Uses about_text (the public-facing blurb) — description is internal notes only.
 fetch('sponsors-feed.php').then(function(r){return r.json();}).then(function(data){
   if (!data.success || !data.sponsors || !data.sponsors.length) return;
-  var latest = data.sponsors.reduce(function(a, b){ return (+b.id > +a.id) ? b : a; });
-  document.getElementById('spotlight-sponsor-name').textContent = latest.name;
-  document.getElementById('spotlight-sponsor-description').textContent = latest.description || '';
-  if (latest.logo_filename && /^[a-zA-Z0-9._-]+$/.test(latest.logo_filename)) {
-    var logo = document.getElementById('spotlight-sponsor-logo');
-    logo.src = 'sponsor-logos/' + latest.logo_filename;
-    logo.alt = latest.name + ' logo';
-    logo.style.display = 'block';
-  }
-  if (latest.website_url) document.getElementById('spotlight-sponsor-link').href = safeHref(latest.website_url);
+  var latest = data.sponsors.slice().sort(function(a, b){ return (+b.id) - (+a.id); }).slice(0, 2);
+  document.getElementById('spotlight-sponsor-list').innerHTML = latest.map(function(sp){
+    var logoHtml = '';
+    if (sp.logo_filename && /^[a-zA-Z0-9._-]+$/.test(sp.logo_filename)) {
+      logoHtml = '<img class="spotlight-sponsor-logo" src="sponsor-logos/' + escHtml(sp.logo_filename) + '" alt="' + escHtml(sp.name) + ' logo">';
+    }
+    var blurb = sp.about_text ? sp.about_text.split(/\r?\n\s*\r?\n/)[0].trim() : '';
+    return '<div class="spotlight-sponsor-item">' + logoHtml
+      + '<h3 class="spotlight-name">' + escHtml(sp.name) + '</h3>'
+      + (blurb ? '<p class="spotlight-description">' + escHtml(blurb) + '</p>' : '')
+      + '</div>';
+  }).join('');
   document.getElementById('spotlight-sponsor-col').style.display = 'block';
   document.getElementById('spotlight').style.display = 'block';
   updateSpotlightDivider();
