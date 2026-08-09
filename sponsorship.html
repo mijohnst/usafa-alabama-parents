@@ -195,7 +195,8 @@
         ? '<div style="text-align:center"><a href="' + escH(s.website_url) + '" target="_blank" rel="noopener" class="visit-link">' + escH(s.visit_link_text) + ' &rarr;</a></div>'
         : '';
 
-      var wrapper = idx === 0 ? '<div class="sponsor-showcase">' : '<section class="individual-sponsor-section"><div class="container"><div class="sponsor-showcase">';
+      var anchorId = 'sponsor-' + s.id;
+      var wrapper = idx === 0 ? '<div class="sponsor-showcase" id="' + anchorId + '">' : '<section class="individual-sponsor-section" id="' + anchorId + '"><div class="container"><div class="sponsor-showcase">';
       var wrapClose = idx === 0 ? '</div>' : '</div></div></section>';
       if (idx > 0) html += '<div class="section-divider"></div>';
 

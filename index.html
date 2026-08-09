@@ -186,6 +186,8 @@
     .spotlight-sponsor-item{margin-bottom:2rem;padding-bottom:2rem;border-bottom:1px solid rgba(0,53,148,.12);}
     .spotlight-sponsor-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
     .spotlight-sponsor-logo{max-width:180px;max-height:100px;object-fit:contain;margin:0 auto 1rem;}
+    .spotlight-sponsor-link-wrap{display:block;text-decoration:none;color:inherit;}
+    .spotlight-sponsor-link-wrap:hover .spotlight-name{text-decoration:underline;}
     .spotlight-name{font-family:var(--font-display);font-size:1.15rem;color:var(--navy);margin-bottom:.6rem;}
     .spotlight-sponsor-amount{color:var(--blue);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;}
     .spotlight-description{color:var(--gray);font-size:.96rem;line-height:1.75;white-space:pre-line;text-align:justify;}
@@ -844,8 +846,11 @@ fetch('sponsors-feed.php').then(function(r){return r.json();}).then(function(dat
       ? '<p class="spotlight-sponsor-amount">' + escHtml(sp.contribution_amount) + (sp.contribution_type ? ' &middot; ' + escHtml(sp.contribution_type) : '') + '</p>'
       : '';
     var blurb = sp.about_text ? sp.about_text.split(/\r?\n\s*\r?\n/)[0].trim() : '';
-    return '<div class="spotlight-sponsor-item">' + logoHtml
+    return '<div class="spotlight-sponsor-item">'
+      + '<a class="spotlight-sponsor-link-wrap" href="sponsorship.html#sponsor-' + sp.id + '">'
+      + logoHtml
       + '<h3 class="spotlight-name">' + escHtml(sp.name) + '</h3>'
+      + '</a>'
       + amountHtml
       + (blurb ? '<p class="spotlight-description">' + escHtml(blurb) + '</p>' : '')
       + '</div>';
