@@ -174,6 +174,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $lines[] = $cadet_last . ' (' . $r['class_year'] . ')' . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : ($p1 ? ' — ' . $p1 : ''));
                 }
                 break;
+            case 'missing_cadet_email':
+                if (!trim($r['cadet_email'] ?? '')) {
+                    $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $lines[] = $cadet_last . ' (' . $r['class_year'] . ')' . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : ($p1 ? ' — ' . $p1 : ''));
+                }
+                break;
             case 'care_labels':
                 $box = trim($r['cadet_po_box'] ?? '');
                 if ($box) {
@@ -333,6 +339,7 @@ admin_header('Lists');
           <optgroup label="Data &amp; Rosters">
             <option value="missing_data"    <?= $type==='missing_data'    ?'selected':''?>>Missing Data Report</option>
             <option value="missing_po_box"  <?= $type==='missing_po_box'  ?'selected':''?>>Missing PO Box</option>
+            <option value="missing_cadet_email" <?= $type==='missing_cadet_email' ?'selected':''?>>Missing Cadet Email</option>
             <option value="care_labels"  <?= $type==='care_labels'  ?'selected':''?>>Care Package Labels</option>
             <option value="sqd_roster"   <?= $type==='sqd_roster'   ?'selected':''?>>Squadron Roster</option>
           </optgroup>
