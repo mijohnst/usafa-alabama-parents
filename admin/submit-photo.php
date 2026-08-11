@@ -13,7 +13,20 @@ if (!is_dir($dir)) mkdir($dir, 0755, true);
 
 const MAX_PHOTOS_PER_SUBMISSION = 5;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Restricted to paid members and board members — admin/tech also keep
+// access (same convention as polls.php) so they can test and help members.
+$my_user_stmt = $pdo->prepare('SELECT * FROM users WHERE id = ?');
+$my_user_stmt->execute([$user_id]);
+$my_user   = $my_user_stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+$my_member = $my_user ? find_linked_member($pdo, $my_user) : null;
+$eligible  = is_super_admin() || is_board_role() || ($my_member && !empty($my_member['membership_paid']));
+
+if (!$eligible && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    flash('error', 'Photo submission is available to paid members and board members.');
+    header('Location: submit-photo.php'); exit;
+}
+
+if ($eligible && $_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $caption = trim($_POST['caption'] ?? '');
     $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
@@ -69,7 +82,7 @@ $mine = $pdo->prepare('SELECT id, user_id, album_id, filename, caption, status, 
 $mine->execute([$user_id]);
 $my_submissions = $mine->fetchAll(PDO::FETCH_ASSOC);
 
-admin_header('Submit Event Photos');
+admin_header('Photo Submission');
 echo show_flash();
 ?>
 <style>
@@ -79,11 +92,16 @@ echo show_flash();
 </style>
 
 <div class="page-head">
-  <h1>Submit Event Photos</h1>
+  <h1>Photo Submission</h1>
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
-<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Got great shots from a club event? Submit them here — an officer reviews each one before it appears in the Member Photos slideshow on the homepage.</p>
+<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Share a great photo and it may be featured in the Member Photos slideshow on the club's <strong>homepage</strong> — an officer reviews each submission before it goes live. Open to paid members and board members.</p>
 
+<?php if (!$eligible): ?>
+<div class="alert alert-error" style="max-width:520px">
+  Photo submission is available to paid members and board members. <a href="my-membership.php">Renew your membership</a> to submit photos, or contact an officer if you believe this is a mistake.
+</div>
+<?php else: ?>
 <div class="card" style="max-width:520px">
   <form method="POST" enctype="multipart/form-data" id="submit-photo-form">
     <?= csrf_field() ?>
@@ -117,6 +135,7 @@ echo show_flash();
   });
 })();
 </script>
+<?php endif; ?>
 
 <?php if (!empty($my_submissions)): ?>
 <p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin-top:1.75rem">Your Recent Submissions</p>

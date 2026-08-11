@@ -196,7 +196,8 @@ try {
 } catch (Exception $e) { $my_open_slots = 0; }
 $sections['For You'][] = ['icon'=>'🙋','label'=>'Volunteer Sign-Ups','sub'=>$my_open_slots>0?"$my_open_slots need people":'View opportunities','href'=>'volunteer-signup.php','color'=>'#1b5e20'];
 $sections['For You'][] = ['icon'=>'📆','label'=>'My RSVPs','sub'=>'Let us know you\'re coming','href'=>'event-rsvp.php','color'=>'#1565c0'];
-$sections['For You'][] = ['icon'=>'📷','label'=>'Submit Photos','sub'=>'Share your event photos','href'=>'submit-photo.php','color'=>'#6a1b9a'];
+$my_photo_eligible = is_super_admin() || is_board_role() || ($my_member && !empty($my_member['membership_paid']));
+$sections['For You'][] = ['icon'=>'📷','label'=>'Photo Submission','sub'=>$my_photo_eligible?'For the homepage slideshow':'Requires paid membership','href'=>'submit-photo.php','color'=>'#6a1b9a'];
 $sections['For You'][] = ['icon'=>'🤝','label'=>'My Committees','sub'=>'Flag where you can help','href'=>'my-committees.php','color'=>'#f57f17'];
 $sections['For You'][] = ['icon'=>'📖','label'=>'Directory','sub'=>'Printable roster','href'=>'directory.php','color'=>'#1b5e20'];
 
@@ -209,8 +210,8 @@ if (can_manage_members()) {
     $sections['Member Management'][] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vcount_v>0?"$vcount_v submission".($vcount_v>1?'s':''):'View signups','href'=>'volunteers.php','color'=>'#1b5e20','badge'=>$vcount_v>0?$vcount_v:0];
     $sections['Member Management'][] = ['icon'=>'👥','label'=>'Leadership','sub'=>'Update officer profiles','href'=>'leadership.php','color'=>'#002554'];
     $sections['Site Management'][] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
-    $sections['Site Management'][] = ['icon'=>'🖼️','label'=>'Gallery','sub'=>'Upload event photos','href'=>'gallery.php','color'=>'#1b5e20'];
-    $sections['Site Management'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Club event photo albums','href'=>'event-albums.php','color'=>'#1565c0'];
+    $sections['Site Management'][] = ['icon'=>'🖼️','label'=>'Homepage Gallery','sub'=>'Direct-upload homepage photos','href'=>'gallery.php','color'=>'#1b5e20'];
+    $sections['Site Management'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Photos for a specific club event','href'=>'event-albums.php','color'=>'#1565c0'];
     if (!$sponsors_tile_added) {
         $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
         $sponsors_tile_added = true;
@@ -232,7 +233,7 @@ if (can_manage_members()) {
     $sections['Member Management'][] = ['icon'=>'🧰','label'=>'Volunteer Opportunities','sub'=>$vo_needed>0?"$vo_needed need people":'Manage opportunities','href'=>'volunteer-opportunities.php','color'=>'#1b5e20','badge'=>$vo_needed>0?$vo_needed:0];
     $sections['Member Management'][] = ['icon'=>'👀','label'=>'Event RSVPs','sub'=>'See who\'s coming','href'=>'event-rsvps.php','color'=>'#1565c0'];
     try { $photo_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM photo_submissions WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $photo_pending = 0; }
-    $sections['Member Management'][] = ['icon'=>'🔍','label'=>'Photo Submissions','sub'=>$photo_pending>0?"$photo_pending awaiting review":'All caught up','href'=>'photo-submissions.php','color'=>$photo_pending>0?'#A6192E':'#6a1b9a','badge'=>$photo_pending>0?$photo_pending:0];
+    $sections['Member Management'][] = ['icon'=>'🔍','label'=>'Review Photo Submissions','sub'=>$photo_pending>0?"$photo_pending awaiting review":'All caught up','href'=>'photo-submissions.php','color'=>$photo_pending>0?'#A6192E':'#6a1b9a','badge'=>$photo_pending>0?$photo_pending:0];
     $sections['Member Management'][] = ['icon'=>'📇','label'=>'Committee Interest','sub'=>'See who volunteered','href'=>'committee-interest.php','color'=>'#f57f17'];
 }
 

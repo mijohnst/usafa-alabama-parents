@@ -104,7 +104,7 @@ gallery_cleanup($pdo, $dir, $max_photos);
 $photos = $pdo->query('SELECT *, DATEDIFF(NOW(),created_at) as days_old FROM site_photos ORDER BY sort_order ASC, id ASC')->fetchAll();
 $total  = count($photos);
 
-admin_header('Gallery');
+admin_header('Homepage Gallery');
 echo show_flash();
 ?>
 <style>
@@ -114,9 +114,10 @@ echo show_flash();
 .photo-card-body{padding:.75rem}
 </style>
 
-<div class="page-head"><h1>Photo Gallery</h1><a href="dashboard.php" class="btn btn-secondary">← Dashboard</a></div>
+<div class="page-head"><h1>Homepage Gallery</h1><a href="dashboard.php" class="btn btn-secondary">← Dashboard</a></div>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">
-  Photos appear in the main site slideshow. <strong>Auto-cleanup:</strong> photos older than 30 days or beyond the photo limit are removed automatically.
+  Upload photos directly to the homepage Member Photos slideshow — no review needed (that's what <a href="photo-submissions.php">Photo Submissions</a> is for, when a member submits their own).
+  <strong>Auto-cleanup:</strong> photos older than 30 days or beyond the photo limit are removed automatically.
   Currently <strong><?= $total ?>/<?= $max_photos ?></strong> photos.
 </p>
 
