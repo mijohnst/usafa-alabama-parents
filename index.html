@@ -134,8 +134,9 @@
     .slideshow-wrap{position:relative;max-width:860px;margin:0 auto;}
     .slideshow-viewport{position:relative;overflow:hidden;border-radius:6px;background:#001535;aspect-ratio:16/9;max-height:520px;border:3px solid var(--navy);box-shadow:0 8px 32px rgba(0,37,84,.2);}
     .slideshow-track{display:flex;height:100%;transition:transform .45s ease;}
-    .slide{min-width:100%;height:100%;}
-    .slide img{width:100%;height:100%;object-fit:contain;display:block;}
+    .slide{min-width:100%;height:100%;position:relative;overflow:hidden;}
+    .slide-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(24px) brightness(.55);transform:scale(1.15);}
+    .slide-fg{position:relative;width:100%;height:100%;object-fit:contain;display:block;z-index:1;}
     .slideshow-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,37,84,.75);color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:1.6rem;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;z-index:2;}
     .slideshow-btn:hover{background:rgba(0,37,84,.97);}
     .slideshow-btn.prev{left:.75rem;}
@@ -1062,15 +1063,27 @@ if (document.readyState === 'loading') {
   var autoTimer= null;
   var initialized = false;
 
-  function buildSlide(id) {
+  function buildSlideFromSrc(src) {
     var slide = document.createElement('div');
     slide.className = 'slide';
-    var img = document.createElement('img');
-    img.src = 'https://drive.google.com/thumbnail?id=' + id + '&sz=w1200';
-    img.alt = 'Club community photo';
-    img.loading = 'lazy';
-    slide.appendChild(img);
+    var bg = document.createElement('img');
+    bg.className = 'slide-bg';
+    bg.src = src;
+    bg.alt = '';
+    bg.setAttribute('aria-hidden', 'true');
+    bg.loading = 'lazy';
+    var fg = document.createElement('img');
+    fg.className = 'slide-fg';
+    fg.src = src;
+    fg.alt = 'Club community photo';
+    fg.loading = 'lazy';
+    slide.appendChild(bg);
+    slide.appendChild(fg);
     return slide;
+  }
+
+  function buildSlide(id) {
+    return buildSlideFromSrc('https://drive.google.com/thumbnail?id=' + id + '&sz=w1200');
   }
 
   function goTo(index) {
@@ -1129,11 +1142,7 @@ if (document.readyState === 'loading') {
       var origBuild = buildSlide;
       buildSlide = function(id) {
         if (id.startsWith('__server__')) {
-          var slide = document.createElement('div'); slide.className = 'slide';
-          var img   = document.createElement('img');
-          img.src = 'site-photos/' + id.replace('__server__','');
-          img.alt = 'Club community photo'; img.loading = 'lazy';
-          slide.appendChild(img); return slide;
+          return buildSlideFromSrc('site-photos/' + id.replace('__server__',''));
         }
         return origBuild(id);
       };
