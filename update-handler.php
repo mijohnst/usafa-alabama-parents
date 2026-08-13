@@ -150,6 +150,12 @@ try {
     if (!in_array($grad_year, ['2026', '2027', '2028', '2029', '2030', 'Prep School'], true)) {
         $grad_year = '';
     }
+    // Same whitelist treatment for Gender — a tampered value falls back to
+    // COALESCE-preserving whatever is already on file instead of being written as-is.
+    $gender = s($payload, 'cadetGender');
+    if (!in_array($gender, ['Male', 'Female'], true)) {
+        $gender = '';
+    }
 
     $upd = $pdo->prepare("
         UPDATE members SET
@@ -158,6 +164,7 @@ try {
             cadet_middle_name = COALESCE(NULLIF(:cadet_middle_name, ''), cadet_middle_name),
             cadet_suffix      = COALESCE(NULLIF(:cadet_suffix, ''), cadet_suffix),
             nickname          = COALESCE(NULLIF(:nickname, ''), nickname),
+            cadet_gender      = COALESCE(NULLIF(:cadet_gender, ''), cadet_gender),
             cadet_birthday    = COALESCE(:cadet_birthday, cadet_birthday),
             cadet_po_box      = COALESCE(NULLIF(:cadet_po_box, ''), cadet_po_box),
             cadet_email       = COALESCE(NULLIF(:cadet_email, ''), cadet_email),
@@ -189,6 +196,7 @@ try {
         'cadet_middle_name'  => $middle,
         'cadet_suffix'       => s($payload, 'cadetSuffix'),
         'nickname'           => s($payload, 'nickname'),
+        'cadet_gender'       => $gender,
         'cadet_birthday'     => $dob,
         'cadet_po_box'       => s($payload, 'poBox'),
         'cadet_email'        => e($payload, 'cadetEmail'),
@@ -239,6 +247,7 @@ $diff_labels = [
     'cadet_middle_name'  => 'Cadet Middle Name',
     'cadet_suffix'        => 'Cadet Suffix',
     'nickname'            => 'Nickname',
+    'cadet_gender'        => 'Gender',
     'cadet_po_box'        => 'USAFA Mailbox / PO Box',
     'cadet_email'         => 'Cadet Email',
     'cadet_cell'          => 'Cadet Cell Phone',

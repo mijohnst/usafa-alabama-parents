@@ -253,7 +253,7 @@
           </div>
         </div>
 
-        <div class="form-row">
+        <div class="form-row-3">
           <div class="form-group">
             <label for="nickname">Nickname</label>
             <input type="text" id="nickname" name="nickname" />
@@ -261,6 +261,14 @@
           <div class="form-group">
             <label for="cadetEmail">Cadet Email</label>
             <input type="email" id="cadetEmail" name="cadetEmail" />
+          </div>
+          <div class="form-group">
+            <label for="cadetGender">Gender</label>
+            <select id="cadetGender" name="cadetGender">
+              <option value="">Select gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
           </div>
         </div>
 
@@ -462,7 +470,7 @@
     // ── Find Your Record ──────────────────────────────────────────────────
     function populateForm(m) {
       var fields = ['cadetFirstName','cadetMiddleName','cadetLastName','cadetSuffix','graduationYear','nickname','poBox',
-        'cadetEmail','cadetPhone','squadron','parent1FirstName','parent1LastName','parent1Phone','parent1Email',
+        'cadetEmail','cadetGender','cadetPhone','squadron','parent1FirstName','parent1LastName','parent1Phone','parent1Email',
         'parent2FirstName','parent2LastName','parent2Phone','parent2Email',
         'streetAddress','city','state','zipCode','parent2Street','parent2City','parent2State','parent2Zip'];
       fields.forEach(function(f) {

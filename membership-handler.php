@@ -85,6 +85,13 @@ if (!filter_var(s($payload, 'parent1Email'), FILTER_VALIDATE_EMAIL)) {
     echo json_encode(['success' => false, 'error' => 'Invalid primary contact email address.']);
     exit();
 }
+// Gender is optional (blank allowed) but, like graduationYear, is a <select>
+// of known values — reject anything else rather than writing a tampered value.
+if (s($payload, 'cadetGender') !== '' && !in_array(s($payload, 'cadetGender'), ['Male', 'Female'], true)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid gender.']);
+    exit();
+}
 
 // ── 1. Write to MySQL (primary) ────────────────────────────────────────────
 require_once __DIR__ . '/admin/config.php';
@@ -157,6 +164,7 @@ try {
             UPDATE members SET
                 cadet_suffix=:cadet_suffix,
                 cadet_first_name=:cadet_first_name, cadet_middle_name=:cadet_middle_name, nickname=:nickname,
+                cadet_gender=:cadet_gender,
                 cadet_birthday=:cadet_birthday, cadet_po_box=:cadet_po_box,
                 cadet_email=:cadet_email, cadet_cell=:cadet_cell,
                 bct_squadron=:bct_squadron,
@@ -176,6 +184,7 @@ try {
             'cadet_first_name'   => $first,
             'cadet_middle_name'  => $middle,
             'nickname'           => s($payload,'nickname'),
+            'cadet_gender'       => s($payload,'cadetGender'),
             'cadet_birthday'     => $dob,
             'cadet_po_box'       => s($payload,'poBox'),
             'cadet_email'        => s($payload,'cadetEmail'),
@@ -206,6 +215,7 @@ try {
     $stmt = $pdo->prepare("
         INSERT INTO members (
             class_year, cadet_last_name, cadet_suffix, cadet_first_name, cadet_middle_name, nickname,
+            cadet_gender,
             cadet_birthday, cadet_po_box, cadet_email, cadet_cell,
             bct_squadron,
             parent1_last_name, parent1_first_name, parent1_email, parent1_cell,
@@ -216,6 +226,7 @@ try {
             membership_paid, membership_year
         ) VALUES (
             :class_year, :cadet_last_name, :cadet_suffix, :cadet_first_name, :cadet_middle_name, :nickname,
+            :cadet_gender,
             :cadet_birthday, :cadet_po_box, :cadet_email, :cadet_cell,
             :bct_squadron,
             :parent1_last_name, :parent1_first_name, :parent1_email, :parent1_cell,
@@ -234,6 +245,7 @@ try {
         'cadet_first_name'    => $first,
         'cadet_middle_name'   => $middle,
         'nickname'            => s($payload, 'nickname'),
+        'cadet_gender'        => s($payload, 'cadetGender'),
         'cadet_birthday'      => $dob,
         'cadet_po_box'        => s($payload, 'poBox'),
         'cadet_email'         => s($payload, 'cadetEmail'),

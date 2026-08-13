@@ -99,6 +99,7 @@ echo json_encode([
         'cadetSuffix'      => $g('cadet_suffix'),
         'graduationYear'   => $g('class_year'),
         'nickname'         => $g('nickname'),
+        'cadetGender'      => $g('cadet_gender'),
         'poBox'            => $g('cadet_po_box'),
         'cadetEmail'       => $g('cadet_email'),
         'cadetPhone'       => $g('cadet_cell'),
