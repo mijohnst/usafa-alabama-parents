@@ -359,10 +359,15 @@ function send_meeting_reminders(PDO $pdo): int {
 
 // ── Send a preview of any automated email to a test address ──────────────
 // Uses sample placeholder data — does not touch automated_email_log or query members.
-function send_automated_test_email(PDO $pdo, string $email_key, string $to): bool {
+// $gender ('', 'Male', 'Female') only matters for the two birthday templates,
+// letting the admin UI preview how {he_she}/{him_her}/{his_her} render for a
+// real cadet without needing to wait for an actual birthday.
+function send_automated_test_email(PDO $pdo, string $email_key, string $to, string $gender = ''): bool {
+    [$he_she, $him_her, $his_her] = cadet_pronouns($gender);
+    $birthday_sample = ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example', '{he_she}' => $he_she, '{him_her}' => $him_her, '{his_her}' => $his_her];
     $samples = [
-        'birthday_cadet'      => ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example', '{he_she}' => 'they', '{him_her}' => 'them', '{his_her}' => 'their'],
-        'birthday_parent'     => ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example', '{he_she}' => 'they', '{him_her}' => 'them', '{his_her}' => 'their'],
+        'birthday_cadet'      => $birthday_sample,
+        'birthday_parent'     => $birthday_sample,
         'dues_renewal'        => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example', '{expire_date}' => date('F j, Y', strtotime('+30 days')), '{dues_amount}' => '$75'],
         'meeting_reminder'    => ['{meeting_title}' => 'Monthly General Meeting', '{meeting_date}' => date('l, F j, Y'), '{meeting_location}' => 'Zoom', '{meeting_link}' => 'https://zoom.us/j/example'],
         'new_member_welcome'  => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example'],

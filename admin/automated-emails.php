@@ -33,12 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'send_test') {
-        $email_key  = $_POST['email_key'] ?? '';
-        $test_email = trim($_POST['test_email'] ?? '');
+        $email_key   = $_POST['email_key'] ?? '';
+        $test_email  = trim($_POST['test_email'] ?? '');
+        $test_gender = $_POST['test_gender'] ?? '';
+        if (!in_array($test_gender, ['Male', 'Female'], true)) $test_gender = '';
         if (!filter_var($test_email, FILTER_VALIDATE_EMAIL)) {
             flash('error', 'Enter a valid email address to send the test to.');
         } else {
-            $ok = send_automated_test_email($pdo, $email_key, $test_email);
+            $ok = send_automated_test_email($pdo, $email_key, $test_email, $test_gender);
             flash($ok ? 'success' : 'error', $ok
                 ? "Test email sent to $test_email."
                 : 'Could not send — check the server\'s mail configuration.');
@@ -155,6 +157,16 @@ $lr_text  = !$last_run ? '#5f4c00' : ($is_stale ? '#c62828' : '#1b5e20');
         <label>Send test to</label>
         <input type="email" name="test_email" required placeholder="you@example.com" value="<?= h($_SESSION['user_email'] ?? '') ?>">
       </div>
+      <?php if (in_array($key, ['birthday_cadet', 'birthday_parent'], true)): ?>
+      <div class="form-group" style="margin:0;min-width:160px">
+        <label>Preview as</label>
+        <select name="test_gender">
+          <option value="">Neutral (they/them)</option>
+          <option value="Male">Male (he/him)</option>
+          <option value="Female">Female (she/her)</option>
+        </select>
+      </div>
+      <?php endif; ?>
       <button type="submit" class="btn btn-secondary btn-sm">Send Test</button>
     </form>
   </div>
