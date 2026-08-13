@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($type === 'new_members') { $where[] = "created_at >= DATE_SUB(NOW(), INTERVAL $days DAY)"; }
 
     $sql = 'SELECT cadet_last_name, cadet_suffix, cadet_first_name, cadet_middle_name, class_year, al_region,
-                   cadet_po_box, cadet_birthday, bct_squadron, bct_flight, fall_squadron, squadron_yr2_4,
+                   cadet_gender, cadet_po_box, cadet_birthday, bct_squadron, bct_flight, fall_squadron, squadron_yr2_4,
                    parent1_first_name, parent1_last_name, parent1_email, parent1_cell,
                    parent1_street, parent1_city, parent1_state, parent1_zip,
                    parent2_first_name, parent2_last_name, parent2_email, parent2_cell,
@@ -176,6 +176,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             case 'missing_cadet_email':
                 if (!trim($r['cadet_email'] ?? '')) {
+                    $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                    $lines[] = $cadet_last . ' (' . $r['class_year'] . ')' . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : ($p1 ? ' — ' . $p1 : ''));
+                }
+                break;
+            case 'missing_gender':
+                if (!trim($r['cadet_gender'] ?? '')) {
                     $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
                     $lines[] = $cadet_last . ' (' . $r['class_year'] . ')' . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : ($p1 ? ' — ' . $p1 : ''));
                 }
@@ -340,6 +346,7 @@ admin_header('Lists');
             <option value="missing_data"    <?= $type==='missing_data'    ?'selected':''?>>Missing Data Report</option>
             <option value="missing_po_box"  <?= $type==='missing_po_box'  ?'selected':''?>>Missing PO Box</option>
             <option value="missing_cadet_email" <?= $type==='missing_cadet_email' ?'selected':''?>>Missing Cadet Email</option>
+            <option value="missing_gender" <?= $type==='missing_gender' ?'selected':''?>>Missing Gender</option>
             <option value="care_labels"  <?= $type==='care_labels'  ?'selected':''?>>Care Package Labels</option>
             <option value="sqd_roster"   <?= $type==='sqd_roster'   ?'selected':''?>>Squadron Roster</option>
           </optgroup>
