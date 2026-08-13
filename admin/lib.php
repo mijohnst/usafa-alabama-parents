@@ -40,6 +40,18 @@ function cadet_last_name_suffixed(array $m): string {
     return trim(($m['cadet_last_name'] ?? '') . ' ' . ($m['cadet_suffix'] ?? ''));
 }
 
+// [he/she, him/her, his/her] for the {he_she}/{him_her}/{his_her} placeholders
+// in automated emails. Falls back to gender-neutral "they/them/their" when
+// cadet_gender is blank, so older profiles that predate the field (or simply
+// leave it unset) still produce a grammatical email instead of a blank spot.
+function cadet_pronouns(string $gender): array {
+    switch (strtolower(trim($gender))) {
+        case 'male':   return ['he', 'him', 'his'];
+        case 'female': return ['she', 'her', 'her'];
+        default:       return ['they', 'them', 'their'];
+    }
+}
+
 // Class year that graduates this club year (spring commencement) — the
 // "outgoing" class. The club year runs July-June, so this stays the same
 // value from July through the following June, then rolls over.

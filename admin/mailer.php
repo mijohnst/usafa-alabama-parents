@@ -122,7 +122,7 @@ function send_birthday_emails(PDO $pdo): int {
         // the two can disagree if the DB server's timezone isn't the same
         // as the one set above, silently shifting "today" by hours.
         $stmt = $pdo->prepare(
-            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, nickname, cadet_email, parent1_email, parent2_email
+            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, nickname, cadet_gender, cadet_email, parent1_email, parent2_email
              FROM members
              WHERE archived = 0 AND cadet_birthday IS NOT NULL
                AND MONTH(cadet_birthday) = :month AND DAY(cadet_birthday) = :day
@@ -147,7 +147,11 @@ function send_birthday_emails(PDO $pdo): int {
         $nickname  = trim((string)($r['nickname'] ?? ''));
         $nick_or_first = $nickname !== '' ? $nickname : trim((string)($r['cadet_first_name'] ?? ''));
         if ($nick_or_first === '') $nick_or_first = $full_name ?: 'Cadet';
-        $replace = ['{name}' => $nick_or_first, '{cadet_name}' => $full_name ?: $nick_or_first];
+        [$he_she, $him_her, $his_her] = cadet_pronouns((string)($r['cadet_gender'] ?? ''));
+        $replace = [
+            '{name}' => $nick_or_first, '{cadet_name}' => $full_name ?: $nick_or_first,
+            '{he_she}' => $he_she, '{him_her}' => $him_her, '{his_her}' => $his_her,
+        ];
 
         if ($cadet_on && !empty($r['cadet_email']) && filter_var($r['cadet_email'], FILTER_VALIDATE_EMAIL)) {
             send_notification($r['cadet_email'], strtr($cadet_cfg['subject'], $replace), strtr($cadet_cfg['body'], $replace));
@@ -357,8 +361,8 @@ function send_meeting_reminders(PDO $pdo): int {
 // Uses sample placeholder data — does not touch automated_email_log or query members.
 function send_automated_test_email(PDO $pdo, string $email_key, string $to): bool {
     $samples = [
-        'birthday_cadet'      => ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example'],
-        'birthday_parent'     => ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example'],
+        'birthday_cadet'      => ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example', '{he_she}' => 'they', '{him_her}' => 'them', '{his_her}' => 'their'],
+        'birthday_parent'     => ['{name}' => 'Jamie', '{cadet_name}' => 'Jamie Example', '{he_she}' => 'they', '{him_her}' => 'them', '{his_her}' => 'their'],
         'dues_renewal'        => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example', '{expire_date}' => date('F j, Y', strtotime('+30 days')), '{dues_amount}' => '$75'],
         'meeting_reminder'    => ['{meeting_title}' => 'Monthly General Meeting', '{meeting_date}' => date('l, F j, Y'), '{meeting_location}' => 'Zoom', '{meeting_link}' => 'https://zoom.us/j/example'],
         'new_member_welcome'  => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example'],

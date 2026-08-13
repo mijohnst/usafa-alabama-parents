@@ -82,7 +82,9 @@ echo show_flash();
   no cron changes needed. Placeholders you can use (only the relevant ones work per email — see its description):
   <code>{name}</code>, <code>{cadet_name}</code>, <code>{parent_name}</code>, <code>{expire_date}</code>,
   <code>{dues_amount}</code>, <code>{meeting_title}</code>, <code>{meeting_date}</code>,
-  <code>{meeting_location}</code>, <code>{meeting_link}</code>.
+  <code>{meeting_location}</code>, <code>{meeting_link}</code>. The birthday emails also support
+  <code>{he_she}</code>, <code>{him_her}</code>, <code>{his_her}</code> (drawn from the cadet's Gender field,
+  falling back to "they/them/their" if it's blank).
 </p>
 
 <?php
