@@ -13,7 +13,7 @@ $mem_type = $_POST['membership_type'] ?? 'annual';
 if (!in_array($mem_type, ['annual','4year'])) $mem_type = 'annual';
 
 $dues_actions   = ['mark_paid','mark_unpaid'];
-$member_actions = ['archive','restore','delete','portal_invite','set_gender_male','set_gender_female'];
+$member_actions = ['archive','restore','delete','portal_invite'];
 $all_actions    = array_merge($dues_actions, $member_actions);
 
 if (empty($ids) || !in_array($action, $all_actions)) {
@@ -52,14 +52,6 @@ if ($action === 'mark_paid') {
 } elseif ($action === 'delete') {
     $pdo->prepare("DELETE FROM members WHERE id IN ($ph)")->execute($ids);
     flash('success', count($ids) . ' member(s) permanently deleted.');
-
-} elseif ($action === 'set_gender_male') {
-    $pdo->prepare("UPDATE members SET cadet_gender = 'Male' WHERE id IN ($ph)")->execute($ids);
-    flash('success', count($ids) . ' member(s) set to Male.');
-
-} elseif ($action === 'set_gender_female') {
-    $pdo->prepare("UPDATE members SET cadet_gender = 'Female' WHERE id IN ($ph)")->execute($ids);
-    flash('success', count($ids) . ' member(s) set to Female.');
 
 } elseif ($action === 'portal_invite') {
     require_once __DIR__ . '/mailer.php';

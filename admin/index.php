@@ -626,9 +626,6 @@ function setCurrentYrs() {
   <button type="submit" form="bulk-form" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Paid</button>
   <button type="submit" form="bulk-form" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">✗ Unpaid</button>
   <?php if (can_manage_members()): ?>
-  <span style="font-size:.82rem;opacity:.7;margin-left:.25rem">Gender:</span>
-  <button type="submit" form="bulk-form" name="action" value="set_gender_male" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">Male</button>
-  <button type="submit" form="bulk-form" name="action" value="set_gender_female" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">Female</button>
   <span style="font-size:.82rem;opacity:.7;margin-left:.25rem">Members:</span>
   <?php if ($archived === '1'): ?>
   <button type="submit" form="bulk-form" name="action" value="restore" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">↩ Restore</button>
