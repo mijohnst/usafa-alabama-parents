@@ -526,12 +526,10 @@ function member_form(array $m = [], bool $is_edit = false): void {
     echo '<div class="form-group"><label>PO Box</label><input name="cadet_po_box" value="' . $v('cadet_po_box') . '"></div>';
     echo '<div class="form-group"><label>Cell</label><input type="tel" name="cadet_cell" value="' . $v('cadet_cell') . '"></div>';
     echo '</div>';
-    echo '<div class="form-row col-2">';
+    echo '<div class="form-row col-3">';
     echo '<div class="form-group"><label>Suffix <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">e.g. Jr., III</span></label><input name="cadet_suffix" value="' . $v('cadet_suffix') . '" maxlength="20"></div>';
     echo '<div class="form-group"><label>Email</label><input type="email" name="cadet_email" value="' . $v('cadet_email') . '"></div>';
-    echo '</div>';
-    echo '<div class="form-row col-2">';
-    echo '<div class="form-group"><label>Gender <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">used for birthday email pronouns</span></label>' . $sel('cadet_gender', GENDERS) . '</div>';
+    echo '<div class="form-group"><label>Gender</label>' . $sel('cadet_gender', GENDERS) . '</div>';
     echo '</div>';
     echo '</fieldset>';
 
