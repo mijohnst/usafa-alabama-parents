@@ -62,6 +62,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status           = $_POST['status']                    ?? 'pending';
     $notes            = trim($_POST['notes']               ?? '');
     $payment_method   = trim($_POST['payment_method']      ?? '');
+    // Venmo/PayPal fold their extra field into payment_method itself, same
+    // format the "Mark as Reimbursed" modal already writes (e.g. "Venmo
+    // @jsmith") — keeps every display of this field (receipts-by.php,
+    // year-end.php, pending-reimbursements.php) working without changes.
+    if ($payment_method === 'Venmo') {
+        $venmo_id = trim($_POST['venmo_id'] ?? '');
+        if ($venmo_id === '') $errors[] = 'Venmo ID is required.';
+        else {
+            if ($venmo_id[0] !== '@') $venmo_id = '@' . $venmo_id;
+            $payment_method = 'Venmo ' . $venmo_id;
+        }
+    } elseif ($payment_method === 'PayPal') {
+        $paypal_email = trim($_POST['paypal_email'] ?? '');
+        if (!filter_var($paypal_email, FILTER_VALIDATE_EMAIL)) $errors[] = 'A valid PayPal email is required.';
+        else $payment_method = 'PayPal ' . $paypal_email;
+    }
     // Only admins/treasurers may re-attribute; everyone else is locked to their own ID
     $submitted_by = (is_admin() || is_treasurer())
         ? (int)($_POST['submitted_by'] ?? $_SESSION['user_id'] ?? 0)
@@ -373,16 +389,49 @@ if (!empty($real_errors)): ?>
         <label>Notes</label>
         <textarea name="notes" rows="3" placeholder="Any additional details…"><?= $v('notes') ?></textarea>
       </div>
+      <?php
+        // A composed value like "Venmo @handle" or "PayPal name@x.com" (the
+        // same format the "Mark as Reimbursed" modal writes) doesn't match
+        // any literal PAYMENT_METHODS option — split it back apart so the
+        // dropdown and the Venmo ID / PayPal Email fields below pre-fill
+        // correctly when editing a purchase that already has one on file.
+        $stored_pm  = (string)($p['payment_method'] ?? '');
+        $pm_selected = in_array($stored_pm, PAYMENT_METHODS, true) ? $stored_pm : '';
+        $venmo_prefill = $paypal_prefill = '';
+        if ($pm_selected === '') {
+            if (str_starts_with($stored_pm, 'Venmo ')) { $pm_selected = 'Venmo'; $venmo_prefill = trim(substr($stored_pm, 6)); }
+            elseif (str_starts_with($stored_pm, 'PayPal ')) { $pm_selected = 'PayPal'; $paypal_prefill = trim(substr($stored_pm, 7)); }
+            elseif (str_starts_with($stored_pm, 'Check')) { $pm_selected = 'Check'; }
+        }
+      ?>
       <div class="form-group">
         <label>Payment Method</label>
-        <select name="payment_method">
+        <select name="payment_method" id="pm_select" onchange="updatePmFields()">
           <?php foreach (PAYMENT_METHODS as $pm): ?>
-            <option value="<?= h($pm) ?>" <?= ($p['payment_method']??'')===$pm?'selected':''?>>
+            <option value="<?= h($pm) ?>" <?= $pm_selected===$pm?'selected':''?>>
               <?= $pm === '' ? '— select —' : h($pm) ?>
             </option>
           <?php endforeach; ?>
         </select>
       </div>
+      <div class="form-group" id="pm_venmo_group" style="display:none">
+        <label>Venmo ID *</label>
+        <input type="text" name="venmo_id" id="pm_venmo_id" placeholder="@username" value="<?= h($venmo_prefill) ?>">
+      </div>
+      <div class="form-group" id="pm_paypal_group" style="display:none">
+        <label>PayPal Email *</label>
+        <input type="email" name="paypal_email" id="pm_paypal_email" placeholder="name@example.com" value="<?= h($paypal_prefill) ?>">
+      </div>
+      <script>
+        function updatePmFields() {
+          var m = document.getElementById('pm_select').value;
+          document.getElementById('pm_venmo_group').style.display  = m === 'Venmo'  ? '' : 'none';
+          document.getElementById('pm_paypal_group').style.display = m === 'PayPal' ? '' : 'none';
+          document.getElementById('pm_venmo_id').required    = m === 'Venmo';
+          document.getElementById('pm_paypal_email').required = m === 'PayPal';
+        }
+        updatePmFields();
+      </script>
     </fieldset>
 
     <?php if ($is_edit && (!empty($p['approved_note']) || !empty($p['reimbursed_note']))): ?>
