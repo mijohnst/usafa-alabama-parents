@@ -275,9 +275,13 @@ admin_header('Finance');
       <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Check Number *</label>
       <input type="text" id="modal-check-number" placeholder="e.g. 1042" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
-    <div id="modal-other-row" style="display:none;margin-bottom:.9rem">
-      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Explanation *</label>
-      <input type="text" id="modal-other-text" placeholder="Describe the payment method…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    <div id="modal-venmo-row" style="display:none;margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Venmo ID *</label>
+      <input type="text" id="modal-venmo-id" placeholder="@username" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    </div>
+    <div id="modal-paypal-row" style="display:none;margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">PayPal Email *</label>
+      <input type="email" id="modal-paypal-email" placeholder="name@example.com" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
     <div class="form-group">
       <label id="modal-note-label">Note <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
@@ -295,13 +299,9 @@ var _reimburseId = null;
 
 function updateModalFields() {
   var m = document.getElementById('modal-payment-method').value;
-  document.getElementById('modal-check-row').style.display = m === 'Check' ? 'block' : 'none';
-  document.getElementById('modal-other-row').style.display = m === 'Other' ? 'block' : 'none';
-  var noteLabel = document.getElementById('modal-note-label');
-  var noteInput = document.getElementById('modal-note');
-  noteLabel.textContent = m === 'Internet Transfer' ? 'Transfer Reference / Details *' : 'Note (optional)';
-  noteLabel.style.color = m === 'Internet Transfer' ? '#002554' : '#5a6a7a';
-  noteInput.placeholder = m === 'Internet Transfer' ? 'e.g. Confirmation #12345, bank reference…' : 'Optional note…';
+  document.getElementById('modal-check-row').style.display  = m === 'Check'  ? 'block' : 'none';
+  document.getElementById('modal-venmo-row').style.display  = m === 'Venmo'  ? 'block' : 'none';
+  document.getElementById('modal-paypal-row').style.display = m === 'PayPal' ? 'block' : 'none';
 }
 
 function openReimburseModal(id, vendor, amount) {
@@ -309,7 +309,8 @@ function openReimburseModal(id, vendor, amount) {
   document.getElementById('reimburse-modal-desc').textContent = vendor + ' — ' + amount;
   document.getElementById('modal-payment-method').value = '';
   document.getElementById('modal-check-number').value = '';
-  document.getElementById('modal-other-text').value = '';
+  document.getElementById('modal-venmo-id').value = '';
+  document.getElementById('modal-paypal-email').value = '';
   document.getElementById('modal-note').value = '';
   updateModalFields();
   document.getElementById('reimburse-modal').style.display = 'flex';
@@ -328,13 +329,17 @@ function confirmReimburse() {
     var num = document.getElementById('modal-check-number').value.trim();
     if (!num) { alert('Please enter the check number.'); return; }
     fullMethod = 'Check #' + num;
-  } else if (method === 'Other') {
-    var expl = document.getElementById('modal-other-text').value.trim();
-    if (!expl) { alert('Please explain the payment method.'); return; }
-    fullMethod = 'Other: ' + expl;
+  } else if (method === 'Venmo') {
+    var venmo = document.getElementById('modal-venmo-id').value.trim();
+    if (!venmo) { alert('Please enter the Venmo ID.'); return; }
+    if (venmo.charAt(0) !== '@') venmo = '@' + venmo;
+    fullMethod = 'Venmo ' + venmo;
+  } else if (method === 'PayPal') {
+    var paypal = document.getElementById('modal-paypal-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paypal)) { alert('Please enter a valid PayPal email address.'); return; }
+    fullMethod = 'PayPal ' + paypal;
   }
   var note = document.getElementById('modal-note').value.trim();
-  if (method === 'Internet Transfer' && !note) { alert('Please enter the transfer reference or details.'); return; }
   var submitId = _reimburseId;
   document.getElementById('rpm-' + submitId).value = fullMethod;
   document.getElementById('rn-'  + submitId).value = note;
