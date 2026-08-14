@@ -62,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status           = $_POST['status']                    ?? 'pending';
     $notes            = trim($_POST['notes']               ?? '');
     $payment_method   = trim($_POST['payment_method']      ?? '');
-    $receipt_required = isset($_POST['receipt_required'])   ? 1 : 0;
     // Only admins/treasurers may re-attribute; everyone else is locked to their own ID
     $submitted_by = (is_admin() || is_treasurer())
         ? (int)($_POST['submitted_by'] ?? $_SESSION['user_id'] ?? 0)
@@ -107,6 +106,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_receipt = handle_receipt_upload($upload_key);
         if (!$new_receipt) $errors[] = 'Receipt upload failed. Use JPG, PNG or PDF under 10MB.';
     }
+    // A receipt is required on every purchase — either a new upload, or (on
+    // edit) one already on file from a previous save.
+    if (!$new_receipt && empty($p['receipt_filename'] ?? null)) {
+        $errors[] = 'A receipt is required.';
+    }
 
     // Block save if duplicate warning and not confirmed
     if ($dup_warning && !$confirmed_dup) {
@@ -127,8 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $old->execute([$id]);
             $old_status = $old->fetchColumn();
 
-            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,payment_method=?,receipt_required=?,updated_at=NOW() WHERE id=?')
-                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$payment_method,$receipt_required,$id]);
+            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,payment_method=?,updated_at=NOW() WHERE id=?')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$payment_method,$id]);
             flash('success','Purchase updated.');
 
             // Check budget thresholds (check both old and new event if event changed)
@@ -142,8 +146,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 notify_status_change($pdo, $updated->fetch(), $old_status, $status, current_user_name());
             }
         } else {
-            $pdo->prepare('INSERT INTO purchases (vendor,order_number,description,event,category,purchase_date,amount_pretax,amount_tax,amount_shipping,amount_total,receipt_filename,submitted_by,status,notes,payment_method,receipt_required) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes,$payment_method,$receipt_required]);
+            $pdo->prepare('INSERT INTO purchases (vendor,order_number,description,event,category,purchase_date,amount_pretax,amount_tax,amount_shipping,amount_total,receipt_filename,submitted_by,status,notes,payment_method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by ?: null,$status,$notes,$payment_method]);
             $new_id = (int)$pdo->lastInsertId();
             flash('success','Purchase added.');
 
@@ -330,7 +334,7 @@ if (!empty($real_errors)): ?>
         </div>
       </div>
       <div class="form-group">
-        <label>Receipt</label>
+        <label>Receipt *</label>
         <!-- Hidden inputs: camera (photo only) and file picker (photo or PDF) -->
         <input type="file" id="receipt-camera" name="receipt" accept="image/*" capture="environment" style="display:none" onchange="previewReceipt(this)">
         <input type="file" id="receipt-file"   name="receipt_file" accept="image/*,application/pdf" style="display:none" onchange="previewReceipt(this)">
@@ -358,13 +362,6 @@ if (!empty($real_errors)): ?>
       <div class="form-group">
         <label>Notes</label>
         <textarea name="notes" rows="3" placeholder="Any additional details…"><?= $v('notes') ?></textarea>
-      </div>
-      <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
-        <input type="checkbox" name="receipt_required" id="req_receipt" value="1" style="width:auto"
-               <?= !empty($p['receipt_required']) ? 'checked' : '' ?>>
-        <label for="req_receipt" style="font-size:.85rem;text-transform:none;letter-spacing:0;font-weight:400;color:#333;cursor:pointer;margin:0">
-          Receipt required before approval
-        </label>
       </div>
       <div class="form-group">
         <label>Payment Method</label>

@@ -184,9 +184,6 @@ $no_receipt_count = count(array_filter($all, fn($p) => empty($p['receipt_filenam
             <?php else: ?>
               <span class="no-receipt">None</span>
             <?php endif; ?>
-            <?php if ($p['receipt_required'] && empty($p['receipt_filename'])): ?>
-              <span class="no-receipt-badge" style="display:block;margin-top:.2rem">Required</span>
-            <?php endif; ?>
           </td>
         </tr>
         <?php endforeach; ?>

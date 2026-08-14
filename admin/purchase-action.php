@@ -51,8 +51,10 @@ if ($action === 'approve') {
             header('Location: purchases.php'); exit;
         }
     }
-    // Block approval if a receipt was marked required and none is on file
-    if (!empty($p['receipt_required']) && empty($p['receipt_filename'])) {
+    // Every purchase requires a receipt before it can be approved (the form
+    // requires one to submit at all now, but older purchases predating that
+    // rule may still be missing one).
+    if (empty($p['receipt_filename'])) {
         flash('error', 'This purchase requires a receipt before it can be approved. Upload one on the edit page first.');
         header('Location: purchase-form.php?id=' . $id); exit;
     }
