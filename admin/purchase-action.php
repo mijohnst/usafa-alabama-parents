@@ -68,7 +68,16 @@ if ($action === 'approve') {
     }
     $pdo->prepare('UPDATE purchases SET status = ?, approved_note = ?, updated_at = NOW() WHERE id = ?')
         ->execute(['approved', $note, $id]);
-    flash('success', 'Purchase approved. Treasurers have been notified.');
+    // TEMP DIAGNOSTIC — remove once the self-approval bypass is root-caused.
+    $debug = sprintf(
+        '[debug: submitted_by=%s submitted_by_role=%s submitted_by_officer_title=%s | approver_user_id=%s approver_session_role=%s]',
+        $p['submitted_by'] ?? 'null',
+        var_export($p['submitted_by_role'] ?? null, true),
+        var_export($p['submitted_by_officer_title'] ?? null, true),
+        $_SESSION['user_id'] ?? 'null',
+        var_export($_SESSION['role'] ?? null, true)
+    );
+    flash('success', 'Purchase approved. Treasurers have been notified. ' . $debug);
     $p['approved_note'] = $note;
     notify_approved($pdo, $p, current_user_name());
 
