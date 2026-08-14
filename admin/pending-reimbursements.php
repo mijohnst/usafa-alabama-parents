@@ -127,6 +127,10 @@ echo show_flash();
       <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">PayPal Email *</label>
       <input type="email" id="pr-paypal-email" placeholder="name@example.com" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
+    <div id="pr-cashapp-row" style="display:none;margin-bottom:.9rem">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Cashtag *</label>
+      <input type="text" id="pr-cashapp-tag" placeholder="$username" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
+    </div>
     <div style="margin-bottom:.9rem">
       <label id="pr-note-label" style="display:block;font-size:.78rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Note (optional)</label>
       <input type="text" id="pr-modal-note" placeholder="Optional note…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
@@ -141,9 +145,10 @@ echo show_flash();
 var _prId = null;
 function updatePrFields() {
   var m = document.getElementById('pr-modal-method').value;
-  document.getElementById('pr-check-row').style.display  = m === 'Check'  ? 'block' : 'none';
-  document.getElementById('pr-venmo-row').style.display  = m === 'Venmo'  ? 'block' : 'none';
-  document.getElementById('pr-paypal-row').style.display = m === 'PayPal' ? 'block' : 'none';
+  document.getElementById('pr-check-row').style.display   = m === 'Check'    ? 'block' : 'none';
+  document.getElementById('pr-venmo-row').style.display   = m === 'Venmo'    ? 'block' : 'none';
+  document.getElementById('pr-paypal-row').style.display  = m === 'PayPal'   ? 'block' : 'none';
+  document.getElementById('pr-cashapp-row').style.display = m === 'Cash App' ? 'block' : 'none';
 }
 function openPrModal(id, vendor, amount) {
   _prId = id;
@@ -152,6 +157,7 @@ function openPrModal(id, vendor, amount) {
   document.getElementById('pr-check-number').value = '';
   document.getElementById('pr-venmo-id').value = '';
   document.getElementById('pr-paypal-email').value = '';
+  document.getElementById('pr-cashapp-tag').value = '';
   document.getElementById('pr-modal-note').value = '';
   updatePrFields();
   document.getElementById('pr-modal').style.display = 'flex';
@@ -173,6 +179,11 @@ function confirmPrReimburse() {
     var paypal = document.getElementById('pr-paypal-email').value.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paypal)) { alert('Please enter a valid PayPal email address.'); return; }
     fullMethod = 'PayPal ' + paypal;
+  } else if (method === 'Cash App') {
+    var cashtag = document.getElementById('pr-cashapp-tag').value.trim();
+    if (!cashtag) { alert('Please enter the Cashtag.'); return; }
+    if (cashtag.charAt(0) !== '$') cashtag = '$' + cashtag;
+    fullMethod = 'Cash App ' + cashtag;
   }
   var prNote = document.getElementById('pr-modal-note').value.trim();
   var submitId = _prId;
