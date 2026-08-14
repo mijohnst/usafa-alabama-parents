@@ -17,7 +17,7 @@ if (!can_view_purchase($p)) { header('Location: purchases.php'); exit; }
 
 // Fetch club name / president from settings
 $setting = function(string $key) use ($pdo): string {
-    $r = $pdo->prepare("SELECT value FROM site_settings WHERE key_name=?");
+    $r = $pdo->prepare("SELECT setting_value FROM site_settings WHERE setting_key=?");
     $r->execute([$key]);
     return (string)($r->fetchColumn() ?: '');
 };
