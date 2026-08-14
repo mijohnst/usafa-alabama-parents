@@ -23,7 +23,7 @@ $finfo = finfo_open(FILEINFO_MIME_TYPE);
 $mime  = finfo_file($finfo, $file);
 finfo_close($finfo);
 
-$allowed_mime = ['image/jpeg','image/png','image/gif','application/pdf'];
+$allowed_mime = ['image/jpeg','image/png','image/gif','image/webp','image/heic','image/heif','application/pdf'];
 if (!in_array($mime, $allowed_mime)) { header('Location: purchases.php'); exit; }
 
 header('Content-Type: ' . $mime);

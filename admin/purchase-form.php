@@ -27,13 +27,16 @@ function handle_receipt_upload(string $key = 'receipt'): ?string {
     if (empty($_FILES[$key]['name'])) return null;
     $file = $_FILES[$key];
     if ($file['error'] !== UPLOAD_ERR_OK) return null;
-    $allowed = ['image/jpeg','image/png','image/gif','application/pdf'];
+    // Includes HEIC/HEIF since that's the default photo format on iPhones —
+    // a receipt photo taken via the camera capture button would otherwise
+    // get silently rejected on any iPhone that hasn't changed that setting.
+    $allowed = ['image/jpeg','image/png','image/gif','image/webp','image/heic','image/heif','application/pdf'];
     $finfo   = finfo_open(FILEINFO_MIME_TYPE);
     $mime    = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
     if (!in_array($mime, $allowed)) return null;
     if ($file['size'] > 10 * 1024 * 1024) return null; // 10MB max
-    $ext_map  = ['application/pdf'=>'pdf','image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
+    $ext_map  = ['application/pdf'=>'pdf','image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp','image/heic'=>'heic','image/heif'=>'heif'];
     $ext      = $ext_map[$mime] ?? 'jpg';
     $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
     $dest     = __DIR__ . '/receipts/' . $filename;
@@ -133,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $upload_key  = !empty($_FILES['receipt']['name']) ? 'receipt' : (!empty($_FILES['receipt_file']['name']) ? 'receipt_file' : null);
     if ($upload_key) {
         $new_receipt = handle_receipt_upload($upload_key);
-        if (!$new_receipt) $errors[] = 'Receipt upload failed. Use JPG, PNG or PDF under 10MB.';
+        if (!$new_receipt) $errors[] = 'Receipt upload failed. Use a photo (JPG, PNG, HEIC, WEBP, GIF) or PDF under 10MB.';
     }
     // A receipt is required on every purchase — either a new upload, or (on
     // edit) one already on file from a previous save.
@@ -500,7 +503,9 @@ function previewReceipt(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
   fn.querySelector('span').textContent = file.name;
-  if (file.type.startsWith('image/')) {
+  // HEIC/HEIF preview only renders in Safari — everywhere else an inline
+  // <img> just shows broken, so fall back to the filename display instead.
+  if (file.type.startsWith('image/') && file.type !== 'image/heic' && file.type !== 'image/heif') {
     var reader = new FileReader();
     reader.onload = function(e) { img.src = e.target.result; img.style.display='block'; fn.style.display='none'; };
     reader.readAsDataURL(file);
