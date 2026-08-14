@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status           = $_POST['status']                    ?? 'pending';
     $notes            = trim($_POST['notes']               ?? '');
     $payment_method   = trim($_POST['payment_method']      ?? '');
+    if ($payment_method === '') $errors[] = 'Payment Method is required.';
     // Venmo/PayPal fold their extra field into payment_method itself, same
     // format the "Mark as Reimbursed" modal already writes (e.g. "Venmo
     // @jsmith") — keeps every display of this field (receipts-by.php,
@@ -413,8 +414,8 @@ if (!empty($real_errors)): ?>
         }
       ?>
       <div class="form-group">
-        <label>Payment Method</label>
-        <select name="payment_method" id="pm_select" onchange="updatePmFields()">
+        <label>Payment Method *</label>
+        <select name="payment_method" id="pm_select" onchange="updatePmFields()" required>
           <?php foreach (PAYMENT_METHODS as $pm): ?>
             <option value="<?= h($pm) ?>" <?= $pm_selected===$pm?'selected':''?>>
               <?= $pm === '' ? '— select —' : h($pm) ?>
