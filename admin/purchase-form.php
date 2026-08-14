@@ -92,11 +92,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$date)        $errors[] = 'Date is required.';
     if ($pretax < 0)   $errors[] = 'Pre-tax amount cannot be negative.';
     if (!in_array($status, array_keys(PURCHASE_STATUSES))) $status = 'pending';
-    // Only treasurer/admin can set approved or reimbursed — block server-side regardless of form
+    // Status may only be changed by Treasurer/Admin — block server-side
+    // regardless of what the form rendered, in case of a tampered POST.
+    // (Normal transitions should go through the Approve/Reimburse buttons
+    // on purchase-action.php, which also enforce the receipt-required and
+    // President/VP cross-approval rules that a raw status write here would skip.)
     if (!is_treasurer() && !is_admin()) {
-        if ($status === 'reimbursed' || $status === 'approved') {
-            $status = $is_edit ? ($p['status'] ?? 'pending') : 'pending';
-        }
+        $status = $is_edit ? ($p['status'] ?? 'pending') : 'pending';
+    } elseif (!is_admin() && $status === 'approved') {
+        // Treasurer (non-admin) still can't jump straight to approved from here
+        $status = $is_edit ? ($p['status'] ?? 'pending') : 'pending';
     }
 
     // Accept from either camera or file picker input
@@ -309,17 +314,22 @@ if (!empty($real_errors)): ?>
         <div class="form-group">
           <label>Status</label>
           <?php
-          // Restrict status options by role — use workflow buttons for transitions
-          $allowed_statuses = PURCHASE_STATUSES;
-          if (!is_admin()) unset($allowed_statuses['approved']); // only admins can approve
-          if (is_member())  $allowed_statuses = [$cur_status => PURCHASE_STATUSES[$cur_status]]; // members can't change status
+          // Status only changes through the Approve/Reimburse workflow buttons
+          // (purchase-action.php) — those enforce the receipt-required check
+          // and the President/VP cross-approval rule. A raw dropdown here
+          // would let anyone who can edit the purchase bypass both, so only
+          // Treasurer/Admin get an editable one, for correcting mistakes.
+          $can_edit_status = is_treasurer() || is_admin();
+          if ($can_edit_status):
+              $allowed_statuses = PURCHASE_STATUSES;
+              if (!is_admin()) unset($allowed_statuses['approved']); // only admins can jump straight to approved
           ?>
-          <select name="status" <?= is_member()?'disabled':'' ?>>
+          <select name="status">
             <?php foreach ($allowed_statuses as $k => $v2): ?>
               <option value="<?= h($k) ?>" <?= $cur_status===$k?'selected':''?>><?= h($v2) ?></option>
             <?php endforeach; ?>
           </select>
-          <?php if (is_member()): ?>
+          <?php else: ?>
             <input type="hidden" name="status" value="<?= h($cur_status) ?>">
             <p style="font-size:.75rem;color:#9aa5b4;margin-top:.25rem">Status changes are handled by the admin workflow.</p>
           <?php endif; ?>
