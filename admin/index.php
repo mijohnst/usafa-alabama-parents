@@ -173,6 +173,21 @@ $new_this_month = (int)$pdo->query(
     "SELECT COUNT(*) FROM members WHERE archived = 0 AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
 )->fetchColumn();
 
+// Cadet gender split (for the summary card) — cadets with Gender left blank
+// count toward the roster total but not toward either percentage.
+$gender_rows = $pdo->query(
+    "SELECT cadet_gender, COUNT(*) as cnt FROM members
+     WHERE archived = 0 AND class_year <> 'Graduate' GROUP BY cadet_gender"
+)->fetchAll();
+$stat_male = $stat_female = 0;
+foreach ($gender_rows as $g) {
+    if ($g['cadet_gender'] === 'Male')   $stat_male   = (int)$g['cnt'];
+    if ($g['cadet_gender'] === 'Female') $stat_female = (int)$g['cnt'];
+}
+$stat_gender_known = $stat_male + $stat_female;
+$male_pct   = $stat_gender_known > 0 ? round($stat_male / $stat_gender_known * 100) : 0;
+$female_pct = $stat_gender_known > 0 ? 100 - $male_pct : 0;
+
 // Cadet records where First Name still has a space — likely an unsplit
 // "First Middle" value left over from before the name fields were separated.
 $needs_split_count = (int)$pdo->query(
@@ -291,7 +306,6 @@ if ($dup_count) $alerts[] = ['color'=>'#fde0e0','border'=>'#e57373','text'=>'#8a
     ['label'=>'Total Members',  'value'=>$stat_total,     'sub'=>'active roster',   'pct'=>100,      'color'=>'#002554'],
     ['label'=>'Dues Paid',      'value'=>$stat_paid,       'sub'=>membership_year(), 'pct'=>$dues_pct,'color'=>'#1b5e20'],
     ['label'=>'Dues Unpaid',    'value'=>$stat_unpaid,     'sub'=>'need to renew',   'pct'=>$active_total>0?round($stat_unpaid/$active_total*100):0,'color'=>'#c62828'],
-    ['label'=>'New This Month', 'value'=>$new_this_month,  'sub'=>date('F Y'),       'pct'=>$stat_total>0?min(round($new_this_month/$stat_total*100),100):0,'color'=>'#003594'],
   ];
   foreach ($summary_cards as $c): ?>
   <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0">
@@ -303,6 +317,16 @@ if ($dup_count) $alerts[] = ['color'=>'#fde0e0','border'=>'#e57373','text'=>'#8a
     </div>
   </div>
   <?php endforeach; ?>
+  <!-- Cadet gender split card -->
+  <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0">
+    <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Cadet Gender</div>
+    <div style="font-size:1.1rem;font-weight:700;line-height:1"><span style="color:#003594"><?= $male_pct ?>% M</span> <span style="color:#9aa5b4;font-weight:400">/</span> <span style="color:#A6192E"><?= $female_pct ?>% F</span></div>
+    <div style="font-size:.65rem;color:#9aa5b4"><?= $stat_male ?> male, <?= $stat_female ?> female<?= $stat_total > $stat_gender_known ? ', ' . ($stat_total - $stat_gender_known) . ' unset' : '' ?></div>
+    <div style="background:#e1e5eb;border-radius:99px;height:4px;overflow:hidden;display:flex">
+      <div style="height:100%;width:<?= $male_pct ?>%;background:#003594"></div>
+      <div style="height:100%;width:<?= $female_pct ?>%;background:#A6192E"></div>
+    </div>
+  </div>
   <!-- Dues progress card -->
   <div class="card" style="padding:.75rem 1rem;margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;min-width:0">
     <div style="font-size:.65rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.05em">Dues <?= h(membership_year()) ?></div>
