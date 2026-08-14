@@ -157,13 +157,6 @@ function current_user_name(): string {
     return $_SESSION['user_name'] ?? 'Unknown';
 }
 
-// 'President', 'VP', or '' — only meaningful when role is 'officer' (President
-// and VP otherwise share that one generic role). Lets purchase approval
-// enforce President <-> VP cross-approval; see admin/purchase-action.php.
-function current_officer_title(): string {
-    return $_SESSION['officer_title'] ?? '';
-}
-
 function require_admin(): void {
     require_login();
     if (!is_super_admin()) {

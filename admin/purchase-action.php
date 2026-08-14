@@ -46,7 +46,15 @@ if ($action === 'approve') {
     $submitter_title = $p['submitted_by_officer_title'] ?? '';
     if ($p['submitted_by_role'] === 'officer' && in_array($submitter_title, ['President', 'VP'], true) && !is_super_admin()) {
         $needed = $submitter_title === 'President' ? 'VP' : 'President';
-        if (current_officer_title() !== $needed) {
+        // Read fresh from the DB rather than trusting $_SESSION['officer_title']
+        // — that's only populated at login, so a title set/changed on this
+        // account after the current session started would otherwise be
+        // silently ignored, in either direction (wrongly blocking OR wrongly
+        // allowing a self-approval).
+        $approver_stmt = $pdo->prepare('SELECT officer_title FROM users WHERE id = ?');
+        $approver_stmt->execute([$_SESSION['user_id'] ?? 0]);
+        $approver_title = (string)($approver_stmt->fetchColumn() ?: '');
+        if ($approver_title !== $needed) {
             flash('error', "This purchase was submitted by the $submitter_title and must be approved by the $needed.");
             header('Location: purchases.php'); exit;
         }
