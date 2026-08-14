@@ -222,7 +222,7 @@ admin_header('Finance');
             <input type="hidden" name="note" id="rn-<?= (int)$p['id'] ?>">
             <input type="hidden" name="payment_method" id="rpm-<?= (int)$p['id'] ?>">
             <button type="button" class="btn btn-sm" style="background:#6a1b9a;color:#fff;white-space:nowrap"
-              onclick="openReimburseModal(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['vendor'])) ?>', '$<?= number_format($p['amount_total'],2) ?>')">
+              onclick="openReimburseModal(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['vendor'])) ?>', '$<?= number_format($p['amount_total'],2) ?>', '<?= h(addslashes($p['payment_method'] ?? '')) ?>')">
               💸 Submit Payment</button>
           </form>
           <?php elseif ($p['status']==='submitted' && is_treasurer()): ?>
@@ -318,14 +318,27 @@ function updateModalFields() {
   document.getElementById('modal-cashapp-row').style.display = m === 'Cash App' ? 'block' : 'none';
 }
 
-function openReimburseModal(id, vendor, amount) {
+// Splits a stored payment_method like "PayPal jsmith@x.com" back into its
+// method + sub-value, so the submitter's own choice (required at purchase
+// submission time) pre-fills here instead of the Treasurer having to look
+// it up and retype it.
+function parsePaymentMethod(stored) {
+  if (stored.indexOf('Check #') === 0)   return {method: 'Check',    value: stored.slice(7)};
+  if (stored.indexOf('Venmo ') === 0)    return {method: 'Venmo',    value: stored.slice(6)};
+  if (stored.indexOf('PayPal ') === 0)   return {method: 'PayPal',   value: stored.slice(7)};
+  if (stored.indexOf('Cash App ') === 0) return {method: 'Cash App', value: stored.slice(9)};
+  return {method: stored, value: ''};
+}
+
+function openReimburseModal(id, vendor, amount, storedMethod) {
   _reimburseId = id;
   document.getElementById('reimburse-modal-desc').textContent = vendor + ' — ' + amount;
-  document.getElementById('modal-payment-method').value = '';
-  document.getElementById('modal-check-number').value = '';
-  document.getElementById('modal-venmo-id').value = '';
-  document.getElementById('modal-paypal-email').value = '';
-  document.getElementById('modal-cashapp-tag').value = '';
+  var parsed = parsePaymentMethod(storedMethod || '');
+  document.getElementById('modal-payment-method').value = parsed.method;
+  document.getElementById('modal-check-number').value = parsed.method === 'Check'    ? parsed.value : '';
+  document.getElementById('modal-venmo-id').value      = parsed.method === 'Venmo'    ? parsed.value : '';
+  document.getElementById('modal-paypal-email').value  = parsed.method === 'PayPal'   ? parsed.value : '';
+  document.getElementById('modal-cashapp-tag').value   = parsed.method === 'Cash App' ? parsed.value : '';
   document.getElementById('modal-note').value = '';
   updateModalFields();
   document.getElementById('reimburse-modal').style.display = 'flex';

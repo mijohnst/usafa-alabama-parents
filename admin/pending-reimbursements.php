@@ -100,7 +100,7 @@ echo show_flash();
         <input type="hidden" name="note" id="rn-pr-<?= (int)$p['id'] ?>">
             <input type="hidden" name="payment_method" id="rpm-pr-<?= (int)$p['id'] ?>">
         <button type="button" class="btn btn-sm" style="background:#6a1b9a;color:#fff"
-          onclick="openPrModal(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['vendor'])) ?>', '$<?= number_format($p['amount_total'],2) ?>')">
+          onclick="openPrModal(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['vendor'])) ?>', '$<?= number_format($p['amount_total'],2) ?>', '<?= h(addslashes($p['payment_method'] ?? '')) ?>')">
           💸 Submit Payment
         </button>
       </form>
@@ -176,14 +176,23 @@ function updatePrFields() {
   document.getElementById('pr-paypal-row').style.display  = m === 'PayPal'   ? 'block' : 'none';
   document.getElementById('pr-cashapp-row').style.display = m === 'Cash App' ? 'block' : 'none';
 }
-function openPrModal(id, vendor, amount) {
+function parsePaymentMethod(stored) {
+  if (stored.indexOf('Check #') === 0)   return {method: 'Check',    value: stored.slice(7)};
+  if (stored.indexOf('Venmo ') === 0)    return {method: 'Venmo',    value: stored.slice(6)};
+  if (stored.indexOf('PayPal ') === 0)   return {method: 'PayPal',   value: stored.slice(7)};
+  if (stored.indexOf('Cash App ') === 0) return {method: 'Cash App', value: stored.slice(9)};
+  return {method: stored, value: ''};
+}
+
+function openPrModal(id, vendor, amount, storedMethod) {
   _prId = id;
   document.getElementById('pr-modal-desc').textContent = vendor + ' — ' + amount;
-  document.getElementById('pr-modal-method').value = '';
-  document.getElementById('pr-check-number').value = '';
-  document.getElementById('pr-venmo-id').value = '';
-  document.getElementById('pr-paypal-email').value = '';
-  document.getElementById('pr-cashapp-tag').value = '';
+  var parsed = parsePaymentMethod(storedMethod || '');
+  document.getElementById('pr-modal-method').value = parsed.method;
+  document.getElementById('pr-check-number').value = parsed.method === 'Check'    ? parsed.value : '';
+  document.getElementById('pr-venmo-id').value      = parsed.method === 'Venmo'    ? parsed.value : '';
+  document.getElementById('pr-paypal-email').value  = parsed.method === 'PayPal'   ? parsed.value : '';
+  document.getElementById('pr-cashapp-tag').value   = parsed.method === 'Cash App' ? parsed.value : '';
   document.getElementById('pr-modal-note').value = '';
   updatePrFields();
   document.getElementById('pr-modal').style.display = 'flex';
