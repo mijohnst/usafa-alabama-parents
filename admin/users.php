@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email        = trim($_POST['email']    ?? '');
         $uname        = trim($_POST['username'] ?? '');
         $role         = $_POST['role'] ?? 'viewer';
+        $officer_title = trim($_POST['officer_title'] ?? '');
         $pw           = $_POST['password']  ?? '';
         $pw2          = $_POST['password2'] ?? '';
         $member_id    = (int)($_POST['member_id'] ?? 0) ?: null;
@@ -26,6 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
         if (!$uname) $errors[] = 'Username is required.';
         if (!in_array($role, ['admin','tech','officer','secretary','treasurer','member'])) $errors[] = 'Invalid role.';
+        // Officer Title distinguishes President from VP within the shared
+        // 'officer' role — required so purchase approval can enforce
+        // President <-> VP cross-approval (see purchase-action.php).
+        if ($role === 'officer') {
+            if (!in_array($officer_title, ['President', 'VP'], true)) $errors[] = 'Select whether this Officer is the President or VP.';
+        } else {
+            $officer_title = '';
+        }
 
         // Check username/email uniqueness
         $dup_check = $pdo->prepare('SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?');
@@ -47,18 +56,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 if ($action === 'add') {
                     if ($send_invite) {
-                        $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active,member_id,invite_token,invite_expires) VALUES (?,?,?,?,?,1,?,?,DATE_ADD(NOW(), INTERVAL 14 DAY))')
-                            ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id, $invite_token]);
+                        $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,officer_title,active,member_id,invite_token,invite_expires) VALUES (?,?,?,?,?,?,1,?,?,DATE_ADD(NOW(), INTERVAL 14 DAY))')
+                            ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $officer_title, $member_id, $invite_token]);
                     } else {
-                        $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,active,member_id) VALUES (?,?,?,?,?,1,?)')
-                            ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id]);
+                        $pdo->prepare('INSERT INTO users (name,email,username,password_hash,role,officer_title,active,member_id) VALUES (?,?,?,?,?,?,1,?)')
+                            ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $officer_title, $member_id]);
                     }
                 } elseif ($pw) {
-                    $pdo->prepare('UPDATE users SET name=?,email=?,username=?,password_hash=?,role=?,member_id=? WHERE id=?')
-                        ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $member_id, $id]);
+                    $pdo->prepare('UPDATE users SET name=?,email=?,username=?,password_hash=?,role=?,officer_title=?,member_id=? WHERE id=?')
+                        ->execute([$name, $email, $uname, password_hash($pw, PASSWORD_BCRYPT), $role, $officer_title, $member_id, $id]);
                 } else {
-                    $pdo->prepare('UPDATE users SET name=?,email=?,username=?,role=?,member_id=? WHERE id=?')
-                        ->execute([$name, $email, $uname, $role, $member_id, $id]);
+                    $pdo->prepare('UPDATE users SET name=?,email=?,username=?,role=?,officer_title=?,member_id=? WHERE id=?')
+                        ->execute([$name, $email, $uname, $role, $officer_title, $member_id, $id]);
                 }
             } catch (PDOException $e) {
                 // users.member_id migration not run yet on this install — save
@@ -231,10 +240,18 @@ echo show_flash();
     </div>
     <div class="form-group">
       <label>Role *</label>
-      <select name="role">
+      <select name="role" id="role_select" onchange="document.getElementById('officer_title_group').style.display = this.value === 'officer' ? '' : 'none';">
         <?php foreach ($role_labels as $r => $label): ?>
           <option value="<?= $r ?>" <?= ($edit_user['role'] ?? 'viewer')===$r?'selected':''?>><?= $label ?></option>
         <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="form-group" id="officer_title_group" style="display:<?= ($edit_user['role'] ?? '')==='officer'?'':'none' ?>">
+      <label>Officer Title * <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">President and VP must approve each other's purchases</span></label>
+      <select name="officer_title">
+        <option value="">— Select —</option>
+        <option value="President" <?= ($edit_user['officer_title'] ?? '')==='President'?'selected':''?>>President</option>
+        <option value="VP" <?= ($edit_user['officer_title'] ?? '')==='VP'?'selected':''?>>VP</option>
       </select>
     </div>
     <div class="form-group">
@@ -284,7 +301,7 @@ echo show_flash();
         <div class="user-avatar"><?= h(mb_strtoupper(mb_substr($u['name'], 0, 1))) ?></div>
       <?php endif; ?>
       <div style="min-width:0">
-        <div class="user-role" style="color:<?= $role_colors[$u['role']] ?>"><?= $role_labels[$u['role']] ?></div>
+        <div class="user-role" style="color:<?= $role_colors[$u['role']] ?>"><?= $role_labels[$u['role']] ?><?= !empty($u['officer_title']) ? ' — ' . h($u['officer_title']) : '' ?></div>
         <div class="user-name"><?= h($u['name']) ?> <?= !$u['active'] ? '<span style="font-size:.7rem;color:#c62828">(Inactive)</span>' : '' ?></div>
         <div class="user-meta">
           @<?= h($u['username']) ?><br>

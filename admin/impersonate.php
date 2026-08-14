@@ -22,7 +22,7 @@ if ($action === 'start') {
     }
 
     $target_id = (int)($_POST['user_id'] ?? 0);
-    $stmt = $pdo->prepare('SELECT id, name, email, role, active FROM users WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, name, email, role, officer_title, active FROM users WHERE id = ?');
     $stmt->execute([$target_id]);
     $target = $stmt->fetch();
 
@@ -36,9 +36,11 @@ if ($action === 'start') {
         $_SESSION['impersonator_id']    = $_SESSION['user_id'];
         $_SESSION['impersonator_name']  = $_SESSION['user_name'];
         $_SESSION['impersonator_email'] = $_SESSION['user_email'];
-        $_SESSION['impersonator_role']  = $_SESSION['role'];
-        $_SESSION['user_id']    = $target['id'];
-        $_SESSION['role']       = $target['role'];
+        $_SESSION['impersonator_role']          = $_SESSION['role'];
+        $_SESSION['impersonator_officer_title'] = $_SESSION['officer_title'] ?? '';
+        $_SESSION['user_id']       = $target['id'];
+        $_SESSION['role']          = $target['role'];
+        $_SESSION['officer_title'] = $target['officer_title'] ?? '';
         $_SESSION['user_name']  = $target['name'];
         $_SESSION['user_email'] = $target['email'];
         error_log('impersonate: user id=' . $_SESSION['impersonator_id']
@@ -54,8 +56,9 @@ if ($action === 'start') {
         $_SESSION['user_id']    = $_SESSION['impersonator_id'];
         $_SESSION['user_name']  = $_SESSION['impersonator_name'];
         $_SESSION['user_email'] = $_SESSION['impersonator_email'];
-        $_SESSION['role']       = $_SESSION['impersonator_role'];
-        unset($_SESSION['impersonator_id'], $_SESSION['impersonator_name'], $_SESSION['impersonator_email'], $_SESSION['impersonator_role']);
+        $_SESSION['role']          = $_SESSION['impersonator_role'];
+        $_SESSION['officer_title'] = $_SESSION['impersonator_officer_title'] ?? '';
+        unset($_SESSION['impersonator_id'], $_SESSION['impersonator_name'], $_SESSION['impersonator_email'], $_SESSION['impersonator_role'], $_SESSION['impersonator_officer_title']);
         flash('success', 'Back to your account.');
     }
     header('Location: users.php'); exit;

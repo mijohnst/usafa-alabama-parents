@@ -18,7 +18,8 @@ if (!$id || !in_array($action, ['approve','reimburse'])) {
 }
 
 $stmt = $pdo->prepare(
-    'SELECT p.*, u.name as submitted_by_name, u.email as submitted_by_email
+    'SELECT p.*, u.name as submitted_by_name, u.email as submitted_by_email,
+            u.role as submitted_by_role, u.officer_title as submitted_by_officer_title
      FROM purchases p LEFT JOIN users u ON p.submitted_by = u.id WHERE p.id = ?'
 );
 $stmt->execute([$id]);
@@ -35,6 +36,20 @@ if ($action === 'approve') {
     if ($p['status'] !== 'pending') {
         flash('error', 'Only pending purchases can be approved.');
         header('Location: purchases.php'); exit;
+    }
+    // President <-> VP cross-approval: President and VP share the generic
+    // 'officer' role, so nothing else distinguishes them. If the submitter
+    // is tagged as one of the two, only their counterpart (or an Admin/Tech
+    // override) may approve — closes the self-approval loophole for those
+    // two board seats. Submitters without a title set (legacy accounts, or
+    // non-officer roles) fall back to the plain is_club_officer() check above.
+    $submitter_title = $p['submitted_by_officer_title'] ?? '';
+    if ($p['submitted_by_role'] === 'officer' && in_array($submitter_title, ['President', 'VP'], true) && !is_super_admin()) {
+        $needed = $submitter_title === 'President' ? 'VP' : 'President';
+        if (current_officer_title() !== $needed) {
+            flash('error', "This purchase was submitted by the $submitter_title and must be approved by the $needed.");
+            header('Location: purchases.php'); exit;
+        }
     }
     // Block approval if a receipt was marked required and none is on file
     if (!empty($p['receipt_required']) && empty($p['receipt_filename'])) {

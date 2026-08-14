@@ -43,7 +43,8 @@ if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootst
             }
             session_regenerate_id(true);
             $_SESSION['logged_in']  = true;
-            $_SESSION['role']       = $user['role'];
+            $_SESSION['role']          = $user['role'];
+            $_SESSION['officer_title'] = $user['officer_title'] ?? '';
             $_SESSION['user_id']    = $user['id'];
             $_SESSION['user_name']  = $user['name'];
             $_SESSION['user_email'] = $user['email'];
