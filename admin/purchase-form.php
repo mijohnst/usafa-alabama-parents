@@ -186,6 +186,7 @@ admin_header($title);
   <h1><?= $title ?></h1>
   <a href="purchases.php" class="btn btn-secondary">← Back</a>
 </div>
+<?= show_flash() ?>
 
 <?php
 $real_errors = array_filter($errors, fn($e) => $e !== '__dup__');

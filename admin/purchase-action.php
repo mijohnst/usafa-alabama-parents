@@ -36,10 +36,10 @@ if ($action === 'approve') {
         flash('error', 'Only pending purchases can be approved.');
         header('Location: purchases.php'); exit;
     }
-    // Warn if no receipt and receipt was marked required
+    // Block approval if a receipt was marked required and none is on file
     if (!empty($p['receipt_required']) && empty($p['receipt_filename'])) {
-        // Allow but flag in note
-        $note = trim('⚠️ Approved without receipt. ' . $note);
+        flash('error', 'This purchase requires a receipt before it can be approved. Upload one on the edit page first.');
+        header('Location: purchase-form.php?id=' . $id); exit;
     }
     $pdo->prepare('UPDATE purchases SET status = ?, approved_note = ?, updated_at = NOW() WHERE id = ?')
         ->execute(['approved', $note, $id]);
