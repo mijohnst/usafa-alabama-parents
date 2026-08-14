@@ -37,7 +37,7 @@ $brows = $bstmt->fetchAll();
 foreach ($brows as $b) $budgets[$b['event']] = (float)$b['budget'];
 
 $months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-$status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','reimbursed'=>'#003594'];
+$status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','submitted'=>'#6a1b9a','paid'=>'#003594'];
 
 admin_header('Finance Report');
 ?>

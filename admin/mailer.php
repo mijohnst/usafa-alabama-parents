@@ -472,7 +472,7 @@ function notify_new_purchase(PDO $pdo, array $purchase, string $submitter_name):
     }
 }
 
-// ── Notify all treasurers that a purchase is approved & needs reimbursement ──
+// ── Notify all treasurers that a purchase is approved & needs payment submitted ──
 function notify_approved(PDO $pdo, array $purchase, string $approved_by): void {
     try {
         $recipients = $pdo->query(
@@ -488,11 +488,11 @@ function notify_approved(PDO $pdo, array $purchase, string $approved_by): void {
     $date = date('F j, Y', strtotime($purchase['purchase_date']));
     $url  = ADMIN_URL . 'purchase-form.php?id=' . (int)$purchase['id'];
 
-    $subject = "Action Required — Reimburse Approved Purchase: {$purchase['vendor']} $amt";
+    $subject = "Action Required — Submit Payment for Approved Purchase: {$purchase['vendor']} $amt";
     $body    = CLUB_NAME . "\n"
-             . "Purchase Approved — Reimbursement Needed\n"
+             . "Purchase Approved — Payment Needed\n"
              . str_repeat('─', 48) . "\n\n"
-             . "A purchase has been approved and is ready for reimbursement.\n\n"
+             . "A purchase has been approved and is ready for payment to be submitted.\n\n"
              . "Approved by:  $approved_by\n"
              . "Submitted by: " . ($purchase['submitted_by_name'] ?? 'Unknown') . "\n"
              . "Date:         $date\n"
@@ -508,7 +508,7 @@ function notify_approved(PDO $pdo, array $purchase, string $approved_by): void {
     if (!empty($purchase['amount_shipping']) && $purchase['amount_shipping'] > 0)
         $body .= "  Shipping: \${$purchase['amount_shipping']}\n";
     $body   .= "  Total:    $amt\n\n"
-             . "Please process the reimbursement and mark as Reimbursed:\n$url\n\n"
+             . "Please submit payment and mark as Submitted:\n$url\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
 
     foreach ($recipients as $r) {
@@ -516,8 +516,8 @@ function notify_approved(PDO $pdo, array $purchase, string $approved_by): void {
     }
 }
 
-// ── Notify submitter their reimbursement has been processed ──────────────
-function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): void {
+// ── Notify submitter their payment has been sent (Submitted step) ────────
+function notify_submitted(PDO $pdo, array $purchase, string $processed_by): void {
     // Use email already fetched via JOIN in purchase-action.php if available
     $email = $purchase['submitted_by_email'] ?? '';
     $name  = $purchase['submitted_by_name']  ?? '';
@@ -525,14 +525,64 @@ function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): voi
     // Fallback: query users table directly
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         if (empty($purchase['submitted_by'])) {
-            error_log('mailer: notify_reimbursed — no submitted_by on purchase ' . ($purchase['id'] ?? '?'));
+            error_log('mailer: notify_submitted — no submitted_by on purchase ' . ($purchase['id'] ?? '?'));
             return;
         }
         $submitter = $pdo->prepare('SELECT name, email FROM users WHERE id = ?');
         $submitter->execute([$purchase['submitted_by']]);
         $user = $submitter->fetch();
         if (!$user || !$user['email']) {
-            error_log('mailer: notify_reimbursed — could not find user ' . $purchase['submitted_by']);
+            error_log('mailer: notify_submitted — could not find user ' . $purchase['submitted_by']);
+            return;
+        }
+        $email = $user['email'];
+        $name  = $user['name'];
+    }
+
+    $amt  = '$' . number_format($purchase['amount_total'], 2);
+    $date = date('F j, Y', strtotime($purchase['purchase_date']));
+    $url  = ADMIN_URL . 'purchase-form.php?id=' . (int)$purchase['id'];
+    $method = trim((string)($purchase['payment_method'] ?? ''));
+
+    $subject = "Payment Submitted: {$purchase['vendor']} $amt";
+    $body    = CLUB_NAME . "\n"
+             . "Your Payment Has Been Submitted\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "Hi $name,\n\n"
+             . "Your payment has been submitted by $processed_by"
+             . ($method ? " via $method" : '') . ".\n\n"
+             . "Purchase Details:\n"
+             . "  Date:        $date\n"
+             . "  Vendor:      {$purchase['vendor']}\n"
+             . "  Description: {$purchase['description']}\n"
+             . "  Amount:      $amt\n\n"
+             . "You'll receive a final confirmation once the payment is received.\n"
+             . "Please allow time for delivery. If you have questions,\n"
+             . "contact your club treasurer.\n\n"
+             . "View record:  $url\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
+
+    $sent = send_notification($email, $subject, $body);
+    if (!$sent) {
+        error_log("mailer: notify_submitted — mail() returned false for email='$email' purchase_id=" . ($purchase['id'] ?? '?'));
+    }
+}
+
+// ── Notify submitter their payment is confirmed received (Paid step) ─────
+function notify_paid(PDO $pdo, array $purchase, string $confirmed_by): void {
+    $email = $purchase['submitted_by_email'] ?? '';
+    $name  = $purchase['submitted_by_name']  ?? '';
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (empty($purchase['submitted_by'])) {
+            error_log('mailer: notify_paid — no submitted_by on purchase ' . ($purchase['id'] ?? '?'));
+            return;
+        }
+        $submitter = $pdo->prepare('SELECT name, email FROM users WHERE id = ?');
+        $submitter->execute([$purchase['submitted_by']]);
+        $user = $submitter->fetch();
+        if (!$user || !$user['email']) {
+            error_log('mailer: notify_paid — could not find user ' . $purchase['submitted_by']);
             return;
         }
         $email = $user['email'];
@@ -543,25 +593,25 @@ function notify_reimbursed(PDO $pdo, array $purchase, string $processed_by): voi
     $date = date('F j, Y', strtotime($purchase['purchase_date']));
     $url  = ADMIN_URL . 'purchase-form.php?id=' . (int)$purchase['id'];
 
-    $subject = "Reimbursement Processed: {$purchase['vendor']} $amt";
+    $subject = "Payment Confirmed: {$purchase['vendor']} $amt";
     $body    = CLUB_NAME . "\n"
-             . "Your Reimbursement Has Been Processed\n"
+             . "Your Payment Is Confirmed\n"
              . str_repeat('─', 48) . "\n\n"
              . "Hi $name,\n\n"
-             . "Your reimbursement has been processed by $processed_by.\n\n"
+             . "This confirms your reimbursement has been received, confirmed by $confirmed_by.\n\n"
              . "Purchase Details:\n"
              . "  Date:        $date\n"
              . "  Vendor:      {$purchase['vendor']}\n"
              . "  Description: {$purchase['description']}\n"
              . "  Amount:      $amt\n\n"
-             . "Please allow time for payment delivery. If you have questions,\n"
+             . "Thank you for supporting the club! If you have questions,\n"
              . "contact your club treasurer.\n\n"
              . "View record:  $url\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
 
     $sent = send_notification($email, $subject, $body);
     if (!$sent) {
-        error_log("mailer: notify_reimbursed — mail() returned false for email='$email' purchase_id=" . ($purchase['id'] ?? '?'));
+        error_log("mailer: notify_paid — mail() returned false for email='$email' purchase_id=" . ($purchase['id'] ?? '?'));
     }
 }
 
@@ -685,7 +735,7 @@ function notify_status_change(PDO $pdo, array $purchase, string $old_status, str
     $user = $submitter->fetch();
     if (!$user || !$user['email']) return;
 
-    $status_labels = ['pending'=>'Pending','approved'=>'Approved','reimbursed'=>'Reimbursed'];
+    $status_labels = ['pending'=>'Pending','approved'=>'Approved','submitted'=>'Submitted','paid'=>'Paid'];
     $old_label = $status_labels[$old_status] ?? $old_status;
     $new_label = $status_labels[$new_status] ?? $new_status;
     $amt  = '$' . number_format($purchase['amount_total'], 2);
@@ -708,8 +758,10 @@ function notify_status_change(PDO $pdo, array $purchase, string $old_status, str
 
     if ($new_status === 'approved')
         $body .= "Your purchase has been approved. Please retain your receipt for records.\n\n";
-    elseif ($new_status === 'reimbursed')
-        $body .= "Your reimbursement has been processed. Please allow time for payment delivery.\n\n";
+    elseif ($new_status === 'submitted')
+        $body .= "Your payment has been submitted. Please allow time for delivery.\n\n";
+    elseif ($new_status === 'paid')
+        $body .= "Your payment is confirmed received. Thank you!\n\n";
 
     $body .= "View purchase:  $url\n\n"
            . str_repeat('─', 48) . "\n"

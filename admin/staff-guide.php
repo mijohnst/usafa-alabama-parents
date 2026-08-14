@@ -140,9 +140,10 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
 .flow-step .fs-label{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--silver);margin-bottom:.3rem}
 .flow-step .fs-name{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:.3rem}
 .flow-step .fs-who{font-size:.7rem;color:var(--text-muted)}
-.fs-pending  {border-top:3px solid #E67E22}
-.fs-approved {border-top:3px solid #2980B9}
-.fs-reimb    {border-top:3px solid #27AE60}
+.fs-pending   {border-top:3px solid #E67E22}
+.fs-approved  {border-top:3px solid #2980B9}
+.fs-submitted {border-top:3px solid #8E44AD}
+.fs-paid      {border-top:3px solid #27AE60}
 
 /* ── Highlight box ── */
 .hbox{background:rgba(162,25,46,.07);border:1px solid rgba(162,25,46,.2);border-left:3px solid var(--crimson);padding:.7rem 1rem;font-size:.8rem;color:var(--text-muted);margin-top:.75rem;line-height:1.55}
@@ -420,7 +421,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li><strong>Attach a receipt</strong> — photo from your phone camera or uploaded file (JPG, PNG, PDF up to 10MB)</li>
         <li>Purchases that look similar to a recent entry will trigger a <strong>duplicate warning</strong> before saving</li>
         <li>All purchases start as <strong>Pending</strong> until an Officer reviews and approves them</li>
-        <li>Once approved, the Treasurer pays the member and marks the purchase <strong>Reimbursed</strong></li>
+        <li>Once approved, the Treasurer submits payment (Check/Venmo/PayPal/Cash App) and marks it <strong>Submitted</strong></li>
+        <li>Once the member confirms receipt, the Treasurer marks it <strong>Paid</strong> — final confirmation</li>
         <li>A plain Member can only see and edit their own submissions</li>
         <li>Officers and Secretary can <strong>view</strong> every purchase for oversight, but can still only <strong>edit</strong> their own — Treasurer and Tech Support can edit any</li>
       </ul>
@@ -450,10 +452,15 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <p class="fs-name">Approved</p>
       <p class="fs-who">Officer reviews and approves</p>
     </div>
-    <div class="flow-step fs-reimb">
+    <div class="flow-step fs-submitted">
       <p class="fs-label">Step 3</p>
-      <p class="fs-name">Reimbursed</p>
-      <p class="fs-who">Treasurer pays member and marks complete</p>
+      <p class="fs-name">Submitted</p>
+      <p class="fs-who">Treasurer submits payment to member</p>
+    </div>
+    <div class="flow-step fs-paid">
+      <p class="fs-label">Step 4</p>
+      <p class="fs-name">Paid</p>
+      <p class="fs-who">Treasurer confirms payment received</p>
     </div>
   </div>
   <div class="shot-strip">

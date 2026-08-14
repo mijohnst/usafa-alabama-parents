@@ -12,7 +12,7 @@ $note           = trim($_POST['note']            ?? '');
 $payment_method = trim($_POST['payment_method']  ?? '');
 $pdo    = get_pdo();
 
-if (!$id || !in_array($action, ['approve','reimburse'])) {
+if (!$id || !in_array($action, ['approve','submit','paid'])) {
     flash('error', 'Invalid request.');
     header('Location: purchases.php'); exit;
 }
@@ -64,21 +64,40 @@ if ($action === 'approve') {
     $p['approved_note'] = $note;
     notify_approved($pdo, $p, current_user_name());
 
-} elseif ($action === 'reimburse') {
-    // Treasurer only can mark reimbursed
+} elseif ($action === 'submit') {
+    // Treasurer only can submit payment
     if (!is_treasurer()) {
-        flash('error', 'Only the treasurer can mark purchases as reimbursed.');
+        flash('error', 'Only the treasurer can submit payment for purchases.');
         header('Location: purchases.php'); exit;
     }
     if ($p['status'] !== 'approved') {
-        flash('error', 'Only approved purchases can be marked as reimbursed.');
+        flash('error', 'Only approved purchases can have payment submitted.');
         header('Location: purchases.php'); exit;
     }
+    // reimbursed_note is the pre-4-step-workflow column name — still holds
+    // this step's note (how/when payment was sent), see migrate_add_purchase_paid_step.sql.
     $pdo->prepare('UPDATE purchases SET status = ?, reimbursed_note = ?, payment_method = ?, updated_at = NOW() WHERE id = ?')
-        ->execute(['reimbursed', $note, $payment_method, $id]);
-    flash('success', 'Purchase marked as reimbursed. Submitter has been notified.');
+        ->execute(['submitted', $note, $payment_method, $id]);
+    flash('success', 'Payment submitted. Submitter has been notified.');
     $p['reimbursed_note'] = $note;
-    notify_reimbursed($pdo, $p, current_user_name());
+    $p['payment_method']  = $payment_method;
+    notify_submitted($pdo, $p, current_user_name());
+
+} elseif ($action === 'paid') {
+    // Treasurer only can confirm payment received
+    if (!is_treasurer()) {
+        flash('error', 'Only the treasurer can mark purchases as paid.');
+        header('Location: purchases.php'); exit;
+    }
+    if ($p['status'] !== 'submitted') {
+        flash('error', 'Only purchases with payment submitted can be marked as paid.');
+        header('Location: purchases.php'); exit;
+    }
+    $pdo->prepare('UPDATE purchases SET status = ?, paid_note = ?, paid_at = NOW(), updated_at = NOW() WHERE id = ?')
+        ->execute(['paid', $note, $id]);
+    flash('success', 'Purchase marked as paid. Submitter has been notified.');
+    $p['paid_note'] = $note;
+    notify_paid($pdo, $p, current_user_name());
 }
 
 header('Location: purchases.php');

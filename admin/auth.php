@@ -416,7 +416,7 @@ const TICKET_STATUSES   = ['open'=>'Open','in_progress'=>'In Progress','resolved
 const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];
 const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
 const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Birthday / Gift', 'General Operations', 'Other'];
-const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'reimbursed' => 'Reimbursed'];
+const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'submitted' => 'Submitted', 'paid' => 'Paid'];
 // 2031 is deliberately absent: the class that will become 2031 is still at
 // Prep School and hasn't matriculated yet, so "2031" and "Prep School"
 // would otherwise represent the exact same cohort under two labels.

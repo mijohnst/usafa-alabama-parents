@@ -7,7 +7,7 @@ $pdo = get_pdo();
 $by     = ($_GET['by']     ?? 'event') === 'vendor' ? 'vendor' : 'event';
 $year   = (int)($_GET['year']   ?? date('Y'));
 $status = $_GET['status'] ?? '';
-if (!in_array($status, ['','pending','approved','reimbursed'])) $status = '';
+if (!in_array($status, ['','pending','approved','submitted','paid'])) $status = '';
 
 // Available years
 $years = $pdo->query("SELECT DISTINCT YEAR(purchase_date) y FROM purchases ORDER BY y DESC")->fetchAll(PDO::FETCH_COLUMN);
@@ -39,7 +39,7 @@ foreach ($all as $p) {
 }
 ksort($groups);
 
-$status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','reimbursed'=>'#003594'];
+$status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','submitted'=>'#6a1b9a','paid'=>'#003594'];
 
 admin_header('Receipts by ' . ucfirst($by));
 ?>
@@ -103,9 +103,10 @@ table.rb-table{width:100%;border-collapse:collapse;font-size:.82rem}
     <label style="font-size:.72rem">Status</label>
     <select name="status" onchange="this.form.submit()" style="padding:.35rem .55rem;font-size:.85rem">
       <option value=""      <?= $status===''           ?'selected':'' ?>>All statuses</option>
-      <option value="pending"    <?= $status==='pending'   ?'selected':'' ?>>Pending</option>
-      <option value="approved"   <?= $status==='approved'  ?'selected':'' ?>>Approved</option>
-      <option value="reimbursed" <?= $status==='reimbursed'?'selected':'' ?>>Reimbursed</option>
+      <option value="pending"   <?= $status==='pending'  ?'selected':'' ?>>Pending</option>
+      <option value="approved"  <?= $status==='approved' ?'selected':'' ?>>Approved</option>
+      <option value="submitted" <?= $status==='submitted'?'selected':'' ?>>Submitted</option>
+      <option value="paid"      <?= $status==='paid'     ?'selected':'' ?>>Paid</option>
     </select>
   </div>
   <noscript><button type="submit" class="btn btn-secondary btn-sm">Filter</button></noscript>

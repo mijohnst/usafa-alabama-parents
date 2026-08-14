@@ -315,7 +315,7 @@ if (!empty($real_errors)): ?>
 
     <fieldset><legend>Receipt &amp; Status</legend>
       <?php $cur_status = $p['status'] ?? 'pending';
-            $status_steps = ['pending'=>0,'approved'=>1,'reimbursed'=>2]; ?>
+            $status_steps = ['pending'=>0,'approved'=>1,'submitted'=>2,'paid'=>3]; ?>
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
         <?php foreach (PURCHASE_STATUSES as $k => $label):
           $step = $status_steps[$k];
@@ -448,7 +448,7 @@ if (!empty($real_errors)): ?>
       </script>
     </fieldset>
 
-    <?php if ($is_edit && (!empty($p['approved_note']) || !empty($p['reimbursed_note']))): ?>
+    <?php if ($is_edit && (!empty($p['approved_note']) || !empty($p['reimbursed_note']) || !empty($p['paid_note']))): ?>
     <fieldset><legend>Workflow Notes</legend>
       <?php if (!empty($p['approved_note'])): ?>
       <div style="background:#e8f5e9;border-left:3px solid #4caf50;padding:.6rem .9rem;border-radius:4px;margin-bottom:.5rem;font-size:.85rem">
@@ -456,8 +456,13 @@ if (!empty($real_errors)): ?>
       </div>
       <?php endif; ?>
       <?php if (!empty($p['reimbursed_note'])): ?>
+      <div style="background:#f3e5f5;border-left:3px solid #6a1b9a;padding:.6rem .9rem;border-radius:4px;margin-bottom:.5rem;font-size:.85rem">
+        <strong style="color:#6a1b9a">Submitted note:</strong> <?= h($p['reimbursed_note']) ?>
+      </div>
+      <?php endif; ?>
+      <?php if (!empty($p['paid_note'])): ?>
       <div style="background:#e3f2fd;border-left:3px solid #2196f3;padding:.6rem .9rem;border-radius:4px;font-size:.85rem">
-        <strong style="color:#003594">Reimbursement note:</strong> <?= h($p['reimbursed_note']) ?>
+        <strong style="color:#003594">Paid note:</strong> <?= h($p['paid_note']) ?>
       </div>
       <?php endif; ?>
     </fieldset>

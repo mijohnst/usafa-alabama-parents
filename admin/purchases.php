@@ -3,7 +3,7 @@ require_once __DIR__ . '/auth.php';
 require_finance();
 $pdo = get_pdo();
 
-$pending_count = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status='approved'")->fetchColumn();
+$pending_count = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status IN ('approved','submitted')")->fetchColumn();
 $filter_status   = $_GET['status']   ?? '';
 $filter_category = $_GET['category'] ?? '';
 $filter_event    = $_GET['event']    ?? '';
@@ -55,7 +55,7 @@ if (isset($_GET['export'])) {
     fclose($out); exit;
 }
 
-$status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','reimbursed'=>'#003594'];
+$status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','submitted'=>'#6a1b9a','paid'=>'#003594'];
 
 admin_header('Finance');
 ?>
@@ -77,7 +77,7 @@ admin_header('Finance');
     <a href="year-end.php" class="btn btn-secondary">📋 Year-End</a>
     <?php if (is_treasurer()): ?>
     <a href="pending-reimbursements.php" class="btn btn-secondary" style="<?= $pending_count>0?'background:#e3f2fd;border-color:#90caf9':'' ?>">
-      💰 Reimburse<?= $pending_count>0?" ($pending_count)":" (0)" ?>
+      💰 Payments<?= $pending_count>0?" ($pending_count)":" (0)" ?>
     </a>
     <?php endif; ?>
     <?php if (is_admin() || is_treasurer()): ?>
@@ -218,12 +218,21 @@ admin_header('Finance');
           <form id="rf-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
-            <input type="hidden" name="action" value="reimburse">
+            <input type="hidden" name="action" value="submit">
             <input type="hidden" name="note" id="rn-<?= (int)$p['id'] ?>">
             <input type="hidden" name="payment_method" id="rpm-<?= (int)$p['id'] ?>">
-            <button type="button" class="btn btn-sm" style="background:#003594;color:#fff;white-space:nowrap"
+            <button type="button" class="btn btn-sm" style="background:#6a1b9a;color:#fff;white-space:nowrap"
               onclick="openReimburseModal(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['vendor'])) ?>', '$<?= number_format($p['amount_total'],2) ?>')">
-              💰 Reimburse</button>
+              💸 Submit Payment</button>
+          </form>
+          <?php elseif ($p['status']==='submitted' && is_treasurer()): ?>
+          <form id="pf-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="paid">
+            <input type="hidden" name="note" id="pn-<?= (int)$p['id'] ?>">
+            <button type="button" class="btn btn-sm" style="background:#003594;color:#fff;white-space:nowrap"
+              onclick="doAction('pf-<?= (int)$p['id'] ?>','pn-<?= (int)$p['id'] ?>','Note (optional):','Confirm this purchase has been paid?')">✓ Mark Paid</button>
           </form>
           <?php endif; ?>
           <?php if (is_treasurer()): ?>
@@ -261,7 +270,7 @@ admin_header('Finance');
 <!-- Reimburse modal -->
 <div id="reimburse-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);padding:1.75rem;max-width:420px;width:90%;margin:1rem">
-    <h2 style="font-size:1rem;color:#002554;margin-bottom:.25rem">Mark as Reimbursed</h2>
+    <h2 style="font-size:1rem;color:#002554;margin-bottom:.25rem">Submit Payment</h2>
     <p id="reimburse-modal-desc" style="font-size:.85rem;color:#5a6a7a;margin-bottom:1.25rem"></p>
     <div class="form-group">
       <label>Payment Method *</label>
@@ -292,7 +301,7 @@ admin_header('Finance');
       <input type="text" id="modal-note" placeholder="Optional note…" style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem">
     </div>
     <div style="display:flex;gap:.75rem;margin-top:1.25rem">
-      <button onclick="confirmReimburse()" class="btn btn-primary" style="flex:1">Confirm Reimbursement</button>
+      <button onclick="confirmReimburse()" class="btn btn-primary" style="flex:1">Confirm Payment Submitted</button>
       <button onclick="closeReimburseModal()" class="btn btn-secondary">Cancel</button>
     </div>
   </div>

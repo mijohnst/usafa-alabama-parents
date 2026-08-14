@@ -12,14 +12,14 @@ $fy_label  = $fy . '–' . ($fy + 1);
 $date_from = $fy . '-07-01';
 $date_to   = ($fy + 1) . '-06-30';
 
-// All reimbursed purchases in fiscal year (for actual expenses)
+// All fully-paid purchases in fiscal year (for actual expenses)
 $stmt = $pdo->prepare(
     "SELECT * FROM purchases WHERE purchase_date BETWEEN ? AND ? ORDER BY purchase_date"
 );
 $stmt->execute([$date_from, $date_to]);
 $all = $stmt->fetchAll();
 
-$reimbursed  = array_filter($all, fn($p) => $p['status'] === 'reimbursed');
+$reimbursed  = array_filter($all, fn($p) => $p['status'] === 'paid');
 $total_spent = array_sum(array_column($reimbursed, 'amount_total'));
 $total_tax   = array_sum(array_column($reimbursed, 'amount_tax'));
 $total_ship  = array_sum(array_column($reimbursed, 'amount_shipping'));
@@ -103,7 +103,7 @@ admin_header('Year-End Summary');
   </div>
   <div class="card" style="padding:1rem;text-align:center;margin:0">
     <div style="font-size:1.5rem;font-weight:700;color:#1b5e20"><?= count($reimbursed) ?></div>
-    <div style="font-size:.72rem;color:#5a6a7a;text-transform:uppercase">Reimbursed</div>
+    <div style="font-size:.72rem;color:#5a6a7a;text-transform:uppercase">Paid</div>
   </div>
   <div class="card" style="padding:1rem;text-align:center;margin:0;border:2px solid #A6192E">
     <div style="font-size:1.5rem;font-weight:700;color:#A6192E">$<?= number_format($total_spent,2) ?></div>
@@ -133,7 +133,7 @@ admin_header('Year-End Summary');
       <div class="bar-pct"><?= $pct ?>%</div>
     </div>
     <?php endforeach; ?>
-    <?php if (empty($by_cat)): ?><p style="color:#9aa5b4;font-size:.85rem">No reimbursed purchases.</p><?php endif; ?>
+    <?php if (empty($by_cat)): ?><p style="color:#9aa5b4;font-size:.85rem">No paid purchases.</p><?php endif; ?>
   </div>
 
   <!-- By Event -->
@@ -149,12 +149,12 @@ admin_header('Year-End Summary');
       <div class="bar-pct"><?= $pct ?>%</div>
     </div>
     <?php endforeach; ?>
-    <?php if (empty($by_event)): ?><p style="color:#9aa5b4;font-size:.85rem">No reimbursed purchases.</p><?php endif; ?>
+    <?php if (empty($by_event)): ?><p style="color:#9aa5b4;font-size:.85rem">No paid purchases.</p><?php endif; ?>
   </div>
 
   <!-- Monthly chart -->
   <div class="ye-card" style="grid-column:1/-1">
-    <h2>Monthly Expenses — FY <?= $fy_label ?> (July – June, reimbursed only)</h2>
+    <h2>Monthly Expenses — FY <?= $fy_label ?> (July – June, paid only)</h2>
     <div class="mb">
       <?php for ($mo=1; $mo<=12; $mo++):
         $amt = $by_month[$mo] ?? 0;
@@ -173,7 +173,7 @@ admin_header('Year-End Summary');
 <!-- Full purchase list for print -->
 <?php if (!empty($reimbursed)): ?>
 <div class="ye-card" style="grid-column:1/-1">
-  <h2>Reimbursed Purchases — FY <?= $fy_label ?></h2>
+  <h2>Paid Purchases — FY <?= $fy_label ?></h2>
   <table>
     <thead>
       <tr>

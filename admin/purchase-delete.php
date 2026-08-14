@@ -12,7 +12,7 @@ if ($p) {
     $own = (int)($p['submitted_by'] ?? -1) === (int)($_SESSION['user_id'] ?? 0);
     $can_delete = is_treasurer() || is_admin() || ((is_member() || is_secretary()) && $own && $p['status'] === 'pending');
     if (!$can_delete) {
-        flash('error', 'Approved or reimbursed purchases can only be deleted by the treasurer.');
+        flash('error', 'Approved, submitted, or paid purchases can only be deleted by the treasurer.');
     } else {
         if (!empty($p['receipt_filename'])) @unlink(__DIR__ . '/receipts/' . $p['receipt_filename']);
         $pdo->prepare('DELETE FROM purchases WHERE id=?')->execute([$id]);

@@ -33,8 +33,8 @@ if (can_view_member_pii()) {
 if (can_manage_finances()) {
     $fin = $pdo->query("SELECT
         SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending_count,
-        SUM(CASE WHEN status='approved' THEN 1 ELSE 0 END) as approved_count,
-        SUM(CASE WHEN status='reimbursed' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as ytd
+        SUM(CASE WHEN status IN ('approved','submitted') THEN 1 ELSE 0 END) as approved_count,
+        SUM(CASE WHEN status='paid' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as ytd
         FROM purchases")->fetch();
     $stats['finance'] = $fin;
 
@@ -56,12 +56,12 @@ $stats['tickets'] = $hd;
 // Extra treasurer finance breakdown
 if (is_treasurer()) {
     $tfin = $pdo->query("SELECT
-        SUM(CASE WHEN status='pending'    THEN amount_total ELSE 0 END) as pending_amt,
-        SUM(CASE WHEN status='approved'   THEN amount_total ELSE 0 END) as approved_amt,
-        SUM(CASE WHEN status='reimbursed' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as reimbursed_ytd,
-        SUM(CASE WHEN status='reimbursed' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_tax    ELSE 0 END) as tax_ytd,
+        SUM(CASE WHEN status='pending'                  THEN amount_total ELSE 0 END) as pending_amt,
+        SUM(CASE WHEN status IN ('approved','submitted') THEN amount_total ELSE 0 END) as approved_amt,
+        SUM(CASE WHEN status='paid' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as reimbursed_ytd,
+        SUM(CASE WHEN status='paid' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_tax    ELSE 0 END) as tax_ytd,
         SUM(CASE WHEN YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as all_ytd,
-        COUNT(CASE WHEN status='reimbursed' AND YEAR(purchase_date)=YEAR(NOW()) THEN 1 END) as reimbursed_count
+        COUNT(CASE WHEN status='paid' AND YEAR(purchase_date)=YEAR(NOW()) THEN 1 END) as reimbursed_count
         FROM purchases")->fetch();
     $stats['tfin'] = $tfin;
 
@@ -246,7 +246,7 @@ if (can_manage_finances()) {
     $my_pending = $stats['my_pending'] ?? 0;
     $sections['For You'][] = ['icon'=>'🧾','label'=>'Add Purchase','sub'=>$my_pending>0?"$my_pending pending":'Submit an expense','href'=>'purchase-form.php','color'=>'#003594','badge'=>$my_pending>0?$my_pending:0];
     if (is_treasurer()) {
-        $sections['Finance'][] = ['icon'=>'💳','label'=>'Reimburse','sub'=>$approved>0?"$approved approved":'Nothing pending','href'=>'pending-reimbursements.php','color'=>$approved>0?'#003594':'#5a6a7a','badge'=>$approved>0?$approved:0];
+        $sections['Finance'][] = ['icon'=>'💳','label'=>'Payments','sub'=>$approved>0?"$approved awaiting payment":'Nothing pending','href'=>'pending-reimbursements.php','color'=>$approved>0?'#003594':'#5a6a7a','badge'=>$approved>0?$approved:0];
         $sections['Finance'][] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end & budgets','href'=>'report.php','color'=>'#37474f'];
         $sections['Finance'][] = ['icon'=>'🗂️','label'=>'Receipts','sub'=>'Browse by event or vendor','href'=>'receipts-by.php','color'=>'#37474f'];
         $sections['Finance'][] = ['icon'=>'📥','label'=>'Income','sub'=>'Record & review income','href'=>'income.php','color'=>'#1b5e20'];
@@ -333,7 +333,7 @@ if (can_manage_finances()) {
     $p = $stats['finance']['pending_count'] ?? 0;
     $a = $stats['finance']['approved_count'] ?? 0;
     if ($p) $alerts[] = ['bg'=>'#fff3cd','border'=>'#ffc107','text'=>'#5f4c00','icon'=>'⏳','msg'=>"$p purchase".($p>1?'s':'')." need approval",'href'=>'purchases.php?status=pending'];
-    if ($a && is_treasurer()) $alerts[] = ['bg'=>'#e3f2fd','border'=>'#90caf9','text'=>'#0d47a1','icon'=>'💳','msg'=>"$a awaiting reimbursement",'href'=>'pending-reimbursements.php'];
+    if ($a && is_treasurer()) $alerts[] = ['bg'=>'#e3f2fd','border'=>'#90caf9','text'=>'#0d47a1','icon'=>'💳','msg'=>"$a awaiting payment",'href'=>'pending-reimbursements.php'];
 }
 if (can_manage_tickets() && $open > 0)
     $alerts[] = ['bg'=>'#fff8e1','border'=>'#ffcc02','text'=>'#5f4c00','icon'=>'🎫','msg'=>"$open support ticket".($open>1?'s':'')." open",'href'=>'helpdesk.php'];
@@ -426,11 +426,11 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
   </div>
   <div class="mini-stat" style="border-left:3px solid #1b5e20">
     <div class="mini-stat-val" style="color:#1b5e20">$<?= number_format($tf['reimbursed_ytd']??0,2) ?></div>
-    <div class="mini-stat-lbl">Reimbursed YTD (<?= (int)($tf['reimbursed_count']??0) ?>)</div>
+    <div class="mini-stat-lbl">Paid YTD (<?= (int)($tf['reimbursed_count']??0) ?>)</div>
   </div>
   <div class="mini-stat" style="border-left:3px solid #003594">
     <div class="mini-stat-val" style="color:#003594">$<?= number_format($tf['approved_amt']??0,2) ?></div>
-    <div class="mini-stat-lbl">Approved — Unpaid</div>
+    <div class="mini-stat-lbl">Approved/Submitted — Unpaid</div>
   </div>
   <div class="mini-stat" style="border-left:3px solid #f57c00">
     <div class="mini-stat-val" style="color:#f57c00">$<?= number_format($tf['pending_amt']??0,2) ?></div>

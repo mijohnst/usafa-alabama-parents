@@ -63,7 +63,7 @@ admin_header('Check Request #' . $id);
 </div>
 
 <?php
-$status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','reimbursed'=>'#003594'];
+$status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','submitted'=>'#6a1b9a','paid'=>'#003594'];
 $sc = $status_colors[$p['status']] ?? '#5a6a7a';
 $line_items = [];
 if ($p['amount_pretax']  > 0) $line_items[] = ['Subtotal (pre-tax)', $p['amount_pretax']];

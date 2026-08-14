@@ -203,8 +203,8 @@ $fin_pending = $fin_approved = $fin_ytd = 0;
 if (can_manage_finances() && !is_member()) {
     try {
         $fin_pending  = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status='pending'")->fetchColumn();
-        $fin_approved = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status='approved'")->fetchColumn();
-        $fin_ytd      = (float)$pdo->query("SELECT COALESCE(SUM(amount_total),0) FROM purchases WHERE YEAR(purchase_date)=YEAR(NOW()) AND status='reimbursed'")->fetchColumn();
+        $fin_approved = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status IN ('approved','submitted')")->fetchColumn();
+        $fin_ytd      = (float)$pdo->query("SELECT COALESCE(SUM(amount_total),0) FROM purchases WHERE YEAR(purchase_date)=YEAR(NOW()) AND status='paid'")->fetchColumn();
     } catch (Exception $e) {}
 }
 
@@ -282,7 +282,7 @@ echo show_flash();
 <?php
 $alerts = [];
 if ($fin_pending)  $alerts[] = ['color'=>'#fff3cd','border'=>'#ffc107','text'=>'#5f4c00','icon'=>'⏳','msg'=>"$fin_pending purchase".($fin_pending>1?'s':'')." need approval",'href'=>'purchases.php?status=pending'];
-if ($fin_approved) $alerts[] = ['color'=>'#e3f2fd','border'=>'#90caf9','text'=>'#0d47a1','icon'=>'💰','msg'=>"$fin_approved awaiting reimbursement",'href'=>'pending-reimbursements.php'];
+if ($fin_approved) $alerts[] = ['color'=>'#e3f2fd','border'=>'#90caf9','text'=>'#0d47a1','icon'=>'💰','msg'=>"$fin_approved awaiting payment",'href'=>'pending-reimbursements.php'];
 if ($new_this_month) $alerts[] = ['color'=>'#e8f5e9','border'=>'#a5d6a7','text'=>'#1b5e20','icon'=>'👤','msg'=>"$new_this_month new member".($new_this_month>1?'s':'')." this month",'href'=>'index.php?q='];
 if (!empty($upcoming_bdays)) $alerts[] = ['color'=>'#f3e5f5','border'=>'#ce93d8','text'=>'#4a148c','icon'=>'🎂','msg'=>count($upcoming_bdays)." birthday".( count($upcoming_bdays)>1?'s':'')." in the next 30 days",'href'=>'#bday-panel','onclick'=>'openBirthdays()'];
 if ($needs_split_count) $alerts[] = ['color'=>'#fff3cd','border'=>'#ffc107','text'=>'#5f4c00','icon'=>'✂️','msg'=>"$needs_split_count cadet name".($needs_split_count>1?'s':'')." still need First/Middle split",'href'=>'index.php?split=1'];
