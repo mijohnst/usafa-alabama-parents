@@ -139,9 +139,12 @@ function can_manage_finances(): bool {
     return in_array($_SESSION['role'] ?? '', ['admin', 'tech', 'officer', 'treasurer', 'member', 'secretary']);
 }
 
-// Admin/Treasurer can edit any purchase; Member/Secretary can only edit their own
+// Admin/Officer/Treasurer can edit any purchase; Member/Secretary can only
+// edit their own. Officer is included so a President/VP redirected here to
+// attach a missing receipt before approving isn't stuck read-only — they
+// already hold higher trust (approval authority) than this requires.
 function can_edit_purchase(array $purchase): bool {
-    if (is_admin() || is_treasurer()) return true;
+    if (is_club_officer() || is_treasurer()) return true;
     if (is_member() || is_secretary()) return (int)($purchase['submitted_by'] ?? -1) === (int)($_SESSION['user_id'] ?? 0);
     return false;
 }
@@ -410,6 +413,10 @@ const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];
 const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
 const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Birthday / Gift', 'General Operations', 'Other'];
 const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'submitted' => 'Submitted', 'paid' => 'Paid'];
+// Sequence position of each purchase status — used both to render the
+// progress stepper and to stop a Treasurer's raw Status-field edit from
+// skipping the workflow forward (see purchase-form.php).
+const STATUS_ORDER = ['pending' => 0, 'approved' => 1, 'submitted' => 2, 'paid' => 3];
 // 2031 is deliberately absent: the class that will become 2031 is still at
 // Prep School and hasn't matriculated yet, so "2031" and "Prep School"
 // would otherwise represent the exact same cohort under two labels.

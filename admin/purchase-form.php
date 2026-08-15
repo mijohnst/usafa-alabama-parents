@@ -124,14 +124,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($status, array_keys(PURCHASE_STATUSES))) $status = 'pending';
     // Status may only be changed by Treasurer/Admin — block server-side
     // regardless of what the form rendered, in case of a tampered POST.
-    // (Normal transitions should go through the Approve/Reimburse buttons
-    // on purchase-action.php, which also enforce the receipt-required and
-    // President/VP cross-approval rules that a raw status write here would skip.)
+    // (Normal transitions should go through the Approve/Submit Payment/Mark
+    // Paid buttons on purchase-action.php, which also enforce the
+    // receipt-required check, the President/VP cross-approval rule, and —
+    // for Paid — the paid_at/paid_note/notify_paid() bookkeeping.)
+    $prior_status = $is_edit ? ($p['status'] ?? 'pending') : 'pending';
     if (!is_treasurer() && !is_admin()) {
-        $status = $is_edit ? ($p['status'] ?? 'pending') : 'pending';
-    } elseif (!is_admin() && $status === 'approved') {
-        // Treasurer (non-admin) still can't jump straight to approved from here
-        $status = $is_edit ? ($p['status'] ?? 'pending') : 'pending';
+        $status = $prior_status;
+    } elseif (!is_admin() && isset(STATUS_ORDER[$prior_status], STATUS_ORDER[$status])
+              && STATUS_ORDER[$status] > STATUS_ORDER[$prior_status]) {
+        // Treasurer (non-admin) may only use this field to correct a status
+        // backward/sideways, never to advance the workflow — that would skip
+        // the checks above. Skipped when the prior status is unrecognized
+        // (corrupted data), so it can still be corrected to any valid value.
+        // Admin keeps full override freedom, consistent with elsewhere in this app.
+        $status = $prior_status;
     }
 
     // Accept from either camera or file picker input
@@ -321,15 +328,14 @@ if (!empty($real_errors)): ?>
     </fieldset>
 
     <fieldset><legend>Receipt &amp; Status</legend>
-      <?php $cur_status = $p['status'] ?? 'pending';
-            $status_steps = ['pending'=>0,'approved'=>1,'submitted'=>2,'paid'=>3]; ?>
-      <?php if (!isset($status_steps[$cur_status])): ?>
+      <?php $cur_status = $p['status'] ?? 'pending'; ?>
+      <?php if (!isset(STATUS_ORDER[$cur_status])): ?>
         <p style="font-size:.82rem;color:#c62828;margin-bottom:1rem">⚠️ Unrecognized status on this record: <strong><?= $cur_status !== '' ? h($cur_status) : '(empty)' ?></strong> — use the Status field below to correct it.</p>
       <?php else: ?>
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
         <?php foreach (PURCHASE_STATUSES as $k => $label):
-          $step = $status_steps[$k];
-          $cur  = $status_steps[$cur_status];
+          $step = STATUS_ORDER[$k];
+          $cur  = STATUS_ORDER[$cur_status];
           $done = $step < $cur; $active = $step === $cur;
           $col  = $done||$active ? '#003594' : '#d0d5dd';
           $bg   = $active ? '#003594' : ($done ? '#e8f0fe' : '#f5f7fa');
@@ -348,18 +354,26 @@ if (!empty($real_errors)): ?>
         <div class="form-group">
           <label>Status</label>
           <?php
-          // Status only changes through the Approve/Reimburse workflow buttons
-          // (purchase-action.php) — those enforce the receipt-required check
-          // and the President/VP cross-approval rule. A raw dropdown here
-          // would let anyone who can edit the purchase bypass both, so only
-          // Treasurer/Admin get an editable one, for correcting mistakes.
+          // Status only changes through the Approve/Submit Payment/Mark Paid
+          // workflow buttons (purchase-action.php) — those enforce the
+          // receipt-required check, the President/VP cross-approval rule, and
+          // (for Paid) the paid_at/paid_note/notify_paid() bookkeeping. A raw
+          // dropdown here would let anyone who can edit the purchase bypass
+          // all of that, so only Treasurer/Admin get an editable one, and
+          // even then only to correct a status backward/sideways — not to
+          // advance the workflow. Admin keeps full override freedom.
           $can_edit_status = is_treasurer() || is_admin();
           if ($can_edit_status):
               $allowed_statuses = PURCHASE_STATUSES;
-              if (!is_admin()) unset($allowed_statuses['approved']); // only admins can jump straight to approved
+              if (!is_admin()) {
+                  unset($allowed_statuses['approved']); // only admins can jump straight to approved
+                  if (isset(STATUS_ORDER[$cur_status])) {
+                      $allowed_statuses = array_filter($allowed_statuses, fn($k) => STATUS_ORDER[$k] <= STATUS_ORDER[$cur_status], ARRAY_FILTER_USE_KEY);
+                  }
+              }
           ?>
           <select name="status">
-            <?php if (!isset($status_steps[$cur_status])): ?>
+            <?php if (!isset(STATUS_ORDER[$cur_status])): ?>
               <option value="" selected disabled>— select to correct —</option>
             <?php endif; ?>
             <?php foreach ($allowed_statuses as $k => $v2): ?>
