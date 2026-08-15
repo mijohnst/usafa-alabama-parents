@@ -320,6 +320,9 @@ if (!empty($real_errors)): ?>
     <fieldset><legend>Receipt &amp; Status</legend>
       <?php $cur_status = $p['status'] ?? 'pending';
             $status_steps = ['pending'=>0,'approved'=>1,'submitted'=>2,'paid'=>3]; ?>
+      <?php if (!isset($status_steps[$cur_status])): ?>
+        <p style="font-size:.82rem;color:#c62828;margin-bottom:1rem">⚠️ Unrecognized status on this record: <strong><?= h($cur_status) ?></strong> — use the Status field below to correct it.</p>
+      <?php else: ?>
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
         <?php foreach (PURCHASE_STATUSES as $k => $label):
           $step = $status_steps[$k];
@@ -337,6 +340,7 @@ if (!empty($real_errors)): ?>
         </div>
         <?php endforeach; ?>
       </div>
+      <?php endif; ?>
       <div class="form-row col-2">
         <div class="form-group">
           <label>Status</label>

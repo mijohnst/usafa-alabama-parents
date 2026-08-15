@@ -198,8 +198,9 @@ admin_header('Finance');
       <td style="text-align:right;white-space:nowrap;color:#5a6a7a">$<?= number_format($p['amount_shipping'],2) ?></td>
       <td style="text-align:right;white-space:nowrap;font-weight:700">$<?= number_format($p['amount_total'],2) ?></td>
       <td>
-        <span class="status-badge" style="background:<?= $status_colors[$p['status']] ?>22;color:<?= $status_colors[$p['status']] ?>">
-          <?= h(PURCHASE_STATUSES[$p['status']]) ?>
+        <?php $sc = $status_colors[$p['status']] ?? '#5a6a7a'; ?>
+        <span class="status-badge" style="background:<?= $sc ?>22;color:<?= $sc ?>">
+          <?= h(PURCHASE_STATUSES[$p['status']] ?? ucfirst($p['status'])) ?>
         </span>
       </td>
       <td style="font-size:.78rem;color:#5a6a7a;white-space:nowrap"><?= h($p['submitted_by_name'] ?? '—') ?></td>
