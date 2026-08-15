@@ -5,9 +5,14 @@
  */
 
 header('Content-Type: application/json');
+// Must be set on every response, not just the OPTIONS preflight — browsers
+// enforce CORS on the actual POST response too, and without this header
+// there the form submission completes server-side but the browser blocks
+// the JS from ever seeing success, showing a false failure to the user
+// (who may then resubmit).
+header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('Access-Control-Allow-Origin: https://alabamafalcons.org');
     header('Access-Control-Allow-Methods: POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
     http_response_code(200);
@@ -139,8 +144,9 @@ try {
     // inserted as a duplicate instead of updated.
     $parent1_email = s($payload, 'parent1Email');
     $parent2_email = s($payload, 'parent2Email');
+    $submitted_emails = array_map('strtolower', array_filter([$parent1_email, $parent2_email], fn($e) => $e !== ''));
     $cand = $pdo->prepare(
-        'SELECT id, cadet_last_name FROM members
+        'SELECT id, cadet_last_name, parent1_email, parent2_email FROM members
          WHERE class_year = :class_year
            AND (
                 (:parent1_email <> "" AND (parent1_email = :parent1_email OR parent2_email = :parent1_email))
@@ -155,7 +161,16 @@ try {
     $target_norm = strip_name_suffix(normalize_name(s($payload, 'cadetLastName')));
     $existing_id = null;
     foreach ($cand->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target_norm) { $existing_id = $row['id']; break; }
+        if (strip_name_suffix(normalize_name($row['cadet_last_name'])) !== $target_norm) continue;
+        // Identity check: every email already on file for this family must be
+        // present among the submitted emails, not just one of them — matching
+        // on just one (the old rule) meant anyone who learned a single parent
+        // email on file could silently overwrite the whole record. A family
+        // that genuinely only remembers one of two emails on file gets a new
+        // row instead (visible to the secretary via the admin duplicate-check
+        // tools), which is a far safer failure mode than an unauthorized overwrite.
+        $stored_emails = array_map('strtolower', array_filter([$row['parent1_email'], $row['parent2_email']], fn($e) => $e !== ''));
+        if (empty(array_diff($stored_emails, $submitted_emails))) { $existing_id = $row['id']; break; }
     }
 
     if ($existing_id) {

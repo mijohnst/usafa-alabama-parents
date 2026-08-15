@@ -8,9 +8,11 @@
  */
 
 header('Content-Type: application/json');
+// Must be set on every response, not just the OPTIONS preflight — see
+// membership-handler.php for why.
+header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('Access-Control-Allow-Origin: https://alabamafalcons.org');
     header('Access-Control-Allow-Methods: POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
     http_response_code(200);
@@ -84,48 +86,30 @@ try {
     // COALESCE-protected UPDATE below leaves the existing value untouched.
     $dob = null;
 
-    // ── Find the existing record — never create a new one. Identity is
-    // whatever was verified by update-lookup.php (last name + class year +
-    // an email already on file for either parent), carried here in hidden
-    // fields — NOT re-derived from the (possibly just-edited) visible form
-    // fields, and NOT a guessable first-name fallback.
-    $verified_last  = s($payload, 'verifiedLastName');
-    $verified_year  = s($payload, 'verifiedYear');
-    $verified_email = s($payload, 'verifiedEmail');
+    // ── Find the existing record — never create a new one. Identity comes
+    // from the session start_verification_session() bound in update-lookup.php
+    // upon a real, successful lookup — NOT from resubmitted last name/class
+    // year/email hidden fields, which (unlike a server-side session) could be
+    // fabricated or replayed directly against this endpoint without ever
+    // passing a genuine lookup.
+    start_verification_session();
+    $existing_id      = (int)($_SESSION['update_verified_member_id'] ?? 0);
+    $verified_expires = (int)($_SESSION['update_verified_expires']   ?? 0);
+    // Consumed immediately so one verified lookup can't drive repeated
+    // updates without going back through "Find My Record" each time.
+    unset($_SESSION['update_verified_member_id'], $_SESSION['update_verified_expires']);
 
-    if ($verified_last === '' || $verified_year === '' || $verified_email === '') {
+    if (!$existing_id || time() > $verified_expires) {
         echo json_encode([
             'success' => false,
-            'error'   => 'Please use "Find My Record" before submitting changes.'
+            'error'   => 'Your session expired. Please use "Find My Record" again before submitting changes.'
         ]);
         exit();
     }
 
-    // Matched the same way update-lookup.php matches it — normalized and
-    // suffix-stripped, not a strict SQL `=` — since $verified_last carries
-    // whatever the visitor literally typed into the lookup box (e.g. "Joseph
-    // III"), which no longer equals cadet_last_name now that suffix lives in
-    // its own column. A strict match here would silently re-lose the record
-    // that the fuzzy lookup above just found.
-    $cand = $pdo->prepare(
-        'SELECT id, cadet_last_name FROM members
-         WHERE archived = 0 AND class_year = :class_year
-           AND (parent1_email = :email OR parent2_email = :email)'
-    );
-    $cand->execute([
-        'class_year' => $verified_year,
-        'email'      => $verified_email,
-    ]);
-    $target_norm = strip_name_suffix(normalize_name($verified_last));
-    $existing_id = null;
-    foreach ($cand->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target_norm) {
-            $existing_id = $row['id'];
-            break;
-        }
-    }
-
-    if (!$existing_id) {
+    $check = $pdo->prepare('SELECT id FROM members WHERE archived = 0 AND id = ?');
+    $check->execute([$existing_id]);
+    if (!$check->fetch()) {
         echo json_encode([
             'success' => false,
             'error'   => "We couldn't find a matching record. Please email secretary@alabamafalcons.org so we can update your information manually."

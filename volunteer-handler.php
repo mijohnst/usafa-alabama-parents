@@ -7,9 +7,11 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 header('Content-Type: application/json');
+// Must be set on every response, not just the OPTIONS preflight — see
+// membership-handler.php for why.
+header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('Access-Control-Allow-Origin: https://alabamafalcons.org');
     header('Access-Control-Allow-Methods: POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
     http_response_code(200); exit();

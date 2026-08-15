@@ -7,12 +7,14 @@
  */
 
 header('Content-Type: application/json');
+// Must be set on every response, not just the OPTIONS preflight — see
+// membership-handler.php for why.
+header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('Access-Control-Allow-Origin: https://alabamafalcons.org');
     header('Access-Control-Allow-Methods: POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
     http_response_code(200);
@@ -87,6 +89,13 @@ if (!$m) {
     ]);
     exit();
 }
+
+// Bind this specific record to the browser that just proved it via a real
+// lookup — update-handler.php trusts this session value to find the record
+// to update, instead of resubmitted form fields that could be fabricated.
+start_verification_session();
+$_SESSION['update_verified_member_id'] = (int)$m['id'];
+$_SESSION['update_verified_expires']   = time() + 1800; // 30 minutes
 
 $g = fn(string $k) => (string)($m[$k] ?? '');
 

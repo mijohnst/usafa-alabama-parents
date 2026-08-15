@@ -20,6 +20,25 @@ function strip_name_suffix(string $normalized): string {
     return trim(preg_replace('/\s+(jr|sr|ii|iii|iv|v)$/i', '', $normalized));
 }
 
+// Starts a session under its own cookie name, distinct from the admin
+// panel's 'usafa_admin' session (auth.php's start_session()) — used to bind
+// a successful public-form identity lookup (see update-lookup.php) to the
+// specific browser that performed it, so update-handler.php doesn't have to
+// trust resubmitted last-name/year/email values that could otherwise be
+// fabricated or replayed directly against that endpoint without ever
+// passing a real lookup. Deliberately a separate cookie so a board member
+// browsing the public site in one tab while logged into /admin/ in another
+// never shares session state between the two.
+function start_verification_session(): void {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_name('usafa_verify');
+        $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        session_set_cookie_params(['httponly' => true, 'samesite' => 'Strict', 'secure' => $is_https]);
+        session_start();
+    }
+}
+
 // Cadet's full name — "First Middle Last Suffix", whitespace-collapsed.
 // Built in one place so a display site (or an automated email — this file
 // is required directly by the cron entry point, which never loads
