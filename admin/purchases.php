@@ -200,7 +200,7 @@ admin_header('Finance');
       <td>
         <?php $sc = $status_colors[$p['status']] ?? '#5a6a7a'; ?>
         <span class="status-badge" style="background:<?= $sc ?>22;color:<?= $sc ?>">
-          <?= h(PURCHASE_STATUSES[$p['status']] ?? ucfirst($p['status'])) ?>
+          <?= h(PURCHASE_STATUSES[$p['status']] ?? ($p['status'] !== '' ? ucfirst($p['status']) : '(no status)')) ?>
         </span>
       </td>
       <td style="font-size:.78rem;color:#5a6a7a;white-space:nowrap"><?= h($p['submitted_by_name'] ?? '—') ?></td>
