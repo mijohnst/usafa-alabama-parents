@@ -62,7 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tax           = (float)str_replace(',','', $_POST['amount_tax']       ?? '0');
     $shipping      = (float)str_replace(',','', $_POST['amount_shipping']  ?? '0');
     $total         = round($pretax + $tax + $shipping, 2);
-    $status           = $_POST['status']                    ?? 'pending';
+    // ?: not ?? — an empty string (e.g. a disabled placeholder option
+    // submitting with no value) must also fall back to 'pending', not
+    // persist as a permanently blank/unrecognized status.
+    $status           = $_POST['status']                    ?: 'pending';
     $notes            = trim($_POST['notes']               ?? '');
     $payment_method   = trim($_POST['payment_method']      ?? '');
     if ($payment_method === '') $errors[] = 'Payment Method is required.';
