@@ -68,6 +68,7 @@ admin_header('Finance');
 @media(max-width:600px){.fin-cards{grid-template-columns:1fr 1fr}}
 </style>
 
+<?= show_flash() ?>
 <div class="page-head">
   <h1>Finance</h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
