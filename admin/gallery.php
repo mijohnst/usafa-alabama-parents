@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $ext  = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'][$mime];
                 $name = date('Ymd') . '_' . substr(date('His'), 0, 6) . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
-                move_uploaded_file($files['tmp_name'][$i], $dir . $name);
+                if (!move_uploaded_file($files['tmp_name'][$i], $dir . $name)) { $skipped++; continue; }
                 $pdo->prepare('INSERT INTO site_photos (filename,caption,sort_order,active) VALUES (?,?,?,1)')
                     ->execute([$name, $caption, $sort + $i]);
                 $uploaded++;

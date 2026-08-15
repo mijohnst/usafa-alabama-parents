@@ -47,11 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_upload) {
                         'image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','text/plain'=>'txt'];
                     $ext  = $ext_map[$mime] ?? 'bin';
                     $name = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                    move_uploaded_file($file['tmp_name'], $vault_dir . $name);
-                    $pdo->prepare('INSERT INTO vault_documents (title,category,description,filename,file_size,mime_type,uploaded_by) VALUES (?,?,?,?,?,?,?)')
-                        ->execute([$title,$category,$description,$name,$file['size'],$mime,$_SESSION['user_id']??null]);
-                    flash('success',"\"$title\" uploaded.");
-                    header('Location: vault.php'); exit;
+                    if (!move_uploaded_file($file['tmp_name'], $vault_dir . $name)) {
+                        $errors[] = 'Upload failed — please try again.';
+                    } else {
+                        $pdo->prepare('INSERT INTO vault_documents (title,category,description,filename,file_size,mime_type,uploaded_by) VALUES (?,?,?,?,?,?,?)')
+                            ->execute([$title,$category,$description,$name,$file['size'],$mime,$_SESSION['user_id']??null]);
+                        flash('success',"\"$title\" uploaded.");
+                        header('Location: vault.php'); exit;
+                    }
                 }
             }
         } elseif (empty($errors)) { $errors[] = 'Please select a file.'; }

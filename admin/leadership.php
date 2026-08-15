@@ -15,8 +15,8 @@ function save_officer_photo(string $key): ?string {
     $ext  = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'][$mime];
     $name = 'officer-' . bin2hex(random_bytes(4)) . '.' . $ext;
     $dir  = __DIR__ . '/../leadership-photos/';
-    if (!is_dir($dir)) mkdir($dir, 0755, true);
-    move_uploaded_file($file['tmp_name'], $dir . $name);
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) return null;
+    if (!move_uploaded_file($file['tmp_name'], $dir . $name)) return null;
     return $name;
 }
 

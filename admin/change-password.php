@@ -30,10 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $post_action === 'avatar_upload') {
             $old_file = $old->fetchColumn();
 
             $filename = 'u' . $_SESSION['user_id'] . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-            move_uploaded_file($file['tmp_name'], $avatar_dir . $filename);
-            $pdo->prepare('UPDATE users SET avatar_filename=? WHERE id=?')->execute([$filename, $_SESSION['user_id']]);
-            if ($old_file && is_file($avatar_dir . basename($old_file))) unlink($avatar_dir . basename($old_file));
-            $avatar_done = true;
+            if (!move_uploaded_file($file['tmp_name'], $avatar_dir . $filename)) {
+                $avatar_errors[] = 'Upload failed — please try again.';
+            } else {
+                $pdo->prepare('UPDATE users SET avatar_filename=? WHERE id=?')->execute([$filename, $_SESSION['user_id']]);
+                if ($old_file && is_file($avatar_dir . basename($old_file))) unlink($avatar_dir . basename($old_file));
+                $avatar_done = true;
+            }
         }
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $post_action === 'avatar_remove') {

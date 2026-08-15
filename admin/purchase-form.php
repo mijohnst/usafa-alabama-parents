@@ -39,9 +39,9 @@ function handle_receipt_upload(string $key = 'receipt'): ?string {
     $ext_map  = ['application/pdf'=>'pdf','image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp','image/heic'=>'heic','image/heif'=>'heif'];
     $ext      = $ext_map[$mime] ?? 'jpg';
     $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    $dest     = __DIR__ . '/receipts/' . $filename;
-    if (!is_dir(__DIR__ . '/receipts')) mkdir(__DIR__ . '/receipts', 0755, true);
-    move_uploaded_file($file['tmp_name'], $dest);
+    $dir      = __DIR__ . '/receipts/';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) return null;
+    if (!move_uploaded_file($file['tmp_name'], $dir . $filename)) return null;
     return $filename;
 }
 
