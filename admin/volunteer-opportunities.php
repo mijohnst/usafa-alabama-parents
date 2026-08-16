@@ -160,6 +160,9 @@ echo show_flash();
         <?php endif; ?>
       </div>
       <div style="display:flex;gap:.4rem;flex-shrink:0;align-items:flex-start">
+        <?php if ($o['active']): ?>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="copyOppLink(this, <?= $o['id'] ?>)">Copy Link</button>
+        <?php endif; ?>
         <a href="volunteer-opportunities.php?edit=<?= $o['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
         <form method="POST" style="margin:0">
           <?= csrf_field() ?><input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="<?= $o['id'] ?>">
@@ -174,5 +177,16 @@ echo show_flash();
   </div>
   <?php endforeach; ?>
 <?php endif; ?>
+
+<script>
+function copyOppLink(btn, id) {
+  var url = 'https://alabamafalcons.org/#opp-' + id;
+  navigator.clipboard.writeText(url).then(function() {
+    var orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = orig; }, 2000);
+  });
+}
+</script>
 
 <?php admin_footer(); ?>

@@ -782,7 +782,7 @@ function renderVolunteerOpportunities(items) {
     if (o.location) meta.push(escHtml(o.location));
     meta.push(full ? 'Full' : (needed - filled) + ' left');
     var border = i === 0 ? '' : 'border-top:1px solid #e4e9f0;';
-    return '<div style="' + border + 'padding:.55rem 0;display:flex;justify-content:space-between;gap:.75rem;align-items:center">' +
+    return '<div id="opp-' + o.id + '" style="' + border + 'padding:.55rem 0;display:flex;justify-content:space-between;gap:.75rem;align-items:center;transition:background-color 1s">' +
         '<div style="min-width:0">' +
           '<strong style="color:var(--navy);font-size:.85rem">' + escHtml(o.title) + '</strong>' +
           '<span style="font-size:.72rem;color:var(--gray);margin-left:.5rem">' + meta.join(' &bull; ') + '</span>' +
@@ -793,6 +793,18 @@ function renderVolunteerOpportunities(items) {
       '</div>';
   }).join('');
   block.style.display = 'block';
+
+  // Deep link support — a shared link like #opp-12 scrolls to and briefly
+  // highlights that specific opportunity (link copied from the admin portal).
+  var hash = window.location.hash;
+  if (/^#opp-\d+$/.test(hash)) {
+    var target = document.getElementById(hash.slice(1));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.style.backgroundColor = '#fff3cd';
+      setTimeout(function() { target.style.backgroundColor = 'transparent'; }, 2500);
+    }
+  }
 }
 
 async function loadVolunteerOpportunities() {

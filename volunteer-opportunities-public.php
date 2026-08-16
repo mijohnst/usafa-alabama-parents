@@ -31,10 +31,12 @@ try {
     exit;
 }
 
-// Public payload — title/description/date/location/spot counts only, no
-// signup rosters or any member/user PII.
+// Public payload — id (just an internal integer, used to deep-link to a
+// specific opportunity) plus title/description/date/location/spot counts.
+// No signup rosters or any member/user PII.
 $out = array_map(function ($r) {
     return [
+        'id'           => (int)$r['id'],
         'title'        => $r['title'],
         'description'  => $r['description'],
         'event_date'   => $r['event_date'],
