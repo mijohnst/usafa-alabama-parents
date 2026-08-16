@@ -90,16 +90,30 @@ if (!$m) {
     exit();
 }
 
-// Bind this specific record to the browser that just proved it via a real
-// lookup — update-handler.php trusts this session value to find the record
-// to update, instead of resubmitted form fields that could be fabricated.
+// Bind this specific record to a random per-lookup token, not one shared
+// session slot — a single slot meant a second "Find My Record" lookup in
+// another tab (e.g. checking a sibling's record) would silently overwrite
+// the first, so submitting the still-open first tab could update the wrong
+// family. update-handler.php trusts this token to find the record to
+// update, instead of resubmitted form fields that could be fabricated.
 start_verification_session();
-$_SESSION['update_verified_member_id'] = (int)$m['id'];
-$_SESSION['update_verified_expires']   = time() + 1800; // 30 minutes
+$verify_token = bin2hex(random_bytes(24));
+if (!isset($_SESSION['update_verified']) || !is_array($_SESSION['update_verified'])) {
+    $_SESSION['update_verified'] = [];
+}
+// Prune expired entries so this array doesn't grow unbounded across a long-lived session.
+foreach ($_SESSION['update_verified'] as $t => $entry) {
+    if (($entry['expires'] ?? 0) < time()) unset($_SESSION['update_verified'][$t]);
+}
+$_SESSION['update_verified'][$verify_token] = [
+    'member_id' => (int)$m['id'],
+    'expires'   => time() + 1800, // 30 minutes
+];
 
 $g = fn(string $k) => (string)($m[$k] ?? '');
 
 echo json_encode([
+    'verifyToken' => $verify_token,
     'success' => true,
     'member'  => [
         'cadetFirstName'   => $g('cadet_first_name'),
