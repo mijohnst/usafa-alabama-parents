@@ -907,7 +907,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
   <div class="accent-bar" style="margin:0 auto 1.5rem"></div>
   <h1>Questions?</h1>
   <p class="cs">USAFA Parents Club of Alabama &nbsp;·&nbsp; Club Portal</p>
-  <p class="cmail">siteadmin@alabamafalcons.org</p>
+  <p class="cmail">mijohnst@alabamafalcons.org</p>
   <p class="cmail" style="margin-top:.5rem">alabamafalcons.org/admin</p>
 </div>
 
