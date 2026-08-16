@@ -424,8 +424,11 @@ const STATUS_ORDER = ['pending' => 0, 'approved' => 1, 'submitted' => 2, 'paid' 
 // Prep School and hasn't matriculated yet, so "2031" and "Prep School"
 // would otherwise represent the exact same cohort under two labels.
 // Re-add it once that class actually starts at the Academy.
-const CLASS_YEARS     = ['', '2026', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
-const CLASS_YEAR_LIST = ['2026', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
+// 2026 is also deliberately absent: that class graduated and every member
+// has been moved to Graduate + archived (see graduate-class.php), so no
+// active record should ever hold class_year='2026' again.
+const CLASS_YEARS     = ['', '2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
+const CLASS_YEAR_LIST = ['2027', '2028', '2029', '2030', 'Prep School', 'Graduate'];
 
 // Used for the Cadet "Gender" field, which drives pronoun placeholders
 // ({he_she}, {him_her}, {his_her}) in the automated birthday emails. Left
