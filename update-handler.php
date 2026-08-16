@@ -87,19 +87,22 @@ try {
     $dob = null;
 
     // ── Find the existing record — never create a new one. Identity comes
-    // from the session start_verification_session() bound in update-lookup.php
-    // upon a real, successful lookup — NOT from resubmitted last name/class
-    // year/email hidden fields, which (unlike a server-side session) could be
-    // fabricated or replayed directly against this endpoint without ever
-    // passing a genuine lookup.
+    // from a per-lookup token issued by update-lookup.php upon a real,
+    // successful lookup — NOT from resubmitted last name/class year/email
+    // hidden fields, which (unlike a server-side token) could be fabricated
+    // or replayed directly against this endpoint without ever passing a
+    // genuine lookup. Keyed by token rather than one shared session slot so
+    // a second "Find My Record" lookup in another tab can't silently
+    // overwrite a still-open first tab's verified identity.
     start_verification_session();
-    $existing_id      = (int)($_SESSION['update_verified_member_id'] ?? 0);
-    $verified_expires = (int)($_SESSION['update_verified_expires']   ?? 0);
+    $verify_token = s($payload, 'verifyToken');
+    $verified     = $_SESSION['update_verified'][$verify_token] ?? null;
     // Consumed immediately so one verified lookup can't drive repeated
     // updates without going back through "Find My Record" each time.
-    unset($_SESSION['update_verified_member_id'], $_SESSION['update_verified_expires']);
+    if ($verify_token !== '') unset($_SESSION['update_verified'][$verify_token]);
 
-    if (!$existing_id || time() > $verified_expires) {
+    $existing_id = (int)($verified['member_id'] ?? 0);
+    if (!$existing_id || ($verified['expires'] ?? 0) < time()) {
         echo json_encode([
             'success' => false,
             'error'   => 'Your session expired. Please use "Find My Record" again before submitting changes.'
@@ -131,7 +134,7 @@ try {
     // tampered/garbage value falls back to COALESCE-preserving the existing
     // year instead of being written as-is.
     $grad_year = s($payload, 'graduationYear');
-    if (!in_array($grad_year, ['2026', '2027', '2028', '2029', '2030', '2031', 'Prep School'], true)) {
+    if (!in_array($grad_year, ['2026', '2027', '2028', '2029', '2030', 'Prep School'], true)) {
         $grad_year = '';
     }
     // Same whitelist treatment for Gender — a tampered value falls back to

@@ -139,12 +139,15 @@ function can_manage_finances(): bool {
     return in_array($_SESSION['role'] ?? '', ['admin', 'tech', 'officer', 'treasurer', 'member', 'secretary']);
 }
 
-// Admin/Officer/Treasurer can edit any purchase; Member/Secretary can only
-// edit their own. Officer is included so a President/VP redirected here to
-// attach a missing receipt before approving isn't stuck read-only — they
-// already hold higher trust (approval authority) than this requires.
+// Admin/Treasurer can edit any purchase; Member/Secretary can only edit
+// their own. Officer (President/VP specifically, not Tech) can edit only a
+// still-Pending purchase — just enough that one redirected here to attach a
+// missing receipt before approving isn't stuck read-only, without handing
+// every officer full edit rights (vendor, amounts, receipt swap) over
+// purchases that have already moved past their approval step.
 function can_edit_purchase(array $purchase): bool {
-    if (is_club_officer() || is_treasurer()) return true;
+    if (is_admin() || is_treasurer()) return true;
+    if (is_officer()) return ($purchase['status'] ?? '') === 'pending';
     if (is_member() || is_secretary()) return (int)($purchase['submitted_by'] ?? -1) === (int)($_SESSION['user_id'] ?? 0);
     return false;
 }

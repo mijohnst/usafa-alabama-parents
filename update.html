@@ -191,7 +191,6 @@
                 <option value="2028">2028</option>
                 <option value="2029">2029</option>
                 <option value="2030">2030</option>
-                <option value="2031">2031</option>
                 <option value="Prep School">Prep School</option>
               </select>
             </div>
@@ -207,6 +206,7 @@
         <input type="hidden" id="verifiedLastName" name="verifiedLastName" />
         <input type="hidden" id="verifiedYear" name="verifiedYear" />
         <input type="hidden" id="verifiedEmail" name="verifiedEmail" />
+        <input type="hidden" id="verifyToken" name="verifyToken" />
 
         <div id="formBody" style="display:none">
         <!-- CADET INFORMATION -->
@@ -541,6 +541,7 @@
           document.getElementById('verifiedLastName').value = last;
           document.getElementById('verifiedYear').value = year;
           document.getElementById('verifiedEmail').value = email;
+          document.getElementById('verifyToken').value = result.verifyToken;
           document.getElementById('lookupSection').style.display = 'none';
           document.getElementById('formBody').style.display = 'block';
           window.scrollTo({ top: document.getElementById('formBody').offsetTop - 100, behavior: 'smooth' });
