@@ -148,9 +148,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_receipt = handle_receipt_upload($upload_key);
         if (!$new_receipt) $errors[] = 'Receipt upload failed. Use a photo (JPG, PNG, HEIC, WEBP, GIF) or PDF under 10MB.';
     }
-    // A receipt is required on every purchase — either a new upload, or (on
-    // edit) one already on file from a previous save.
-    if (!$new_receipt && empty($p['receipt_filename'] ?? null)) {
+    // A file input can't be repopulated after a page reload — if this request
+    // got blocked by something else (e.g. the duplicate-purchase warning
+    // below) after a receipt was already successfully uploaded, carry that
+    // filename forward via a hidden field instead of making the user
+    // re-select the same file just to get past an unrelated warning.
+    if (!$new_receipt) {
+        $carried = trim($_POST['pending_receipt_filename'] ?? '');
+        if ($carried !== '' && preg_match('/^[a-zA-Z0-9._-]+$/', $carried) && is_file(__DIR__ . '/receipts/' . $carried)) {
+            $new_receipt = $carried;
+        }
+    }
+    // Required on a new purchase, or an edit that's still Pending (i.e. it
+    // never had one attached before its first approval). Once a purchase has
+    // moved past Pending, the receipt-required gate already ran at approval
+    // time — re-demanding one on every later edit would lock legacy
+    // purchases (predating this rule) out of even a one-word correction.
+    if (!$new_receipt && empty($p['receipt_filename'] ?? null) && (!$is_edit || $prior_status === 'pending')) {
         $errors[] = 'A receipt is required.';
     }
 
@@ -173,8 +187,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $old->execute([$id]);
             $old_status = $old->fetchColumn();
 
-            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,payment_method=?,updated_at=NOW() WHERE id=?')
-                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$payment_method,$id]);
+            // If this raw status edit is what's setting status to Paid (rather
+            // than the dedicated Mark Paid button, which sets this itself),
+            // still fill in paid_at so it doesn't stay permanently NULL —
+            // COALESCE leaves it alone if it was already set for real.
+            $paid_at_if_new = ($status === 'paid' && $old_status !== 'paid') ? date('Y-m-d H:i:s') : null;
+            $pdo->prepare('UPDATE purchases SET vendor=?,order_number=?,description=?,event=?,category=?,purchase_date=?,amount_pretax=?,amount_tax=?,amount_shipping=?,amount_total=?,receipt_filename=?,submitted_by=?,status=?,notes=?,payment_method=?,paid_at=COALESCE(paid_at,?),updated_at=NOW() WHERE id=?')
+                ->execute([$vendor,$order_number,$description,$event,$category,$date,$pretax,$tax,$shipping,$total,$receipt_filename,$submitted_by,$status,$notes,$payment_method,$paid_at_if_new,$id]);
             flash('success','Purchase updated.');
 
             // Check budget thresholds (check both old and new event if event changed)
@@ -205,8 +224,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Re-populate from POST on error
-    $p = array_merge($p, compact('vendor','description','event','category','date','pretax','tax','total','status','notes','submitted_by'));
+    $p = array_merge($p, compact('vendor','description','event','category','date','pretax','tax','total','status','notes','submitted_by','payment_method'));
     $p['purchase_date']  = $date;
+    // Surfaced in the template as a hidden field so a receipt uploaded this
+    // attempt (but blocked from saving by some other error) survives the
+    // next resubmit — see the carry-forward check above.
+    $carried_receipt = $new_receipt;
     $p['amount_pretax']  = $pretax;
     $p['amount_tax']     = $tax;
     $p['amount_total']   = $total;
@@ -418,6 +441,10 @@ if (!empty($real_errors)): ?>
             Current receipt: <a href="receipt-view.php?id=<?= $id ?>" target="_blank" style="color:#003594">View</a>
             <span style="color:#9aa5b4"> — use buttons above to replace it</span>
           </div>
+        <?php endif; ?>
+        <?php if (!empty($carried_receipt)): ?>
+          <input type="hidden" name="pending_receipt_filename" value="<?= h($carried_receipt) ?>">
+          <div style="margin-top:.5rem;font-size:.82rem;color:#1b5e20">✓ Receipt already uploaded from your last attempt — no need to re-select it.</div>
         <?php endif; ?>
       </div>
       <div class="form-group">
