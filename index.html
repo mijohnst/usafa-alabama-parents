@@ -464,6 +464,13 @@
         <h3>Support our cadets &amp; families</h3>
         <p style="margin-bottom:1.25rem;">Our club runs on the energy of dedicated volunteers. Whether you can help at events, coordinate care packages, or lend your skills — we'd love to have you.</p>
 
+        <!-- Open volunteer opportunities (loaded from the portal) -->
+        <div id="volunteer-opps-block" style="display:none;margin-bottom:1.5rem;border-top:1px solid #d0d8e4;border-bottom:1px solid #d0d8e4;padding:1.1rem 0">
+          <p style="font-size:.78rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem">Open Opportunities Right Now</p>
+          <div id="volunteer-opps-list"></div>
+          <p style="font-size:.72rem;color:var(--gray);margin-top:.6rem">Already a member? <a href="/admin/login.php?next=volunteer-signup.php" style="color:var(--blue);">Log in</a> to claim a spot.</p>
+        </div>
+
         <!-- What you'll do -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.5rem">
           <div style="background:var(--light);border-radius:6px;padding:.75rem;text-align:center">
@@ -757,6 +764,52 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', loadNews);
 } else {
   loadNews();
+}
+
+// ── Open volunteer opportunities (posted in the portal) ─────────────────────
+function renderVolunteerOpportunities(items) {
+  var block = document.getElementById('volunteer-opps-block');
+  var list  = document.getElementById('volunteer-opps-list');
+  if (!items || items.length === 0) { block.style.display = 'none'; return; }
+  list.innerHTML = items.map(function(o) {
+    var filled = o.filled || 0;
+    var needed = o.spots_needed || 1;
+    var full   = filled >= needed;
+    var meta = [];
+    if (o.event_date) {
+      var d = new Date(o.event_date + 'T00:00:00');
+      meta.push(d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}));
+    }
+    if (o.location) meta.push(escHtml(o.location));
+    meta.push(full ? 'Full' : (needed - filled) + ' spot' + ((needed - filled) !== 1 ? 's' : '') + ' left');
+    return '<div style="background:var(--light);border-radius:6px;padding:.75rem;margin-bottom:.5rem">' +
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;align-items:center">' +
+        '<div style="min-width:0">' +
+          '<strong style="color:var(--navy);font-size:.85rem">' + escHtml(o.title) + '</strong>' +
+          '<div style="font-size:.72rem;color:var(--gray);margin-top:.15rem">' + meta.join(' &bull; ') + '</div>' +
+          (o.description ? '<div style="font-size:.75rem;color:var(--gray);margin-top:.25rem">' + escHtml(o.description) + '</div>' : '') +
+        '</div>' +
+        (full
+          ? '<span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);flex-shrink:0">Full</span>'
+          : '<a href="/admin/login.php?next=volunteer-signup.php" class="btn btn-dark" style="padding:.5rem 1rem;font-size:.68rem;flex-shrink:0">Log In to Claim</a>') +
+      '</div></div>';
+  }).join('');
+  block.style.display = 'block';
+}
+
+async function loadVolunteerOpportunities() {
+  try {
+    var resp = await fetchWithTimeout('volunteer-opportunities-public.php', 6000);
+    var data = await resp.json();
+    if (data && data.success) renderVolunteerOpportunities(data.opportunities);
+  } catch (err) {
+    // Silent failure — the general interest form below still works without this list.
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadVolunteerOpportunities);
+} else {
+  loadVolunteerOpportunities();
 }
 
 // ── Spotlight layout — two centered columns when both halves have data,

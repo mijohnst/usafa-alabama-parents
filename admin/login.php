@@ -2,7 +2,13 @@
 require_once __DIR__ . '/auth.php';
 start_session();
 
-if (!empty($_SESSION['logged_in'])) { header('Location: dashboard.php'); exit; }
+// Only a fixed allowlist of destinations can be requested via ?next= — never
+// trust an arbitrary redirect target from the query string or POST body.
+$next_allowlist = ['volunteer-signup.php'];
+$next = $_POST['next'] ?? $_GET['next'] ?? '';
+$next = in_array($next, $next_allowlist, true) ? $next : 'dashboard.php';
+
+if (!empty($_SESSION['logged_in'])) { header('Location: ' . $next); exit; }
 
 $pdo   = get_pdo();
 $error = '';
@@ -48,7 +54,7 @@ if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootst
             $_SESSION['user_id']    = $user['id'];
             $_SESSION['user_name']  = $user['name'];
             $_SESSION['user_email'] = $user['email'];
-            header('Location: dashboard.php'); exit;
+            header('Location: ' . $next); exit;
         }
         if ($status) register_login_failure($pdo, (int)$status['id'], (int)$status['failed_attempts']);
         $error = 'Invalid username or password.';
@@ -111,6 +117,7 @@ button:hover{background:#002268}
   <?php else: ?>
     <form method="POST">
       <?= csrf_field() ?>
+      <input type="hidden" name="next" value="<?= h($next) ?>">
       <label>Username or Email</label>
       <input type="text" name="username" required autocomplete="username">
       <label>Password</label>
