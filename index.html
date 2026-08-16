@@ -782,14 +782,29 @@ function renderVolunteerOpportunities(items) {
     if (o.location) meta.push(escHtml(o.location));
     meta.push(full ? 'Full' : (needed - filled) + ' left');
     var spacing = i === 0 ? '' : 'margin-top:.5rem;';
-    return '<div id="opp-' + o.id + '" style="' + spacing + 'background:var(--light);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;padding:.6rem .75rem;display:flex;justify-content:space-between;gap:.75rem;align-items:center;transition:background-color 1s">' +
+    return '<div id="opp-' + o.id + '" style="' + spacing + 'background:var(--light);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;padding:.6rem .75rem;transition:background-color 1s">' +
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center">' +
         '<div style="min-width:0">' +
           '<strong style="color:var(--accent);font-size:.85rem">' + escHtml(o.title) + '</strong>' +
           '<span style="font-size:.72rem;color:var(--gray);margin-left:.5rem">' + meta.join(' &bull; ') + '</span>' +
         '</div>' +
+        '<div class="opp-actions" style="text-align:right;flex-shrink:0">' +
         (full
-          ? '<span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);flex-shrink:0">Full</span>'
-          : '<a href="/admin/login.php?next=volunteer-signup.php" style="font-size:.72rem;font-weight:700;color:var(--blue);flex-shrink:0;white-space:nowrap">Log In to Claim &rarr;</a>') +
+          ? '<span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray)">Full</span>'
+          : '<a href="/admin/login.php?next=volunteer-signup.php" style="font-size:.72rem;font-weight:700;color:var(--blue);white-space:nowrap">Log In to Claim &rarr;</a>' +
+            '<div><a href="#" onclick="toggleGuestForm(' + o.id + ');return false;" style="font-size:.66rem;color:var(--gray);white-space:nowrap">or sign up without an account</a></div>') +
+        '</div>' +
+      '</div>' +
+      (full ? '' :
+        '<div id="opp-form-' + o.id + '" style="display:none;margin-top:.6rem;padding-top:.6rem;border-top:1px dashed #c9cdd6">' +
+          '<div style="display:flex;gap:.4rem;flex-wrap:wrap">' +
+            '<input type="text" id="opp-name-' + o.id + '" placeholder="Your name" style="flex:1;min-width:110px;padding:.4rem .5rem;border:1px solid #d0d5dd;border-radius:4px;font-size:.78rem;font-family:inherit">' +
+            '<input type="email" id="opp-email-' + o.id + '" placeholder="Your email" style="flex:1;min-width:140px;padding:.4rem .5rem;border:1px solid #d0d5dd;border-radius:4px;font-size:.78rem;font-family:inherit">' +
+            '<input type="text" id="opp-hp-' + o.id + '" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off">' +
+            '<button type="button" onclick="submitGuestClaim(' + o.id + ')" class="btn btn-dark" style="padding:.4rem .9rem;font-size:.68rem">Sign Up</button>' +
+          '</div>' +
+          '<div id="opp-status-' + o.id + '" style="font-size:.72rem;margin-top:.35rem"></div>' +
+        '</div>') +
       '</div>';
   }).join('');
   block.style.display = 'block';
@@ -804,6 +819,48 @@ function renderVolunteerOpportunities(items) {
       target.style.backgroundColor = '#fff3cd';
       setTimeout(function() { target.style.backgroundColor = ''; }, 2500);
     }
+  }
+}
+
+function toggleGuestForm(id) {
+  var el = document.getElementById('opp-form-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitGuestClaim(id) {
+  var nameEl   = document.getElementById('opp-name-'   + id);
+  var emailEl  = document.getElementById('opp-email-'  + id);
+  var hpEl     = document.getElementById('opp-hp-'     + id);
+  var statusEl = document.getElementById('opp-status-' + id);
+  var name  = nameEl.value.trim();
+  var email = emailEl.value.trim();
+  if (!name || !email) {
+    statusEl.textContent = 'Name and email are required.';
+    statusEl.style.color = 'var(--accent)';
+    return;
+  }
+  statusEl.textContent = 'Submitting…';
+  statusEl.style.color = 'var(--gray)';
+  try {
+    var resp = await fetch('volunteer-opportunity-claim.php', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ opportunity_id: id, name: name, email: email, website: hpEl.value })
+    });
+    var data = await resp.json();
+    if (resp.ok && data.success) {
+      var row = document.getElementById('opp-' + id);
+      var actions = row ? row.querySelector('.opp-actions') : null;
+      if (actions) actions.innerHTML = '<span style="font-size:.7rem;font-weight:700;color:#1b5e20">&#10003; Signed up</span>';
+      var formEl = document.getElementById('opp-form-' + id);
+      if (formEl) formEl.style.display = 'none';
+    } else {
+      statusEl.textContent = data.error || 'Something went wrong. Please email info@alabamafalcons.org';
+      statusEl.style.color = 'var(--accent)';
+    }
+  } catch (err) {
+    statusEl.textContent = 'Something went wrong. Please email info@alabamafalcons.org';
+    statusEl.style.color = 'var(--accent)';
   }
 }
 

@@ -61,8 +61,11 @@ if (!empty($opportunities)) {
     $ids = array_column($opportunities, 'id');
     $ph  = implode(',', array_fill(0, count($ids), '?'));
     $rows = $pdo->prepare(
-        "SELECT s.opportunity_id, u.name, u.email FROM volunteer_signups s
-         JOIN users u ON s.user_id = u.id WHERE s.opportunity_id IN ($ph) ORDER BY s.signed_up_at ASC"
+        "SELECT s.opportunity_id, COALESCE(u.name, s.guest_name) AS name,
+                COALESCE(u.email, s.guest_email) AS email, s.user_id IS NULL AS is_guest
+         FROM volunteer_signups s
+         LEFT JOIN users u ON s.user_id = u.id
+         WHERE s.opportunity_id IN ($ph) ORDER BY s.signed_up_at ASC"
     );
     $rows->execute($ids);
     foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $r) {
@@ -155,7 +158,7 @@ echo show_flash();
         <?php if (!empty($rosters[$o['id']])): ?>
         <div class="vo-roster">
           <strong>Signed up:</strong>
-          <?= implode(', ', array_map(fn($r) => h($r['name']), $rosters[$o['id']])) ?>
+          <?= implode(', ', array_map(fn($r) => h($r['name']) . ($r['is_guest'] ? ' (Guest)' : ''), $rosters[$o['id']])) ?>
         </div>
         <?php endif; ?>
       </div>
