@@ -421,7 +421,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li><strong>Attach a receipt</strong> — photo from your phone camera or uploaded file (JPG, PNG, PDF up to 10MB)</li>
         <li>Purchases that look similar to a recent entry will trigger a <strong>duplicate warning</strong> before saving</li>
         <li>All purchases start as <strong>Pending</strong> until an Officer reviews and approves them</li>
-        <li>Once approved, the Treasurer submits payment (Check/Venmo/PayPal/Cash App) and marks it <strong>Submitted</strong></li>
+        <li>Once approved, the Treasurer submits payment (Check/Venmo/PayPal) and marks it <strong>Submitted</strong></li>
         <li>Once the member confirms receipt, the Treasurer marks it <strong>Paid</strong> — final confirmation</li>
         <li>A plain Member can only see and edit their own submissions</li>
         <li>Officers and Secretary can <strong>view</strong> every purchase for oversight, but can still only <strong>edit</strong> their own — Treasurer and Tech Support can edit any</li>

@@ -84,13 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $paypal_email = trim($_POST['paypal_email'] ?? '');
         if (!filter_var($paypal_email, FILTER_VALIDATE_EMAIL)) $errors[] = 'A valid PayPal email is required.';
         else $payment_method = 'PayPal ' . $paypal_email;
-    } elseif ($payment_method === 'Cash App') {
-        $cashapp_tag = trim($_POST['cashapp_tag'] ?? '');
-        if ($cashapp_tag === '') $errors[] = 'Cashtag is required.';
-        else {
-            if ($cashapp_tag[0] !== '$') $cashapp_tag = '$' . $cashapp_tag;
-            $payment_method = 'Cash App ' . $cashapp_tag;
-        }
     }
     // Only admins/treasurers may re-attribute; everyone else is locked to their own ID
     $submitted_by = (is_admin() || is_treasurer())
@@ -459,12 +452,15 @@ if (!empty($real_errors)): ?>
         // correctly when editing a purchase that already has one on file.
         $stored_pm  = (string)($p['payment_method'] ?? '');
         $pm_selected = in_array($stored_pm, PAYMENT_METHODS, true) ? $stored_pm : '';
-        $venmo_prefill = $paypal_prefill = $cashapp_prefill = '';
+        $venmo_prefill = $paypal_prefill = '';
         if ($pm_selected === '') {
             if (str_starts_with($stored_pm, 'Venmo ')) { $pm_selected = 'Venmo'; $venmo_prefill = trim(substr($stored_pm, 6)); }
             elseif (str_starts_with($stored_pm, 'PayPal ')) { $pm_selected = 'PayPal'; $paypal_prefill = trim(substr($stored_pm, 7)); }
-            elseif (str_starts_with($stored_pm, 'Cash App ')) { $pm_selected = 'Cash App'; $cashapp_prefill = trim(substr($stored_pm, 9)); }
             elseif (str_starts_with($stored_pm, 'Check')) { $pm_selected = 'Check'; }
+            // A stored "Cash App $handle" value from before that method was
+            // removed falls through here unrecognized — the dropdown just
+            // shows unselected, same graceful degradation as any other
+            // retired payment method (e.g. the old "Internet Transfer").
         }
       ?>
       <div class="form-group">
@@ -485,19 +481,13 @@ if (!empty($real_errors)): ?>
         <label>PayPal Email *</label>
         <input type="email" name="paypal_email" id="pm_paypal_email" placeholder="name@example.com" value="<?= h($paypal_prefill) ?>">
       </div>
-      <div class="form-group" id="pm_cashapp_group" style="display:none">
-        <label>Cashtag *</label>
-        <input type="text" name="cashapp_tag" id="pm_cashapp_tag" placeholder="$username" value="<?= h($cashapp_prefill) ?>">
-      </div>
       <script>
         function updatePmFields() {
           var m = document.getElementById('pm_select').value;
-          document.getElementById('pm_venmo_group').style.display   = m === 'Venmo'    ? '' : 'none';
-          document.getElementById('pm_paypal_group').style.display  = m === 'PayPal'   ? '' : 'none';
-          document.getElementById('pm_cashapp_group').style.display = m === 'Cash App' ? '' : 'none';
+          document.getElementById('pm_venmo_group').style.display  = m === 'Venmo'  ? '' : 'none';
+          document.getElementById('pm_paypal_group').style.display = m === 'PayPal' ? '' : 'none';
           document.getElementById('pm_venmo_id').required     = m === 'Venmo';
           document.getElementById('pm_paypal_email').required = m === 'PayPal';
-          document.getElementById('pm_cashapp_tag').required  = m === 'Cash App';
         }
         updatePmFields();
       </script>

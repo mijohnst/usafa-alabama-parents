@@ -409,7 +409,7 @@ const ELECTION_POSITIONS = ['President', 'Vice President', 'Secretary', 'Treasur
 const COMMITTEES = ['Fundraising', 'Events & Socials', 'Communications', 'Care Packages', 'Membership Outreach', 'Sendoff Support'];
 
 const REGIONS = ['', 'North', 'Central', 'South'];
-const PAYMENT_METHODS   = ['', 'Check', 'Venmo', 'PayPal', 'Cash App'];
+const PAYMENT_METHODS   = ['', 'Check', 'Venmo', 'PayPal'];
 const TICKET_CATEGORIES = ['', 'Website Issue', 'Admin Portal Issue', 'Email / Google Workspace', 'Login / Password Help', 'Add Event to Calendar', 'Site Suggestion', 'Other'];
 const TICKET_STATUSES   = ['open'=>'Open','in_progress'=>'In Progress','resolved'=>'Resolved'];
 const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];
