@@ -17,7 +17,7 @@ $days           = in_array($days_raw, [30,60,90,365]) ? $days_raw : 30;
 $results = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $where  = ['archived = 0'];
+    $where  = [$type === 'archived_members' ? 'archived = 1' : 'archived = 0'];
     $params = [];
 
     $selected_years = array_intersect((array)$selected_years, $all_years);
@@ -186,6 +186,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $lines[] = $cadet_last . ' (' . $r['class_year'] . ')' . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : ($p1 ? ' — ' . $p1 : ''));
                 }
                 break;
+            case 'archived_members':
+                $p1 = trim($r['parent1_first_name'] . ' ' . $r['parent1_last_name']);
+                $lines[] = $cadet_last . ' (' . $r['class_year'] . ')' . ($p1 ? ' — ' . $p1 : '')
+                         . ($r['parent1_email'] ? ' — ' . $r['parent1_email'] : '');
+                break;
             case 'care_labels':
                 $box = trim($r['cadet_po_box'] ?? '');
                 if ($box) {
@@ -349,6 +354,7 @@ admin_header('Lists');
             <option value="missing_gender" <?= $type==='missing_gender' ?'selected':''?>>Missing Gender</option>
             <option value="care_labels"  <?= $type==='care_labels'  ?'selected':''?>>Care Package Labels</option>
             <option value="sqd_roster"   <?= $type==='sqd_roster'   ?'selected':''?>>Squadron Roster</option>
+            <option value="archived_members" <?= $type==='archived_members' ?'selected':''?>>Archived Cadets</option>
           </optgroup>
           <optgroup label="Full Roster">
             <option value="full_roster"  <?= $type==='full_roster'  ?'selected':''?>>Full Roster (all fields)</option>
