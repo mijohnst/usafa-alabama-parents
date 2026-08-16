@@ -24,7 +24,7 @@ function extract_emails(string $raw): array {
 
 // ── Query DB to build recipient list ──────────────────────────────────────
 function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, string $missing = ''): string {
-    $where  = ['1=1'];
+    $where  = ['archived = 0'];
     $params = [];
 
     $safe_years = array_intersect($years, CLASS_YEAR_LIST);
