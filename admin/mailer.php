@@ -357,6 +357,78 @@ function send_meeting_reminders(PDO $pdo): int {
     return $count;
 }
 
+// ── Volunteer opportunity reminder — day before the event, to everyone
+// signed up (member or guest) plus whoever created the opportunity ────────
+// event_date has no time-of-day, and this runs once daily via cron, so
+// "24 hours before" in practice means "the morning before the day it's on."
+function send_volunteer_opportunity_reminders(PDO $pdo): int {
+    $cfg = load_automated_email($pdo, 'volunteer_opportunity_reminder');
+    if (!$cfg || !$cfg['enabled']) return 0;
+
+    try {
+        // Bind PHP's own "tomorrow" rather than trusting MySQL's CURDATE()+1
+        // — same reasoning as send_birthday_emails().
+        $tomorrow = date('Y-m-d', strtotime('+1 day'));
+        $stmt = $pdo->prepare(
+            "SELECT o.id, o.title, o.description, o.event_date, o.location,
+                    u.name AS creator_name, u.email AS creator_email
+             FROM volunteer_opportunities o
+             LEFT JOIN users u ON u.id = o.created_by
+             WHERE o.active = 1 AND o.event_date = ?"
+        );
+        $stmt->execute([$tomorrow]);
+        $opportunities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('mailer: send_volunteer_opportunity_reminders query failed — ' . $e->getMessage());
+        return 0;
+    }
+    if (empty($opportunities)) return 0;
+
+    $count = 0;
+    foreach ($opportunities as $opp) {
+        // Guard is per-opportunity, not per-recipient — matches how the
+        // return count below represents opportunities processed, same as
+        // send_birthday_emails() counts cadets, not individual emails.
+        if (!mark_automated_sent($pdo, 'volunteer_opportunity_reminder', (int)$opp['id'], (string)$opp['event_date'])) continue;
+        $count++;
+
+        $replace = [
+            '{opportunity_title}'       => $opp['title'],
+            '{event_date}'              => date('l, F j, Y', strtotime($opp['event_date'])),
+            '{event_location}'          => $opp['location'] ?: 'No location listed',
+            '{opportunity_description}' => $opp['description'] ?: '',
+        ];
+
+        // Recipients: everyone signed up (member or guest), plus the
+        // creator — deduped by email so the creator doesn't get it twice
+        // if they also signed themselves up.
+        $recipients = [];
+        try {
+            $sign = $pdo->prepare(
+                "SELECT COALESCE(u.name, s.guest_name) AS name, COALESCE(u.email, s.guest_email) AS email
+                 FROM volunteer_signups s LEFT JOIN users u ON u.id = s.user_id
+                 WHERE s.opportunity_id = ?"
+            );
+            $sign->execute([$opp['id']]);
+            foreach ($sign->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                if (!empty($r['email'])) $recipients[strtolower($r['email'])] = $r['name'] ?: 'there';
+            }
+        } catch (PDOException $e) {}
+
+        if (!empty($opp['creator_email'])) {
+            $recipients[strtolower($opp['creator_email'])] = $opp['creator_name'] ?: 'there';
+        }
+
+        foreach ($recipients as $email => $name) {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+            $r = $replace;
+            $r['{name}'] = $name;
+            send_notification($email, strtr($cfg['subject'], $r), strtr($cfg['body'], $r));
+        }
+    }
+    return $count;
+}
+
 // ── Send a preview of any automated email to a test address ──────────────
 // Uses sample placeholder data — does not touch automated_email_log or query members.
 // $gender ('', 'Male', 'Female') only matters for the two birthday templates,
@@ -372,6 +444,7 @@ function send_automated_test_email(PDO $pdo, string $email_key, string $to, stri
         'meeting_reminder'    => ['{meeting_title}' => 'Monthly General Meeting', '{meeting_date}' => date('l, F j, Y'), '{meeting_location}' => 'Zoom', '{meeting_link}' => 'https://zoom.us/j/example'],
         'new_member_welcome'  => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example'],
         'lapsed_reengagement' => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example', '{expire_date}' => date('F j, Y', strtotime('-60 days'))],
+        'volunteer_opportunity_reminder' => ['{name}' => 'Alex', '{opportunity_title}' => 'Cadet Care Package Assembly Night', '{event_date}' => date('l, F j, Y', strtotime('+1 day')), '{event_location}' => 'Brick & Tin, Huntsville', '{opportunity_description}' => 'Join fellow club members as we come together to assemble care packages for our Alabama cadets.'],
     ];
     $cfg = load_automated_email($pdo, $email_key);
     if (!$cfg) return false;

@@ -84,7 +84,9 @@ echo show_flash();
   no cron changes needed. Placeholders you can use (only the relevant ones work per email — see its description):
   <code>{name}</code>, <code>{cadet_name}</code>, <code>{parent_name}</code>, <code>{expire_date}</code>,
   <code>{dues_amount}</code>, <code>{meeting_title}</code>, <code>{meeting_date}</code>,
-  <code>{meeting_location}</code>, <code>{meeting_link}</code>. The birthday emails also support
+  <code>{meeting_location}</code>, <code>{meeting_link}</code>, <code>{opportunity_title}</code>,
+  <code>{event_date}</code>, <code>{event_location}</code>, <code>{opportunity_description}</code>.
+  The birthday emails also support
   <code>{he_she}</code>, <code>{him_her}</code>, <code>{his_her}</code> (drawn from the cadet's Gender field,
   falling back to "they/them/their" if it's blank).
 </p>
@@ -103,7 +105,8 @@ $lr_text  = !$last_run ? '#5f4c00' : ($is_stale ? '#c62828' : '#1b5e20');
     Dues renewals: <?= (int)$last_run['dues_renewals'] ?>,
     Meeting reminders: <?= (int)$last_run['meeting_reminders'] ?>,
     New member welcomes: <?= (int)$last_run['new_member_welcomes'] ?>,
-    Lapsed re-engagements: <?= (int)$last_run['lapsed_reengagements'] ?>
+    Lapsed re-engagements: <?= (int)$last_run['lapsed_reengagements'] ?>,
+    Volunteer opportunity reminders: <?= (int)($last_run['volunteer_opp_reminders'] ?? 0) ?>
   <?php endif; ?>
 </div>
 

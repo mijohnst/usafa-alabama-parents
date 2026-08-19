@@ -38,11 +38,12 @@ try {
 }
 
 $results = [
-    'Birthdays'             => send_birthday_emails($pdo),
-    'Dues renewals'         => send_dues_renewal_reminders($pdo),
-    'Meeting reminders'     => send_meeting_reminders($pdo),
-    'New member welcomes'   => send_new_member_welcome($pdo),
-    'Lapsed re-engagements' => send_lapsed_reengagement($pdo),
+    'Birthdays'                    => send_birthday_emails($pdo),
+    'Dues renewals'                => send_dues_renewal_reminders($pdo),
+    'Meeting reminders'            => send_meeting_reminders($pdo),
+    'New member welcomes'          => send_new_member_welcome($pdo),
+    'Lapsed re-engagements'        => send_lapsed_reengagement($pdo),
+    'Volunteer opportunity reminders' => send_volunteer_opportunity_reminders($pdo),
 ];
 
 echo date('Y-m-d H:i:s') . " — Automated emails:\n";
@@ -55,14 +56,15 @@ foreach ($results as $label => $count) {
 // can silently reject as spam (see migrate_automated_email_last_run.sql).
 try {
     $pdo->prepare(
-        'INSERT INTO automated_email_runs (id, ran_at, birthdays, dues_renewals, meeting_reminders, new_member_welcomes, lapsed_reengagements)
-         VALUES (1, NOW(), ?, ?, ?, ?, ?)
+        'INSERT INTO automated_email_runs (id, ran_at, birthdays, dues_renewals, meeting_reminders, new_member_welcomes, lapsed_reengagements, volunteer_opp_reminders)
+         VALUES (1, NOW(), ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE ran_at=VALUES(ran_at), birthdays=VALUES(birthdays), dues_renewals=VALUES(dues_renewals),
-             meeting_reminders=VALUES(meeting_reminders), new_member_welcomes=VALUES(new_member_welcomes), lapsed_reengagements=VALUES(lapsed_reengagements)'
+             meeting_reminders=VALUES(meeting_reminders), new_member_welcomes=VALUES(new_member_welcomes), lapsed_reengagements=VALUES(lapsed_reengagements),
+             volunteer_opp_reminders=VALUES(volunteer_opp_reminders)'
     )->execute([
         $results['Birthdays'], $results['Dues renewals'], $results['Meeting reminders'],
-        $results['New member welcomes'], $results['Lapsed re-engagements'],
+        $results['New member welcomes'], $results['Lapsed re-engagements'], $results['Volunteer opportunity reminders'],
     ]);
 } catch (PDOException $e) {
-    echo "(Could not record last-run status — has migrate_automated_email_last_run.sql been run? " . $e->getMessage() . ")\n";
+    echo "(Could not record last-run status — has migrate_add_volunteer_opp_reminder.sql been run? " . $e->getMessage() . ")\n";
 }
