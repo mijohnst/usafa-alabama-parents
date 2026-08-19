@@ -26,11 +26,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $committees = array_intersect((array)($_POST['committees'] ?? []), COMMITTEES);
 
         try {
+            // "Assign to Opportunity" previously only labeled the interest
+            // submission — it never actually claimed a spot, so assigned
+            // people silently never counted toward the opportunity's filled
+            // total or showed up on its roster. Reconcile a real
+            // volunteer_signups row (as a guest — these people don't have
+            // portal accounts) to match whatever is now selected here.
+            $before = $pdo->prepare('SELECT name, email, assigned_opportunity_id FROM volunteers WHERE id=?');
+            $before->execute([$id]);
+            $vol = $before->fetch(PDO::FETCH_ASSOC);
+            $old_opp_id = $vol ? (int)($vol['assigned_opportunity_id'] ?? 0) : 0;
+
             $pdo->prepare('UPDATE volunteers SET status=?, assigned_opportunity_id=?, admin_notes=? WHERE id=?')
                 ->execute([$status, $opp_id, $notes, $id]);
             $pdo->prepare('DELETE FROM volunteer_committee_tags WHERE volunteer_id=?')->execute([$id]);
             $ins = $pdo->prepare('INSERT INTO volunteer_committee_tags (volunteer_id, committee) VALUES (?,?)');
             foreach ($committees as $c) $ins->execute([$id, $c]);
+
+            if ($vol && $vol['email']) {
+                // Moved off the old opportunity (or unassigned) — drop the
+                // old guest signup so it stops counting there.
+                if ($old_opp_id && $old_opp_id !== (int)$opp_id) {
+                    $pdo->prepare('DELETE FROM volunteer_signups WHERE opportunity_id=? AND guest_email=?')
+                        ->execute([$old_opp_id, $vol['email']]);
+                }
+                // Newly assigned (or re-saved on the same one) — claim the
+                // spot. Duplicate key (already claimed) is expected and fine.
+                if ($opp_id) {
+                    try {
+                        $pdo->prepare('INSERT INTO volunteer_signups (opportunity_id, guest_name, guest_email) VALUES (?,?,?)')
+                            ->execute([$opp_id, $vol['name'], $vol['email']]);
+                    } catch (PDOException $e) {}
+                }
+            }
+
             flash('success', 'Submission updated.');
         } catch (PDOException $e) {
             flash('error', 'Could not save — run admin/migrate_volunteer_assignment.sql first.');
