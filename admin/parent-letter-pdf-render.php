@@ -26,7 +26,7 @@ function render_parent_letter_pdf_page(tFPDF $pdf, string $letterDate, string $l
     $logo_path = __DIR__ . '/../logo01.png';
     if (file_exists($logo_path)) {
         $dims = @getimagesize($logo_path);
-        $img_w_in = 2.0;
+        $img_w_in = 1.0;
         $img_h_in = $dims ? $img_w_in * ($dims[1] / $dims[0]) : $img_w_in;
         $pdf->Image($logo_path, ($page_width - $img_w_in) / 2, 0.75, $img_w_in, $img_h_in);
         $pdf->SetY(0.75 + $img_h_in + 0.15);
