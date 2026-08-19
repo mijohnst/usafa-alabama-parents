@@ -163,6 +163,12 @@ echo show_flash();
         <?php endif; ?>
       </div>
       <div style="display:flex;gap:.4rem;flex-shrink:0;align-items:flex-start">
+        <?php if (!empty($rosters[$o['id']])): ?>
+        <form method="POST" action="email.php" style="margin:0">
+          <input type="hidden" name="recipients" value="<?= h(implode("\n", array_map(fn($r) => $r['name'] . ' <' . $r['email'] . '>', $rosters[$o['id']]))) ?>">
+          <button type="submit" class="btn btn-secondary btn-sm">✉️ Email Everyone Signed Up</button>
+        </form>
+        <?php endif; ?>
         <?php if ($o['active']): ?>
         <button type="button" class="btn btn-secondary btn-sm" onclick="copyOppLink(this, <?= $o['id'] ?>)">Copy Link</button>
         <?php endif; ?>
