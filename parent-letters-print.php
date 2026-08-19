@@ -45,6 +45,9 @@ $letter_date = date('F j, Y', strtotime($letter['created_at']));
 <meta charset="UTF-8">
 <title>Letter to <?= h($cadet_first) ?> — <?= h($letter_date) ?></title>
 <link rel="icon" type="image/png" href="logo01.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Times New Roman',Times,serif;font-size:12pt;color:#000;background:#fff;padding:0.75in}
@@ -53,12 +56,12 @@ body{font-family:'Times New Roman',Times,serif;font-size:12pt;color:#000;backgro
   .no-print{display:none!important}
   @page{margin:0.85in}
 }
-.letterhead{text-align:center;border-bottom:2px solid #003594;padding-bottom:.75rem;margin-bottom:1.6rem}
-.letterhead img{height:70px;margin-bottom:.5rem}
-.club-name{font-size:16pt;font-weight:bold;color:#002554;letter-spacing:.02em}
-.club-sub{font-size:10pt;color:#003594;margin-top:.15rem}
-.letter-date{text-align:right;margin-bottom:1.4rem;font-size:11pt}
-.body-text{line-height:1.7;font-size:12pt;white-space:pre-wrap}
+.letterhead{text-align:center;margin-bottom:1.8rem}
+.letterhead img{height:90px}
+.letter-date{text-align:right;margin-bottom:1.4rem;font-family:'Caveat',cursive;font-size:20pt}
+.body-text{font-family:'Caveat',cursive;font-weight:500;line-height:1.5;font-size:16pt;white-space:pre-wrap}
+.footer-mark{text-align:center;margin-top:3rem}
+.footer-mark img{height:60px}
 .print-btn{position:fixed;top:1rem;right:1rem;background:#003594;color:#fff;border:none;padding:.6rem 1.2rem;border-radius:5px;font-size:14px;cursor:pointer;font-family:sans-serif}
 .print-btn:hover{background:#002554}
 .back-link{position:fixed;top:1rem;left:1rem;background:#f0f2f5;color:#002554;border:none;padding:.5rem 1rem;border-radius:5px;font-size:13px;text-decoration:none;font-family:sans-serif}
@@ -70,14 +73,16 @@ body{font-family:'Times New Roman',Times,serif;font-size:12pt;color:#000;backgro
 <button class="print-btn no-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
 
 <div class="letterhead">
-  <img src="logo01.png" alt="USAFA Parents Club of Alabama">
-  <div class="club-name">USAFA Parents Club of Alabama</div>
-  <div class="club-sub">alabamafalcons.org</div>
+  <img src="falcon-strong-logo.png" alt="Falcon Strong — USAFA Parents Club of Alabama">
 </div>
 
 <div class="letter-date"><?= h($letter_date) ?></div>
 
 <div class="body-text"><?= h($letter['letter_body']) ?></div>
+
+<div class="footer-mark">
+  <img src="logo01.png" alt="USAFA Parents Club of Alabama">
+</div>
 
 </body>
 </html>
