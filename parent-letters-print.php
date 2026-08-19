@@ -57,11 +57,11 @@ body{font-family:'Times New Roman',Times,serif;font-size:12pt;color:#000;backgro
   @page{margin:0.85in}
 }
 .letterhead{text-align:center;margin-bottom:1.8rem}
-.letterhead img{height:90px}
-.letter-date{text-align:right;margin-bottom:1.4rem;font-family:'Caveat',cursive;font-size:20pt}
-.body-text{font-family:'Caveat',cursive;font-weight:500;line-height:1.5;font-size:16pt;white-space:pre-wrap}
+.letterhead img{height:170px}
+.letter-date{text-align:right;margin-bottom:1.4rem;font-family:'Caveat',cursive;font-size:24pt}
+.body-text{font-family:'Caveat',cursive;font-weight:500;line-height:1.5;font-size:22pt;white-space:pre-wrap}
 .footer-mark{text-align:center;margin-top:3rem}
-.footer-mark img{height:60px}
+.footer-mark img{height:130px}
 .print-btn{position:fixed;top:1rem;right:1rem;background:#003594;color:#fff;border:none;padding:.6rem 1.2rem;border-radius:5px;font-size:14px;cursor:pointer;font-family:sans-serif}
 .print-btn:hover{background:#002554}
 .back-link{position:fixed;top:1rem;left:1rem;background:#f0f2f5;color:#002554;border:none;padding:.5rem 1rem;border-radius:5px;font-size:13px;text-decoration:none;font-family:sans-serif}
