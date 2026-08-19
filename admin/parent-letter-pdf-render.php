@@ -42,21 +42,24 @@ function render_parent_letter_pdf_page(tFPDF $pdf, string $letterDate, string $l
     $right_margin = 1;
     $top_y = 0.75;
 
+    // Logo and flag are matched by HEIGHT (not width) so they read as
+    // level with each other despite very different aspect ratios — the
+    // logo is a tall portrait shape, the flag is a wide rectangle.
+    $flank_h = 0.55;
+
     // Logo — left
-    $logo_w = 0.8;
-    $logo_h = $logo_w;
+    $logo_w = $flank_h;
     $logo_path = __DIR__ . '/../logo01.png';
     if (file_exists($logo_path)) {
         $dims = @getimagesize($logo_path);
-        $logo_h = $dims ? $logo_w * ($dims[1] / $dims[0]) : $logo_w;
-        $pdf->Image($logo_path, $left_margin, $top_y, $logo_w, $logo_h);
+        $logo_w = $dims ? $flank_h * ($dims[0] / $dims[1]) : $flank_h;
+        $pdf->Image($logo_path, $left_margin, $top_y, $logo_w, $flank_h);
     }
 
     // Alabama flag — right
-    $flag_w = 0.8;
-    $flag_h = $flag_w * (40 / 60);
+    $flag_w = $flank_h * (60 / 40);
     $flag_x = $page_width - $right_margin - $flag_w;
-    draw_alabama_flag($pdf, $flag_x, $top_y, $flag_w, $flag_h);
+    draw_alabama_flag($pdf, $flag_x, $top_y, $flag_w, $flank_h);
 
     // Club name banner — center, between logo and flag
     $text_x = $left_margin + $logo_w + 0.25;
@@ -65,14 +68,20 @@ function render_parent_letter_pdf_page(tFPDF $pdf, string $letterDate, string $l
     $pdf->SetFont('Cinzel', '', 18);
     $pdf->SetTextColor(0, 37, 84);
     $pdf->MultiCell($text_w, 0.28, 'USAFA Parents Club of Alabama', 0, 'C');
+    $banner_text_bottom = $pdf->GetY();
 
-    $banner_bottom = $top_y + max($logo_h, $flag_h, $pdf->GetY() - $top_y);
-    $pdf->SetY($banner_bottom + 0.2);
-
+    // Tagline sits directly under the banner text itself — independent of
+    // the flanking logo/flag height, so it doesn't drift down just because
+    // one of those images happens to be tall.
+    $pdf->SetXY($left_margin, $banner_text_bottom + 0.08);
     $pdf->SetFont('Kalam', '', 10);
     $pdf->SetTextColor(90, 106, 122);
     $pdf->Cell(0, 0.25, 'A volunteer-run nonprofit supporting Alabama USAFA families · alabamafalcons.org', 0, 1, 'C');
-    $pdf->Ln(0.3);
+    $tagline_bottom = $pdf->GetY();
+
+    // Whatever comes next clears both the tagline and the flanking images,
+    // whichever ends up lower.
+    $pdf->SetY(max($tagline_bottom, $top_y + $flank_h) + 0.25);
 
     $pdf->SetFont('Kalam', '', 13);
     $pdf->SetTextColor(51, 51, 51);
