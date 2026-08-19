@@ -9,30 +9,65 @@
 require_once __DIR__ . '/lib/tfpdf/tfpdf.php';
 require_once __DIR__ . '/lib/tfpdf/font/unifont/ttfonts.php';
 
-// Registers the Kalam handwritten font on a fresh document. Call once per
-// tFPDF instance, before any AddPage()/render calls.
+// Registers the Kalam handwritten font and Cinzel (the site's heading font,
+// used only for the letterhead's club-name banner) on a fresh document.
+// Call once per tFPDF instance, before any AddPage()/render calls.
 function setup_parent_letter_pdf(tFPDF $pdf): void {
     $pdf->AddFont('Kalam', '', 'Kalam-Regular.ttf', true);
     $pdf->AddFont('Kalam', 'B', 'Kalam-Bold.ttf', true);
+    $pdf->AddFont('Cinzel', '', 'Cinzel-Regular.ttf', true);
     $pdf->SetMargins(1, 0.75, 1);
     $pdf->SetAutoPageBreak(true, 0.75);
 }
 
-// Renders one letter as its own page: logo, tagline, date, body text.
+// Draws the Alabama flag (white field, red St. Andrew's cross) as vectors —
+// same shape as the inline SVG used in the site nav — so no separate image
+// asset is needed.
+function draw_alabama_flag(tFPDF $pdf, float $x, float $y, float $w, float $h): void {
+    $pdf->SetFillColor(255, 255, 255);
+    $pdf->Rect($x, $y, $w, $h, 'F');
+    $pdf->SetDrawColor(166, 25, 46);
+    $pdf->SetLineWidth($w * (9 / 60));
+    $pdf->Line($x, $y, $x + $w, $y + $h);
+    $pdf->Line($x + $w, $y, $x, $y + $h);
+    $pdf->SetLineWidth(0.01);
+}
+
+// Renders one letter as its own page: letterhead (logo, club name banner,
+// Alabama flag), tagline, date, body text.
 function render_parent_letter_pdf_page(tFPDF $pdf, string $letterDate, string $letterBody): void {
     $pdf->AddPage();
-    $page_width = 8.5;
+    $page_width  = 8.5;
+    $left_margin = 1;
+    $right_margin = 1;
+    $top_y = 0.75;
 
+    // Logo — left
+    $logo_w = 0.8;
+    $logo_h = $logo_w;
     $logo_path = __DIR__ . '/../logo01.png';
     if (file_exists($logo_path)) {
         $dims = @getimagesize($logo_path);
-        $img_w_in = 1.0;
-        $img_h_in = $dims ? $img_w_in * ($dims[1] / $dims[0]) : $img_w_in;
-        $pdf->Image($logo_path, ($page_width - $img_w_in) / 2, 0.75, $img_w_in, $img_h_in);
-        $pdf->SetY(0.75 + $img_h_in + 0.15);
-    } else {
-        $pdf->SetY(0.75);
+        $logo_h = $dims ? $logo_w * ($dims[1] / $dims[0]) : $logo_w;
+        $pdf->Image($logo_path, $left_margin, $top_y, $logo_w, $logo_h);
     }
+
+    // Alabama flag — right
+    $flag_w = 0.8;
+    $flag_h = $flag_w * (40 / 60);
+    $flag_x = $page_width - $right_margin - $flag_w;
+    draw_alabama_flag($pdf, $flag_x, $top_y, $flag_w, $flag_h);
+
+    // Club name banner — center, between logo and flag
+    $text_x = $left_margin + $logo_w + 0.25;
+    $text_w = $flag_x - 0.25 - $text_x;
+    $pdf->SetXY($text_x, $top_y);
+    $pdf->SetFont('Cinzel', '', 18);
+    $pdf->SetTextColor(0, 37, 84);
+    $pdf->MultiCell($text_w, 0.28, 'USAFA Parents Club of Alabama', 0, 'C');
+
+    $banner_bottom = $top_y + max($logo_h, $flag_h, $pdf->GetY() - $top_y);
+    $pdf->SetY($banner_bottom + 0.2);
 
     $pdf->SetFont('Kalam', '', 10);
     $pdf->SetTextColor(90, 106, 122);
