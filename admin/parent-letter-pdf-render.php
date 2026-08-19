@@ -42,24 +42,32 @@ function render_parent_letter_pdf_page(tFPDF $pdf, string $letterDate, string $l
     $right_margin = 1;
     $top_y = 0.75;
 
-    // Logo and flag are matched by HEIGHT (not width) so they read as
-    // level with each other despite very different aspect ratios — the
-    // logo is a tall portrait shape, the flag is a wide rectangle.
-    $flank_h = 0.55;
+    // Logo and flag are sized to the same bounding-box AREA rather than
+    // the same width or height — the logo is a tall portrait shape and
+    // the flag is a wide rectangle, so matching just one dimension made
+    // one of them look much smaller than the other despite "matching."
+    $target_area = 0.38; // sq in
 
     // Logo — left
-    $logo_w = $flank_h;
     $logo_path = __DIR__ . '/../logo01.png';
+    $logo_h = sqrt($target_area);
+    $logo_w = $logo_h;
     if (file_exists($logo_path)) {
         $dims = @getimagesize($logo_path);
-        $logo_w = $dims ? $flank_h * ($dims[0] / $dims[1]) : $flank_h;
-        $pdf->Image($logo_path, $left_margin, $top_y, $logo_w, $flank_h);
+        if ($dims) {
+            $aspect = $dims[0] / $dims[1]; // width/height
+            $logo_h = sqrt($target_area / $aspect);
+            $logo_w = $logo_h * $aspect;
+        }
+        $pdf->Image($logo_path, $left_margin, $top_y, $logo_w, $logo_h);
     }
 
-    // Alabama flag — right
-    $flag_w = $flank_h * (60 / 40);
+    // Alabama flag — right (60:40 aspect ratio)
+    $flag_aspect = 60 / 40;
+    $flag_h = sqrt($target_area / $flag_aspect);
+    $flag_w = $flag_h * $flag_aspect;
     $flag_x = $page_width - $right_margin - $flag_w;
-    draw_alabama_flag($pdf, $flag_x, $top_y, $flag_w, $flank_h);
+    draw_alabama_flag($pdf, $flag_x, $top_y, $flag_w, $flag_h);
 
     // Club name banner — center, between logo and flag
     $text_x = $left_margin + $logo_w + 0.25;
@@ -81,9 +89,9 @@ function render_parent_letter_pdf_page(tFPDF $pdf, string $letterDate, string $l
     $pdf->MultiCell($text_w, 0.2, 'A volunteer-run nonprofit supporting Alabama USAFA families · alabamafalcons.org', 0, 'C');
     $tagline_bottom = $pdf->GetY();
 
-    // Whatever comes next clears both the tagline and the flanking images,
+    // Whatever comes next clears the tagline and both flanking images,
     // whichever ends up lower.
-    $pdf->SetY(max($tagline_bottom, $top_y + $flank_h) + 0.25);
+    $pdf->SetY(max($tagline_bottom, $top_y + $logo_h, $top_y + $flag_h) + 0.25);
 
     $pdf->SetFont('Kalam', '', 13);
     $pdf->SetTextColor(51, 51, 51);
