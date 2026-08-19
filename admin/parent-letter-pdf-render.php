@@ -70,13 +70,15 @@ function render_parent_letter_pdf_page(tFPDF $pdf, string $letterDate, string $l
     $pdf->MultiCell($text_w, 0.28, 'USAFA Parents Club of Alabama', 0, 'C');
     $banner_text_bottom = $pdf->GetY();
 
-    // Tagline sits directly under the banner text itself — independent of
-    // the flanking logo/flag height, so it doesn't drift down just because
-    // one of those images happens to be tall.
-    $pdf->SetXY($left_margin, $banner_text_bottom + 0.08);
+    // Tagline sits directly under the banner text itself, confined to the
+    // same narrow column between the logo and flag (not the full page
+    // width) so it can't run into either image — independent of the
+    // flanking logo/flag height, so it doesn't drift down just because one
+    // of those images happens to be tall.
+    $pdf->SetXY($text_x, $banner_text_bottom + 0.08);
     $pdf->SetFont('Kalam', '', 10);
     $pdf->SetTextColor(90, 106, 122);
-    $pdf->Cell(0, 0.25, 'A volunteer-run nonprofit supporting Alabama USAFA families · alabamafalcons.org', 0, 1, 'C');
+    $pdf->MultiCell($text_w, 0.2, 'A volunteer-run nonprofit supporting Alabama USAFA families · alabamafalcons.org', 0, 'C');
     $tagline_bottom = $pdf->GetY();
 
     // Whatever comes next clears both the tagline and the flanking images,
