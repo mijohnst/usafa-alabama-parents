@@ -36,7 +36,7 @@ echo show_flash();
   <h1>Parent Letters</h1>
   <div style="display:flex;gap:.5rem">
     <?php if (!empty($letters)): ?>
-    <a href="parent-letters-print-all.php" target="_blank" class="btn btn-primary">🖨️ Print All (A–Z by Cadet Last Name)</a>
+    <a href="parent-letters-pdf-all.php" class="btn btn-primary">⬇️ Download All as PDF (A–Z by Cadet Last Name)</a>
     <?php endif; ?>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
