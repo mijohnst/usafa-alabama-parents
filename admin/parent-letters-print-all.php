@@ -40,12 +40,14 @@ body{font-family:'Times New Roman',Times,serif;color:#000;background:#fff}
   @page{margin:0.85in}
 }
 .cadet-tag{font-family:sans-serif;font-size:9pt;color:#9aa5b4;margin-bottom:.5rem}
-.letterhead{text-align:center;margin-bottom:1.8rem}
-.letterhead img{height:170px}
+.letterhead{text-align:center;margin-bottom:1rem}
+.letterhead img{width:3in;height:auto}
+.club-blurb{text-align:center;font-family:'Source Sans 3',Arial,sans-serif;font-size:10pt;color:#5a6a7a;line-height:1.5;max-width:5.5in;margin:0 auto 1.6rem;padding-bottom:1.2rem;border-bottom:2px solid #003594}
+.club-blurb strong{color:#002554}
 .letter-date{text-align:right;margin-bottom:1.4rem;font-family:'Caveat',cursive;font-size:24pt}
 .body-text{font-family:'Caveat',cursive;font-weight:500;line-height:1.5;font-size:22pt;white-space:pre-wrap}
 .footer-mark{text-align:center;margin-top:3rem}
-.footer-mark img{height:130px}
+.footer-mark img{width:5.5in;height:auto}
 .print-btn{position:fixed;top:1rem;right:1rem;background:#003594;color:#fff;border:none;padding:.6rem 1.2rem;border-radius:5px;font-size:14px;cursor:pointer;font-family:sans-serif;z-index:10}
 .print-btn:hover{background:#002554}
 .back-link{position:fixed;top:1rem;left:1rem;background:#f0f2f5;color:#002554;border:none;padding:.5rem 1rem;border-radius:5px;font-size:13px;text-decoration:none;font-family:sans-serif;z-index:10}
@@ -68,12 +70,17 @@ body{font-family:'Times New Roman',Times,serif;color:#000;background:#fff}
 <div class="letter-page">
   <div class="cadet-tag no-print">For sorting only, not printed: <?= h($cadet_name) ?></div>
   <div class="letterhead">
-    <img src="../falcon-strong-logo.png" alt="Falcon Strong — USAFA Parents Club of Alabama">
+    <img src="../logo01.png" alt="USAFA Parents Club of Alabama">
+  </div>
+  <div class="club-blurb">
+    <strong>USAFA Parents Club of Alabama</strong> is a volunteer-run nonprofit supporting Alabama
+    families with cadets at the United States Air Force Academy — care packages, events, mentorship,
+    and community throughout the cadet journey. Learn more at alabamafalcons.org.
   </div>
   <div class="letter-date"><?= h($letter_date) ?></div>
   <div class="body-text"><?= h($l['letter_body']) ?></div>
   <div class="footer-mark">
-    <img src="../logo01.png" alt="USAFA Parents Club of Alabama">
+    <img src="../falcon-strong-logo.png" alt="Falcon Strong — USAFA Parents Club of Alabama">
   </div>
 </div>
 <?php endforeach; ?>
