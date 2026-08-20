@@ -15,10 +15,16 @@ function paypal_api_base(): string {
 // OAuth2 client_credentials grant — short-lived token, fetched fresh for
 // every call rather than cached, to keep this wrapper simple; Payouts is a
 // low-volume admin action, not a hot path worth optimizing.
-function paypal_get_access_token(): ?string {
+// Returns ['token'=>string,'error'=>null] or ['token'=>null,'error'=>string] —
+// the specific reason is surfaced all the way to the on-screen flash message
+// rather than only to the PHP error log, since that log isn't reliably
+// reachable on every hosting setup.
+function paypal_get_access_token(): array {
     if (!defined('PAYPAL_CLIENT_ID') || !defined('PAYPAL_SECRET')) {
-        error_log('paypal_get_access_token: PAYPAL_CLIENT_ID/PAYPAL_SECRET not configured');
-        return null;
+        return ['token' => null, 'error' => 'PAYPAL_CLIENT_ID/PAYPAL_SECRET are not defined in admin/config.php.'];
+    }
+    if (!function_exists('curl_init')) {
+        return ['token' => null, 'error' => 'The PHP curl extension is not available on this server.'];
     }
     $ch = curl_init(paypal_api_base() . '/v1/oauth2/token');
     curl_setopt_array($ch, [
@@ -31,22 +37,30 @@ function paypal_get_access_token(): ?string {
     ]);
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err  = curl_error($ch);
+    $curl_err = curl_error($ch);
     curl_close($ch);
 
-    if ($resp === false || $code !== 200) {
-        error_log('paypal_get_access_token failed: HTTP ' . $code . ' ' . $err . ' ' . $resp);
-        return null;
+    if ($resp === false) {
+        return ['token' => null, 'error' => 'Connection to PayPal failed: ' . ($curl_err ?: 'unknown cURL error')];
     }
     $data = json_decode($resp, true);
-    return $data['access_token'] ?? null;
+    if ($code !== 200 || empty($data['access_token'])) {
+        $reason = $data['error_description'] ?? $data['error'] ?? $resp;
+        return ['token' => null, 'error' => "PayPal auth rejected (HTTP $code, mode " . paypal_mode_label() . "): $reason"];
+    }
+    return ['token' => $data['access_token'], 'error' => null];
+}
+
+function paypal_mode_label(): string {
+    return (defined('PAYPAL_MODE') && PAYPAL_MODE === 'live') ? 'live' : 'sandbox';
 }
 
 // Sends a single payout to one PayPal email address. Returns
 // ['success'=>true,'batch_id'=>...,'status'=>...] or ['success'=>false,'error'=>...].
 function paypal_send_payout(string $recipientEmail, float $amount, string $note, string $senderItemId): array {
-    $token = paypal_get_access_token();
-    if (!$token) return ['success' => false, 'error' => 'Could not authenticate with PayPal — check PAYPAL_CLIENT_ID/PAYPAL_SECRET in admin/config.php.'];
+    $auth = paypal_get_access_token();
+    if (!$auth['token']) return ['success' => false, 'error' => $auth['error']];
+    $token = $auth['token'];
 
     $payload = [
         'sender_batch_header' => [
@@ -91,8 +105,9 @@ function paypal_send_payout(string $recipientEmail, float $amount, string $note,
 
 // Looks up the current status of a previously-sent payout batch.
 function paypal_check_payout_status(string $batchId): array {
-    $token = paypal_get_access_token();
-    if (!$token) return ['success' => false, 'error' => 'Could not authenticate with PayPal.'];
+    $auth = paypal_get_access_token();
+    if (!$auth['token']) return ['success' => false, 'error' => $auth['error']];
+    $token = $auth['token'];
 
     $ch = curl_init(paypal_api_base() . '/v1/payments/payouts/' . urlencode($batchId));
     curl_setopt_array($ch, [
