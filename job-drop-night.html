@@ -28,8 +28,8 @@
     .form-section { background: var(--light); padding: 2rem; border-radius: 4px; margin: 2rem 0; }
     .form-section h3 { font-family: var(--font-display); color: var(--navy); margin-bottom: 0.5rem; letter-spacing: 0.01em; }
     .form-section > p { color: var(--gray); margin-bottom: 1.5rem; font-size: 0.95rem; }
-    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-    @media (max-width: 600px) { .form-row-3 { grid-template-columns: 1fr; } }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-row-2 { grid-template-columns: 1fr; } }
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--navy); font-size: 0.9rem; }
     .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; font-family: var(--font-body); color: var(--navy); font-size: 0.95rem; background: var(--white); }
@@ -149,22 +149,11 @@
       <!-- FIND YOUR RECORD -->
       <div id="lookupSection">
         <h3>Find Your Record</h3>
-        <p>Enter your cadet's info and a parent email address already on file.</p>
-        <div class="form-row-3">
+        <p>Job Drop Night is for our graduating cadets — this year, the Class of 2027. Enter your cadet's last name and a parent email address already on file.</p>
+        <div class="form-row-2">
           <div class="form-group">
             <label for="lookupLastName">Cadet Last Name *</label>
             <input type="text" id="lookupLastName" required />
-          </div>
-          <div class="form-group">
-            <label for="lookupGradYear">Graduation Year *</label>
-            <select id="lookupGradYear" required>
-              <option value="">Select graduation year</option>
-              <option value="2027">2027</option>
-              <option value="2028">2028</option>
-              <option value="2029">2029</option>
-              <option value="2030">2030</option>
-              <option value="Prep School">Prep School</option>
-            </select>
           </div>
           <div class="form-group">
             <label for="lookupEmail">Either Parent's Email on File *</label>
@@ -215,14 +204,13 @@
       var btn = this;
       var statusEl = document.getElementById('lookupStatus');
       var last  = document.getElementById('lookupLastName').value.trim();
-      var year  = document.getElementById('lookupGradYear').value;
       var email = document.getElementById('lookupEmail').value.trim();
 
       statusEl.style.display = 'none';
       statusEl.className = '';
 
-      if (!last || !year || !email) {
-        statusEl.textContent = 'Please enter the cadet last name, graduation year, and the email on file.';
+      if (!last || !email) {
+        statusEl.textContent = 'Please enter the cadet last name and the email on file.';
         statusEl.className = 'error';
         statusEl.style.display = 'block';
         return;
@@ -237,7 +225,6 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             cadetLastName: last,
-            graduationYear: year,
             email: email,
             website: document.getElementById('website').value
           })

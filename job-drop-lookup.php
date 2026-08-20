@@ -1,10 +1,13 @@
 <?php
 /**
  * Job Drop Night — Lookup
- * Same identity check as parent-letters-lookup.php (cadet last name +
- * graduation year + a parent email already on file), issuing its own
- * token in its own session pool so it doesn't interact with either the
- * Update Your Information or Parent Letters flows.
+ * Same identity check as parent-letters-lookup.php (cadet last name + a
+ * parent email already on file), issuing its own token in its own session
+ * pool so it doesn't interact with either the Update Your Information or
+ * Parent Letters flows. Unlike those, graduation year isn't a field the
+ * visitor picks — Job Drop Night is only for the class about to graduate,
+ * computed the same way current_class_years() is (no yearly manual
+ * upkeep), so a family from any other class simply won't match.
  */
 
 header('Content-Type: application/json');
@@ -53,21 +56,25 @@ function s(array $p, string $key): string {
 }
 
 $last  = s($payload, 'cadetLastName');
-$year  = s($payload, 'graduationYear');
 $email = s($payload, 'email');
 
-if ($last === '' || $year === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Please enter the cadet last name, graduation year, and the email address on file.']);
+    echo json_encode(['success' => false, 'error' => 'Please enter the cadet last name and the email address on file.']);
     exit();
 }
+
+// The class about to graduate — one year past the most recently graduated
+// class. Job Drop Night only ever applies to this class, so it's the only
+// class_year this lookup will ever match against.
+$eligible_year = (string)((int)outgoing_class_year() + 1);
 
 $stmt = $pdo->prepare(
     'SELECT * FROM members
      WHERE archived = 0 AND class_year = :class_year
        AND (parent1_email = :email OR parent2_email = :email)'
 );
-$stmt->execute(['class_year' => $year, 'email' => $email]);
+$stmt->execute(['class_year' => $eligible_year, 'email' => $email]);
 $target_norm = strip_name_suffix(normalize_name($last));
 $m = null;
 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -77,7 +84,7 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
 if (!$m) {
     echo json_encode([
         'success' => false,
-        'error'   => "We couldn't find a matching record. Please double-check the cadet's last name, graduation year, and the email on file, or contact secretary@alabamafalcons.org."
+        'error'   => "We couldn't find a matching record. Job Drop Night is only open to the graduating Class of $eligible_year — please double-check the cadet's last name and the email on file, or contact secretary@alabamafalcons.org."
     ]);
     exit();
 }
