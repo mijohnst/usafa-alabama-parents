@@ -19,6 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', "Photo limit updated to $max_photos.");
         header('Location: gallery.php'); exit;
 
+    } elseif ($action === 'toggle_visibility') {
+        $row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='gallery_section_visible'")->fetch();
+        $cur = $row ? (bool)(int)$row['setting_value'] : true;
+        $new_val = $cur ? 0 : 1;
+        $pdo->prepare("INSERT INTO site_settings (setting_key,setting_label,setting_value,setting_type) VALUES ('gallery_section_visible','Member Photos section visible',?,'number') ON DUPLICATE KEY UPDATE setting_value=?")->execute([$new_val, $new_val]);
+        flash('success', $cur ? 'Member Photos section hidden from the homepage.' : 'Member Photos section is back on the homepage.');
+        header('Location: gallery.php'); exit;
+
     } elseif ($action === 'upload') {
         $caption    = trim($_POST['caption']    ?? '');
         $sort       = (int)($_POST['sort_order']?? 0);
@@ -104,6 +112,9 @@ gallery_cleanup($pdo, $dir, $max_photos);
 $photos = $pdo->query('SELECT *, DATEDIFF(NOW(),created_at) as days_old FROM site_photos ORDER BY sort_order ASC, id ASC')->fetchAll();
 $total  = count($photos);
 
+$vis_row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='gallery_section_visible'")->fetch();
+$section_visible = $vis_row ? (bool)(int)$vis_row['setting_value'] : true;
+
 admin_header('Homepage Gallery');
 echo show_flash();
 ?>
@@ -114,7 +125,21 @@ echo show_flash();
 .photo-card-body{padding:.75rem}
 </style>
 
-<div class="page-head"><h1>Homepage Gallery</h1><a href="dashboard.php" class="btn btn-secondary">← Dashboard</a></div>
+<div class="page-head">
+  <h1>Homepage Gallery</h1>
+  <div style="display:flex;gap:.5rem">
+    <form method="POST" style="margin:0">
+      <?= csrf_field() ?><input type="hidden" name="action" value="toggle_visibility">
+      <button type="submit" class="btn <?= $section_visible ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+        <?= $section_visible ? 'Hide Section from Homepage' : '✓ Show Section on Homepage' ?>
+      </button>
+    </form>
+    <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  </div>
+</div>
+<?php if (!$section_visible): ?>
+<div class="alert alert-error" style="margin-bottom:1.25rem">The Member Photos section is currently hidden from the homepage, regardless of what's uploaded below.</div>
+<?php endif; ?>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">
   Upload photos directly to the homepage Member Photos slideshow — no review needed (that's what <a href="photo-submissions.php">Photo Submissions</a> is for, when a member submits their own).
   <strong>Auto-cleanup:</strong> photos older than 30 days or beyond the photo limit are removed automatically.
