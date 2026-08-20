@@ -59,6 +59,19 @@ if (mb_strlen($job_title) > 150) {
     exit();
 }
 
+// Optional — never trust the raw URL itself, only the 11-character video
+// ID extract_youtube_id() pulls out of it (or rejects entirely if the
+// string isn't a recognizable YouTube link).
+$youtube_id = null;
+$youtube_url_raw = trim((string)($_POST['youtubeUrl'] ?? ''));
+if ($youtube_url_raw !== '') {
+    $youtube_id = extract_youtube_id($youtube_url_raw);
+    if (!$youtube_id) {
+        echo json_encode(['success' => false, 'error' => "That doesn't look like a valid YouTube link. Double-check it, or leave the field blank."]);
+        exit();
+    }
+}
+
 if (empty($_FILES['photo']) || $_FILES['photo']['error'] === UPLOAD_ERR_NO_FILE) {
     echo json_encode(['success' => false, 'error' => 'Please choose a photo to upload.']);
     exit();
@@ -102,8 +115,8 @@ if (!move_uploaded_file($_FILES['photo']['tmp_name'], $dir . $filename)) {
 }
 
 try {
-    $pdo->prepare('INSERT INTO job_drop_submissions (member_id, job_title, filename, status) VALUES (?, ?, ?, \'pending\')')
-        ->execute([$member_id, $job_title, $filename]);
+    $pdo->prepare('INSERT INTO job_drop_submissions (member_id, job_title, filename, youtube_id, status) VALUES (?, ?, ?, ?, \'pending\')')
+        ->execute([$member_id, $job_title, $filename, $youtube_id]);
 } catch (Throwable $e) {
     @unlink($dir . $filename);
     error_log('job-drop-submit: database insert failed - ' . $e->getMessage());

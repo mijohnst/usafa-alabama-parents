@@ -53,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // happens to be eligible when an officer clicks Approve.
                 $class_year = (string)$sub['member_class_year'];
                 $next_sort = (int)$pdo->query('SELECT COALESCE(MAX(sort_order),0)+10 FROM job_drop_photos')->fetchColumn();
-                $pdo->prepare('INSERT INTO job_drop_photos (filename, cadet_name, job_title, sort_order, active, class_year) VALUES (?,?,?,?,1,?)')
-                    ->execute([$sub['filename'], $cadet_name, $sub['job_title'], $next_sort, $class_year]);
+                $pdo->prepare('INSERT INTO job_drop_photos (filename, cadet_name, job_title, sort_order, active, class_year, youtube_id) VALUES (?,?,?,?,1,?,?)')
+                    ->execute([$sub['filename'], $cadet_name, $sub['job_title'], $next_sort, $class_year, $sub['youtube_id'] ?? null]);
                 $pdo->prepare("UPDATE job_drop_submissions SET status='approved', reviewed_by=?, reviewed_at=NOW() WHERE id=?")
                     ->execute([$_SESSION['user_id'] ?? null, $id]);
                 $pdo->commit();
@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pending = $pdo->query(
-    "SELECT js.id, js.filename, js.job_title, js.submitted_at,
+    "SELECT js.id, js.filename, js.job_title, js.submitted_at, js.youtube_id,
             m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix,
             m.parent1_first_name, m.parent1_last_name
      FROM job_drop_submissions js
@@ -136,7 +136,7 @@ $pending = $pdo->query(
 )->fetchAll(PDO::FETCH_ASSOC);
 
 $live = $pdo->query(
-    "SELECT id, filename, cadet_name, job_title, active, class_year, created_at
+    "SELECT id, filename, cadet_name, job_title, active, class_year, created_at, youtube_id
      FROM job_drop_photos ORDER BY class_year DESC, sort_order ASC, id ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
@@ -217,6 +217,9 @@ echo show_flash();
       <div class="sub-meta">
         <strong style="color:#002554"><?= h($cadet_name) ?></strong> — <?= h($s['job_title']) ?><br>
         Submitted by <?= h($parent_name) ?> &bull; <?= date('M j, Y', strtotime($s['submitted_at'])) ?>
+        <?php if (!empty($s['youtube_id'])): ?>
+          <br><a href="https://www.youtube-nocookie.com/watch?v=<?= h($s['youtube_id']) ?>" target="_blank" rel="noopener">&#9654; Watch submitted video</a>
+        <?php endif; ?>
       </div>
       <form method="POST">
         <?= csrf_field() ?><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="<?= $s['id'] ?>">
@@ -249,6 +252,9 @@ echo show_flash();
       <div class="sub-meta">
         <strong style="color:#002554"><?= h($l['cadet_name']) ?></strong> — <?= h($l['job_title']) ?><br>
         Class of <?= h($l['class_year']) ?><?= $l['active'] ? '' : ' &middot; Hidden' ?>
+        <?php if (!empty($l['youtube_id'])): ?>
+          <br><a href="https://www.youtube-nocookie.com/watch?v=<?= h($l['youtube_id']) ?>" target="_blank" rel="noopener">&#9654; Watch video</a>
+        <?php endif; ?>
       </div>
       <form method="POST">
         <?= csrf_field() ?><input type="hidden" name="action" value="toggle_live"><input type="hidden" name="id" value="<?= $l['id'] ?>">

@@ -26,7 +26,7 @@ try {
     // approved photos automatically stop appearing here once the next
     // class becomes eligible, with no manual cleanup needed between years.
     $eligible_year = job_drop_eligible_year($pdo);
-    $stmt = $pdo->prepare("SELECT filename, cadet_name, job_title FROM job_drop_photos WHERE active=1 AND class_year=? ORDER BY sort_order ASC, id ASC");
+    $stmt = $pdo->prepare("SELECT filename, cadet_name, job_title, youtube_id FROM job_drop_photos WHERE active=1 AND class_year=? ORDER BY sort_order ASC, id ASC");
     $stmt->execute([$eligible_year]);
     $rows = $stmt->fetchAll();
     echo json_encode(['success'=>true,'eligibleYear'=>$eligible_year,'drops'=>$rows]);

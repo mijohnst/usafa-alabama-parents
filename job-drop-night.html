@@ -184,6 +184,10 @@
           <input type="file" id="photoInput" accept="image/*" required />
           <div class="hint">JPG, PNG, GIF, or WebP, under 10MB.</div>
         </div>
+        <div class="form-group">
+          <label for="youtubeUrl">YouTube Link <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.75rem;color:var(--gray)">optional — got video of the reveal?</span></label>
+          <input type="url" id="youtubeUrl" placeholder="https://youtube.com/watch?v=..." />
+        </div>
         <div id="formStatus" role="status" aria-live="polite"></div>
         <button type="button" id="submitBtn" class="cta-button">Submit for Review</button>
       </div>
@@ -299,6 +303,7 @@
         formData.append('verifyToken', verifyToken);
         formData.append('jobTitle', jobTitle);
         formData.append('photo', photoFile);
+        formData.append('youtubeUrl', document.getElementById('youtubeUrl').value.trim());
         formData.append('website', document.getElementById('website').value);
 
         var resp = await fetch('job-drop-submit.php', { method: 'POST', body: formData });
@@ -310,6 +315,7 @@
           statusEl.style.display = 'block';
           document.getElementById('jobTitle').value = '';
           document.getElementById('photoInput').value = '';
+          document.getElementById('youtubeUrl').value = '';
         } else {
           statusEl.textContent = result.error || 'Something went wrong. Please try again.';
           statusEl.className = 'error';

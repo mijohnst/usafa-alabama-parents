@@ -109,3 +109,23 @@ function job_drop_eligible_year(PDO $pdo): string {
     }
     return $auto;
 }
+
+// Extracts the 11-character video ID from any common YouTube URL shape
+// (watch?v=, youtu.be/, embed/, shorts/, with or without extra query
+// params) — or returns null if the string isn't recognizably a YouTube
+// link at all. Never trust a submitted URL directly as an iframe src or
+// href; only ever build one from an ID this function has validated.
+function extract_youtube_id(string $url): ?string {
+    $url = trim($url);
+    if ($url === '') return null;
+    $patterns = [
+        '~youtu\.be/([A-Za-z0-9_-]{11})~i',
+        '~youtube(?:-nocookie)?\.com/watch\?(?:[^#]*&)?v=([A-Za-z0-9_-]{11})~i',
+        '~youtube(?:-nocookie)?\.com/embed/([A-Za-z0-9_-]{11})~i',
+        '~youtube(?:-nocookie)?\.com/shorts/([A-Za-z0-9_-]{11})~i',
+    ];
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $url, $m)) return $m[1];
+    }
+    return null;
+}
