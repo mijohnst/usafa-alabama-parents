@@ -41,11 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $sub['cadet_first_name'] . ' ' . $sub['cadet_middle_name'] . ' ' . $sub['cadet_last_name'] . ' ' . $sub['cadet_suffix']
                 ));
                 // Stamped with the class this submission was eligible under
-                // (same computation as job-drop-lookup.php) so the homepage
-                // feed can automatically stop showing it once that class
-                // has graduated and the next one becomes eligible — no
-                // manual cleanup needed between years.
-                $class_year = (string)((int)outgoing_class_year() + 1);
+                // (same job_drop_eligible_year() as job-drop-lookup.php) so
+                // the homepage feed can automatically stop showing it once
+                // that class has graduated and the next one becomes
+                // eligible — no manual cleanup needed between years.
+                $class_year = job_drop_eligible_year($pdo);
                 $next_sort = (int)$pdo->query('SELECT COALESCE(MAX(sort_order),0)+10 FROM job_drop_photos')->fetchColumn();
                 $pdo->prepare('INSERT INTO job_drop_photos (filename, cadet_name, job_title, sort_order, active, class_year) VALUES (?,?,?,?,1,?)')
                     ->execute([$sub['filename'], $cadet_name, $sub['job_title'], $next_sort, $class_year]);
@@ -69,6 +69,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', $cur ? 'Job Drop Night section hidden from the homepage.' : 'Job Drop Night section is back on the homepage.');
         } catch (PDOException $e) {
             flash('error', 'Could not update — run admin/migrate_add_job_drop_section_toggle.sql first.');
+        }
+    }
+
+    if ($action === 'set_year_override') {
+        $new_year = trim($_POST['override_class_year'] ?? '');
+        if ($new_year !== '' && !preg_match('/^\d{4}$/', $new_year)) {
+            flash('error', 'Class year override must be a 4-digit year, or left blank to go back to automatic.');
+        } else {
+            try {
+                $pdo->prepare('UPDATE job_drop_settings SET override_class_year=? WHERE id=1')
+                    ->execute([$new_year === '' ? null : $new_year]);
+                flash('success', $new_year === '' ? 'Back to automatic — following the normal July rollover.' : "Job Drop Night is now manually set to the Class of $new_year.");
+            } catch (PDOException $e) {
+                flash('error', 'Could not save — run admin/migrate_add_job_drop_year_override.sql first.');
+            }
         }
     }
 
@@ -112,6 +127,12 @@ $section_visible = true;
 try { $section_visible = (bool)$pdo->query('SELECT section_visible FROM job_drop_settings WHERE id=1')->fetchColumn(); }
 catch (PDOException $e) { /* not migrated yet — treat as visible */ }
 
+$auto_year = (string)((int)outgoing_class_year() + 1);
+$year_override = null;
+try { $year_override = $pdo->query('SELECT override_class_year FROM job_drop_settings WHERE id=1')->fetchColumn() ?: null; }
+catch (PDOException $e) { /* not migrated yet */ }
+$effective_year = $year_override ?: $auto_year;
+
 admin_header('Job Drop Night Submissions');
 echo show_flash();
 ?>
@@ -138,6 +159,29 @@ echo show_flash();
 <?php if (!$section_visible): ?>
 <div class="alert alert-error" style="margin-bottom:1.25rem">The Job Drop Night section is currently hidden from the homepage, regardless of what's approved below.</div>
 <?php endif; ?>
+
+<div class="card" style="max-width:520px;margin-bottom:1.5rem">
+  <h3 style="margin-bottom:.4rem;font-size:1rem;color:#002554">Which class is Job Drop Night open for?</h3>
+  <p style="font-size:.8rem;color:#5a6a7a;margin-bottom:1rem">
+    Currently: <strong>Class of <?= h($effective_year) ?></strong>
+    <?= $year_override ? " (manually set — automatic would be $auto_year)" : ' (automatic — flips every July 1st)' ?>.
+  </p>
+  <form method="POST" style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
+    <?= csrf_field() ?><input type="hidden" name="action" value="set_year_override">
+    <div class="form-group" style="margin:0">
+      <label>Set manually</label>
+      <input type="text" name="override_class_year" value="<?= h($year_override ?? '') ?>" placeholder="e.g. <?= h($auto_year) ?>" style="width:140px">
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+  </form>
+  <?php if ($year_override): ?>
+  <form method="POST" style="margin-top:.5rem">
+    <?= csrf_field() ?><input type="hidden" name="action" value="set_year_override"><input type="hidden" name="override_class_year" value="">
+    <button type="submit" class="btn btn-secondary btn-sm">Reset to Automatic</button>
+  </form>
+  <?php endif; ?>
+</div>
+
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Parent-submitted cadet job assignments awaiting review. Approving adds the photo to the homepage Job Drop Night rotation.</p>
 
 <?php if (empty($pending)): ?>

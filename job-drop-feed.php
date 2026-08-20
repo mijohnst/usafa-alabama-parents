@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 header('Cache-Control: public, max-age=300');
 require_once __DIR__ . '/admin/config.php';
+require_once __DIR__ . '/admin/lib.php'; // dependency-free — for job_drop_eligible_year()
 try {
     $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS,
         [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>true, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
@@ -20,13 +21,11 @@ try {
         exit;
     }
 
-    // Only ever shows the currently-graduating class's entries — mirrors
-    // admin/lib.php's outgoing_class_year()+1 so a prior class's approved
-    // photos automatically stop appearing here the moment the next class
-    // becomes eligible, with no manual cleanup needed between years.
-    $month = (int)date('n'); $year = (int)date('Y');
-    $outgoing_class_year = $month >= 7 ? $year : $year - 1;
-    $eligible_year = (string)($outgoing_class_year + 1);
+    // Only ever shows the currently-eligible class's entries (see
+    // job_drop_eligible_year() in admin/lib.php) so a prior class's
+    // approved photos automatically stop appearing here once the next
+    // class becomes eligible, with no manual cleanup needed between years.
+    $eligible_year = job_drop_eligible_year($pdo);
     $stmt = $pdo->prepare("SELECT filename, cadet_name, job_title FROM job_drop_photos WHERE active=1 AND class_year=? ORDER BY sort_order ASC, id ASC");
     $stmt->execute([$eligible_year]);
     $rows = $stmt->fetchAll();

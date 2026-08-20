@@ -64,10 +64,10 @@ if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL))
     exit();
 }
 
-// The class about to graduate — one year past the most recently graduated
-// class. Job Drop Night only ever applies to this class, so it's the only
-// class_year this lookup will ever match against.
-$eligible_year = (string)((int)outgoing_class_year() + 1);
+// The class Job Drop Night is currently open for — automatic by default,
+// but an officer can override it (see job_drop_eligible_year()). Only this
+// class_year will ever match this lookup.
+$eligible_year = job_drop_eligible_year($pdo);
 
 $stmt = $pdo->prepare(
     'SELECT * FROM members
