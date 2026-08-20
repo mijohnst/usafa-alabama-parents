@@ -25,7 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id     = (int)($_POST['id'] ?? 0);
 
     $s = $pdo->prepare(
-        "SELECT js.*, m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix
+        "SELECT js.*, m.class_year AS member_class_year,
+                m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix
          FROM job_drop_submissions js
          JOIN members m ON m.id = js.member_id
          WHERE js.id = ? AND js.status = 'pending'"
@@ -36,28 +37,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($sub) {
         if ($action === 'approve') {
             $src = $submissions_dir . basename($sub['filename']);
-            if (is_file($src) && rename($src, $photos_dir . basename($sub['filename']))) {
+            $dest = $photos_dir . basename($sub['filename']);
+            $moved = false;
+            if (!is_file($src)) {
+                flash('error', 'The submitted photo file is missing on the server — could not approve. Contact tech support.');
+            } else {
+              try {
+                $pdo->beginTransaction();
+                if (!rename($src, $dest)) throw new RuntimeException('Could not move approved photo.');
+                $moved = true;
                 $cadet_name = trim(preg_replace('/\s+/', ' ',
                     $sub['cadet_first_name'] . ' ' . $sub['cadet_middle_name'] . ' ' . $sub['cadet_last_name'] . ' ' . $sub['cadet_suffix']
                 ));
-                // Stamped with the class this submission was eligible under
-                // (same job_drop_eligible_year() as job-drop-lookup.php) so
-                // the homepage feed can automatically stop showing it once
-                // that class has graduated and the next one becomes
-                // eligible — no manual cleanup needed between years.
-                $class_year = job_drop_eligible_year($pdo);
+                // Use the member's actual class rather than whichever class
+                // happens to be eligible when an officer clicks Approve.
+                $class_year = (string)$sub['member_class_year'];
                 $next_sort = (int)$pdo->query('SELECT COALESCE(MAX(sort_order),0)+10 FROM job_drop_photos')->fetchColumn();
                 $pdo->prepare('INSERT INTO job_drop_photos (filename, cadet_name, job_title, sort_order, active, class_year) VALUES (?,?,?,?,1,?)')
                     ->execute([$sub['filename'], $cadet_name, $sub['job_title'], $next_sort, $class_year]);
                 $pdo->prepare("UPDATE job_drop_submissions SET status='approved', reviewed_by=?, reviewed_at=NOW() WHERE id=?")
                     ->execute([$_SESSION['user_id'] ?? null, $id]);
+                $pdo->commit();
                 flash('success', 'Job Drop approved and added to the homepage.');
-            } else {
-                flash('error', 'The submitted photo file is missing on the server — could not approve. Contact tech support.');
+              } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                if ($moved && is_file($dest)) @rename($dest, $src);
+                error_log('job-drop approval failed: ' . $e->getMessage());
+                flash('error', 'Could not approve the submission. Nothing was published; please try again or contact tech support.');
+              }
             }
         } elseif ($action === 'reject') {
             $pdo->prepare("UPDATE job_drop_submissions SET status='rejected', reviewed_by=?, reviewed_at=NOW() WHERE id=?")
                 ->execute([$_SESSION['user_id'] ?? null, $id]);
+            $rejected_file = $submissions_dir . basename($sub['filename']);
+            if (is_file($rejected_file)) @unlink($rejected_file);
             flash('success', 'Submission rejected.');
         }
     }
@@ -103,6 +116,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $path = $photos_dir . basename($filename);
             if (is_file($path)) unlink($path);
             $pdo->prepare('DELETE FROM job_drop_photos WHERE id=?')->execute([$id]);
+            // Permit the family to submit a replacement after an approved
+            // entry is permanently removed.
+            $pdo->prepare("UPDATE job_drop_submissions SET status='rejected' WHERE filename=? AND status='approved'")
+                ->execute([$filename]);
             flash('success', 'Entry deleted.');
         }
     }
@@ -195,7 +212,7 @@ echo show_flash();
     $parent_name = trim($s['parent1_first_name'] . ' ' . $s['parent1_last_name']);
   ?>
   <div class="sub-card">
-    <img src="/job-drop-submissions/<?= h(basename($s['filename'])) ?>" alt="">
+    <img src="/job-drop-submission-serve.php?id=<?= (int)$s['id'] ?>" alt="Preview of <?= h($cadet_name) ?>'s submitted Job Drop photo">
     <div class="sub-body">
       <div class="sub-meta">
         <strong style="color:#002554"><?= h($cadet_name) ?></strong> — <?= h($s['job_title']) ?><br>
@@ -227,7 +244,7 @@ echo show_flash();
 <div class="sub-grid">
   <?php foreach ($live as $l): ?>
   <div class="sub-card" style="<?= $l['active'] ? '' : 'opacity:.5' ?>">
-    <img src="/job-drop-photos/<?= h(basename($l['filename'])) ?>" alt="">
+    <img src="/job-drop-photo-serve.php?id=<?= (int)$l['id'] ?>" alt="<?= h($l['cadet_name']) ?> — <?= h($l['job_title']) ?>">
     <div class="sub-body">
       <div class="sub-meta">
         <strong style="color:#002554"><?= h($l['cadet_name']) ?></strong> — <?= h($l['job_title']) ?><br>

@@ -17,7 +17,7 @@ try {
     } catch (Exception $e) { /* table not migrated yet — stay visible */ }
 
     if (!$section_visible) {
-        echo json_encode(['success'=>true,'drops'=>[]]);
+        echo json_encode(['success'=>true,'eligibleYear'=>job_drop_eligible_year($pdo),'drops'=>[]]);
         exit;
     }
 
@@ -29,5 +29,5 @@ try {
     $stmt = $pdo->prepare("SELECT filename, cadet_name, job_title FROM job_drop_photos WHERE active=1 AND class_year=? ORDER BY sort_order ASC, id ASC");
     $stmt->execute([$eligible_year]);
     $rows = $stmt->fetchAll();
-    echo json_encode(['success'=>true,'drops'=>$rows]);
-} catch (Exception $e) { http_response_code(500); echo json_encode(['success'=>false,'drops'=>[]]); error_log('job-drop-feed: '.$e->getMessage()); }
+    echo json_encode(['success'=>true,'eligibleYear'=>$eligible_year,'drops'=>$rows]);
+} catch (Exception $e) { http_response_code(500); echo json_encode(['success'=>false,'eligibleYear'=>null,'drops'=>[]]); error_log('job-drop-feed: '.$e->getMessage()); }

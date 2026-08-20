@@ -789,14 +789,21 @@ function showJobDrop(i) {
   if (!jobDropItems.length) return;
   var item = jobDropItems[i];
   var img = document.getElementById('job-drop-photo');
-  img.style.opacity = '0';
-  setTimeout(function() {
-    img.src = 'job-drop-photos/' + item.filename;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var update = function() {
+    img.src = 'job-drop-photo-serve.php?f=' + encodeURIComponent(item.filename);
     img.alt = item.cadet_name + ' — ' + item.job_title;
     document.getElementById('job-drop-name').textContent = item.cadet_name;
     document.getElementById('job-drop-title').textContent = item.job_title;
     img.style.opacity = '1';
-  }, 400);
+  };
+  if (reduceMotion) {
+    img.style.transition = 'none';
+    update();
+    return;
+  }
+  img.style.opacity = '0';
+  setTimeout(update, 400);
 }
 
 async function loadJobDrops() {
@@ -807,7 +814,8 @@ async function loadJobDrops() {
       jobDropItems = data.drops;
       document.getElementById('job-drop').style.display = 'block';
       showJobDrop(0);
-      if (jobDropItems.length > 1) {
+      var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (jobDropItems.length > 1 && !reduceMotion) {
         setInterval(function() {
           jobDropIndex = (jobDropIndex + 1) % jobDropItems.length;
           showJobDrop(jobDropIndex);

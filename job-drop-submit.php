@@ -82,6 +82,16 @@ if ($_FILES['photo']['size'] > 10 * 1024 * 1024) {
     exit();
 }
 
+// A token represents one Job Drop submission. Do not allow a family to
+// create another pending/live entry accidentally by double-clicking or
+// resubmitting the same browser session. A rejected entry may be replaced.
+$duplicate = $pdo->prepare("SELECT COUNT(*) FROM job_drop_submissions WHERE member_id=? AND status IN ('pending','approved')");
+$duplicate->execute([$member_id]);
+if ((int)$duplicate->fetchColumn() > 0) {
+    echo json_encode(['success' => false, 'error' => 'A Job Drop submission for this cadet is already pending or approved. Contact site support if it needs to be replaced.']);
+    exit;
+}
+
 $dir = __DIR__ . '/job-drop-submissions/';
 if (!is_dir($dir)) mkdir($dir, 0755, true);
 
@@ -91,7 +101,17 @@ if (!move_uploaded_file($_FILES['photo']['tmp_name'], $dir . $filename)) {
     exit();
 }
 
-$pdo->prepare('INSERT INTO job_drop_submissions (member_id, job_title, filename, status) VALUES (?, ?, ?, \'pending\')')
-    ->execute([$member_id, $job_title, $filename]);
+try {
+    $pdo->prepare('INSERT INTO job_drop_submissions (member_id, job_title, filename, status) VALUES (?, ?, ?, \'pending\')')
+        ->execute([$member_id, $job_title, $filename]);
+} catch (Throwable $e) {
+    @unlink($dir . $filename);
+    error_log('job-drop-submit: database insert failed - ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Could not save your submission. Please try again.']);
+    exit;
+}
+
+unset($_SESSION['jobdrop_verified'][$token]);
 
 echo json_encode(['success' => true, 'message' => "Thank you! Your submission is awaiting review — once approved, it'll appear on the homepage."]);

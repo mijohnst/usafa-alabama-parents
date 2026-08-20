@@ -38,6 +38,7 @@
 
     .cta-button { display: inline-block; background: linear-gradient(180deg, #1a5cbf 0%, #002554 100%); color: var(--white); padding: 0.9rem 2rem; border-radius: 4px; font-family: var(--font-body); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.85rem; transition: all 0.15s ease; border: none; cursor: pointer; box-shadow: 0 4px 0 #001535, 0 6px 12px rgba(0,0,0,.25); position: relative; top: 0; }
     .cta-button:hover { background: linear-gradient(180deg, #2166cc 0%, #003080 100%); box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,.2); top: 2px; }
+    .cta-button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
     .cta-button:disabled { opacity: 0.6; cursor: not-allowed; }
 
     #formStatus, #lookupStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; }
@@ -51,6 +52,11 @@
     footer p { margin-bottom: 0.5rem; }
 
     @media (max-width: 768px) { .hero h1 { font-size: 2rem; } }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-content { animation: none; }
+      .cta-button { transition: none; }
+      html { scroll-behavior: auto; }
+    }
   </style>
   <script src="shared-nav.js" defer></script>
 </head>
@@ -150,7 +156,7 @@
       <!-- FIND YOUR RECORD -->
       <div id="lookupSection">
         <h3>Find Your Record</h3>
-        <p>Job Drop Night is for our graduating cadets — this year, the Class of 2027. Enter your cadet's last name and a parent email address already on file.</p>
+        <p>Job Drop Night is for our graduating cadets — currently, the Class of <span id="eligibleYear">2027</span>. Enter your cadet's last name and a parent email address already on file.</p>
         <div class="form-row-2">
           <div class="form-group">
             <label for="lookupLastName">Cadet Last Name *</label>
@@ -161,7 +167,7 @@
             <input type="email" id="lookupEmail" required />
           </div>
         </div>
-        <div id="lookupStatus"></div>
+        <div id="lookupStatus" role="status" aria-live="polite"></div>
         <button type="button" id="lookupBtn" class="cta-button">Find My Record</button>
         <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Having trouble finding your record? Contact site support at <a href="mailto:mijohnst@alabamafalcons.org" style="color:var(--blue)">mijohnst@alabamafalcons.org</a>.</p>
       </div>
@@ -178,7 +184,7 @@
           <input type="file" id="photoInput" accept="image/*" required />
           <div class="hint">JPG, PNG, GIF, or WebP, under 10MB.</div>
         </div>
-        <div id="formStatus"></div>
+        <div id="formStatus" role="status" aria-live="polite"></div>
         <button type="button" id="submitBtn" class="cta-button">Submit for Review</button>
       </div>
     </div>
@@ -194,6 +200,15 @@
 
   <script>
     var verifyToken = '';
+
+    fetch('job-drop-feed.php').then(function(resp) {
+      if (!resp.ok) throw new Error('Unable to load eligible class');
+      return resp.json();
+    }).then(function(data) {
+      if (data && /^\d{4}$/.test(String(data.eligibleYear || ''))) {
+        document.getElementById('eligibleYear').textContent = data.eligibleYear;
+      }
+    }).catch(function() {});
 
     function lookupEnterKey(e) {
       if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lookupBtn').click(); }
@@ -237,7 +252,8 @@
           document.getElementById('cadetNameDisplay').textContent = result.cadetName || 'your cadet';
           document.getElementById('lookupSection').style.display = 'none';
           document.getElementById('submitBody').style.display = 'block';
-          window.scrollTo({ top: document.getElementById('submitBody').offsetTop - 100, behavior: 'smooth' });
+          var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          window.scrollTo({ top: document.getElementById('submitBody').offsetTop - 100, behavior: reduceMotion ? 'auto' : 'smooth' });
         } else {
           statusEl.textContent = result.error || "We couldn't find a matching record.";
           statusEl.className = 'error';
