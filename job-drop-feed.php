@@ -5,6 +5,21 @@ require_once __DIR__ . '/admin/config.php';
 try {
     $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS,
         [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>true, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+    // Whole-section manual off switch — separate from the per-class
+    // auto-retirement below, for when an officer just wants to turn the
+    // whole thing off right now rather than hide entries one at a time.
+    // Defaults to visible if the table isn't migrated yet or has no row.
+    $section_visible = true;
+    try {
+        $sv = $pdo->query("SELECT section_visible FROM job_drop_settings WHERE id=1")->fetchColumn();
+        if ($sv !== false) $section_visible = (bool)$sv;
+    } catch (Exception $e) { /* table not migrated yet — stay visible */ }
+
+    if (!$section_visible) {
+        echo json_encode(['success'=>true,'drops'=>[]]);
+        exit;
+    }
+
     // Only ever shows the currently-graduating class's entries — mirrors
     // admin/lib.php's outgoing_class_year()+1 so a prior class's approved
     // photos automatically stop appearing here the moment the next class

@@ -62,6 +62,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'toggle_section') {
+        try {
+            $cur = (bool)$pdo->query('SELECT section_visible FROM job_drop_settings WHERE id=1')->fetchColumn();
+            $pdo->prepare('UPDATE job_drop_settings SET section_visible=? WHERE id=1')->execute([$cur ? 0 : 1]);
+            flash('success', $cur ? 'Job Drop Night section hidden from the homepage.' : 'Job Drop Night section is back on the homepage.');
+        } catch (PDOException $e) {
+            flash('error', 'Could not update — run admin/migrate_add_job_drop_section_toggle.sql first.');
+        }
+    }
+
     if ($action === 'toggle_live') {
         $cur = $pdo->prepare('SELECT active FROM job_drop_photos WHERE id=?');
         $cur->execute([$id]);
@@ -98,6 +108,10 @@ $live = $pdo->query(
      FROM job_drop_photos ORDER BY class_year DESC, sort_order ASC, id ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
+$section_visible = true;
+try { $section_visible = (bool)$pdo->query('SELECT section_visible FROM job_drop_settings WHERE id=1')->fetchColumn(); }
+catch (PDOException $e) { /* not migrated yet — treat as visible */ }
+
 admin_header('Job Drop Night Submissions');
 echo show_flash();
 ?>
@@ -111,8 +125,19 @@ echo show_flash();
 
 <div class="page-head">
   <h1>Job Drop Night Submissions</h1>
-  <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  <div style="display:flex;gap:.5rem">
+    <form method="POST" style="margin:0">
+      <?= csrf_field() ?><input type="hidden" name="action" value="toggle_section">
+      <button type="submit" class="btn <?= $section_visible ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+        <?= $section_visible ? 'Hide Entire Section from Homepage' : '✓ Show Section on Homepage' ?>
+      </button>
+    </form>
+    <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  </div>
 </div>
+<?php if (!$section_visible): ?>
+<div class="alert alert-error" style="margin-bottom:1.25rem">The Job Drop Night section is currently hidden from the homepage, regardless of what's approved below.</div>
+<?php endif; ?>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Parent-submitted cadet job assignments awaiting review. Approving adds the photo to the homepage Job Drop Night rotation.</p>
 
 <?php if (empty($pending)): ?>
