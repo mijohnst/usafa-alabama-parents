@@ -228,6 +228,22 @@ admin_header('Finance');
               💸 Submit Payment</button>
           </form>
           <?php elseif ($p['status']==='submitted' && is_treasurer()): ?>
+          <?php if (str_starts_with($p['payment_method'] ?? '', 'PayPal ') && empty($p['paypal_payout_batch_id'])): ?>
+          <form method="POST" action="purchase-action.php" style="margin:0"
+            onsubmit="return confirm('Send $<?= number_format($p['amount_total'],2) ?> via PayPal to <?= h(addslashes(trim(substr($p['payment_method'], 7)))) ?>?')">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="send_paypal">
+            <button type="submit" class="btn btn-sm" style="background:#0070ba;color:#fff;white-space:nowrap">🅿️ Send via PayPal</button>
+          </form>
+          <?php elseif (!empty($p['paypal_payout_batch_id'])): ?>
+          <form method="POST" action="purchase-action.php" style="margin:0">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="check_paypal_status">
+            <button type="submit" class="btn btn-secondary btn-sm" style="white-space:nowrap">🔄 PayPal: <?= h($p['paypal_payout_status'] ?? 'Sent') ?></button>
+          </form>
+          <?php endif; ?>
           <form id="pf-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/lib/paypal.php';
 require_finance();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: purchases.php'); exit; }
@@ -12,7 +13,7 @@ $note           = trim($_POST['note']            ?? '');
 $payment_method = trim($_POST['payment_method']  ?? '');
 $pdo    = get_pdo();
 
-if (!$id || !in_array($action, ['approve','submit','paid'])) {
+if (!$id || !in_array($action, ['approve','submit','paid','send_paypal','check_paypal_status'])) {
     flash('error', 'Invalid request.');
     header('Location: purchases.php'); exit;
 }
@@ -106,6 +107,53 @@ if ($action === 'approve') {
     flash('success', 'Purchase marked as paid. Submitter has been notified.');
     $p['paid_note'] = $note;
     notify_paid($pdo, $p, current_user_name());
+
+} elseif ($action === 'send_paypal') {
+    // Treasurer only — same gate as submitting/marking payment
+    if (!is_treasurer()) {
+        flash('error', 'Only the treasurer can send PayPal payouts.');
+        header('Location: purchases.php'); exit;
+    }
+    if ($p['status'] !== 'submitted') {
+        flash('error', 'Only purchases with payment submitted can be paid via PayPal.');
+        header('Location: purchases.php'); exit;
+    }
+    if (!empty($p['paypal_payout_batch_id'])) {
+        flash('error', 'A PayPal payout has already been sent for this purchase — use Check Status instead.');
+        header('Location: purchases.php'); exit;
+    }
+    $stored_pm = $p['payment_method'] ?? '';
+    if (!str_starts_with($stored_pm, 'PayPal ')) {
+        flash('error', 'This purchase\'s payment method is not PayPal.');
+        header('Location: purchases.php'); exit;
+    }
+    $paypal_email = trim(substr($stored_pm, 7));
+    $result = paypal_send_payout($paypal_email, (float)$p['amount_total'], 'Reimbursement: ' . $p['vendor'], 'purchase-' . $id);
+    if ($result['success']) {
+        $pdo->prepare('UPDATE purchases SET paypal_payout_batch_id = ?, paypal_payout_status = ?, paypal_payout_sent_at = NOW(), updated_at = NOW() WHERE id = ?')
+            ->execute([$result['batch_id'], $result['status'], $id]);
+        flash('success', "PayPal payout sent to $paypal_email — status: {$result['status']}. Check status before marking paid.");
+    } else {
+        flash('error', 'PayPal payout failed: ' . $result['error']);
+    }
+
+} elseif ($action === 'check_paypal_status') {
+    if (!is_treasurer()) {
+        flash('error', 'Only the treasurer can check PayPal payout status.');
+        header('Location: purchases.php'); exit;
+    }
+    if (empty($p['paypal_payout_batch_id'])) {
+        flash('error', 'No PayPal payout has been sent for this purchase yet.');
+        header('Location: purchases.php'); exit;
+    }
+    $result = paypal_check_payout_status($p['paypal_payout_batch_id']);
+    if ($result['success']) {
+        $pdo->prepare('UPDATE purchases SET paypal_payout_status = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$result['status'], $id]);
+        flash('success', 'PayPal payout status: ' . $result['status']);
+    } else {
+        flash('error', 'Could not check PayPal status: ' . $result['error']);
+    }
 }
 
 header('Location: purchases.php');
