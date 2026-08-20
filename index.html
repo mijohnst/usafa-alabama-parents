@@ -36,6 +36,9 @@
     .container{max-width:1100px;margin:0 auto;}
     .divider{width:48px;height:3px;background:linear-gradient(90deg,var(--blue),transparent);margin-bottom:2rem;}
 
+    /* JOB DROP NIGHT */
+    #job-drop{background:var(--light);}
+
     /* ABOUT */
     #about{background:var(--white);}
     .about-grid{display:grid;grid-template-columns:280px 1fr;gap:3rem;align-items:start;}
@@ -298,6 +301,23 @@
     <div class="stat"><strong>60+</strong><span>Current Cadets</span></div>
     <div class="stat"><strong>4+</strong><span>Annual Events</span></div>
     <div class="stat"><strong>10+</strong><span>Years Active</span></div>
+  </div>
+</section>
+
+<!-- JOB DROP NIGHT -->
+<section id="job-drop" style="display:none">
+  <div class="container">
+    <p class="section-label">Career Fields</p>
+    <h2 class="section-title">Job Drop Night</h2>
+    <div class="divider"></div>
+    <div id="job-drop-display" style="max-width:640px;margin:0 auto;text-align:center">
+      <div id="job-drop-photo-wrap" style="border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(0,53,148,.15);margin-bottom:1.25rem;background:var(--white)">
+        <img id="job-drop-photo" src="" alt="" style="width:100%;height:380px;object-fit:cover;display:block;transition:opacity .4s ease">
+      </div>
+      <h3 id="job-drop-name" style="font-family:var(--font-display);color:var(--navy);font-size:1.4rem;margin-bottom:.25rem"></h3>
+      <p id="job-drop-title" style="color:var(--accent);font-weight:600;font-size:1.05rem;margin-bottom:1.5rem"></p>
+      <a href="job-drop-night.html" class="btn btn-dark">Submit Your Cadet's Job Drop</a>
+    </div>
   </div>
 </section>
 
@@ -757,6 +777,49 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', loadNews);
 } else {
   loadNews();
+}
+
+// ── Job Drop Night — rotating showcase of approved cadet job drops ─────────
+var jobDropItems = [];
+var jobDropIndex = 0;
+
+function showJobDrop(i) {
+  if (!jobDropItems.length) return;
+  var item = jobDropItems[i];
+  var img = document.getElementById('job-drop-photo');
+  img.style.opacity = '0';
+  setTimeout(function() {
+    img.src = 'job-drop-photos/' + item.filename;
+    img.alt = item.cadet_name + ' — ' + item.job_title;
+    document.getElementById('job-drop-name').textContent = item.cadet_name;
+    document.getElementById('job-drop-title').textContent = item.job_title;
+    img.style.opacity = '1';
+  }, 400);
+}
+
+async function loadJobDrops() {
+  try {
+    var resp = await fetchWithTimeout('job-drop-feed.php', 6000);
+    var data = await resp.json();
+    if (data && data.success && data.drops && data.drops.length) {
+      jobDropItems = data.drops;
+      document.getElementById('job-drop').style.display = 'block';
+      showJobDrop(0);
+      if (jobDropItems.length > 1) {
+        setInterval(function() {
+          jobDropIndex = (jobDropIndex + 1) % jobDropItems.length;
+          showJobDrop(jobDropIndex);
+        }, 6000);
+      }
+    }
+  } catch (err) {
+    // Silent failure — section just stays hidden if the feed can't be reached.
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadJobDrops);
+} else {
+  loadJobDrops();
 }
 
 // ── Spotlight layout — two centered columns when both halves have data,
