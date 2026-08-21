@@ -625,6 +625,7 @@ function setCurrentYrs() {
               <button type="submit" name="action" value="mark_paid_current" class="btn btn-primary btn-sm">✓ Paid</button>
               <button type="submit" name="action" value="mark_paid_4year" class="btn btn-secondary btn-sm" title="Mark all 4 undergrad years paid">4-Yr</button>
             <?php endif; ?>
+            <a href="edit-dues.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm" title="Pick specific years, e.g. two non-default years">Years…</a>
           </form>
           <?php else: ?>
           <a href="view.php?id=<?= (int)$m['id'] ?>" class="btn btn-secondary btn-sm">View</a>

@@ -826,6 +826,17 @@ function syncP2Addr(radio) {
     echo '</div></div>';
     echo '</div></fieldset>';
 
+    dues_years_fieldset($m);
+}
+
+// The "Membership Dues" per-year checkbox fieldset — factored out of
+// member_form() so it can also stand alone on admin/edit-dues.php, a
+// treasurer-accessible page that only touches dues (Treasurer alone
+// doesn't pass can_manage_members(), so it can't reach the full Edit
+// Member form member_form() lives on, but it does pass can_mark_dues()
+// and needs a way to check/uncheck a specific year rather than only the
+// blunt "mark current year" / "mark all 4" bulk actions on the roster).
+function dues_years_fieldset(array $m): void {
     $cadet_years = cadet_dues_years($m['class_year'] ?? '');
     $paid_years  = parse_dues_years($m['membership_paid_years'] ?? '');
     $cur_year    = membership_year();
