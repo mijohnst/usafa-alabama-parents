@@ -862,7 +862,7 @@ function dues_years_fieldset(array $m): void {
                . h($yr) . $tag . '</label>';
         }
         echo '</div></div>';
-        echo '<button type="button" class="btn btn-secondary btn-sm" style="margin-top:.5rem" onclick="checkAllUndergradDues()">Check all 4 undergrad years</button>';
+        echo '<button type="button" class="btn btn-secondary btn-sm" style="margin-top:.5rem" onclick="checkAllUndergradDues()">Check all 4 undergrad years ($275)</button>';
         echo '<div style="margin-top:.65rem;font-size:.85rem;color:#5a6a7a">Total: $<strong id="dues-total-preview">' . dues_years_price($paid_years, $cadet_years) . '</strong></div>';
         echo '<script>
 function calcDuesTotal() {
