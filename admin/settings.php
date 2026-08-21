@@ -30,6 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($key === 'spotlight_photo') {
             // Keep the existing photo unless a new one was actually uploaded.
             $val = save_spotlight_photo('spotlight_photo_file') ?? $row['setting_value'];
+        } elseif ($key === 'president_letter') {
+            // The only setting rendered back as raw HTML (Quill editor here,
+            // and unescaped on the public president-letter.html page) — cut
+            // down to a safe tag/attribute allow-list rather than escaped.
+            $val = sanitize_rich_html($_POST[$key] ?? '');
         } else {
             // Windows browsers submit textarea line breaks as \r\n — normalize to
             // \n so stored values are consistent regardless of the editor's OS,

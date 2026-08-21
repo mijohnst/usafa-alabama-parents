@@ -122,18 +122,55 @@ if ($action === 'approve') {
         flash('error', 'A PayPal payout has already been sent for this purchase — use Check Status instead.');
         header('Location: purchases.php'); exit;
     }
+    if (($p['paypal_payout_status'] ?? '') === 'SENDING') {
+        flash('error', 'A PayPal payout is already being sent for this purchase — wait a moment and refresh before trying again.');
+        header('Location: purchases.php'); exit;
+    }
+    if (($p['paypal_payout_status'] ?? '') === 'NEEDS_MANUAL_CHECK') {
+        flash('error', 'PayPal already has a record of a payout attempt for this purchase but we lost track of its result. Check the PayPal dashboard directly for "purchase-' . $id . '" before doing anything else — do not resend.');
+        header('Location: purchases.php'); exit;
+    }
     $stored_pm = $p['payment_method'] ?? '';
     if (!str_starts_with($stored_pm, 'PayPal ')) {
         flash('error', 'This purchase\'s payment method is not PayPal.');
         header('Location: purchases.php'); exit;
     }
     $paypal_email = trim(substr($stored_pm, 7));
+
+    // Atomically claim this purchase before calling PayPal — closes the
+    // race where two near-simultaneous "Send via PayPal" clicks (or a
+    // double-click) both pass the empty(paypal_payout_batch_id) check above
+    // and both fire a real payout. paypal_send_payout() also derives its
+    // PayPal-side batch id only from the purchase id (not the current
+    // time), so even a retry after a crash/timeout reuses the same batch id
+    // and lands on PayPal's own duplicate-batch rejection rather than a
+    // second real transfer.
+    $claim = $pdo->prepare("UPDATE purchases SET paypal_payout_status = 'SENDING', updated_at = NOW()
+                             WHERE id = ? AND status = 'submitted'
+                               AND (paypal_payout_batch_id IS NULL OR paypal_payout_batch_id = '')
+                               AND (paypal_payout_status IS NULL OR paypal_payout_status NOT IN ('SENDING', 'NEEDS_MANUAL_CHECK'))");
+    $claim->execute([$id]);
+    if ($claim->rowCount() !== 1) {
+        flash('error', 'Could not send — this purchase may already have a payout in progress. Refresh and try again.');
+        header('Location: purchases.php'); exit;
+    }
+
     $result = paypal_send_payout($paypal_email, (float)$p['amount_total'], 'Reimbursement: ' . $p['vendor'], 'purchase-' . $id);
     if ($result['success']) {
         $pdo->prepare('UPDATE purchases SET paypal_payout_batch_id = ?, paypal_payout_status = ?, paypal_payout_sent_at = NOW(), updated_at = NOW() WHERE id = ?')
             ->execute([$result['batch_id'], $result['status'], $id]);
         flash('success', "PayPal payout sent to $paypal_email — status: {$result['status']}. Check status before marking paid.");
+    } elseif (!empty($result['duplicate'])) {
+        // PayPal has already accepted this exact batch once before — do
+        // NOT release the claim (that would let a treasurer keep retrying
+        // and hitting the same duplicate rejection, each time relying on
+        // PayPal to save them). Force a manual check instead.
+        $pdo->prepare("UPDATE purchases SET paypal_payout_status = 'NEEDS_MANUAL_CHECK', updated_at = NOW() WHERE id = ?")->execute([$id]);
+        flash('error', 'PayPal already has a record of a payout for this purchase (duplicate batch rejected) — check the PayPal dashboard directly for "purchase-' . $id . '" before doing anything else.');
     } else {
+        // An ordinary failure PayPal never accepted the batch for — safe to
+        // release and let the treasurer fix and retry.
+        $pdo->prepare("UPDATE purchases SET paypal_payout_status = NULL, updated_at = NOW() WHERE id = ?")->execute([$id]);
         flash('error', 'PayPal payout failed: ' . $result['error']);
     }
 

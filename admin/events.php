@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $visible     = isset($_POST['visible']) ? 1 : 0;
 
         if (!$title) $errors[] = 'Title is required.';
+        if ($cta_url !== '' && !is_safe_http_url($cta_url)) $errors[] = 'Button URL must start with https:// or http://';
         if (!in_array($group_label, ['past','upcoming','planning'])) $group_label = 'upcoming';
 
         if (empty($errors)) {

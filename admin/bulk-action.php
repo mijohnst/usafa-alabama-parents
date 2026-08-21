@@ -57,20 +57,29 @@ if ($action === 'mark_paid') {
     require_once __DIR__ . '/mailer.php';
     $stmt = $pdo->prepare("SELECT id,parent1_first_name,parent1_last_name,parent1_email,parent2_first_name,parent2_last_name,parent2_email FROM members WHERE id IN ($ph)");
     $stmt->execute($ids);
-    $dup_check = $pdo->prepare('SELECT id FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?');
-    $insert    = $pdo->prepare(
+    $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // One query for every existing email/username instead of one lookup per
+    // parent slot (up to 2x the selected member count) — this action can be
+    // run against a large batch of members at once.
+    $existing = [];
+    foreach ($pdo->query('SELECT LOWER(email) AS e, LOWER(username) AS u FROM users')->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $existing[$row['e']] = true;
+        $existing[$row['u']] = true;
+    }
+
+    $insert = $pdo->prepare(
         "INSERT INTO users (name,email,username,password_hash,role,active,invite_token,invite_expires,member_id)
          VALUES (?,?,?,?,'member',1,?,DATE_ADD(NOW(), INTERVAL 14 DAY),?)"
     );
     $invited = 0; $skipped = 0;
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $m) {
+    foreach ($members as $m) {
         foreach ([1, 2] as $slot) {
             $email = strtolower(trim($m["parent{$slot}_email"] ?? ''));
             if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
             $name = trim($m["parent{$slot}_first_name"] . ' ' . $m["parent{$slot}_last_name"]) ?: $email;
 
-            $dup_check->execute([$email, $email]);
-            if ($dup_check->fetch()) { $skipped++; continue; }
+            if (isset($existing[$email])) { $skipped++; continue; }
 
             $token = bin2hex(random_bytes(24));
             try {
@@ -78,6 +87,9 @@ if ($action === 'mark_paid') {
             } catch (PDOException $e) {
                 $skipped++; continue;
             }
+            // Covers the same email appearing on more than one selected
+            // member (or as both parents on one) within this same batch.
+            $existing[$email] = true;
             send_portal_invite($email, $name, $token);
             $invited++;
         }

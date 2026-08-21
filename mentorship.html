@@ -635,14 +635,23 @@
 
   <script>
 
-    // FAQ toggle
+    // FAQ toggle — keyboard-accessible: focusable via tabindex, activatable
+    // with Enter/Space (not just a mouse click), and announces open/closed
+    // state via aria-expanded for screen readers.
     document.querySelectorAll('.faq-question').forEach(question => {
-      question.addEventListener('click', function() {
-        const answer = this.nextElementSibling;
-        const toggle = this.querySelector('.faq-toggle');
-        
-        answer.classList.toggle('open');
-        toggle.textContent = answer.classList.contains('open') ? '−' : '+';
+      const answer = question.nextElementSibling;
+      question.setAttribute('role', 'button');
+      question.setAttribute('tabindex', '0');
+      question.setAttribute('aria-expanded', 'false');
+      function toggleFaq() {
+        const toggle = question.querySelector('.faq-toggle');
+        const open = answer.classList.toggle('open');
+        toggle.textContent = open ? '−' : '+';
+        question.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      question.addEventListener('click', toggleFaq);
+      question.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFaq(); }
       });
     });
 

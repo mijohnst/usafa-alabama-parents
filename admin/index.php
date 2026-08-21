@@ -118,7 +118,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                    'Dues','Dues Year','Remarks']);
     foreach ($members as $m) {
         $sqd = $m['squadron_yr2_4'] ?: ($m['fall_squadron'] ?: $m['bct_squadron']);
-        fputcsv($out, [
+        fputcsv($out, array_map(fn($v) => is_string($v) ? csv_formula_safe($v) : $v, [
             $m['class_year'], $m['cadet_last_name'], $m['cadet_suffix'] ?? '', $m['cadet_first_name'], $m['cadet_middle_name'],
             $sqd, $m['al_region'],
             trim($m['parent1_first_name'].' '.$m['parent1_last_name']),
@@ -127,7 +127,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             $m['parent2_email'], $m['parent2_cell'],
             $m['membership_paid'] ? 'Paid' : 'Unpaid',
             $m['membership_year'], $m['remarks']
-        ]);
+        ]));
     }
     fclose($out);
     exit;

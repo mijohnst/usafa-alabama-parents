@@ -42,6 +42,38 @@ function require_login(): void {
         header('Location: login.php');
         exit;
     }
+    revalidate_session_periodically();
+}
+
+// Session cookies are deliberately kept alive for hours (see
+// start_session()'s comment) so an idling admin doesn't lose in-progress
+// work to CSRF failures — but $_SESSION['role'] is otherwise only set once,
+// at login, so that same long lifetime could let a deactivated or demoted
+// account keep acting on its old privileges for the rest of that window.
+// Re-checks the users table at most once every 5 minutes (this runs on
+// every require_login() call, i.e. every admin page load) and forces a
+// fresh login the moment a deactivated account is caught, or silently
+// refreshes a merely-changed role/title so the next permission check sees
+// it. During impersonation this re-validates the impersonated target
+// (whose id/role $_SESSION currently holds), not the real admin — which is
+// the intended check either way.
+function revalidate_session_periodically(): void {
+    $now = time();
+    if ($now - (int)($_SESSION['role_checked_at'] ?? 0) < 300) return;
+
+    $stmt = get_pdo()->prepare('SELECT role, officer_title, active FROM users WHERE id = ?');
+    $stmt->execute([$_SESSION['user_id'] ?? 0]);
+    $user = $stmt->fetch();
+
+    if (!$user || !$user['active']) {
+        session_unset();
+        session_destroy();
+        header('Location: login.php?deactivated=1');
+        exit;
+    }
+    $_SESSION['role']          = $user['role'];
+    $_SESSION['officer_title'] = $user['officer_title'] ?? '';
+    $_SESSION['role_checked_at'] = $now;
 }
 
 function is_admin(): bool {

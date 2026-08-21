@@ -46,9 +46,28 @@ function send_notification(string $to, string $subject, string $body): bool {
     $clean_subject = preg_replace('/[\x00-\x1F\x7F]/', '', $subject);
     $clean_subject = mb_substr($clean_subject, 0, 200); // cap length
 
-    $mail = new PHPMailer(true);
+    // Shared across every send_notification() call in this request. Several
+    // bulk-notify helpers below (nominations/election-open, poll
+    // notifications, meeting/volunteer/birthday reminders) call this once
+    // per recipient in a loop — without SMTPKeepAlive, each call was
+    // opening and TLS-handshaking a brand-new connection to the relay, so a
+    // 100-recipient blast meant 100 serial connections. One shared,
+    // kept-alive connection is reused instead; register_shutdown_function
+    // closes it once, however the script ends, so no socket is left open.
+    static $shared_mail = null;
+    if ($shared_mail === null) {
+        $shared_mail = new PHPMailer(true);
+        configure_smtp_relay($shared_mail);
+        $shared_mail->SMTPKeepAlive = true;
+        register_shutdown_function(function () use ($shared_mail) {
+            try { $shared_mail->smtpClose(); } catch (\Throwable $e) { /* already closed */ }
+        });
+    }
+
+    $mail = $shared_mail;
+    $mail->clearAddresses();
+    $mail->clearReplyTos();
     try {
-        configure_smtp_relay($mail);
         $mail->setFrom(CLUB_FROM_EMAIL, CLUB_NAME);
         $mail->addReplyTo(CLUB_FROM_EMAIL, CLUB_NAME);
         $mail->addAddress($to);

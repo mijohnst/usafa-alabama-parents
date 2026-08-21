@@ -228,7 +228,12 @@ admin_header('Finance');
               💸 Submit Payment</button>
           </form>
           <?php elseif ($p['status']==='submitted' && is_treasurer()): ?>
-          <?php if (str_starts_with($p['payment_method'] ?? '', 'PayPal ') && empty($p['paypal_payout_batch_id'])): ?>
+          <?php $pp_status = $p['paypal_payout_status'] ?? ''; ?>
+          <?php if ($pp_status === 'NEEDS_MANUAL_CHECK'): ?>
+          <span class="btn btn-sm" style="background:#b02a37;color:#fff;white-space:nowrap" title='PayPal already has a record of a payout attempt for this purchase — check the PayPal dashboard for "purchase-<?= (int)$p['id'] ?>" before doing anything else.'>⚠️ Check PayPal manually</span>
+          <?php elseif ($pp_status === 'SENDING'): ?>
+          <span class="btn btn-sm" style="background:#8A8D8F;color:#fff;white-space:nowrap">🅿️ Sending…</span>
+          <?php elseif (str_starts_with($p['payment_method'] ?? '', 'PayPal ') && empty($p['paypal_payout_batch_id'])): ?>
           <form method="POST" action="purchase-action.php" style="margin:0"
             onsubmit="return confirm('Send $<?= number_format($p['amount_total'],2) ?> via PayPal to <?= h(addslashes(trim(substr($p['payment_method'], 7)))) ?>?')">
             <?= csrf_field() ?>
@@ -258,7 +263,7 @@ admin_header('Finance');
           <?php endif; ?>
           <?php
             $own_purchase = (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0);
-            if (is_treasurer() || ((is_member()||is_secretary()) && $own_purchase)): ?>
+            if (is_treasurer() || is_super_admin() || ((is_member()||is_secretary()) && $own_purchase)): ?>
           <form method="POST" action="purchase-delete.php" onsubmit="return confirm('Delete this purchase? This cannot be undone.')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">

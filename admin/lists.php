@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_login();
+require_member_admin();
 $pdo = get_pdo();
 
 $all_years     = CLASS_YEAR_LIST;
@@ -409,7 +409,7 @@ $roster_fields = [
 ];
 $tsv_rows = [implode("\t", $roster_cols)];
 foreach ($results['rows'] as $r) {
-    $tsv_rows[] = implode("\t", array_map(fn($f) => str_replace(["\t","\n","\r"], ' ', $r[$f] ?? ''), $roster_fields));
+    $tsv_rows[] = implode("\t", array_map(fn($f) => csv_formula_safe(str_replace(["\t","\n","\r"], ' ', $r[$f] ?? '')), $roster_fields));
 }
 $tsv = implode("\n", $tsv_rows);
 ?>

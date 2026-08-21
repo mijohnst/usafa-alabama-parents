@@ -1112,7 +1112,7 @@ function renderEvents(events) {
       var dt = formatEventDate(e);
       var info = '<h3>' + escHtml(e.title) + '</h3>';
       var meta = '';
-      if (e.event_time) meta += e.event_time;
+      if (e.event_time) meta += escHtml(e.event_time);
       if (e.location)   meta += (meta?' &bull; ':'') + escHtml(e.location);
       if (meta) info += '<p>' + meta + '</p>';
       if (e.description) info += '<p' + (meta?' style="margin-top:.4rem"':'') + '>' + escHtml(e.description) + '</p>';
@@ -1125,7 +1125,7 @@ function renderEvents(events) {
         }
       }
       if (e.cta_text && e.cta_url) {
-        info += '<div style="margin-top:.5rem"><a href="' + escHtml(e.cta_url) + '" style="display:inline-block;padding:.45rem 1.1rem;background:#A6192E;color:#fff;border-radius:4px;font-size:.85rem;font-weight:700;text-decoration:none;letter-spacing:.04em;">' + escHtml(e.cta_text) + ' &rarr;</a></div>';
+        info += '<div style="margin-top:.5rem"><a href="' + escHtml(safeHref(e.cta_url)) + '" style="display:inline-block;padding:.45rem 1.1rem;background:#A6192E;color:#fff;border-radius:4px;font-size:.85rem;font-weight:700;text-decoration:none;letter-spacing:.04em;">' + escHtml(e.cta_text) + ' &rarr;</a></div>';
       }
       if (e.cta_note) info += '<p style="font-size:.8rem;color:#6c757d;margin-top:.5rem">' + escHtml(e.cta_note) + '</p>';
       if (e.tag) info += '<span class="event-tag ' + tagClass(e.tag) + '">' + escHtml(e.tag) + '</span>';

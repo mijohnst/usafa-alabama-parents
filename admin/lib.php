@@ -110,6 +110,130 @@ function job_drop_eligible_year(PDO $pdo): string {
     return $auto;
 }
 
+// Neutralizes CSV/TSV formula injection: if a cell's first character is
+// one Excel/Sheets treats as a formula trigger (=, +, -, @, or a tab/CR
+// that could smuggle one in after whitespace-trimming), prefix it with a
+// leading apostrophe so spreadsheet apps render it as literal text instead
+// of executing it. Used by any export (lists.php, index.php) that writes
+// free-text, staff-entered fields like `remarks` into a CSV/TSV cell.
+function csv_formula_safe(string $v): string {
+    return preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
+}
+
+// Sanitizes the President's Letter rich-text field (admin/settings.php) —
+// the one place this codebase stores free-form HTML and renders it
+// unescaped, both back into the Quill editor and on the public
+// president-letter.html page. Reduces the submitted HTML to a small
+// allow-list of tags/attributes rather than escaping it (the whole point
+// of the field is to store real HTML): everything Quill's own toolbar can
+// produce (bold/italic/underline/strike/headers/lists/links/inline images/
+// color/background) survives; <script>, <iframe>, event-handler
+// attributes, javascript: URLs, and arbitrary inline CSS do not, whether
+// they came from a paste or a hand-crafted payload.
+function sanitize_rich_html(string $html): string {
+    if ($html === '') return '';
+    if (!class_exists('DOMDocument')) {
+        // No DOM extension available — fail safe by stripping all markup
+        // rather than passing raw HTML through unsanitized.
+        return htmlspecialchars(strip_tags($html), ENT_QUOTES, 'UTF-8');
+    }
+
+    $allowed_tags        = ['p','br','strong','b','em','i','u','s','a','ul','ol','li','h1','h2','h3','h4','blockquote','span','img'];
+    $allowed_style_props = ['color','background-color','text-align','font-size'];
+
+    $doc = new DOMDocument();
+    libxml_use_internal_errors(true);
+    // The XML PI is the standard workaround for DOMDocument's broken
+    // default UTF-8 handling; it becomes a document-level node, not a
+    // child of our wrapper <div>, so it never ends up in the output.
+    $doc->loadHTML('<?xml encoding="utf-8"?><div id="sanitize-root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    libxml_clear_errors();
+
+    $root = $doc->getElementsByTagName('div')->item(0);
+    if (!$root) return '';
+
+    sanitize_html_node_tree($root, $allowed_tags, $allowed_style_props);
+
+    $out = '';
+    foreach (iterator_to_array($root->childNodes) as $child) {
+        $out .= $doc->saveHTML($child);
+    }
+    return $out;
+}
+
+// Depth-first: tags never welcome in stored content (script/iframe/etc.)
+// are removed entirely, taking their contents with them. Any other
+// disallowed tag is unwrapped instead — replaced by its own children — so
+// plain text a user typed inside an unrecognized tag isn't silently
+// dropped. Allowed tags keep only a validated, explicit per-tag attribute
+// allow-list; everything else on them is stripped.
+function sanitize_html_node_tree(DOMNode $node, array $allowed_tags, array $allowed_style_props): void {
+    $always_strip_entirely = ['script','style','iframe','object','embed','form','link','meta','svg','math'];
+
+    foreach (iterator_to_array($node->childNodes) as $child) {
+        if ($child->nodeType === XML_COMMENT_NODE) { $node->removeChild($child); continue; }
+        if ($child->nodeType !== XML_ELEMENT_NODE) continue;
+        /** @var DOMElement $child */
+        $tag = strtolower($child->tagName);
+
+        if (in_array($tag, $always_strip_entirely, true)) {
+            $node->removeChild($child);
+            continue;
+        }
+
+        sanitize_html_node_tree($child, $allowed_tags, $allowed_style_props);
+
+        if (!in_array($tag, $allowed_tags, true)) {
+            while ($child->firstChild) { $node->insertBefore($child->firstChild, $child); }
+            $node->removeChild($child);
+            continue;
+        }
+
+        $keep = match ($tag) {
+            'a'     => ['href'],
+            'img'   => ['src', 'alt'],
+            'span'  => ['style'],
+            default => [],
+        };
+        $attr_names = [];
+        foreach ($child->attributes as $attr) { $attr_names[] = $attr->name; }
+        foreach ($attr_names as $name) {
+            $lower = strtolower($name);
+            if (!in_array($lower, $keep, true)) { $child->removeAttribute($name); continue; }
+            $val = $child->getAttribute($name);
+            if ($lower === 'href') {
+                if (!preg_match('~^(https?://|mailto:)~i', trim($val))) $child->removeAttribute('href');
+                else $child->setAttribute('rel', 'noopener');
+            } elseif ($lower === 'src') {
+                $is_safe_data_image = preg_match('~^data:image/(png|jpe?g|gif|webp);base64,~i', trim($val));
+                $is_safe_http       = preg_match('~^https?://~i', trim($val));
+                if (!$is_safe_data_image && !$is_safe_http) $child->removeAttribute('src');
+            } elseif ($lower === 'style') {
+                $child->setAttribute('style', sanitize_style_value($val, $allowed_style_props));
+            }
+        }
+    }
+}
+
+// Keeps only a small allow-list of CSS properties from a Quill-generated
+// style attribute (e.g. "color: rgb(0,0,0); background-color: #fff"),
+// dropping anything else — including url(), expression(), or any property
+// name that could smuggle behavior through inline CSS.
+function sanitize_style_value(string $style, array $allowed_props): string {
+    $out = [];
+    foreach (explode(';', $style) as $decl) {
+        $decl = trim($decl);
+        if ($decl === '' || !str_contains($decl, ':')) continue;
+        [$prop, $val] = array_map('trim', explode(':', $decl, 2));
+        $prop = strtolower($prop);
+        if (!in_array($prop, $allowed_props, true)) continue;
+        if (!preg_match('/^[#a-zA-Z0-9 .,%()-]*$/', $val)) continue;
+        if (stripos($val, 'url(') !== false || stripos($val, 'expression(') !== false) continue;
+        $out[] = "$prop: $val";
+    }
+    return implode('; ', $out);
+}
+
 // Extracts the 11-character video ID from any common YouTube URL shape
 // (watch?v=, youtu.be/, embed/, shorts/, with or without extra query
 // params) — or returns null if the string isn't recognizably a YouTube

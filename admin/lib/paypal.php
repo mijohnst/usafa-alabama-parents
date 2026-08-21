@@ -64,9 +64,14 @@ function paypal_send_payout(string $recipientEmail, float $amount, string $note,
 
     $payload = [
         'sender_batch_header' => [
-            // Must be unique per batch or PayPal rejects it as a duplicate —
-            // timestamped so re-sending after a failure gets a fresh id.
-            'sender_batch_id' => $senderItemId . '-' . time(),
+            // Deliberately deterministic (purchase id, not timestamped): if
+            // a request crashes/times out after PayPal has already accepted
+            // it but before our own DB write records the batch id, a retry
+            // reuses this exact id — PayPal recognizes it as a duplicate
+            // batch and returns the existing one instead of paying out a
+            // second time. See the claim/retry logic around this call in
+            // admin/purchase-action.php's send_paypal action.
+            'sender_batch_id' => $senderItemId,
             'email_subject'   => 'You have a payout from ' . (defined('CLUB_NAME') ? CLUB_NAME : 'USAFA Parents Club of Alabama'),
             'email_message'   => $note,
         ],
@@ -100,7 +105,14 @@ function paypal_send_payout(string $recipientEmail, float $amount, string $note,
         ];
     }
     error_log('paypal_send_payout failed: HTTP ' . $code . ' ' . $resp);
-    return ['success' => false, 'error' => $data['message'] ?? ('PayPal returned HTTP ' . $code)];
+    // PayPal rejects a reused sender_batch_id outright rather than quietly
+    // no-op'ing — which, given our batch id is deterministic per purchase,
+    // means it has *already* accepted this exact payout once before (most
+    // likely from an earlier attempt whose success response we never got to
+    // record). Surfaced distinctly so the caller does not treat this the
+    // same as an ordinary, safe-to-retry failure.
+    $is_duplicate = ($data['name'] ?? '') === 'DUPLICATE_BATCH_ID';
+    return ['success' => false, 'duplicate' => $is_duplicate, 'error' => $data['message'] ?? ('PayPal returned HTTP ' . $code)];
 }
 
 // Looks up the current status of a previously-sent payout batch.

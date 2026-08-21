@@ -57,12 +57,16 @@ foreach ($required_fields as $field) {
     }
 }
 
-// Sanitize inputs — str_replace strips CR/LF before values enter mail headers
-$name = str_replace(["\r", "\n"], '', htmlspecialchars(strip_tags(trim($data['name']))));
+// Sanitize inputs — strip_tags removes any HTML, str_replace strips CR/LF
+// before values enter mail headers. No htmlspecialchars() here: the email
+// this feeds is sent as plain text (isHTML(false) below), so HTML-entity
+// encoding would just corrupt ordinary characters like & and ' in the
+// notification the club receives.
+$name = str_replace(["\r", "\n"], '', strip_tags(trim($data['name'])));
 $email = str_replace(["\r", "\n"], '', filter_var(trim($data['email']), FILTER_SANITIZE_EMAIL));
-$iam = isset($data['iam']) ? htmlspecialchars(strip_tags(trim($data['iam']))) : 'Not specified';
-$class_year = isset($data['classYear']) ? htmlspecialchars(strip_tags(trim($data['classYear']))) : 'N/A';
-$message = htmlspecialchars(strip_tags(trim($data['message'])));
+$iam = isset($data['iam']) ? strip_tags(trim($data['iam'])) : 'Not specified';
+$class_year = isset($data['classYear']) ? strip_tags(trim($data['classYear'])) : 'N/A';
+$message = strip_tags(trim($data['message']));
 
 // Validate email
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {

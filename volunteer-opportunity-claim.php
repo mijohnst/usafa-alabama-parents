@@ -49,31 +49,46 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 try {
-    $stmt = $pdo->prepare(
-        'SELECT id, title, spots_needed, active, (SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id = ?) AS filled
-         FROM volunteer_opportunities WHERE id = ?'
-    );
-    $stmt->execute([$opportunity_id, $opportunity_id]);
+    $pdo->beginTransaction();
+
+    // FOR UPDATE locks the opportunity row for the rest of this
+    // transaction, so a second concurrent claim has to wait until this one
+    // commits (and sees the up-to-date fill count) rather than both reading
+    // "not yet full" at the same time and overbooking past spots_needed.
+    $stmt = $pdo->prepare('SELECT id, title, spots_needed, active FROM volunteer_opportunities WHERE id = ? FOR UPDATE');
+    $stmt->execute([$opportunity_id]);
     $opp = $stmt->fetch(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    error_log('volunteer-opportunity-claim: lookup failed — ' . $e->getMessage());
-    http_response_code(500); echo json_encode(['success' => false, 'error' => 'A server error occurred.']); exit();
-}
 
-if (!$opp || !$opp['active']) {
-    http_response_code(410); echo json_encode(['success' => false, 'error' => 'This opportunity is no longer open.']); exit();
-}
-if ((int)$opp['filled'] >= (int)$opp['spots_needed']) {
-    http_response_code(409); echo json_encode(['success' => false, 'error' => 'That opportunity is already full.']); exit();
-}
+    if (!$opp || !$opp['active']) {
+        $pdo->rollBack();
+        http_response_code(410); echo json_encode(['success' => false, 'error' => 'This opportunity is no longer open.']); exit();
+    }
 
-try {
+    $filled_stmt = $pdo->prepare('SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id = ?');
+    $filled_stmt->execute([$opportunity_id]);
+    $filled = (int)$filled_stmt->fetchColumn();
+
+    if ($filled >= (int)$opp['spots_needed']) {
+        $pdo->rollBack();
+        http_response_code(409); echo json_encode(['success' => false, 'error' => 'That opportunity is already full.']); exit();
+    }
+
     $pdo->prepare('INSERT INTO volunteer_signups (opportunity_id, guest_name, guest_email) VALUES (?, ?, ?)')
         ->execute([$opportunity_id, $name, strtolower($email)]);
+
+    $pdo->commit();
 } catch (PDOException $e) {
-    // Unique key on (opportunity_id, guest_email) — this email already claimed this one.
-    echo json_encode(['success' => true, 'message' => "You're already signed up for that one — thank you!"]);
-    exit;
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($e->getCode() === '23000') {
+        // Unique key on (opportunity_id, guest_email) — this email already
+        // claimed this one. Any other error code is a real failure (lost
+        // connection, schema mismatch, etc.) and must not be reported to
+        // the visitor as if they'd succeeded.
+        echo json_encode(['success' => true, 'message' => "You're already signed up for that one — thank you!"]);
+        exit;
+    }
+    error_log('volunteer-opportunity-claim: signup failed — ' . $e->getMessage());
+    http_response_code(500); echo json_encode(['success' => false, 'error' => 'A server error occurred. Please try again or email us directly at info@alabamafalcons.org.']); exit();
 }
 
 $title = $opp['title'];

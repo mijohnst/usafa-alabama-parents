@@ -21,13 +21,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($priority, array_keys(TICKET_PRIORITIES))) $priority = 'medium';
 
     if (empty($errors)) {
-        // Generate ticket number
-        $max = (int)$pdo->query('SELECT COUNT(*) FROM tickets')->fetchColumn();
-        $ticket_num = 'TICK-' . str_pad($max + 1, 4, '0', STR_PAD_LEFT);
-
+        // Ticket number is derived from the row's own auto-increment id
+        // (assigned atomically by the database), not a COUNT(*)+1 guess —
+        // two submissions arriving at nearly the same moment could both
+        // compute the same guess and collide. The insert uses a throwaway
+        // unique placeholder so it succeeds regardless of whether
+        // ticket_number has a NOT NULL/UNIQUE constraint, then the real
+        // number is written once the id is known.
+        $temp_ticket_num = 'TEMP-' . bin2hex(random_bytes(8));
         $pdo->prepare('INSERT INTO tickets (ticket_number,category,subject,description,priority,status,submitted_by) VALUES (?,?,?,?,?,?,?)')
-            ->execute([$ticket_num, $category, $subject, $description, $priority, 'open', $_SESSION['user_id'] ?? null]);
+            ->execute([$temp_ticket_num, $category, $subject, $description, $priority, 'open', $_SESSION['user_id'] ?? null]);
         $ticket_id = (int)$pdo->lastInsertId();
+        $ticket_num = 'TICK-' . str_pad($ticket_id, 4, '0', STR_PAD_LEFT);
+        $pdo->prepare('UPDATE tickets SET ticket_number = ? WHERE id = ?')->execute([$ticket_num, $ticket_id]);
 
         $url = 'https://alabamafalcons.org/admin/ticket-view.php?id=' . $ticket_id;
 

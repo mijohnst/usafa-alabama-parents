@@ -252,6 +252,7 @@ function buildEventSection(album, openByDefault) {
 
   const dateStr = album.event_date ? new Date(album.event_date + 'T00:00:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '';
   const metaId  = 'meta-' + album.id;
+  const bodyId  = 'event-body-' + album.id;
 
   const parts = [];
   if (dateStr) parts.push(dateStr);
@@ -261,6 +262,10 @@ function buildEventSection(album, openByDefault) {
 
   const header = document.createElement('div');
   header.className = 'event-header' + (openByDefault ? ' open' : '');
+  header.setAttribute('role', 'button');
+  header.setAttribute('tabindex', '0');
+  header.setAttribute('aria-expanded', openByDefault ? 'true' : 'false');
+  header.setAttribute('aria-controls', bodyId);
   header.innerHTML = `
     <div>
       <div class="event-title">${esc(album.name)}</div>
@@ -269,6 +274,7 @@ function buildEventSection(album, openByDefault) {
     <span class="event-chevron">&#9660;</span>`;
 
   const body = document.createElement('div');
+  body.id = bodyId;
   body.className = 'event-body' + (openByDefault ? ' open' : '');
 
   if (openByDefault) {
@@ -277,14 +283,19 @@ function buildEventSection(album, openByDefault) {
   }
 
   let loaded = openByDefault;
-  header.addEventListener('click', () => {
+  function toggleEvent() {
     const isOpen = header.classList.toggle('open');
     body.classList.toggle('open', isOpen);
+    header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     if (isOpen && !loaded) {
       loaded = true;
       body.innerHTML = '<div class="photo-load-bar"><span></span></div>';
       fetchEventContent(album, body);
     }
+  }
+  header.addEventListener('click', toggleEvent);
+  header.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleEvent(); }
   });
 
   section.appendChild(header);
@@ -403,7 +414,7 @@ document.addEventListener('keydown', e => {
 // ─── UTILITY ────────────────────────────────────────────────────────────────────
 
 function esc(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 

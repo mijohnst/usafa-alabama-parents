@@ -94,6 +94,8 @@ button:hover{background:#002268}
 
   <?php if ($error): ?>
     <div class="alert"><?= h($error) ?></div>
+  <?php elseif (!empty($_GET['deactivated'])): ?>
+    <div class="alert">Your account is no longer active. Contact a site admin if this is unexpected.</div>
   <?php endif; ?>
 
   <?php if ($bootstrap): ?>
