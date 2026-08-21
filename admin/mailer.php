@@ -102,18 +102,6 @@ function mark_automated_sent(PDO $pdo, string $email_key, int $subject_id, strin
     return $stmt->rowCount() > 0;
 }
 
-// Parses a "YYYY-YYYY" membership_paid_through value into the date it
-// actually expires (June 30 of the second year, matching the July-June
-// club year used by membership_year()). Returns null if unparseable.
-function parse_membership_expiration(string $paid_through): ?DateTimeImmutable {
-    if (!preg_match('/^(\d{4})-(\d{4})$/', trim($paid_through), $m)) return null;
-    try {
-        return new DateTimeImmutable($m[2] . '-06-30');
-    } catch (Exception $e) {
-        return null;
-    }
-}
-
 // ── Send happy-birthday emails to today's cadets + their parents ─────────
 // Cadet and parent versions can be enabled/disabled independently.
 // Returns the number of cadets processed (not the number of individual emails).
@@ -188,37 +176,55 @@ function send_birthday_emails(PDO $pdo): int {
     return $count;
 }
 
-// ── Dues renewal reminder — parents, once, N days before paid-through ends ──
+// ── Dues renewal reminder — parents, once, N days before the current club
+// year ends, unless next year is already on file (e.g. a multi-year
+// prepay) ──────────────────────────────────────────────────────────────
+// Keyed off membership_paid (is the *current* year in this member's
+// recorded dues-years set?) and whether *next* year is also already in
+// that set — not off membership_paid_through (the furthest year ever
+// paid), which a gap can leave pointing at a misleadingly distant date
+// even for someone who needs to renew right now. See admin/lib.php's
+// membership dues helpers for the underlying data model.
 function send_dues_renewal_reminders(PDO $pdo): int {
     $cfg = load_automated_email($pdo, 'dues_renewal');
     if (!$cfg || !$cfg['enabled']) return 0;
 
+    $cur_year = membership_year();
+    $parts = explode('-', $cur_year);
+    if (count($parts) !== 2) return 0;
+    try {
+        $year_end = new DateTimeImmutable($parts[1] . '-06-30');
+    } catch (Exception $e) {
+        return 0;
+    }
+    $next_year = ((int)$parts[0] + 1) . '-' . ((int)$parts[1] + 1);
+
+    $today = new DateTimeImmutable('today');
+    $days_left = (int)$today->diff($year_end)->format('%r%a');
+    if ($days_left < 0 || $days_left > (int)$cfg['days_offset']) return 0;
+
     try {
         $rows = $pdo->query(
-            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, parent1_first_name, parent1_email, parent2_email, membership_paid_through
+            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, parent1_first_name, parent1_email, parent2_email, membership_paid_years
              FROM members
-             WHERE archived = 0 AND membership_paid = 1 AND membership_paid_through <> '' AND class_year <> 'Graduate'"
+             WHERE archived = 0 AND membership_paid = 1 AND class_year <> 'Graduate'"
         )->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_dues_renewal_reminders query failed — ' . $e->getMessage());
         return 0;
     }
 
-    $today = new DateTimeImmutable('today');
     $count = 0;
     foreach ($rows as $r) {
-        $exp = parse_membership_expiration($r['membership_paid_through']);
-        if (!$exp) continue;
-        $days_left = (int)$today->diff($exp)->format('%r%a');
-        if ($days_left < 0 || $days_left > (int)$cfg['days_offset']) continue;
-        if (!mark_automated_sent($pdo, 'dues_renewal', (int)$r['id'], $r['membership_paid_through'])) continue;
+        if (in_array($next_year, parse_dues_years($r['membership_paid_years']), true)) continue; // already covered ahead
+        if (!mark_automated_sent($pdo, 'dues_renewal', (int)$r['id'], $cur_year)) continue;
         $count++;
 
         $full_name = cadet_full_name($r);
         $replace = [
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',
-            '{expire_date}' => $exp->format('F j, Y'),
+            '{expire_date}' => $year_end->format('F j, Y'),
             '{dues_amount}' => '$75', // cost of renewing one more year; the 4-year bulk option is offered separately on the site
         ];
         $subject = strtr($cfg['subject'], $replace);
@@ -230,37 +236,58 @@ function send_dues_renewal_reminders(PDO $pdo): int {
     return $count;
 }
 
-// ── Lapsed member re-engagement — parents, once, N days after expiration ──
+// ── Lapsed member re-engagement — parents, once, N days after the current
+// club year opens, for anyone not currently paid ─────────────────────────
+// Keyed directly off membership_paid = 0 — the correct, always-accurate
+// signal for "not currently covered" — rather than reasoning back from
+// membership_paid_through, which a family that paid this year, skipped
+// next, then pre-paid the year after would leave pointing at a future
+// date despite having a real gap right now.
 function send_lapsed_reengagement(PDO $pdo): int {
     $cfg = load_automated_email($pdo, 'lapsed_reengagement');
     if (!$cfg || !$cfg['enabled']) return 0;
+
+    $cur_year = membership_year();
+    $parts = explode('-', $cur_year);
+    if (count($parts) !== 2) return 0;
+    try {
+        $year_start = new DateTimeImmutable($parts[0] . '-07-01');
+    } catch (Exception $e) {
+        return 0;
+    }
+    $today = new DateTimeImmutable('today');
+    $days_open = (int)$year_start->diff($today)->format('%r%a');
+    if ($days_open < (int)$cfg['days_offset']) return 0;
 
     try {
         $rows = $pdo->query(
             "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, parent1_first_name, parent1_email, parent2_email, membership_paid_through
              FROM members
-             WHERE archived = 0 AND membership_paid_through <> '' AND class_year <> 'Graduate'"
+             WHERE archived = 0 AND membership_paid = 0 AND class_year <> 'Graduate'"
         )->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_lapsed_reengagement query failed — ' . $e->getMessage());
         return 0;
     }
 
-    $today = new DateTimeImmutable('today');
     $count = 0;
     foreach ($rows as $r) {
-        $exp = parse_membership_expiration($r['membership_paid_through']);
-        if (!$exp || $today < $exp) continue; // not expired yet
-        $days_past = (int)$exp->diff($today)->format('%r%a');
-        if ($days_past < (int)$cfg['days_offset']) continue;
-        if (!mark_automated_sent($pdo, 'lapsed_reengagement', (int)$r['id'], $r['membership_paid_through'])) continue;
+        if (!mark_automated_sent($pdo, 'lapsed_reengagement', (int)$r['id'], $cur_year)) continue;
         $count++;
+
+        // Best-effort "you were last covered through..." — falls back to
+        // something generic for a family that's simply never paid at all.
+        $expire_label = 'recently';
+        $pt_parts = explode('-', (string)$r['membership_paid_through']);
+        if (count($pt_parts) === 2) {
+            try { $expire_label = (new DateTimeImmutable($pt_parts[1] . '-06-30'))->format('F j, Y'); } catch (Exception $e) {}
+        }
 
         $full_name = cadet_full_name($r);
         $replace = [
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',
-            '{expire_date}' => $exp->format('F j, Y'),
+            '{expire_date}' => $expire_label,
         ];
         $subject = strtr($cfg['subject'], $replace);
         $body    = strtr($cfg['body'], $replace);
