@@ -6,13 +6,10 @@ if (!can_mark_dues()) { header('Location: index.php?denied=1'); exit; }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: index.php'); exit; }
 csrf_verify();
 
-$ids      = array_filter(array_map('intval', $_POST['member_ids'] ?? []));
-$action   = $_POST['action'] ?? '';
-$mem_year = trim($_POST['membership_year'] ?? '');
-$mem_type = $_POST['membership_type'] ?? 'annual';
-if (!in_array($mem_type, ['annual','2year','3year','4year'])) $mem_type = 'annual';
+$ids    = array_filter(array_map('intval', $_POST['member_ids'] ?? []));
+$action = $_POST['action'] ?? '';
 
-$dues_actions   = ['mark_paid','mark_unpaid'];
+$dues_actions   = ['mark_paid_current','mark_paid_4year','mark_unpaid_current'];
 $member_actions = ['archive','restore','delete','portal_invite'];
 $all_actions    = array_merge($dues_actions, $member_actions);
 
@@ -29,17 +26,36 @@ if (in_array($action, $member_actions) && !can_manage_members()) {
 $pdo = get_pdo();
 $ph  = implode(',', array_fill(0, count($ids), '?'));
 
-if ($action === 'mark_paid') {
-    $paid_through = calc_paid_through($mem_year, $mem_type, true);
-    $stmt = $pdo->prepare("UPDATE members SET membership_paid = 1, membership_year = ?, membership_type = ?, membership_paid_through = ? WHERE id IN ($ph)");
-    $stmt->execute(array_merge([$mem_year, $mem_type, $paid_through], $ids));
-    $plan_label = dues_plan_years($mem_type) > 1 ? dues_plan_label($mem_type) . ' (through ' . $paid_through . ')' : 'Annual';
-    flash('success', count($ids) . ' member(s) marked paid — ' . $plan_label . '.');
-
-} elseif ($action === 'mark_unpaid') {
-    $stmt = $pdo->prepare("UPDATE members SET membership_paid = 0, membership_year = '', membership_type = 'annual', membership_paid_through = '' WHERE id IN ($ph)");
-    $stmt->execute($ids);
-    flash('success', count($ids) . ' member(s) marked as unpaid.');
+if (in_array($action, $dues_actions, true)) {
+    // Each member's own dues years are derived from their class_year
+    // (cadet_dues_years()), not a single global plan — so this loops
+    // per-member rather than a single bulk UPDATE. Fine at this club's
+    // roster size.
+    $rows_stmt = $pdo->prepare("SELECT id, class_year, membership_paid_years FROM members WHERE id IN ($ph)");
+    $rows_stmt->execute($ids);
+    $cur_year = membership_year();
+    $count = 0;
+    foreach ($rows_stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $cadet_years = cadet_dues_years($row['class_year']);
+        if (!$cadet_years) continue; // Graduate/blank class year — nothing to mark
+        $years = parse_dues_years($row['membership_paid_years']);
+        if ($action === 'mark_paid_current') {
+            if (!in_array($cur_year, $cadet_years, true)) continue;
+            $years[] = $cur_year;
+        } elseif ($action === 'mark_paid_4year') {
+            $years = array_merge($years, array_slice($cadet_years, -4));
+        } else { // mark_unpaid_current
+            $years = array_diff($years, [$cur_year]);
+        }
+        save_dues_years($pdo, (int)$row['id'], $years);
+        $count++;
+    }
+    $labels = [
+        'mark_paid_current'   => "marked paid for $cur_year",
+        'mark_paid_4year'     => 'marked paid for all 4 undergrad years ($275 rate)',
+        'mark_unpaid_current' => "marked not paid for $cur_year",
+    ];
+    flash('success', "$count member(s) " . $labels[$action] . '.');
 
 } elseif ($action === 'archive') {
     $pdo->prepare("UPDATE members SET archived = 1 WHERE id IN ($ph)")->execute($ids);

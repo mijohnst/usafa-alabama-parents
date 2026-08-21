@@ -56,15 +56,14 @@ a.vf-val{color:#003594}
 
 <!-- Dues status banner -->
 <div style="margin-bottom:1.25rem">
+  <?php $view_dues_years = parse_dues_years($m['membership_paid_years'] ?? ''); ?>
   <?php if ($m['membership_paid']): ?>
-    <?php
-      $plan = dues_plan_years($m['membership_type'] ?? 'annual') > 1
-          ? dues_plan_label($m['membership_type']) . ' Plan · paid through ' . $m['membership_paid_through']
-          : 'Annual · ' . $m['membership_year'];
-    ?>
-    <span class="paid-badge" style="background:#e8f5e9;color:#1b5e20">✓ Dues Paid — <?= h($plan) ?></span>
+    <span class="paid-badge" style="background:#e8f5e9;color:#1b5e20">✓ Dues Paid — <?= count($view_dues_years) ?> yr<?= count($view_dues_years) !== 1 ? 's' : '' ?> on file, through <?= h($m['membership_paid_through']) ?></span>
   <?php else: ?>
-    <span class="paid-badge" style="background:#ffebee;color:#c62828">✗ Dues Not Paid</span>
+    <span class="paid-badge" style="background:#ffebee;color:#c62828">✗ Dues Not Paid<?= $view_dues_years ? ' (' . count($view_dues_years) . ' other yr' . (count($view_dues_years) !== 1 ? 's' : '') . ' on file)' : '' ?></span>
+  <?php endif; ?>
+  <?php if ($view_dues_years): ?>
+    <div style="font-size:.78rem;color:#5a6a7a;margin-top:.35rem">Years paid: <?= h(implode(', ', $view_dues_years)) ?></div>
   <?php endif; ?>
   <?php if ($m['al_region']): ?>
     <span class="badge badge-<?= h($m['al_region']) ?>" style="margin-left:.5rem;font-size:.82rem;padding:.3rem .75rem"><?= h($m['al_region']) ?> Region</span>

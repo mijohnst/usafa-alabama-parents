@@ -42,14 +42,15 @@ if (!$member && $q !== '') {
 
 // If we have a member, render printable letter
 if ($member) {
-    $type_label = dues_plan_label($member['membership_type'] ?? 'annual');
-    $amount     = '$' . dues_plan_price($member['membership_type'] ?? 'annual');
+    $letter_dues_years  = parse_dues_years($member['membership_paid_years'] ?? '');
+    $letter_cadet_years = cadet_dues_years($member['class_year'] ?? '');
+    $years_label = $letter_dues_years ? implode(', ', $letter_dues_years) : 'None on file';
+    $amount     = '$' . dues_years_price($letter_dues_years, $letter_cadet_years);
     $paid_label = $member['membership_paid'] ? 'Paid' : 'Unpaid';
     $paid_color = $member['membership_paid'] ? '#1b5e20' : '#A6192E';
     $cadet_full = cadet_full_name($member);
     $parent_full = trim($member['parent1_first_name'] . ' ' . $member['parent1_last_name']);
     $squadron = $member['squadron_yr2_4'] ?: ($member['fall_squadron'] ?: $member['bct_squadron']);
-    $mem_year    = $member['membership_year'] ?? '';
     $letter_date = date('F j, Y');
     ?>
 <!DOCTYPE html>
@@ -130,15 +131,9 @@ body{font-family:'Times New Roman',Times,serif;font-size:12pt;color:#000;backgro
     </tr>
     <?php endif; ?>
     <tr>
-      <td>Membership Type:</td>
-      <td><?= h($type_label) ?> (<?= $amount ?>)</td>
+      <td>Years Paid:</td>
+      <td><?= h($years_label) ?> (<?= $amount ?>)</td>
     </tr>
-    <?php if ($mem_year): ?>
-    <tr>
-      <td>Membership Year:</td>
-      <td><?= h($mem_year) ?></td>
-    </tr>
-    <?php endif; ?>
     <tr>
       <td>Payment Status:</td>
       <td style="font-weight:bold;color:<?= $paid_color ?>"><?= $paid_label ?></td>

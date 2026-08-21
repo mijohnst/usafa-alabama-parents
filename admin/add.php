@@ -9,11 +9,10 @@ $duplicates = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     foreach (FIELDS as $f) $m[$f] = trim($_POST[$f] ?? '');
-    $m['membership_paid'] = isset($_POST['membership_paid']) ? (int)$_POST['membership_paid'] : 0;
     $m['parent1_is_board_member'] = isset($_POST['parent1_is_board_member']) ? 1 : 0;
     $m['parent2_is_board_member'] = isset($_POST['parent2_is_board_member']) ? 1 : 0;
-    if (!in_array($m['membership_type'], ['annual','2year','3year','4year'])) $m['membership_type'] = 'annual';
-    $m['membership_paid_through'] = calc_paid_through($m['membership_year'], $m['membership_type'], (bool)$m['membership_paid']);
+    $dues_years = array_intersect((array)($_POST['dues_years'] ?? []), cadet_dues_years($m['class_year']));
+    $m['membership_paid_years'] = implode(',', $dues_years); // reflected if the form needs to redisplay below
 
     if ($m['class_year'] === '') $errors[] = 'Class Year is required.';
     if ($m['cadet_last_name'] === '') $errors[] = 'Cadet Last Name is required.';
@@ -39,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $placeholders = implode(', ', array_map(fn($f) => ":$f", FIELDS));
         $stmt = $pdo->prepare("INSERT INTO members ($cols) VALUES ($placeholders)");
         $stmt->execute($m);
+        save_dues_years($pdo, (int)$pdo->lastInsertId(), $dues_years);
         flash('success', 'Member added successfully.');
         header('Location: index.php'); exit;
     }

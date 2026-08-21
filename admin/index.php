@@ -530,7 +530,6 @@ function setCurrentYrs() {
 <!-- Bulk action form (inputs inside the table use form="bulk-form") -->
 <form id="bulk-form" method="POST" action="bulk-action.php">
   <?= csrf_field() ?>
-  <input type="hidden" name="membership_year" value="<?= h(membership_year()) ?>">
 </form>
 <?php endif; ?>
 
@@ -583,16 +582,20 @@ function setCurrentYrs() {
         <?php if ($p2cell): ?><a href="tel:<?= h(preg_replace('/\D/','',$p2cell)) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($p2cell) ?></a><?php endif; ?>
         <?php if ($p2email): ?><br><a href="mailto:<?= h($p2email) ?>" style="font-size:.78rem;color:#5a6a7a"><?= h($p2email) ?></a><?php endif; ?>
       </td>
+      <?php $row_dues_years = parse_dues_years($m['membership_paid_years'] ?? ''); ?>
       <td>
         <?php if ($m['membership_paid']): ?>
           <span class="badge badge-paid">✓ Paid</span><br>
-          <?php if (dues_plan_years($m['membership_type'] ?? 'annual') > 1): ?>
-            <span style="font-size:.7rem;color:#2e7d32;font-weight:700"><?= h(dues_plan_label($m['membership_type'])) ?> thru <?= h($m['membership_paid_through']) ?></span>
+          <?php if (count($row_dues_years) > 1): ?>
+            <span style="font-size:.7rem;color:#2e7d32;font-weight:700"><?= count($row_dues_years) ?> yrs thru <?= h($m['membership_paid_through']) ?></span>
           <?php else: ?>
-            <span style="font-size:.72rem;color:#5a6a7a"><?= h($m['membership_year']) ?></span>
+            <span style="font-size:.72rem;color:#5a6a7a"><?= h($m['membership_paid_through']) ?></span>
           <?php endif; ?>
         <?php else: ?>
           <span class="badge badge-unpaid">✗ Unpaid</span>
+          <?php if ($row_dues_years): ?>
+            <br><span style="font-size:.68rem;color:#9aa5b4"><?= count($row_dues_years) ?> other yr<?= count($row_dues_years) !== 1 ? 's' : '' ?> on file</span>
+          <?php endif; ?>
         <?php endif; ?>
       </td>
       <td class="actions">
@@ -616,17 +619,11 @@ function setCurrentYrs() {
           <form method="POST" action="bulk-action.php" style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
             <?= csrf_field() ?>
             <input type="hidden" name="member_ids[]" value="<?= (int)$m['id'] ?>">
-            <input type="hidden" name="membership_year" value="<?= h(membership_year()) ?>">
             <?php if ($m['membership_paid']): ?>
-              <button type="submit" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm">✗ Unpaid</button>
+              <button type="submit" name="action" value="mark_unpaid_current" class="btn btn-secondary btn-sm">✗ Unpaid</button>
             <?php else: ?>
-              <select name="membership_type" style="padding:.22rem .4rem;font-size:.72rem;width:auto;min-width:0">
-                <option value="annual">Annual $<?= dues_plan_price('annual') ?></option>
-                <option value="2year">2-Year $<?= dues_plan_price('2year') ?></option>
-                <option value="3year">3-Year $<?= dues_plan_price('3year') ?></option>
-                <option value="4year">4-Year $<?= dues_plan_price('4year') ?></option>
-              </select>
-              <button type="submit" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Paid</button>
+              <button type="submit" name="action" value="mark_paid_current" class="btn btn-primary btn-sm">✓ Paid</button>
+              <button type="submit" name="action" value="mark_paid_4year" class="btn btn-secondary btn-sm" title="Mark all 4 undergrad years paid">4-Yr</button>
             <?php endif; ?>
           </form>
           <?php else: ?>
@@ -645,14 +642,9 @@ function setCurrentYrs() {
 <div id="bulk-bar" style="display:none;position:sticky;bottom:1rem;background:#002554;color:#fff;padding:.85rem 1.25rem;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.3);align-items:center;gap:.65rem;flex-wrap:wrap;margin-top:.75rem">
   <span id="bulk-count" style="font-size:.9rem;font-weight:600;margin-right:.25rem"></span>
   <span style="font-size:.82rem;opacity:.7">Dues:</span>
-  <select name="membership_type" form="bulk-form" style="padding:.28rem .55rem;font-size:.78rem;width:auto;background:#fff;color:#1a2332;border-radius:4px;border:1px solid #d0d5dd">
-    <option value="annual">Annual ($<?= dues_plan_price('annual') ?>)</option>
-    <option value="2year">2-Year ($<?= dues_plan_price('2year') ?>)</option>
-    <option value="3year">3-Year ($<?= dues_plan_price('3year') ?>)</option>
-    <option value="4year">4-Year ($<?= dues_plan_price('4year') ?>)</option>
-  </select>
-  <button type="submit" form="bulk-form" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Paid</button>
-  <button type="submit" form="bulk-form" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">✗ Unpaid</button>
+  <button type="submit" form="bulk-form" name="action" value="mark_paid_current" class="btn btn-primary btn-sm">✓ Paid (this year)</button>
+  <button type="submit" form="bulk-form" name="action" value="mark_paid_4year" class="btn btn-primary btn-sm">✓ Paid (4-Yr, $275)</button>
+  <button type="submit" form="bulk-form" name="action" value="mark_unpaid_current" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">✗ Unpaid (this year)</button>
   <?php if (can_manage_members()): ?>
   <span style="font-size:.82rem;opacity:.7;margin-left:.25rem">Members:</span>
   <?php if ($archived === '1'): ?>

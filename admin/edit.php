@@ -16,11 +16,10 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     foreach (FIELDS as $f) $member[$f] = trim($_POST[$f] ?? '');
-    $member['membership_paid'] = isset($_POST['membership_paid']) ? (int)$_POST['membership_paid'] : 0;
     $member['parent1_is_board_member'] = isset($_POST['parent1_is_board_member']) ? 1 : 0;
     $member['parent2_is_board_member'] = isset($_POST['parent2_is_board_member']) ? 1 : 0;
-    if (!in_array($member['membership_type'], ['annual','2year','3year','4year'])) $member['membership_type'] = 'annual';
-    $member['membership_paid_through'] = calc_paid_through($member['membership_year'], $member['membership_type'], (bool)$member['membership_paid']);
+    $dues_years = array_intersect((array)($_POST['dues_years'] ?? []), cadet_dues_years($member['class_year']));
+    $member['membership_paid_years'] = implode(',', $dues_years); // reflected if the form needs to redisplay below
     if ($member['cadet_birthday'] === '') $member['cadet_birthday'] = null;
 
     if ($member['class_year'] === '') $errors[] = 'Class Year is required.';
@@ -33,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach (FIELDS as $f) $params[$f] = $member[$f];
         $params['id'] = $id;
         $stmt->execute($params);
+        save_dues_years($pdo, $id, $dues_years);
         flash('success', 'Member updated successfully.');
         header('Location: index.php'); exit;
     }

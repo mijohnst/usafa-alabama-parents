@@ -65,14 +65,11 @@ $year     = (int)($_GET['year'] ?? date('Y'));
 $type_f   = $_GET['type'] ?? '';
 if (!in_array($type_f, array_merge([''], array_keys($SOURCE_TYPES)))) $type_f = '';
 
-// Combine years from income_entries AND membership years (e.g. "2026-2027" → 2026)
-$ie_years  = $pdo->query("SELECT DISTINCT YEAR(entry_date) FROM income_entries")->fetchAll(PDO::FETCH_COLUMN);
-$mem_years = $pdo->query("SELECT DISTINCT CAST(LEFT(membership_year,4) AS UNSIGNED) FROM members WHERE membership_year != '' AND membership_year IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
-$years_avail = array_values(array_unique(array_merge(
-    array_map('intval', $ie_years),
-    array_map('intval', $mem_years),
-    [(int)date('Y')]
-)));
+// Dues payments log to income_entries automatically now (see
+// save_dues_years() in auth.php), so they need no separate handling here
+// — they're just regular entries with source_type='dues'.
+$ie_years    = $pdo->query("SELECT DISTINCT YEAR(entry_date) FROM income_entries")->fetchAll(PDO::FETCH_COLUMN);
+$years_avail = array_values(array_unique(array_merge(array_map('intval', $ie_years), [(int)date('Y')])));
 rsort($years_avail);
 
 $where = ['YEAR(i.entry_date) = :year'];
@@ -87,45 +84,12 @@ $stmt = $pdo->prepare("SELECT i.*, u.name AS received_by_name
 $stmt->execute($params);
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Dues from members table — membership_year stored as "2026-2027", match on first 4 chars
-$dues_stmt = $pdo->prepare("SELECT
-    COUNT(CASE WHEN membership_type='annual' AND membership_paid=1 THEN 1 END) AS annual_count,
-    COUNT(CASE WHEN membership_type='2year'  AND membership_paid=1 THEN 1 END) AS twoyear_count,
-    COUNT(CASE WHEN membership_type='3year'  AND membership_paid=1 THEN 1 END) AS threeyear_count,
-    COUNT(CASE WHEN membership_type='4year'  AND membership_paid=1 THEN 1 END) AS fouryear_count,
-    COUNT(*) AS member_count
-    FROM members WHERE archived=0 AND LEFT(membership_year,4) = ?");
-$dues_stmt->execute([(string)$year]);
-$dues_row = $dues_stmt->fetch(PDO::FETCH_ASSOC);
-$dues_annual        = (int)($dues_row['annual_count']    ?? 0);
-$dues_twoyear       = (int)($dues_row['twoyear_count']   ?? 0);
-$dues_threeyear     = (int)($dues_row['threeyear_count'] ?? 0);
-$dues_fouryear      = (int)($dues_row['fouryear_count']  ?? 0);
-$dues_annual_amt    = $dues_annual    * dues_plan_price('annual');
-$dues_twoyear_amt   = $dues_twoyear   * dues_plan_price('2year');
-$dues_threeyear_amt = $dues_threeyear * dues_plan_price('3year');
-$dues_fouryear_amt  = $dues_fouryear  * dues_plan_price('4year');
-$dues_total         = $dues_annual_amt + $dues_twoyear_amt + $dues_threeyear_amt + $dues_fouryear_amt;
-
 // CSV export
 if (isset($_GET['export'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="income-' . $year . '.csv"');
     $out = fopen('php://output','w');
     fputcsv($out, ['Date','Source','Type','Description','Amount','Payment Method','Notes','Received By']);
-    // Dues rows first
-    $dues_breakdown = [
-        'annual' => [$dues_annual, $dues_annual_amt],
-        '2year'  => [$dues_twoyear, $dues_twoyear_amt],
-        '3year'  => [$dues_threeyear, $dues_threeyear_amt],
-        '4year'  => [$dues_fouryear, $dues_fouryear_amt],
-    ];
-    foreach ($dues_breakdown as $plan => [$plan_count, $plan_amt]) {
-        if ($plan_count > 0) {
-            fputcsv($out, [$year.'-01-01', dues_plan_label($plan).' Members ('.$plan_count.')', 'Dues',
-                           $plan_count.' x $'.dues_plan_price($plan), $plan_amt, '', 'From membership records', '']);
-        }
-    }
     foreach ($entries as $e) {
         fputcsv($out, [$e['entry_date'],$e['source'],$SOURCE_TYPES[$e['source_type']],$e['description'],
                        $e['amount'],$e['payment_method'],$e['notes'],$e['received_by_name']??'']);
@@ -138,8 +102,7 @@ $by_type = [];
 foreach ($entries as $e) {
     $by_type[$e['source_type']] = ($by_type[$e['source_type']] ?? 0) + (float)$e['amount'];
 }
-$grand_income       = array_sum($by_type);
-$grand_income_total = $grand_income + $dues_total;
+$grand_income_total = array_sum($by_type);
 
 // Edit mode
 $editing = null;
@@ -197,44 +160,9 @@ echo show_flash();
 <!-- Summary chips -->
 <div class="summary-chips">
   <div class="summary-chip" style="background:#002554;color:#fff">Combined Total: $<?= number_format($grand_income_total,2) ?></div>
-  <?php if ($dues_total > 0): ?>
-  <div class="summary-chip" style="background:#1565c022;color:#1565c0">Dues: $<?= number_format($dues_total,2) ?></div>
-  <?php endif; ?>
   <?php foreach ($SOURCE_TYPES as $k => $v): if (isset($by_type[$k])): ?>
   <div class="summary-chip" style="background:<?= $TYPE_COLORS[$k] ?>22;color:<?= $TYPE_COLORS[$k] ?>"><?= $v ?>: $<?= number_format($by_type[$k],2) ?></div>
   <?php endif; endforeach; ?>
-</div>
-
-<!-- Dues section (read-only, from membership records) -->
-<div class="card" style="margin-bottom:1.5rem;border-left:4px solid #1565c0">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem;margin-bottom:.85rem">
-    <div>
-      <h2 style="margin:0;font-size:.95rem;color:#1565c0">Membership Dues — <?= $year ?>–<?= $year+1 ?></h2>
-      <div style="font-size:.75rem;color:#9aa5b4;margin-top:.2rem">Pulled from membership records · read-only</div>
-    </div>
-    <a href="index.php?year=<?= $year ?>" class="btn btn-secondary btn-sm">View Members</a>
-  </div>
-  <?php if ($dues_total === 0): ?>
-    <p style="color:#9aa5b4;font-size:.85rem;margin:0">No dues payments recorded for <?= $year ?>–<?= $year+1 ?> membership year.</p>
-  <?php else: ?>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.6rem">
-    <?php foreach (['annual' => [$dues_annual, $dues_annual_amt], '2year' => [$dues_twoyear, $dues_twoyear_amt],
-                     '3year' => [$dues_threeyear, $dues_threeyear_amt], '4year' => [$dues_fouryear, $dues_fouryear_amt]] as $plan => [$plan_count, $plan_amt]): ?>
-    <div style="background:#f7f9fc;border-radius:6px;padding:.85rem 1rem;text-align:center">
-      <div style="font-size:1.3rem;font-weight:700;color:#1565c0"><?= $plan_count ?></div>
-      <div style="font-size:.7rem;color:#5a6a7a;text-transform:uppercase;letter-spacing:.04em;margin-top:.1rem"><?= h(dues_plan_label($plan)) ?> Members</div>
-      <div style="font-size:.8rem;font-weight:700;color:#1b5e20;margin-top:.3rem">$<?= number_format($plan_amt,2) ?></div>
-      <div style="font-size:.68rem;color:#9aa5b4">@ $<?= dues_plan_price($plan) ?> each</div>
-    </div>
-    <?php endforeach; ?>
-    <div style="background:#1565c0;border-radius:6px;padding:.85rem 1rem;text-align:center">
-      <div style="font-size:1.3rem;font-weight:700;color:#fff"><?= $dues_annual + $dues_twoyear + $dues_threeyear + $dues_fouryear ?></div>
-      <div style="font-size:.7rem;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.04em;margin-top:.1rem">Total Members Paid</div>
-      <div style="font-size:.8rem;font-weight:700;color:#fff;margin-top:.3rem">$<?= number_format($dues_total,2) ?></div>
-      <div style="font-size:.68rem;color:rgba(255,255,255,.6)">dues total</div>
-    </div>
-  </div>
-  <?php endif; ?>
 </div>
 
 <?php if ($can_edit): ?>

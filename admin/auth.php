@@ -496,44 +496,131 @@ const FIELDS = [
     'parent1_street','parent1_city','parent1_state','parent1_zip',
     'parent2_last_name','parent2_first_name','parent2_email','parent2_cell',
     'parent2_street','parent2_city','parent2_state','parent2_zip',
-    'al_region','remarks','photo_consent','directory_consent','parent1_is_board_member','parent2_is_board_member',
-    'membership_paid','membership_year','membership_type','membership_paid_through'
+    'al_region','remarks','photo_consent','directory_consent','parent1_is_board_member','parent2_is_board_member'
+    // Deliberately excludes membership_paid / membership_year /
+    // membership_paid_through / membership_paid_years — those are all
+    // written together by save_dues_years(), never as plain form fields
+    // (see the "Years Paid" checkboxes in member_form()).
 ];
 
-// Dues plan types: 'annual' (1 year), '2year', '3year', '4year' — the number
-// of consecutive club years covered starting from membership_year. Kept as
-// small central helpers rather than repeating '4year'-vs-else checks across
-// every admin page that displays or prices a plan.
-function dues_plan_years(string $type): int {
-    return ['annual' => 1, '2year' => 2, '3year' => 3, '4year' => 4][$type] ?? 1;
+// ── Membership dues ─────────────────────────────────────────────────────
+// Dues are tracked as the specific set of club years a family has paid for
+// (e.g. "2026-2027,2028-2029" — not necessarily consecutive), stored in
+// members.membership_paid_years. membership_paid and
+// membership_paid_through stay in sync as computed conveniences so the
+// ~20 other admin pages that just need "are they currently in good
+// standing" don't need to know about the underlying set — see
+// save_dues_years() below, the one place that writes all of these.
+
+// The ordered list of club-year strings ("2026-2027") this cadet's dues
+// can ever apply to: their 4 years as an undergrad, computed backward
+// from their graduating class_year, plus one earlier Prep School year for
+// cadets currently at Prep — whose eventual graduating class is always
+// outgoing_class_year()+5 (see the CLASS_YEARS comment above: that future
+// class is deliberately absent from CLASS_YEAR_LIST until they
+// matriculate, since until then "Prep School" and that class year are the
+// same cohort). Returns [] for 'Graduate', blank, or anything that isn't
+// a real class — those cadets have no dues years to select.
+function cadet_dues_years(string $class_year): array {
+    if ($class_year === 'Prep School') {
+        $grad = (int)outgoing_class_year() + 5;
+    } elseif (ctype_digit($class_year)) {
+        $grad = (int)$class_year;
+    } else {
+        return [];
+    }
+    $years = [];
+    if ($class_year === 'Prep School') {
+        $prep_start = $grad - 5;
+        $years[] = $prep_start . '-' . ($prep_start + 1);
+    }
+    for ($i = 4; $i >= 1; $i--) {
+        $s = $grad - $i;
+        $years[] = $s . '-' . ($s + 1);
+    }
+    return $years;
 }
 
-// $75/year for the 1-3 year options; the 4-year plan keeps its existing
-// $275 bulk-discount price (vs. $300 straight multiplication).
-function dues_plan_price(string $type): int {
-    return $type === '4year' ? 275 : dues_plan_years($type) * 75;
+// Splits the stored comma-separated column back into an array. Tolerant
+// of null/empty (a member with no dues history yet).
+function parse_dues_years(?string $csv): array {
+    if (!$csv) return [];
+    return array_values(array_filter(array_map('trim', explode(',', $csv))));
 }
 
-function dues_plan_label(string $type): string {
-    return match ($type) {
-        '4year' => '4-Year',
-        '3year' => '3-Year',
-        '2year' => '2-Year',
-        default => 'Annual',
-    };
+// $75/year, except a $275 bulk rate once all 4 of a cadet's own undergrad
+// years are paid — however that happened, whether checked individually
+// over time or all at once. This is the same discount the old Annual/
+// 4-Year plan toggle gave, just derived from the actual years paid
+// instead of a separate "plan type" field that could disagree with them.
+function dues_years_price(array $paid_years, array $cadet_years): int {
+    $undergrad = array_slice($cadet_years, -4);
+    $has_full_undergrad = count($undergrad) === 4 && !array_diff($undergrad, $paid_years);
+    if (!$has_full_undergrad) {
+        return count(array_intersect($cadet_years, $paid_years)) * 75;
+    }
+    $price = 275;
+    $prep_year = count($cadet_years) === 5 ? $cadet_years[0] : null;
+    if ($prep_year !== null && in_array($prep_year, $paid_years, true)) $price += 75;
+    return $price;
 }
 
-function calc_paid_through(string $mem_year, string $type, bool $paid): string {
-    if (!$paid) return '';
-    $years = dues_plan_years($type);
-    if ($years > 1) {
-        $parts = explode('-', $mem_year);
-        if (count($parts) === 2 && is_numeric($parts[0])) {
-            $s = (int)$parts[0] + ($years - 1);
-            return $s . '-' . ($s + 1);
+// The one place that writes membership_paid_years — always keeps
+// membership_paid (is the *current* club year in the set?) and
+// membership_paid_through (the latest paid year on file) refreshed in the
+// same call, so those two derived columns can never drift out of sync
+// with the underlying set. $touch_year controls whether
+// membership_year — which now means "last time this record's dues were
+// actually touched," not a plan start — gets bumped to today's club year;
+// pass false for a passive recompute (e.g. the annual rollover) that
+// isn't a new payment.
+//
+// Also logs the financial delta to income_entries (source_type='dues'),
+// the same table every other income source in admin/income.php uses,
+// rather than admin/income.php trying to re-derive "how much came in this
+// year" from a member's current total on read — which would double-count
+// prior years' payments every time just one more year gets added later.
+// Only *increases* are logged automatically; removing a year (correcting
+// a mistake) never auto-creates a negative entry — a real refund is a
+// treasurer's manual call, not something this should silently infer.
+function save_dues_years(PDO $pdo, int $member_id, array $years, bool $touch_year = true): void {
+    $years = array_values(array_unique(array_filter($years)));
+    sort($years);
+
+    $before = $pdo->prepare('SELECT class_year, membership_paid_years, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix FROM members WHERE id = ?');
+    $before->execute([$member_id]);
+    $row = $before->fetch(PDO::FETCH_ASSOC);
+
+    $csv     = implode(',', $years);
+    $paid    = in_array(membership_year(), $years, true) ? 1 : 0;
+    $through = $years ? end($years) : '';
+    if ($touch_year) {
+        $pdo->prepare('UPDATE members SET membership_paid_years=?, membership_paid=?, membership_paid_through=?, membership_year=? WHERE id=?')
+            ->execute([$csv, $paid, $through, membership_year(), $member_id]);
+    } else {
+        $pdo->prepare('UPDATE members SET membership_paid_years=?, membership_paid=?, membership_paid_through=? WHERE id=?')
+            ->execute([$csv, $paid, $through, $member_id]);
+    }
+
+    if ($touch_year && $row) {
+        $cadet_years = cadet_dues_years($row['class_year'] ?? '');
+        $old_years   = parse_dues_years($row['membership_paid_years']);
+        $delta = dues_years_price($years, $cadet_years) - dues_years_price($old_years, $cadet_years);
+        if ($delta > 0) {
+            $added = array_diff($years, $old_years);
+            $cadet_name = trim(preg_replace('/\s+/', ' ', ($row['cadet_first_name'] ?? '') . ' ' . ($row['cadet_middle_name'] ?? '') . ' ' . ($row['cadet_last_name'] ?? '') . ' ' . ($row['cadet_suffix'] ?? '')));
+            $pdo->prepare('INSERT INTO income_entries (entry_date, source, source_type, description, amount, payment_method, notes, received_by) VALUES (CURDATE(), ?, ?, ?, ?, ?, ?, ?)')
+                ->execute([
+                    $cadet_name ?: ('Member #' . $member_id),
+                    'dues',
+                    'Dues — ' . implode(', ', $added),
+                    $delta,
+                    '',
+                    'Recorded automatically from dues years update',
+                    $_SESSION['user_id'] ?? null,
+                ]);
         }
     }
-    return $mem_year;
 }
 
 function membership_year(): string {
@@ -739,57 +826,56 @@ function syncP2Addr(radio) {
     echo '</div></div>';
     echo '</div></fieldset>';
 
-    $paid        = (int)($m['membership_paid'] ?? 0);
-    $mem_year    = $m['membership_year'] ?? membership_year();
-    if (!$mem_year) $mem_year = membership_year();
-    $mem_type    = $m['membership_type'] ?? 'annual';
-    $mem_through = $m['membership_paid_through'] ?? '';
-    if (!$mem_through) $mem_through = $mem_year;
+    $cadet_years = cadet_dues_years($m['class_year'] ?? '');
+    $paid_years  = parse_dues_years($m['membership_paid_years'] ?? '');
+    $cur_year    = membership_year();
 
     echo '<fieldset><legend>Membership Dues</legend>';
-    echo '<div class="form-row col-2">';
-    echo '<div class="form-group"><label>Dues Paid?</label>';
-    echo '<div style="display:flex;gap:1.5rem;margin-top:.4rem">';
-    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;color:#2e7d32;cursor:pointer">'
-       . '<input type="radio" name="membership_paid" value="1" style="width:auto;accent-color:#2e7d32"' . ($paid ? ' checked' : '') . '> ✓ Paid</label>';
-    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;color:#c62828;cursor:pointer">'
-       . '<input type="radio" name="membership_paid" value="0" style="width:auto;accent-color:#c62828"' . (!$paid ? ' checked' : '') . '> ✗ Not Paid</label>';
-    echo '</div></div>';
-    echo '<div class="form-group"><label>Membership Year</label>'
-       . '<input name="membership_year" id="dues_mem_year" value="' . h($mem_year) . '" placeholder="e.g. 2026-2027" oninput="calcDuesPaidThrough()"></div>';
-    echo '</div>';
-    echo '<div class="form-row col-2">';
-    echo '<div class="form-group"><label>Dues Plan <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">covers this many consecutive club years starting from Membership Year, including Prep School</span></label>';
-    echo '<div style="display:flex;gap:1.25rem;margin-top:.4rem;flex-wrap:wrap">';
-    foreach (['annual' => 'Annual', '2year' => '2-Year', '3year' => '3-Year', '4year' => '4-Year'] as $plan_val => $plan_label) {
-        echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer">'
-           . '<input type="radio" name="membership_type" value="' . $plan_val . '" style="width:auto"' . ($mem_type === $plan_val ? ' checked' : '') . ' onchange="calcDuesPaidThrough()"> '
-           . $plan_label . ' &nbsp;($' . dues_plan_price($plan_val) . ')</label>';
-    }
-    echo '</div></div>';
-    echo '<div class="form-group"><label>Paid Through</label>'
-       . '<input name="membership_paid_through" id="dues_paid_through" value="' . h($mem_through) . '" placeholder="e.g. 2026-2027">'
-       . '<p style="font-size:.72rem;color:#9aa5b4;margin-top:.25rem">Auto-fills based on plan. Edit manually if needed.</p>'
-       . '</div>';
-    echo '</div></fieldset>';
-    echo '<script>
-function calcDuesPaidThrough() {
-  var yearsByPlan = {annual: 1, "2year": 2, "3year": 3, "4year": 4};
-  var typeEl = document.querySelector("input[name=membership_type]:checked");
-  var yr     = (document.getElementById("dues_mem_year") || {}).value || "";
-  var thru   = document.getElementById("dues_paid_through");
-  if (!typeEl || !thru) return;
-  var years = yearsByPlan[typeEl.value] || 1;
-  if (years > 1) {
-    var parts = yr.split("-");
-    if (parts.length === 2 && !isNaN(parseInt(parts[0]))) {
-      var s = parseInt(parts[0]) + (years - 1);
-      thru.value = s + "-" + (s + 1);
-    }
+    if (empty($cadet_years)) {
+        echo '<p style="color:#9aa5b4;font-size:.85rem">Set a Class Year above to manage dues years for this cadet.</p>';
+        if ($paid_years) {
+            echo '<p style="font-size:.85rem;color:#5a6a7a;margin-top:.5rem">Dues history on file (read-only once graduated): <strong>' . h(implode(', ', $paid_years)) . '</strong></p>';
+        }
+    } else {
+        $is_paid_now = in_array($cur_year, $paid_years, true);
+        echo '<div style="margin-bottom:.75rem"><span class="badge ' . ($is_paid_now ? 'badge-paid' : 'badge-unpaid') . '">'
+           . ($is_paid_now ? '✓ Paid for ' . h($cur_year) : '✗ Not Paid for ' . h($cur_year)) . '</span></div>';
+        echo '<div class="form-group"><label>Years Paid <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">'
+           . '$75 each — check all 4 undergrad years for the $275 bulk rate. Reflects the Class Year above as of page load; save and reopen if you just changed it.</span></label>';
+        echo '<div style="display:flex;gap:1.25rem;flex-wrap:wrap;margin-top:.4rem" id="dues-year-checks">';
+        foreach ($cadet_years as $yr) {
+            $checked = in_array($yr, $paid_years, true);
+            $tag = $yr === $cur_year ? ' <span style="font-weight:400;font-size:.72rem;color:#1565c0">(current)</span>' : '';
+            echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.9rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+               . '<input type="checkbox" name="dues_years[]" value="' . h($yr) . '" style="width:auto" onchange="calcDuesTotal()"' . ($checked ? ' checked' : '') . '> '
+               . h($yr) . $tag . '</label>';
+        }
+        echo '</div></div>';
+        echo '<button type="button" class="btn btn-secondary btn-sm" style="margin-top:.5rem" onclick="checkAllUndergradDues()">Check all 4 undergrad years</button>';
+        echo '<div style="margin-top:.65rem;font-size:.85rem;color:#5a6a7a">Total: $<strong id="dues-total-preview">' . dues_years_price($paid_years, $cadet_years) . '</strong></div>';
+        echo '<script>
+function calcDuesTotal() {
+  var boxes = document.querySelectorAll("#dues-year-checks input[type=checkbox]");
+  var checked = []; var all = [];
+  boxes.forEach(function(b){ all.push(b.value); if (b.checked) checked.push(b.value); });
+  var undergrad = all.slice(-4);
+  var hasFullUndergrad = undergrad.length === 4 && undergrad.every(function(y){ return checked.indexOf(y) !== -1; });
+  var total;
+  if (hasFullUndergrad) {
+    total = 275;
+    if (all.length === 5 && checked.indexOf(all[0]) !== -1) total += 75;
   } else {
-    thru.value = yr;
+    total = checked.length * 75;
   }
+  document.getElementById("dues-total-preview").textContent = total;
 }
-calcDuesPaidThrough();
+function checkAllUndergradDues() {
+  var boxes = document.querySelectorAll("#dues-year-checks input[type=checkbox]");
+  var all = []; boxes.forEach(function(b){ all.push(b); });
+  all.slice(-4).forEach(function(b){ b.checked = true; });
+  calcDuesTotal();
+}
 </script>';
+    }
+    echo '</fieldset>';
 }

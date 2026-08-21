@@ -195,7 +195,7 @@ function send_dues_renewal_reminders(PDO $pdo): int {
 
     try {
         $rows = $pdo->query(
-            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, parent1_first_name, parent1_email, parent2_email, membership_paid_through, membership_type
+            "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, parent1_first_name, parent1_email, parent2_email, membership_paid_through
              FROM members
              WHERE archived = 0 AND membership_paid = 1 AND membership_paid_through <> '' AND class_year <> 'Graduate'"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -219,7 +219,7 @@ function send_dues_renewal_reminders(PDO $pdo): int {
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',
             '{expire_date}' => $exp->format('F j, Y'),
-            '{dues_amount}' => '$' . dues_plan_price($r['membership_type'] ?? 'annual'),
+            '{dues_amount}' => '$75', // cost of renewing one more year; the 4-year bulk option is offered separately on the site
         ];
         $subject = strtr($cfg['subject'], $replace);
         $body    = strtr($cfg['body'], $replace);

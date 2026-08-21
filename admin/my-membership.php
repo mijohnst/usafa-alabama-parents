@@ -45,14 +45,15 @@ admin_header('My Membership');
         <?= $member['membership_paid'] ? '✓ Paid' : '✗ Unpaid' ?>
       </span>
     </div>
-    <?php if ($member['membership_paid']): $mm_multi_year = dues_plan_years($member['membership_type'] ?? 'annual') > 1; ?>
+    <?php $mm_years = parse_dues_years($member['membership_paid_years'] ?? ''); ?>
+    <?php if ($mm_years): ?>
     <div class="mm-row">
-      <span class="mm-label">Plan</span>
-      <span class="mm-value"><?= h(dues_plan_label($member['membership_type'] ?? 'annual')) ?></span>
+      <span class="mm-label">Years Paid</span>
+      <span class="mm-value"><?= h(implode(', ', $mm_years)) ?></span>
     </div>
     <div class="mm-row">
-      <span class="mm-label"><?= $mm_multi_year ? 'Covered Through' : 'Membership Year' ?></span>
-      <span class="mm-value"><?= h($mm_multi_year ? $member['membership_paid_through'] : $member['membership_year']) ?></span>
+      <span class="mm-label">Covered Through</span>
+      <span class="mm-value"><?= h($member['membership_paid_through']) ?></span>
     </div>
     <?php endif; ?>
   </div>
