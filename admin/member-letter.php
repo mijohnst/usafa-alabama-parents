@@ -42,8 +42,8 @@ if (!$member && $q !== '') {
 
 // If we have a member, render printable letter
 if ($member) {
-    $type_label = $member['membership_type'] === '4year' ? '4-Year' : 'Annual';
-    $amount     = $member['membership_type'] === '4year' ? '$275' : '$75';
+    $type_label = dues_plan_label($member['membership_type'] ?? 'annual');
+    $amount     = '$' . dues_plan_price($member['membership_type'] ?? 'annual');
     $paid_label = $member['membership_paid'] ? 'Paid' : 'Unpaid';
     $paid_color = $member['membership_paid'] ? '#1b5e20' : '#A6192E';
     $cadet_full = cadet_full_name($member);

@@ -500,12 +500,36 @@ const FIELDS = [
     'membership_paid','membership_year','membership_type','membership_paid_through'
 ];
 
+// Dues plan types: 'annual' (1 year), '2year', '3year', '4year' — the number
+// of consecutive club years covered starting from membership_year. Kept as
+// small central helpers rather than repeating '4year'-vs-else checks across
+// every admin page that displays or prices a plan.
+function dues_plan_years(string $type): int {
+    return ['annual' => 1, '2year' => 2, '3year' => 3, '4year' => 4][$type] ?? 1;
+}
+
+// $75/year for the 1-3 year options; the 4-year plan keeps its existing
+// $275 bulk-discount price (vs. $300 straight multiplication).
+function dues_plan_price(string $type): int {
+    return $type === '4year' ? 275 : dues_plan_years($type) * 75;
+}
+
+function dues_plan_label(string $type): string {
+    return match ($type) {
+        '4year' => '4-Year',
+        '3year' => '3-Year',
+        '2year' => '2-Year',
+        default => 'Annual',
+    };
+}
+
 function calc_paid_through(string $mem_year, string $type, bool $paid): string {
     if (!$paid) return '';
-    if ($type === '4year') {
+    $years = dues_plan_years($type);
+    if ($years > 1) {
         $parts = explode('-', $mem_year);
         if (count($parts) === 2 && is_numeric($parts[0])) {
-            $s = (int)$parts[0] + 3;
+            $s = (int)$parts[0] + ($years - 1);
             return $s . '-' . ($s + 1);
         }
     }
@@ -735,12 +759,13 @@ function syncP2Addr(radio) {
        . '<input name="membership_year" id="dues_mem_year" value="' . h($mem_year) . '" placeholder="e.g. 2026-2027" oninput="calcDuesPaidThrough()"></div>';
     echo '</div>';
     echo '<div class="form-row col-2">';
-    echo '<div class="form-group"><label>Dues Plan</label>';
-    echo '<div style="display:flex;gap:1.5rem;margin-top:.4rem">';
-    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer">'
-       . '<input type="radio" name="membership_type" value="annual" style="width:auto"' . ($mem_type !== '4year' ? ' checked' : '') . ' onchange="calcDuesPaidThrough()"> Annual &nbsp;($75)</label>';
-    echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer">'
-       . '<input type="radio" name="membership_type" value="4year" style="width:auto"' . ($mem_type === '4year' ? ' checked' : '') . ' onchange="calcDuesPaidThrough()"> 4-Year ($275)</label>';
+    echo '<div class="form-group"><label>Dues Plan <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">covers this many consecutive club years starting from Membership Year, including Prep School</span></label>';
+    echo '<div style="display:flex;gap:1.25rem;margin-top:.4rem;flex-wrap:wrap">';
+    foreach (['annual' => 'Annual', '2year' => '2-Year', '3year' => '3-Year', '4year' => '4-Year'] as $plan_val => $plan_label) {
+        echo '<label style="display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.95rem;text-transform:none;letter-spacing:0;cursor:pointer">'
+           . '<input type="radio" name="membership_type" value="' . $plan_val . '" style="width:auto"' . ($mem_type === $plan_val ? ' checked' : '') . ' onchange="calcDuesPaidThrough()"> '
+           . $plan_label . ' &nbsp;($' . dues_plan_price($plan_val) . ')</label>';
+    }
     echo '</div></div>';
     echo '<div class="form-group"><label>Paid Through</label>'
        . '<input name="membership_paid_through" id="dues_paid_through" value="' . h($mem_through) . '" placeholder="e.g. 2026-2027">'
@@ -749,14 +774,16 @@ function syncP2Addr(radio) {
     echo '</div></fieldset>';
     echo '<script>
 function calcDuesPaidThrough() {
+  var yearsByPlan = {annual: 1, "2year": 2, "3year": 3, "4year": 4};
   var typeEl = document.querySelector("input[name=membership_type]:checked");
   var yr     = (document.getElementById("dues_mem_year") || {}).value || "";
   var thru   = document.getElementById("dues_paid_through");
   if (!typeEl || !thru) return;
-  if (typeEl.value === "4year") {
+  var years = yearsByPlan[typeEl.value] || 1;
+  if (years > 1) {
     var parts = yr.split("-");
     if (parts.length === 2 && !isNaN(parseInt(parts[0]))) {
-      var s = parseInt(parts[0]) + 3;
+      var s = parseInt(parts[0]) + (years - 1);
       thru.value = s + "-" + (s + 1);
     }
   } else {

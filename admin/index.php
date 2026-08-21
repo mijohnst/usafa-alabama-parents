@@ -586,8 +586,8 @@ function setCurrentYrs() {
       <td>
         <?php if ($m['membership_paid']): ?>
           <span class="badge badge-paid">✓ Paid</span><br>
-          <?php if (($m['membership_type'] ?? '') === '4year'): ?>
-            <span style="font-size:.7rem;color:#2e7d32;font-weight:700">4-yr thru <?= h($m['membership_paid_through']) ?></span>
+          <?php if (dues_plan_years($m['membership_type'] ?? 'annual') > 1): ?>
+            <span style="font-size:.7rem;color:#2e7d32;font-weight:700"><?= h(dues_plan_label($m['membership_type'])) ?> thru <?= h($m['membership_paid_through']) ?></span>
           <?php else: ?>
             <span style="font-size:.72rem;color:#5a6a7a"><?= h($m['membership_year']) ?></span>
           <?php endif; ?>
@@ -621,8 +621,10 @@ function setCurrentYrs() {
               <button type="submit" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm">✗ Unpaid</button>
             <?php else: ?>
               <select name="membership_type" style="padding:.22rem .4rem;font-size:.72rem;width:auto;min-width:0">
-                <option value="annual">Annual $75</option>
-                <option value="4year">4-Year $275</option>
+                <option value="annual">Annual $<?= dues_plan_price('annual') ?></option>
+                <option value="2year">2-Year $<?= dues_plan_price('2year') ?></option>
+                <option value="3year">3-Year $<?= dues_plan_price('3year') ?></option>
+                <option value="4year">4-Year $<?= dues_plan_price('4year') ?></option>
               </select>
               <button type="submit" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Paid</button>
             <?php endif; ?>
@@ -644,8 +646,10 @@ function setCurrentYrs() {
   <span id="bulk-count" style="font-size:.9rem;font-weight:600;margin-right:.25rem"></span>
   <span style="font-size:.82rem;opacity:.7">Dues:</span>
   <select name="membership_type" form="bulk-form" style="padding:.28rem .55rem;font-size:.78rem;width:auto;background:#fff;color:#1a2332;border-radius:4px;border:1px solid #d0d5dd">
-    <option value="annual">Annual ($75)</option>
-    <option value="4year">4-Year ($275)</option>
+    <option value="annual">Annual ($<?= dues_plan_price('annual') ?>)</option>
+    <option value="2year">2-Year ($<?= dues_plan_price('2year') ?>)</option>
+    <option value="3year">3-Year ($<?= dues_plan_price('3year') ?>)</option>
+    <option value="4year">4-Year ($<?= dues_plan_price('4year') ?>)</option>
   </select>
   <button type="submit" form="bulk-form" name="action" value="mark_paid" class="btn btn-primary btn-sm">✓ Paid</button>
   <button type="submit" form="bulk-form" name="action" value="mark_unpaid" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">✗ Unpaid</button>

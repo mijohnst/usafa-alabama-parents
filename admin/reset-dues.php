@@ -15,10 +15,10 @@ $cnt_stmt = $pdo->prepare(
 $cnt_stmt->execute(array_merge($active_years, [$new_year]));
 $affected = (int)$cnt_stmt->fetchColumn();
 
-// Members that will be SKIPPED (4-year plan still active)
+// Members that will be SKIPPED (2/3/4-year plan with coverage still active)
 $skip_stmt = $pdo->prepare(
     "SELECT COUNT(*) FROM members WHERE archived = 0 AND class_year IN ($ph)
-     AND membership_type = '4year' AND membership_paid_through >= ?"
+     AND membership_type <> 'annual' AND membership_paid_through >= ?"
 );
 $skip_stmt->execute(array_merge($active_years, [$new_year]));
 $skipped = (int)$skip_stmt->fetchColumn();
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $upd->execute(array_merge($active_years, [$new_year]));
     $confirmed = true;
     $msg = "$affected member(s) marked unpaid for $new_year.";
-    if ($skipped) $msg .= " $skipped 4-year member(s) kept as paid (coverage active).";
+    if ($skipped) $msg .= " $skipped multi-year member(s) kept as paid (coverage active).";
     flash('success', $msg);
     header('Location: index.php'); exit;
 }
@@ -57,7 +57,7 @@ admin_header('Start New Membership Year');
       <strong><?= h($new_year) ?></strong> dues cycle.
       Prep School and Graduate records are not changed.
       <?php if ($skipped): ?>
-        <br><strong><?= $skipped ?> member(s) on the 4-year plan with active coverage will be skipped</strong> and kept as paid.
+        <br><strong><?= $skipped ?> member(s) on a multi-year plan with active coverage will be skipped</strong> and kept as paid.
       <?php endif; ?>
     </p>
   </div>

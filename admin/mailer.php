@@ -219,7 +219,7 @@ function send_dues_renewal_reminders(PDO $pdo): int {
             '{parent_name}' => $r['parent1_first_name'] ?: 'there',
             '{cadet_name}'  => $full_name ?: 'your cadet',
             '{expire_date}' => $exp->format('F j, Y'),
-            '{dues_amount}' => $r['membership_type'] === '4year' ? '$275' : '$75',
+            '{dues_amount}' => '$' . dues_plan_price($r['membership_type'] ?? 'annual'),
         ];
         $subject = strtr($cfg['subject'], $replace);
         $body    = strtr($cfg['body'], $replace);

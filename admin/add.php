@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $m['membership_paid'] = isset($_POST['membership_paid']) ? (int)$_POST['membership_paid'] : 0;
     $m['parent1_is_board_member'] = isset($_POST['parent1_is_board_member']) ? 1 : 0;
     $m['parent2_is_board_member'] = isset($_POST['parent2_is_board_member']) ? 1 : 0;
-    if (!in_array($m['membership_type'], ['annual','4year'])) $m['membership_type'] = 'annual';
+    if (!in_array($m['membership_type'], ['annual','2year','3year','4year'])) $m['membership_type'] = 'annual';
     $m['membership_paid_through'] = calc_paid_through($m['membership_year'], $m['membership_type'], (bool)$m['membership_paid']);
 
     if ($m['class_year'] === '') $errors[] = 'Class Year is required.';

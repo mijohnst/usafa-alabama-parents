@@ -69,14 +69,18 @@ if (is_treasurer()) {
     $cur_year = membership_year();
     $dues_stmt = $pdo->prepare("SELECT
         COUNT(CASE WHEN membership_type='annual' AND membership_paid=1 AND membership_year=? THEN 1 END) as annual_count,
+        COUNT(CASE WHEN membership_type='2year'  AND membership_paid=1 AND membership_year=? THEN 1 END) as twoyear_count,
+        COUNT(CASE WHEN membership_type='3year'  AND membership_paid=1 AND membership_year=? THEN 1 END) as threeyear_count,
         COUNT(CASE WHEN membership_type='4year'  AND membership_paid=1 AND membership_year=? THEN 1 END) as fouryear_count
         FROM members WHERE archived=0");
-    $dues_stmt->execute([$cur_year, $cur_year]);
+    $dues_stmt->execute([$cur_year, $cur_year, $cur_year, $cur_year]);
     $dues_row = $dues_stmt->fetch();
-    $dues_row['annual_total']   = (int)$dues_row['annual_count']   * 75;
-    $dues_row['fouryear_total'] = (int)$dues_row['fouryear_count'] * 275;
-    $dues_row['grand_total']    = $dues_row['annual_total'] + $dues_row['fouryear_total'];
-    $dues_row['year']           = $cur_year;
+    $dues_row['annual_total']    = (int)$dues_row['annual_count']    * dues_plan_price('annual');
+    $dues_row['twoyear_total']   = (int)$dues_row['twoyear_count']   * dues_plan_price('2year');
+    $dues_row['threeyear_total'] = (int)$dues_row['threeyear_count'] * dues_plan_price('3year');
+    $dues_row['fouryear_total']  = (int)$dues_row['fouryear_count']  * dues_plan_price('4year');
+    $dues_row['grand_total']     = $dues_row['annual_total'] + $dues_row['twoyear_total'] + $dues_row['threeyear_total'] + $dues_row['fouryear_total'];
+    $dues_row['year']            = $cur_year;
     $stats['dues'] = $dues_row;
 
     // Budget utilization
@@ -416,11 +420,11 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
   </div>
   <div class="mini-stat" style="border-left:3px solid #003594">
     <div class="mini-stat-val" style="color:#003594;font-size:1.1rem;line-height:1.4">
-      <?= (int)$d['annual_count'] ?> / <?= (int)$d['fouryear_count'] ?>
+      <?= (int)$d['annual_count'] ?> / <?= (int)$d['twoyear_count'] ?> / <?= (int)$d['threeyear_count'] ?> / <?= (int)$d['fouryear_count'] ?>
     </div>
-    <div class="mini-stat-lbl">Annual / 4-Year Paid</div>
+    <div class="mini-stat-lbl">Annual / 2-Yr / 3-Yr / 4-Yr Paid</div>
     <div style="font-size:.65rem;color:#9aa5b4;margin-top:.2rem">
-      $<?= number_format($d['annual_total']) ?> + $<?= number_format($d['fouryear_total']) ?>
+      $<?= number_format($d['annual_total']) ?> + $<?= number_format($d['twoyear_total']) ?> + $<?= number_format($d['threeyear_total']) ?> + $<?= number_format($d['fouryear_total']) ?>
     </div>
   </div>
   <?php endif; ?>

@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $member['membership_paid'] = isset($_POST['membership_paid']) ? (int)$_POST['membership_paid'] : 0;
     $member['parent1_is_board_member'] = isset($_POST['parent1_is_board_member']) ? 1 : 0;
     $member['parent2_is_board_member'] = isset($_POST['parent2_is_board_member']) ? 1 : 0;
-    if (!in_array($member['membership_type'], ['annual','4year'])) $member['membership_type'] = 'annual';
+    if (!in_array($member['membership_type'], ['annual','2year','3year','4year'])) $member['membership_type'] = 'annual';
     $member['membership_paid_through'] = calc_paid_through($member['membership_year'], $member['membership_type'], (bool)$member['membership_paid']);
     if ($member['cadet_birthday'] === '') $member['cadet_birthday'] = null;
 

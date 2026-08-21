@@ -10,7 +10,7 @@ $ids      = array_filter(array_map('intval', $_POST['member_ids'] ?? []));
 $action   = $_POST['action'] ?? '';
 $mem_year = trim($_POST['membership_year'] ?? '');
 $mem_type = $_POST['membership_type'] ?? 'annual';
-if (!in_array($mem_type, ['annual','4year'])) $mem_type = 'annual';
+if (!in_array($mem_type, ['annual','2year','3year','4year'])) $mem_type = 'annual';
 
 $dues_actions   = ['mark_paid','mark_unpaid'];
 $member_actions = ['archive','restore','delete','portal_invite'];
@@ -33,7 +33,7 @@ if ($action === 'mark_paid') {
     $paid_through = calc_paid_through($mem_year, $mem_type, true);
     $stmt = $pdo->prepare("UPDATE members SET membership_paid = 1, membership_year = ?, membership_type = ?, membership_paid_through = ? WHERE id IN ($ph)");
     $stmt->execute(array_merge([$mem_year, $mem_type, $paid_through], $ids));
-    $plan_label = $mem_type === '4year' ? '4-Year (through ' . $paid_through . ')' : 'Annual';
+    $plan_label = dues_plan_years($mem_type) > 1 ? dues_plan_label($mem_type) . ' (through ' . $paid_through . ')' : 'Annual';
     flash('success', count($ids) . ' member(s) marked paid — ' . $plan_label . '.');
 
 } elseif ($action === 'mark_unpaid') {
