@@ -310,9 +310,9 @@
     <a href="#about" class="btn btn-outline">Learn More</a>
   </div>
   <div class="hero-stats">
-    <div class="stat"><strong>60+</strong><span>Current Cadets</span></div>
-    <div class="stat"><strong>4+</strong><span>Annual Events</span></div>
-    <div class="stat"><strong>10+</strong><span>Years Active</span></div>
+    <div class="stat"><strong id="stat-current-cadets">60+</strong><span>Current Cadets</span></div>
+    <div class="stat"><strong id="stat-annual-events">4+</strong><span>Annual Events</span></div>
+    <div class="stat"><strong id="stat-years-active">10+</strong><span>Years Active</span></div>
   </div>
 </section>
 
@@ -935,6 +935,11 @@ fetch('settings-feed.php').then(function(r){return r.json();}).then(function(dat
     var cta = document.getElementById('hero-cta');
     if (cta) { if (s.hero_cta_text) cta.textContent = s.hero_cta_text; if (s.hero_cta_url) cta.href = safeHref(s.hero_cta_url); }
   }
+  // Hero stats — falls back to the hardcoded defaults already in the markup
+  // if a value is blank or the migration adding these settings hasn't run yet.
+  if (s.stat_current_cadets) document.getElementById('stat-current-cadets').textContent = s.stat_current_cadets;
+  if (s.stat_annual_events)  document.getElementById('stat-annual-events').textContent  = s.stat_annual_events;
+  if (s.stat_years_active)   document.getElementById('stat-years-active').textContent   = s.stat_years_active;
   // Parent Spotlight — left half stays hidden unless a name is set
   if (s.spotlight_name) {
     document.getElementById('spotlight-name').textContent = s.spotlight_name;

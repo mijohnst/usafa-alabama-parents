@@ -123,6 +123,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Entry deleted.');
         }
     }
+
+    if ($action === 'edit_pending' || $action === 'edit_live') {
+        $job_title = trim($_POST['job_title'] ?? '');
+        $cadet_name = trim($_POST['cadet_name'] ?? ''); // only used by edit_live
+        $youtube_url = trim($_POST['youtube_url'] ?? '');
+        $youtube_id = null;
+        if ($youtube_url !== '') {
+            $youtube_id = extract_youtube_id($youtube_url);
+            if (!$youtube_id) {
+                flash('error', "That doesn't look like a valid YouTube link.");
+                header('Location: job-drop-submissions.php'); exit;
+            }
+        }
+
+        $table = $action === 'edit_pending' ? 'job_drop_submissions' : 'job_drop_photos';
+        $dir   = $action === 'edit_pending' ? $submissions_dir : $photos_dir;
+        $row_stmt = $pdo->prepare("SELECT filename FROM $table WHERE id=?" . ($action === 'edit_pending' ? " AND status='pending'" : ''));
+        $row_stmt->execute([$id]);
+        $row = $row_stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            flash('error', 'That entry no longer exists.');
+        } elseif ($job_title === '' || mb_strlen($job_title) > 150 || ($action === 'edit_live' && ($cadet_name === '' || mb_strlen($cadet_name) > 150))) {
+            flash('error', 'Please fill in the required field(s) — job title (and cadet name for live entries) must be non-empty and under 150 characters.');
+        } else {
+            $filename = $row['filename'];
+            $photo_warning = null;
+            // Photo replacement is optional here — editing normally only
+            // touches the text fields, but a mis-uploaded or blurry photo
+            // can be swapped in the same place rather than deleting and
+            // asking the family to resubmit from scratch.
+            if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+                $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime  = finfo_file($finfo, $_FILES['photo']['tmp_name']);
+                finfo_close($finfo);
+                if (isset($allowed[$mime]) && $_FILES['photo']['size'] <= 10 * 1024 * 1024) {
+                    $new_filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
+                    if (move_uploaded_file($_FILES['photo']['tmp_name'], $dir . $new_filename)) {
+                        $old_path = $dir . basename($filename);
+                        if (is_file($old_path)) @unlink($old_path);
+                        $filename = $new_filename;
+                    }
+                } else {
+                    $photo_warning = 'Photo must be a JPG, PNG, GIF, or WebP under 10MB — kept the existing photo, other changes were still saved.';
+                }
+            }
+
+            if ($action === 'edit_pending') {
+                $pdo->prepare('UPDATE job_drop_submissions SET job_title=?, youtube_id=?, filename=? WHERE id=?')
+                    ->execute([$job_title, $youtube_id, $filename, $id]);
+            } else {
+                $pdo->prepare('UPDATE job_drop_photos SET cadet_name=?, job_title=?, youtube_id=?, filename=? WHERE id=?')
+                    ->execute([$cadet_name, $job_title, $youtube_id, $filename, $id]);
+            }
+            flash($photo_warning ? 'error' : 'success', $photo_warning ?? 'Changes saved.');
+        }
+    }
+
     header('Location: job-drop-submissions.php'); exit;
 }
 
@@ -159,6 +218,10 @@ echo show_flash();
 .sub-card img{width:100%;height:180px;object-fit:cover;display:block}
 .sub-body{padding:.85rem}
 .sub-meta{font-size:.75rem;color:#5a6a7a;margin-bottom:.5rem}
+.edit-form{display:none;margin-top:.5rem;padding-top:.6rem;border-top:1px solid #eee}
+.edit-form label{display:block;font-size:.72rem;font-weight:600;color:#5a6a7a;margin-bottom:.15rem}
+.edit-form input[type=text],.edit-form input[type=url]{width:100%;padding:.4rem;font-size:.82rem;margin-bottom:.5rem;border:1px solid #d0d5dd;border-radius:4px}
+.edit-form input[type=file]{width:100%;font-size:.78rem;margin-bottom:.6rem}
 </style>
 
 <div class="page-head">
@@ -229,6 +292,17 @@ echo show_flash();
         <?= csrf_field() ?><input type="hidden" name="action" value="reject"><input type="hidden" name="id" value="<?= $s['id'] ?>">
         <button type="submit" class="btn btn-danger btn-sm" style="width:100%">Reject</button>
       </form>
+      <button type="button" class="btn btn-secondary btn-sm" style="width:100%;margin-top:.4rem" onclick="toggleEditForm('edit-pend-<?= $s['id'] ?>')">&#9998; Edit</button>
+      <form method="POST" enctype="multipart/form-data" id="edit-pend-<?= $s['id'] ?>" class="edit-form">
+        <?= csrf_field() ?><input type="hidden" name="action" value="edit_pending"><input type="hidden" name="id" value="<?= $s['id'] ?>">
+        <label>Job Title</label>
+        <input type="text" name="job_title" value="<?= h($s['job_title']) ?>" required>
+        <label>YouTube Link</label>
+        <input type="url" name="youtube_url" value="<?= !empty($s['youtube_id']) ? 'https://youtube.com/watch?v=' . h($s['youtube_id']) : '' ?>" placeholder="https://youtube.com/watch?v=...">
+        <label>Replace Photo <span style="font-weight:400">(optional)</span></label>
+        <input type="file" name="photo" accept="image/*">
+        <button type="submit" class="btn btn-primary btn-sm" style="width:100%">Save Changes</button>
+      </form>
     </div>
   </div>
   <?php endforeach; ?>
@@ -264,10 +338,30 @@ echo show_flash();
         <?= csrf_field() ?><input type="hidden" name="action" value="delete_live"><input type="hidden" name="id" value="<?= $l['id'] ?>">
         <button type="submit" class="btn btn-danger btn-sm" style="width:100%">Delete</button>
       </form>
+      <button type="button" class="btn btn-secondary btn-sm" style="width:100%;margin-top:.4rem" onclick="toggleEditForm('edit-live-<?= $l['id'] ?>')">&#9998; Edit</button>
+      <form method="POST" enctype="multipart/form-data" id="edit-live-<?= $l['id'] ?>" class="edit-form">
+        <?= csrf_field() ?><input type="hidden" name="action" value="edit_live"><input type="hidden" name="id" value="<?= $l['id'] ?>">
+        <label>Cadet Name</label>
+        <input type="text" name="cadet_name" value="<?= h($l['cadet_name']) ?>" required>
+        <label>Job Title</label>
+        <input type="text" name="job_title" value="<?= h($l['job_title']) ?>" required>
+        <label>YouTube Link</label>
+        <input type="url" name="youtube_url" value="<?= !empty($l['youtube_id']) ? 'https://youtube.com/watch?v=' . h($l['youtube_id']) : '' ?>" placeholder="https://youtube.com/watch?v=...">
+        <label>Replace Photo <span style="font-weight:400">(optional)</span></label>
+        <input type="file" name="photo" accept="image/*">
+        <button type="submit" class="btn btn-primary btn-sm" style="width:100%">Save Changes</button>
+      </form>
     </div>
   </div>
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
+
+<script>
+function toggleEditForm(id) {
+  var el = document.getElementById(id);
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+</script>
 
 <?php admin_footer(); ?>

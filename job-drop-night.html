@@ -29,7 +29,8 @@
     .form-section h3 { font-family: var(--font-display); color: var(--navy); margin-bottom: 0.5rem; letter-spacing: 0.01em; }
     .form-section > p { color: var(--gray); margin-bottom: 1.5rem; font-size: 0.95rem; }
     .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    @media (max-width: 600px) { .form-row-2 { grid-template-columns: 1fr; } }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-row-2, .form-row-3 { grid-template-columns: 1fr; } }
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--navy); font-size: 0.9rem; }
     .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; font-family: var(--font-body); color: var(--navy); font-size: 0.95rem; background: var(--white); }
@@ -156,11 +157,15 @@
       <!-- FIND YOUR RECORD -->
       <div id="lookupSection">
         <h3>Find Your Record</h3>
-        <p>Job Drop Night is for our graduating cadets — currently, the Class of <span id="eligibleYear">2027</span>. Enter your cadet's last name and a parent email address already on file.</p>
-        <div class="form-row-2">
+        <p>Job Drop Night is for our graduating cadets — currently, the Class of <span id="eligibleYear">2027</span>. Enter your cadet's last name, birthday, and a parent email address already on file.</p>
+        <div class="form-row-3">
           <div class="form-group">
             <label for="lookupLastName">Cadet Last Name *</label>
             <input type="text" id="lookupLastName" required />
+          </div>
+          <div class="form-group">
+            <label for="lookupBirthday">Cadet Birthday *</label>
+            <input type="date" id="lookupBirthday" required />
           </div>
           <div class="form-group">
             <label for="lookupEmail">Either Parent's Email on File *</label>
@@ -172,9 +177,16 @@
         <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Having trouble finding your record? Contact site support at <a href="mailto:mijohnst@alabamafalcons.org" style="color:var(--blue)">mijohnst@alabamafalcons.org</a>.</p>
       </div>
 
+      <!-- ALREADY APPROVED -->
+      <div id="alreadyApprovedBody" style="display:none">
+        <h3>Already Live for <span id="approvedCadetNameDisplay"></span></h3>
+        <p>This cadet's Job Drop submission has already been approved and is live on the homepage. Email <a href="mailto:secretary@alabamafalcons.org" style="color:var(--blue)">secretary@alabamafalcons.org</a> if it needs to change.</p>
+      </div>
+
       <!-- SUBMISSION FORM -->
       <div id="submitBody" style="display:none">
-        <h3>Submitting for <span id="cadetNameDisplay"></span></h3>
+        <h3 id="submitHeading">Submitting for <span id="cadetNameDisplay"></span></h3>
+        <p id="editingNotice" style="display:none;font-size:.85rem;color:var(--gray);margin-top:-.75rem">You already have a submission awaiting review — updating it below replaces what you sent before.</p>
         <div class="form-group">
           <label for="jobTitle">Job / Career Field *</label>
           <input type="text" id="jobTitle" placeholder="e.g. Pilot, Intelligence Officer, Cyber Operations Officer" required />
@@ -182,14 +194,14 @@
         <div class="form-group">
           <label for="photoInput">Photo *</label>
           <input type="file" id="photoInput" accept="image/*" required />
-          <div class="hint">JPG, PNG, GIF, or WebP, under 10MB.</div>
+          <div class="hint" id="photoHint">JPG, PNG, GIF, or WebP, under 10MB.</div>
         </div>
         <div class="form-group">
           <label for="youtubeUrl">YouTube Link <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.75rem;color:var(--gray)">optional — got video of the reveal?</span></label>
           <input type="url" id="youtubeUrl" placeholder="https://youtube.com/watch?v=..." />
         </div>
         <div id="formStatus" role="status" aria-live="polite"></div>
-        <button type="button" id="submitBtn" class="cta-button">Submit for Review</button>
+        <button type="button" id="submitBtn" class="cta-button" data-idle-label="Submit for Review">Submit for Review</button>
       </div>
     </div>
   </section>
@@ -218,19 +230,21 @@
       if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lookupBtn').click(); }
     }
     document.getElementById('lookupLastName').addEventListener('keydown', lookupEnterKey);
+    document.getElementById('lookupBirthday').addEventListener('keydown', lookupEnterKey);
     document.getElementById('lookupEmail').addEventListener('keydown', lookupEnterKey);
 
     document.getElementById('lookupBtn').addEventListener('click', async function() {
       var btn = this;
       var statusEl = document.getElementById('lookupStatus');
-      var last  = document.getElementById('lookupLastName').value.trim();
-      var email = document.getElementById('lookupEmail').value.trim();
+      var last     = document.getElementById('lookupLastName').value.trim();
+      var birthday = document.getElementById('lookupBirthday').value;
+      var email    = document.getElementById('lookupEmail').value.trim();
 
       statusEl.style.display = 'none';
       statusEl.className = '';
 
-      if (!last || !email) {
-        statusEl.textContent = 'Please enter the cadet last name and the email on file.';
+      if (!last || !birthday || !email) {
+        statusEl.textContent = "Please enter the cadet's last name, birthday, and the email on file.";
         statusEl.className = 'error';
         statusEl.style.display = 'block';
         return;
@@ -245,6 +259,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             cadetLastName: last,
+            cadetBirthday: birthday,
             email: email,
             website: document.getElementById('website').value
           })
@@ -253,11 +268,32 @@
 
         if (result.success) {
           verifyToken = result.verifyToken;
-          document.getElementById('cadetNameDisplay').textContent = result.cadetName || 'your cadet';
+          var cadetName = result.cadetName || 'your cadet';
           document.getElementById('lookupSection').style.display = 'none';
-          document.getElementById('submitBody').style.display = 'block';
+
+          if (result.existing && result.existing.status === 'approved') {
+            document.getElementById('approvedCadetNameDisplay').textContent = cadetName;
+            document.getElementById('alreadyApprovedBody').style.display = 'block';
+          } else {
+            document.getElementById('cadetNameDisplay').textContent = cadetName;
+            if (result.existing && result.existing.editable) {
+              document.getElementById('submitHeading').firstChild.textContent = 'Editing submission for ';
+              document.getElementById('editingNotice').style.display = 'block';
+              document.getElementById('photoHint').textContent = 'Choose a new photo (JPG, PNG, GIF, or WebP, under 10MB) — replaces the one you sent before.';
+              document.getElementById('jobTitle').value = result.existing.jobTitle || '';
+              if (result.existing.youtubeId) {
+                document.getElementById('youtubeUrl').value = 'https://youtube.com/watch?v=' + result.existing.youtubeId;
+              }
+              document.getElementById('submitBtn').textContent = 'Update My Submission';
+              document.getElementById('submitBtn').setAttribute('data-idle-label', 'Update My Submission');
+            }
+            document.getElementById('submitBody').style.display = 'block';
+          }
+
           var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          window.scrollTo({ top: document.getElementById('submitBody').offsetTop - 100, behavior: reduceMotion ? 'auto' : 'smooth' });
+          var revealed = document.getElementById('alreadyApprovedBody').style.display === 'block'
+            ? document.getElementById('alreadyApprovedBody') : document.getElementById('submitBody');
+          window.scrollTo({ top: revealed.offsetTop - 100, behavior: reduceMotion ? 'auto' : 'smooth' });
         } else {
           statusEl.textContent = result.error || "We couldn't find a matching record.";
           statusEl.className = 'error';
@@ -326,7 +362,7 @@
         statusEl.className = 'error';
         statusEl.style.display = 'block';
       } finally {
-        btn.textContent = 'Submit for Review';
+        btn.textContent = btn.getAttribute('data-idle-label') || 'Submit for Review';
         btn.disabled = false;
       }
     });

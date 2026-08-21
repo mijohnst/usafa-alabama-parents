@@ -58,6 +58,7 @@ foreach ($rows as $r) {
 
 $sections = [
     'Homepage Hero'       => ['hero_subtitle','hero_cta_text','hero_cta_url'],
+    'Homepage Stats'      => ['stat_current_cadets','stat_annual_events','stat_years_active'],
     'Parent Spotlight'    => ['spotlight_name','spotlight_photo','spotlight_description'],
     'Membership'          => ['membership_dues','membership_description'],
     'President\'s Letter' => ['president_letter','president_name','president_title'],
