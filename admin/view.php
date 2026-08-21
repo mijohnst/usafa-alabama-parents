@@ -49,6 +49,8 @@ a.vf-val{color:#003594}
   <div style="display:flex;gap:.5rem">
     <?php if (!is_viewer()): ?>
       <a href="edit.php?id=<?= $id ?>" class="btn btn-primary">Edit</a>
+    <?php elseif (can_mark_dues()): ?>
+      <a href="edit-dues.php?id=<?= $id ?>" class="btn btn-primary">Manage Dues</a>
     <?php endif; ?>
     <a href="index.php" class="btn btn-secondary">← Back</a>
   </div>

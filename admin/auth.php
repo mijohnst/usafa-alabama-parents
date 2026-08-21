@@ -554,6 +554,11 @@ function parse_dues_years(?string $csv): array {
 // 4-Year plan toggle gave, just derived from the actual years paid
 // instead of a separate "plan type" field that could disagree with them.
 function dues_years_price(array $paid_years, array $cadet_years): int {
+    // No resolvable window (e.g. class_year is 'Graduate' or blank) — fall
+    // back to pricing whatever years are actually on file directly, rather
+    // than intersecting against an empty window and always landing on $0
+    // regardless of real payment history.
+    if (!$cadet_years) return count(array_unique($paid_years)) * 75;
     $undergrad = array_slice($cadet_years, -4);
     $has_full_undergrad = count($undergrad) === 4 && !array_diff($undergrad, $paid_years);
     if (!$has_full_undergrad) {
@@ -583,13 +588,23 @@ function dues_years_price(array $paid_years, array $cadet_years): int {
 // Only *increases* are logged automatically; removing a year (correcting
 // a mistake) never auto-creates a negative entry — a real refund is a
 // treasurer's manual call, not something this should silently infer.
-function save_dues_years(PDO $pdo, int $member_id, array $years, bool $touch_year = true): void {
+// $before lets a caller that already fetched class_year/membership_paid_years
+// (and ideally the cadet name columns) for this member pass it straight in,
+// instead of this function re-querying a row the caller already has — used
+// by bulk-action.php, which fetches every selected member in one batched
+// query up front. Only consulted when $touch_year is true; the passive
+// recompute path (reset-dues.php) skips this fetch/lookup entirely since it
+// never logs income and the "before" data would just go unused.
+function save_dues_years(PDO $pdo, int $member_id, array $years, bool $touch_year = true, ?array $before = null): void {
     $years = array_values(array_unique(array_filter($years)));
     sort($years);
 
-    $before = $pdo->prepare('SELECT class_year, membership_paid_years, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix FROM members WHERE id = ?');
-    $before->execute([$member_id]);
-    $row = $before->fetch(PDO::FETCH_ASSOC);
+    $row = $before;
+    if ($touch_year && $row === null) {
+        $before_stmt = $pdo->prepare('SELECT class_year, membership_paid_years, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix FROM members WHERE id = ?');
+        $before_stmt->execute([$member_id]);
+        $row = $before_stmt->fetch(PDO::FETCH_ASSOC);
+    }
 
     $csv     = implode(',', $years);
     $paid    = in_array(membership_year(), $years, true) ? 1 : 0;

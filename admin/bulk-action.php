@@ -30,8 +30,13 @@ if (in_array($action, $dues_actions, true)) {
     // Each member's own dues years are derived from their class_year
     // (cadet_dues_years()), not a single global plan — so this loops
     // per-member rather than a single bulk UPDATE. Fine at this club's
-    // roster size.
-    $rows_stmt = $pdo->prepare("SELECT id, class_year, membership_paid_years FROM members WHERE id IN ($ph)");
+    // roster size. Includes the cadet name columns and passes each row
+    // straight into save_dues_years() as $before, so it doesn't re-fetch
+    // the same row per member that's already in hand here.
+    $rows_stmt = $pdo->prepare(
+        "SELECT id, class_year, membership_paid_years, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix
+         FROM members WHERE id IN ($ph)"
+    );
     $rows_stmt->execute($ids);
     $cur_year = membership_year();
     $count = 0;
@@ -47,7 +52,7 @@ if (in_array($action, $dues_actions, true)) {
         } else { // mark_unpaid_current
             $years = array_diff($years, [$cur_year]);
         }
-        save_dues_years($pdo, (int)$row['id'], $years);
+        save_dues_years($pdo, (int)$row['id'], $years, true, $row);
         $count++;
     }
     $labels = [

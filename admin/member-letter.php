@@ -211,7 +211,7 @@ admin_header('Member Status Letter');
     <tr>
       <th>Parent Name</th>
       <th>Cadet Name</th>
-      <th>Membership Year</th>
+      <th>Dues Last Updated</th>
       <th>Status</th>
       <th></th>
     </tr>
