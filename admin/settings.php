@@ -59,7 +59,7 @@ foreach ($rows as $r) {
 $sections = [
     'Homepage Hero'       => ['hero_subtitle','hero_cta_text','hero_cta_url'],
     'Homepage Stats'      => ['stat_current_cadets','stat_annual_events','stat_years_active'],
-    'Parent Spotlight'    => ['spotlight_name','spotlight_photo','spotlight_description'],
+    'Parent of the Month' => ['spotlight_name','spotlight_photo','spotlight_description'],
     'Membership'          => ['membership_dues','membership_description'],
     'President\'s Letter' => ['president_letter','president_name','president_title'],
     'Social & Links'      => ['facebook_url'],
@@ -85,7 +85,7 @@ echo show_flash();
 </div>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.5rem">
   Changes here update the main website automatically.
-  <strong>Parent Spotlight:</strong> shows near the bottom of the homepage once a name is filled in — leave it blank to hide the section.
+  <strong>Parent of the Month:</strong> shows near the bottom of the homepage once a name is filled in — leave it blank to hide the section.
   <strong>Footer Resources:</strong> one per line as <code>Title|URL</code>.
   Looking for the cadet birthday / dues renewal / meeting reminder emails? Those moved to
   <a href="automated-emails.php">Automated Emails</a>.
