@@ -31,6 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($member['cadet_last_name'] === '') $errors[] = 'Cadet Last Name is required.';
 
     if (empty($errors)) {
+        // Two separate writes (dues years, then the rest of the fields) —
+        // wrapped in a transaction so a failure partway through can't leave
+        // one committed without the other.
+        $pdo->beginTransaction();
         // Save dues years first, while the DB's class_year/membership_paid_years
         // still reflect the pre-edit state — save_dues_years() reads that
         // "before" state itself to compute the income delta, and it must
@@ -43,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach (FIELDS as $f) $params[$f] = $member[$f];
         $params['id'] = $id;
         $stmt->execute($params);
+        $pdo->commit();
         flash('success', 'Member updated successfully.');
         header('Location: index.php'); exit;
     }
