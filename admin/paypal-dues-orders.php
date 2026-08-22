@@ -17,7 +17,11 @@ $pdo = get_pdo();
 // still be alive — dues-pay-lookup.php's verify token (and so the whole
 // checkout window) expires 30 minutes after lookup, so a 'created' row
 // older than that never got captured and is dead, not just slow.
-function pdo_display_status(string $status, string $created_at): array {
+// Nullable params on purpose: a single row with an unexpected null status
+// or timestamp must never fatal the whole list off the page — worst case
+// it just falls through to the generic label below.
+function pdo_display_status(?string $status, ?string $created_at): array {
+    $status = $status ?? '';
     if (in_array($status, ['applied', 'already_captured'], true)) {
         return ['Paid', '#1b5e20'];
     }
@@ -28,10 +32,11 @@ function pdo_display_status(string $status, string $created_at): array {
         return ['Processing', '#1565c0'];
     }
     if ($status === 'created') {
-        $age_minutes = (time() - strtotime($created_at)) / 60;
+        $created_ts   = $created_at ? strtotime($created_at) : false;
+        $age_minutes  = $created_ts ? (time() - $created_ts) / 60 : 9999;
         return $age_minutes > 30 ? ['Failed / Abandoned', '#9aa5b4'] : ['Pending', '#f57f17'];
     }
-    return [ucfirst(str_replace('_', ' ', $status)), '#5a6a7a'];
+    return [$status !== '' ? ucfirst(str_replace('_', ' ', $status)) : 'Unknown', '#5a6a7a'];
 }
 
 $stmt = $pdo->query(
