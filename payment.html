@@ -79,6 +79,26 @@
       font-weight: 700;
     }
 
+    /* PAY ONLINE (PAYPAL) LOOKUP FORM */
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-row-3 { grid-template-columns: 1fr; } }
+    .form-group { margin-bottom: 1rem; text-align: left; }
+    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--navy); font-size: 0.9rem; }
+    .form-group input { width: 100%; padding: 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; font-family: var(--font-body); color: var(--navy); font-size: 0.95rem; background: var(--white); }
+    .form-group input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 2px rgba(0, 53, 148, 0.15); }
+    #duesLookupStatus, #duesPayStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; text-align: left; }
+    #duesLookupStatus.success, #duesPayStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
+    #duesLookupStatus.error, #duesPayStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
+    .dues-years-list { text-align: left; margin: 1rem 0; }
+    .dues-years-list label { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.95rem; color: var(--navy); }
+    .dues-years-list label:hover { background: var(--light); }
+    .dues-years-list input { width: auto; }
+    .dues-years-total { font-weight: 700; color: var(--navy); font-size: 1.05rem; margin: 1rem 0; text-align: left; }
+    #duesPaypalButtons { max-width: 400px; margin: 1rem auto 0; }
+    .cta-button { display: inline-block; background: linear-gradient(180deg, #1a5cbf 0%, #002554 100%); color: var(--white); padding: 0.9rem 2rem; border-radius: 4px; font-family: var(--font-body); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.85rem; transition: all 0.15s ease; border: none; cursor: pointer; box-shadow: 0 4px 0 #001535, 0 6px 12px rgba(0,0,0,.25); position: relative; top: 0; }
+    .cta-button:hover { background: linear-gradient(180deg, #2166cc 0%, #003080 100%); box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,.2); top: 2px; }
+    .cta-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
     /* PAYMENT METHOD BOX */
     .payment-method-box {
       background: var(--white);
@@ -420,12 +440,65 @@
     <!-- PAYMENT METHODS HEADER - Prominent, above all boxes -->
     <div class="payment-methods-header">
       <h3>Payment Methods</h3>
-      <p class="intro-text">We offer three convenient ways to pay your membership dues:</p>
+      <p class="intro-text">We offer four convenient ways to pay your membership dues:</p>
       <ul class="payment-options-list">
-        <li><span class="number">1</span> Credit/Debit Card</li>
-        <li><span class="number">2</span> Zelle</li>
-        <li><span class="number">3</span> Check</li>
+        <li><span class="number">1</span> Pay Online</li>
+        <li><span class="number">2</span> Credit/Debit Card</li>
+        <li><span class="number">3</span> Zelle</li>
+        <li><span class="number">4</span> Check</li>
       </ul>
+    </div>
+
+    <!-- PAYMENT METHOD 0: PAY DUES ONLINE (PAYPAL) -->
+    <div class="payment-method-box">
+      <div class="box-header">
+        <span class="icon">🅿️</span>
+        <h4>Pay Dues Online</h4>
+      </div>
+      <div class="box-content">
+        <p>Look up your cadet below to pay online instantly by card, PayPal balance, or Venmo &mdash; no need to email a receipt, your membership updates automatically.</p>
+
+        <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+          <label for="duesWebsite">Leave this field empty</label>
+          <input type="text" id="duesWebsite" name="duesWebsite" tabindex="-1" autocomplete="off">
+        </div>
+
+        <!-- LOOKUP -->
+        <div id="duesLookupSection">
+          <div class="form-row-3">
+            <div class="form-group">
+              <label for="duesLastName">Cadet Last Name *</label>
+              <input type="text" id="duesLastName" required />
+            </div>
+            <div class="form-group">
+              <label for="duesBirthday">Cadet Birthday *</label>
+              <input type="date" id="duesBirthday" required />
+            </div>
+            <div class="form-group">
+              <label for="duesEmail">Either Parent's Email on File *</label>
+              <input type="email" id="duesEmail" required />
+            </div>
+          </div>
+          <div id="duesLookupStatus" role="status" aria-live="polite"></div>
+          <button type="button" id="duesLookupBtn" class="cta-button">Find My Cadet</button>
+          <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Having trouble? Contact <a href="mailto:treasurer@alabamafalcons.org" style="color:var(--blue)">treasurer@alabamafalcons.org</a>.</p>
+        </div>
+
+        <!-- PAY -->
+        <div id="duesPaySection" style="display:none">
+          <h5 id="duesPayHeading" style="color:var(--navy);margin-bottom:.75rem"></h5>
+          <div id="duesNothingDue" style="display:none">
+            <p>Great news &mdash; this cadet's membership dues are fully paid up. Thank you!</p>
+          </div>
+          <div id="duesYearsBody" style="display:none">
+            <p>Select the year(s) you'd like to pay for:</p>
+            <div class="dues-years-list" id="duesYearsList"></div>
+            <div class="dues-years-total" id="duesYearsTotal"></div>
+            <div id="duesPayStatus" role="status" aria-live="polite"></div>
+            <div id="duesPaypalButtons"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- PAYMENT METHOD 1: CREDIT/DEBIT CARD -->
@@ -573,6 +646,182 @@
       <span>Aim High &middot; Fly &middot; Fight &middot; Win</span>
     </div>
   </footer>
+
+  <script>
+    (function() {
+      var verifyToken = '';
+      var duesOptions = [];
+      var sdkReady = false;
+      var buttonsRendered = false;
+
+      // Load the PayPal JS SDK eagerly (client id is not a secret) so the
+      // Smart Buttons are ready to render as soon as a cadet is found.
+      fetch('paypal-client-id.php').then(function(r) { return r.json(); }).then(function(d) {
+        if (!d.success || !d.clientId) return;
+        var s = document.createElement('script');
+        s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(d.clientId) + '&currency=USD&intent=capture';
+        s.onload = function() { sdkReady = true; renderPaypalButtonsIfReady(); };
+        document.head.appendChild(s);
+      }).catch(function() {});
+
+      function duesEnterKey(e) {
+        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('duesLookupBtn').click(); }
+      }
+      document.getElementById('duesLastName').addEventListener('keydown', duesEnterKey);
+      document.getElementById('duesBirthday').addEventListener('keydown', duesEnterKey);
+      document.getElementById('duesEmail').addEventListener('keydown', duesEnterKey);
+
+      document.getElementById('duesLookupBtn').addEventListener('click', async function() {
+        var btn = this;
+        var statusEl = document.getElementById('duesLookupStatus');
+        var last     = document.getElementById('duesLastName').value.trim();
+        var birthday = document.getElementById('duesBirthday').value;
+        var email    = document.getElementById('duesEmail').value.trim();
+
+        statusEl.style.display = 'none';
+        statusEl.className = '';
+
+        if (!last || !birthday || !email) {
+          statusEl.textContent = "Please enter the cadet's last name, birthday, and the email on file.";
+          statusEl.className = 'error';
+          statusEl.style.display = 'block';
+          return;
+        }
+
+        btn.textContent = 'Searching…';
+        btn.disabled = true;
+
+        try {
+          var resp = await fetch('dues-pay-lookup.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cadetLastName: last,
+              cadetBirthday: birthday,
+              email: email,
+              website: document.getElementById('duesWebsite').value
+            })
+          });
+          var result = await resp.json();
+
+          if (result.success) {
+            verifyToken = result.verifyToken;
+            duesOptions = result.options || [];
+            document.getElementById('duesLookupSection').style.display = 'none';
+            document.getElementById('duesPaySection').style.display = 'block';
+            document.getElementById('duesPayHeading').textContent = 'Paying dues for ' + (result.cadetName || 'your cadet');
+
+            if (!duesOptions.length) {
+              document.getElementById('duesNothingDue').style.display = 'block';
+            } else {
+              document.getElementById('duesYearsBody').style.display = 'block';
+              var list = document.getElementById('duesYearsList');
+              list.innerHTML = '';
+              duesOptions.forEach(function(opt) {
+                var label = document.createElement('label');
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = opt.year;
+                cb.className = 'dues-year-checkbox';
+                cb.addEventListener('change', updateDuesTotal);
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(' ' + opt.year + ' — $' + opt.estimatedPrice));
+                list.appendChild(label);
+              });
+              updateDuesTotal();
+              renderPaypalButtonsIfReady();
+            }
+          } else {
+            statusEl.textContent = result.error || "We couldn't find a matching record.";
+            statusEl.className = 'error';
+            statusEl.style.display = 'block';
+          }
+        } catch (err) {
+          statusEl.textContent = 'Something went wrong. Please try again or email treasurer@alabamafalcons.org.';
+          statusEl.className = 'error';
+          statusEl.style.display = 'block';
+        }
+
+        btn.textContent = 'Find My Cadet';
+        btn.disabled = false;
+      });
+
+      function selectedYears() {
+        return Array.prototype.slice.call(document.querySelectorAll('.dues-year-checkbox:checked')).map(function(cb) { return cb.value; });
+      }
+
+      function updateDuesTotal() {
+        var years = selectedYears();
+        var total = duesOptions.filter(function(o) { return years.indexOf(o.year) !== -1; })
+          .reduce(function(sum, o) { return sum + o.estimatedPrice; }, 0);
+        var totalEl = document.getElementById('duesYearsTotal');
+        totalEl.textContent = years.length
+          ? 'Estimated total: $' + total + ' (multi-year discounts are applied automatically — the exact amount is confirmed by PayPal at checkout)'
+          : '';
+      }
+
+      function renderPaypalButtonsIfReady() {
+        if (!sdkReady || buttonsRendered || !duesOptions.length || typeof paypal === 'undefined') return;
+        buttonsRendered = true;
+        paypal.Buttons({
+          createOrder: function() {
+            var statusEl = document.getElementById('duesPayStatus');
+            statusEl.style.display = 'none';
+            statusEl.className = '';
+            var years = selectedYears();
+            if (!years.length) {
+              statusEl.textContent = 'Please select at least one year to pay for.';
+              statusEl.className = 'error';
+              statusEl.style.display = 'block';
+              return Promise.reject(new Error('No years selected'));
+            }
+            return fetch('dues-pay-create-order.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ verifyToken: verifyToken, years: years })
+            }).then(function(r) { return r.json(); }).then(function(result) {
+              if (!result.success) {
+                statusEl.textContent = result.error || 'Could not start checkout. Please try again.';
+                statusEl.className = 'error';
+                statusEl.style.display = 'block';
+                throw new Error(result.error || 'create order failed');
+              }
+              return result.orderId;
+            });
+          },
+          onApprove: function(data) {
+            var statusEl = document.getElementById('duesPayStatus');
+            return fetch('dues-pay-capture-order.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ verifyToken: verifyToken, orderId: data.orderID })
+            }).then(function(r) { return r.json(); }).then(function(result) {
+              if (result.success) {
+                document.getElementById('duesYearsBody').innerHTML =
+                  '<p style="color:#2e7d32;font-weight:600">Payment received — thank you! Your membership has been updated for ' + (result.years || []).join(', ') + '.</p>';
+              } else {
+                statusEl.textContent = result.error || 'Payment could not be completed. Please try again.';
+                statusEl.className = 'error';
+                statusEl.style.display = 'block';
+              }
+            });
+          },
+          onCancel: function() {
+            var statusEl = document.getElementById('duesPayStatus');
+            statusEl.textContent = 'Checkout cancelled — you can select your year(s) and try again anytime.';
+            statusEl.className = '';
+            statusEl.style.display = 'block';
+          },
+          onError: function() {
+            var statusEl = document.getElementById('duesPayStatus');
+            statusEl.textContent = 'Something went wrong with PayPal. Please try again or use another payment method below.';
+            statusEl.className = 'error';
+            statusEl.style.display = 'block';
+          }
+        }).render('#duesPaypalButtons');
+      }
+    })();
+  </script>
 
   </body>
 </html>

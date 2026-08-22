@@ -1,9 +1,10 @@
 <?php
 /**
- * PayPal Payouts API — minimal wrapper, plain cURL (no vendored SDK).
- * Requires PAYPAL_MODE ('sandbox'|'live'), PAYPAL_CLIENT_ID, PAYPAL_SECRET
- * defined in admin/config.php. Sandbox and live use different API hosts
- * and completely separate credentials/money.
+ * PayPal API wrapper — minimal, plain cURL (no vendored SDK). Covers both
+ * Payouts (sending reimbursements) and Orders/Checkout (collecting online
+ * dues payments). Requires PAYPAL_MODE ('sandbox'|'live'), PAYPAL_CLIENT_ID,
+ * PAYPAL_SECRET defined in admin/config.php. Sandbox and live use different
+ * API hosts and completely separate credentials/money.
  */
 
 function paypal_api_base(): string {
@@ -141,5 +142,122 @@ function paypal_check_payout_status(string $batchId): array {
         return ['success' => true, 'status' => $item_status ?: $batch_status];
     }
     error_log('paypal_check_payout_status failed: HTTP ' . $code . ' ' . $resp);
+    return ['success' => false, 'error' => $data['message'] ?? ('PayPal returned HTTP ' . $code)];
+}
+
+// ── Orders API — collects a payment (the reverse of Payouts, above,
+// which sends one) ─────────────────────────────────────────────────────
+
+// Creates a PayPal order for a single USD amount. $requestId is sent as
+// the PayPal-Request-Id idempotency header — a retry with the same id
+// (e.g. a double-click before the first request finishes) returns the
+// same still-open order instead of creating a second one. Returns
+// ['success'=>true,'order_id'=>...,'status'=>...] or
+// ['success'=>false,'error'=>...].
+function paypal_create_order(float $amount, string $referenceId, string $requestId): array {
+    $auth = paypal_get_access_token();
+    if (!$auth['token']) return ['success' => false, 'error' => $auth['error']];
+    $token = $auth['token'];
+
+    $payload = [
+        'intent' => 'CAPTURE',
+        'purchase_units' => [[
+            'reference_id' => $referenceId,
+            'amount' => ['currency_code' => 'USD', 'value' => number_format($amount, 2, '.', '')],
+        ]],
+    ];
+
+    $ch = curl_init(paypal_api_base() . '/v2/checkout/orders');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($payload),
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Authorization: Bearer ' . $token, 'PayPal-Request-Id: ' . $requestId],
+        CURLOPT_TIMEOUT        => 20,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $data = json_decode((string)$resp, true);
+    if ($code >= 200 && $code < 300 && !empty($data['id'])) {
+        return ['success' => true, 'order_id' => $data['id'], 'status' => $data['status'] ?? 'CREATED'];
+    }
+    error_log('paypal_create_order failed: HTTP ' . $code . ' ' . $resp);
+    return ['success' => false, 'error' => $data['message'] ?? ('PayPal returned HTTP ' . $code)];
+}
+
+// Captures a previously-created order — the call that actually moves the
+// payer's money. $requestId should be deterministic per order (callers
+// use 'capture-' . $orderId) so a network retry after a crash/timeout
+// reuses it and lands on PayPal's own duplicate-capture rejection rather
+// than attempting to charge the payer a second time — the collection-side
+// mirror of paypal_send_payout()'s DUPLICATE_BATCH_ID handling above.
+// 'already_captured' distinguishes that specific, expected-on-retry
+// rejection from an ordinary failure the caller should just report as-is.
+function paypal_capture_order(string $orderId, string $requestId): array {
+    $auth = paypal_get_access_token();
+    if (!$auth['token']) return ['success' => false, 'error' => $auth['error']];
+    $token = $auth['token'];
+
+    $ch = curl_init(paypal_api_base() . '/v2/checkout/orders/' . urlencode($orderId) . '/capture');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => '{}',
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Authorization: Bearer ' . $token, 'PayPal-Request-Id: ' . $requestId],
+        CURLOPT_TIMEOUT        => 20,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $data = json_decode((string)$resp, true);
+    $capture = $data['purchase_units'][0]['payments']['captures'][0] ?? null;
+    if ($code >= 200 && $code < 300 && $capture && ($capture['status'] ?? '') === 'COMPLETED') {
+        return [
+            'success'         => true,
+            'status'          => $capture['status'],
+            'capture_id'      => $capture['id'],
+            'captured_amount' => (float)($capture['amount']['value'] ?? 0),
+        ];
+    }
+    error_log('paypal_capture_order failed: HTTP ' . $code . ' ' . $resp);
+    $is_duplicate = $code === 422 && (($data['details'][0]['issue'] ?? '') === 'ORDER_ALREADY_CAPTURED');
+    return ['success' => false, 'already_captured' => $is_duplicate, 'error' => $data['message'] ?? ('PayPal returned HTTP ' . $code)];
+}
+
+// Recovery path only: looks up an order's current state directly. Used
+// when paypal_capture_order() reports 'already_captured' but our own
+// tracking row doesn't show it as applied yet (a crash between PayPal
+// confirming the capture and our own bookkeeping finishing) — recovers
+// the real capture id/amount so the flow can still finish instead of
+// stranding an already-paid order in limbo.
+function paypal_get_order(string $orderId): array {
+    $auth = paypal_get_access_token();
+    if (!$auth['token']) return ['success' => false, 'error' => $auth['error']];
+    $token = $auth['token'];
+
+    $ch = curl_init(paypal_api_base() . '/v2/checkout/orders/' . urlencode($orderId));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $token],
+        CURLOPT_TIMEOUT        => 15,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $data = json_decode((string)$resp, true);
+    $capture = $data['purchase_units'][0]['payments']['captures'][0] ?? null;
+    if ($code >= 200 && $code < 300 && $capture) {
+        return [
+            'success'         => true,
+            'status'          => $capture['status'] ?? 'UNKNOWN',
+            'capture_id'      => $capture['id'] ?? null,
+            'captured_amount' => (float)($capture['amount']['value'] ?? 0),
+        ];
+    }
+    error_log('paypal_get_order failed: HTTP ' . $code . ' ' . $resp);
     return ['success' => false, 'error' => $data['message'] ?? ('PayPal returned HTTP ' . $code)];
 }

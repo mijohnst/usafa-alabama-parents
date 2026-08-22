@@ -189,7 +189,7 @@ function dues_years_price(array $paid_years, array $cadet_years): int {
 // query up front. Only consulted when $touch_year is true; the passive
 // recompute path (reset-dues.php) skips this fetch/lookup entirely since it
 // never logs income and the "before" data would just go unused.
-function save_dues_years(PDO $pdo, int $member_id, array $years, bool $touch_year = true, ?array $before = null): void {
+function save_dues_years(PDO $pdo, int $member_id, array $years, bool $touch_year = true, ?array $before = null, ?string $payment_method_override = null, ?string $notes_override = null): void {
     $years = array_values(array_unique(array_filter($years)));
     sort($years);
 
@@ -224,8 +224,8 @@ function save_dues_years(PDO $pdo, int $member_id, array $years, bool $touch_yea
                     'dues',
                     'Dues — ' . implode(', ', $added),
                     $delta,
-                    '',
-                    'Recorded automatically from dues years update',
+                    $payment_method_override ?? '',
+                    $notes_override ?? 'Recorded automatically from dues years update',
                     $_SESSION['user_id'] ?? null,
                 ]);
         }
