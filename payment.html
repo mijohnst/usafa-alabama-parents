@@ -686,7 +686,7 @@
       fetch('paypal-client-id.php').then(function(r) { return r.json(); }).then(function(d) {
         if (!d.success || !d.clientId) return;
         var s = document.createElement('script');
-        s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(d.clientId) + '&currency=USD&intent=capture';
+        s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(d.clientId) + '&currency=USD&intent=capture&disable-funding=paylater';
         s.onload = function() { sdkReady = true; renderPaypalButtonsIfReady(); };
         document.head.appendChild(s);
       }).catch(function() {});
