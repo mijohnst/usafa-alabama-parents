@@ -87,17 +87,15 @@ $cadet_years = cadet_dues_years($m['class_year'] ?? '');
 $paid_years  = parse_dues_years($m['membership_paid_years']);
 $payable     = array_values(array_diff($cadet_years, $paid_years));
 
-// Display-only incremental price estimate per payable year — the real
-// charge is always recomputed server-side from the actual selected set
-// in dues-pay-create-order.php, never trusted from this estimate.
-$options = [];
-$running = $paid_years;
-foreach ($payable as $year) {
-    $before = dues_years_price($running, $cadet_years);
-    $running[] = $year;
-    $after = dues_years_price($running, $cadet_years);
-    $options[] = ['year' => $year, 'estimatedPrice' => $after - $before];
-}
+// cadetYears/paidYears let the front end mirror dues_years_price()'s own
+// $75/year-with-$275-bundle-discount rule (see admin/lib.php) to compute an
+// accurate running total for *any* combination the parent checks — a
+// per-checkbox price walked in list order was misleading (it dumped the
+// whole 4-year bundle discount onto whichever box happened to be last),
+// and wouldn't match what dues-pay-create-order.php actually charges if
+// that box were checked alone. This can't leak anything the payable list
+// doesn't already imply, since cadetYears - payable = paidYears anyway.
+$options = array_map(function ($year) { return ['year' => $year]; }, $payable);
 
 start_verification_session();
 $verify_token = bin2hex(random_bytes(24));
@@ -118,4 +116,6 @@ echo json_encode([
     'verifyToken' => $verify_token,
     'cadetName'   => trim(cadet_full_name($m)),
     'options'     => $options,
+    'cadetYears'  => $cadet_years,
+    'paidYears'   => $paid_years,
 ]);

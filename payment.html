@@ -651,8 +651,35 @@
     (function() {
       var verifyToken = '';
       var duesOptions = [];
+      var duesCadetYears = [];
+      var duesPaidYears = [];
       var sdkReady = false;
       var buttonsRendered = false;
+
+      // Mirrors dues_years_price() in admin/lib.php: $75/year, except a
+      // $275 bundle once all 4 of the cadet's undergrad years are paid.
+      // Kept in sync with that function's business rule (not its own
+      // source of truth — the server always recomputes and validates the
+      // real charge in dues-pay-create-order.php) so the total shown here
+      // matches whatever combination of years is actually checked, instead
+      // of a per-checkbox estimate that only held up in one specific order.
+      function duesPrice(paidYears, cadetYears) {
+        if (!cadetYears.length) {
+          return uniq(paidYears).length * 75;
+        }
+        var undergrad = cadetYears.slice(-4);
+        var hasFullUndergrad = undergrad.length === 4 && undergrad.every(function(y) { return paidYears.indexOf(y) !== -1; });
+        if (!hasFullUndergrad) {
+          return cadetYears.filter(function(y) { return paidYears.indexOf(y) !== -1; }).length * 75;
+        }
+        var price = 275;
+        var prepYear = cadetYears.length === 5 ? cadetYears[0] : null;
+        if (prepYear !== null && paidYears.indexOf(prepYear) !== -1) price += 75;
+        return price;
+      }
+      function uniq(arr) {
+        return arr.filter(function(v, i) { return arr.indexOf(v) === i; });
+      }
 
       // Load the PayPal JS SDK eagerly (client id is not a secret) so the
       // Smart Buttons are ready to render as soon as a cadet is found.
@@ -707,6 +734,8 @@
           if (result.success) {
             verifyToken = result.verifyToken;
             duesOptions = result.options || [];
+            duesCadetYears = result.cadetYears || [];
+            duesPaidYears = result.paidYears || [];
             document.getElementById('duesLookupSection').style.display = 'none';
             document.getElementById('duesPaySection').style.display = 'block';
             document.getElementById('duesPayHeading').textContent = 'Paying dues for ' + (result.cadetName || 'your cadet');
@@ -718,6 +747,12 @@
               var list = document.getElementById('duesYearsList');
               list.innerHTML = '';
               duesOptions.forEach(function(opt) {
+                // Per-box price if that single year were paid on its own —
+                // matches what dues-pay-create-order.php would actually
+                // charge for checking just this box; the accurate combined
+                // total (which reflects the 4-year bundle discount) is
+                // shown separately below, computed by updateDuesTotal().
+                var solo = duesPrice(duesPaidYears.concat([opt.year]), duesCadetYears) - duesPrice(duesPaidYears, duesCadetYears);
                 var label = document.createElement('label');
                 var cb = document.createElement('input');
                 cb.type = 'checkbox';
@@ -725,7 +760,7 @@
                 cb.className = 'dues-year-checkbox';
                 cb.addEventListener('change', updateDuesTotal);
                 label.appendChild(cb);
-                label.appendChild(document.createTextNode(' ' + opt.year + ' — $' + opt.estimatedPrice));
+                label.appendChild(document.createTextNode(' ' + opt.year + ' — $' + solo));
                 list.appendChild(label);
               });
               updateDuesTotal();
@@ -752,11 +787,10 @@
 
       function updateDuesTotal() {
         var years = selectedYears();
-        var total = duesOptions.filter(function(o) { return years.indexOf(o.year) !== -1; })
-          .reduce(function(sum, o) { return sum + o.estimatedPrice; }, 0);
+        var total = duesPrice(duesPaidYears.concat(years), duesCadetYears) - duesPrice(duesPaidYears, duesCadetYears);
         var totalEl = document.getElementById('duesYearsTotal');
         totalEl.textContent = years.length
-          ? 'Estimated total: $' + total + ' (multi-year discounts are applied automatically — the exact amount is confirmed by PayPal at checkout)'
+          ? 'Total: $' + total + ' (multi-year discounts are applied automatically)'
           : '';
       }
 
