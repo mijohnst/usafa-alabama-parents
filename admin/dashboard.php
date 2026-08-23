@@ -252,7 +252,7 @@ if (can_manage_finances()) {
         $sections['Finance'][] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end & budgets','href'=>'report.php','color'=>'#37474f'];
         $sections['Finance'][] = ['icon'=>'🗂️','label'=>'Receipts','sub'=>'Browse by event or vendor','href'=>'receipts-by.php','color'=>'#37474f'];
         $sections['Finance'][] = ['icon'=>'📥','label'=>'Income','sub'=>'Record & review income','href'=>'income.php','color'=>'#1b5e20'];
-        $sections['Finance'][] = ['icon'=>'🅿️','label'=>'PayPal Dues','sub'=>'Online checkout activity','href'=>'paypal-dues-orders.php','color'=>'#003594'];
+        $sections['Finance'][] = ['icon'=>'🅿️','label'=>'PayPal Activity','sub'=>'Online dues & donations','href'=>'paypal-dues-orders.php','color'=>'#003594'];
         $sections['Finance'][] = ['icon'=>'🏭','label'=>'Vendors','sub'=>'Spend by vendor + 1099','href'=>'vendor-summary.php','color'=>'#1565c0'];
         $sections['Finance'][] = ['icon'=>'📈','label'=>'Year Compare','sub'=>'Multi-year spending','href'=>'year-compare.php','color'=>'#6a1b9a'];
         if (!$sponsors_tile_added) {
