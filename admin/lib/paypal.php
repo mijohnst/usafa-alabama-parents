@@ -7,9 +7,8 @@
  * API hosts and completely separate credentials/money.
  */
 
-function paypal_api_base(?string $mode = null): string {
-    $mode = $mode ?? (defined('PAYPAL_MODE') ? PAYPAL_MODE : 'sandbox');
-    return $mode === 'live'
+function paypal_api_base(): string {
+    return (defined('PAYPAL_MODE') && PAYPAL_MODE === 'live')
         ? 'https://api-m.paypal.com'
         : 'https://api-m.sandbox.paypal.com';
 }
@@ -21,26 +20,19 @@ function paypal_api_base(?string $mode = null): string {
 // the specific reason is surfaced all the way to the on-screen flash message
 // rather than only to the PHP error log, since that log isn't reliably
 // reachable on every hosting setup.
-//
-// $clientId/$secret/$mode let a caller test credentials that aren't (yet)
-// the ones in config.php — e.g. the admin "test connection before I paste
-// these into config.php" tool. Omit all three to use the configured
-// PAYPAL_CLIENT_ID/PAYPAL_SECRET/PAYPAL_MODE as before.
-function paypal_get_access_token(?string $clientId = null, ?string $secret = null, ?string $mode = null): array {
-    $clientId = $clientId ?? (defined('PAYPAL_CLIENT_ID') ? PAYPAL_CLIENT_ID : null);
-    $secret   = $secret   ?? (defined('PAYPAL_SECRET') ? PAYPAL_SECRET : null);
-    if (!$clientId || !$secret) {
+function paypal_get_access_token(): array {
+    if (!defined('PAYPAL_CLIENT_ID') || !defined('PAYPAL_SECRET')) {
         return ['token' => null, 'error' => 'PAYPAL_CLIENT_ID/PAYPAL_SECRET are not defined in admin/config.php.'];
     }
     if (!function_exists('curl_init')) {
         return ['token' => null, 'error' => 'The PHP curl extension is not available on this server.'];
     }
-    $ch = curl_init(paypal_api_base($mode) . '/v1/oauth2/token');
+    $ch = curl_init(paypal_api_base() . '/v1/oauth2/token');
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => 'grant_type=client_credentials',
-        CURLOPT_USERPWD        => $clientId . ':' . $secret,
+        CURLOPT_USERPWD        => PAYPAL_CLIENT_ID . ':' . PAYPAL_SECRET,
         CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Accept-Language: en_US'],
         CURLOPT_TIMEOUT        => 15,
     ]);
@@ -55,14 +47,13 @@ function paypal_get_access_token(?string $clientId = null, ?string $secret = nul
     $data = json_decode($resp, true);
     if ($code !== 200 || empty($data['access_token'])) {
         $reason = $data['error_description'] ?? $data['error'] ?? $resp;
-        return ['token' => null, 'error' => "PayPal auth rejected (HTTP $code, mode " . paypal_mode_label($mode) . "): $reason"];
+        return ['token' => null, 'error' => "PayPal auth rejected (HTTP $code, mode " . paypal_mode_label() . "): $reason"];
     }
     return ['token' => $data['access_token'], 'error' => null];
 }
 
-function paypal_mode_label(?string $mode = null): string {
-    $mode = $mode ?? (defined('PAYPAL_MODE') ? PAYPAL_MODE : 'sandbox');
-    return $mode === 'live' ? 'live' : 'sandbox';
+function paypal_mode_label(): string {
+    return (defined('PAYPAL_MODE') && PAYPAL_MODE === 'live') ? 'live' : 'sandbox';
 }
 
 // Sends a single payout to one PayPal email address. Returns
