@@ -1049,3 +1049,46 @@ function send_portal_invite(string $to, string $name, string $token): bool {
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
     return send_notification($to, $subject, $body);
 }
+
+// ── Donation receipt to the donor, sent right after PayPal capture ───────
+function send_donation_receipt(string $donorEmail, string $donorName, float $amount, string $captureId): bool {
+    $amt  = '$' . number_format($amount, 2);
+    $date = date('F j, Y');
+    $name = $donorName !== '' ? $donorName : 'there';
+
+    $subject = "Thank You for Your Donation — $amt";
+    $body    = CLUB_NAME . "\n"
+             . "Donation Receipt\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "Hi $name,\n\n"
+             . "Thank you for your generous donation of $amt to " . CLUB_NAME . "! "
+             . "Your support directly helps our cadets and families throughout their Academy journey.\n\n"
+             . "Donation Details:\n"
+             . "  Date:          $date\n"
+             . "  Amount:        $amt\n"
+             . "  PayPal Ref:    $captureId\n\n"
+             . "If you have any questions, please contact our treasurer at treasurer@alabamafalcons.org.\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+    return send_notification($donorEmail, $subject, $body);
+}
+
+// ── Notify the treasurer of a completed online donation ──────────────────
+function notify_treasurer_of_donation(string $donorName, string $donorEmail, float $amount, string $orderId, string $captureId): bool {
+    $amt  = '$' . number_format($amount, 2);
+    $date = date('F j, Y g:ia');
+
+    $subject = "New Online Donation Received — $amt";
+    $body    = CLUB_NAME . "\n"
+             . "New Online Donation\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "A donation was just completed via PayPal on payment.html.\n\n"
+             . "Donor Name:    " . ($donorName !== '' ? $donorName : '(not provided)') . "\n"
+             . "Donor Email:   $donorEmail\n"
+             . "Amount:        $amt\n"
+             . "Date:          $date\n"
+             . "PayPal Order:   $orderId\n"
+             . "PayPal Capture: $captureId\n\n"
+             . "This has been logged in the Income Ledger automatically (source: Online Donation).\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
+    return send_notification('treasurer@alabamafalcons.org', $subject, $body);
+}
