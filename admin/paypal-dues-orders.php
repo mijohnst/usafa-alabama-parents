@@ -11,6 +11,17 @@ require_finance();
 if (!is_treasurer() && !is_super_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
+// Clears this diagnostic log only — never touches members.membership_paid_years
+// or income_entries, so it can't undo a real payment or dues status, only
+// the PayPal order/capture ID breadcrumb trail for looking one up later.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'clear_all') {
+    csrf_verify();
+    $pdo->exec('DELETE FROM paypal_dues_orders');
+    flash('success', 'PayPal Dues Orders log cleared.');
+    header('Location: paypal-dues-orders.php');
+    exit;
+}
+
 // Collapses the raw internal status into what a treasurer actually wants
 // to know: did this succeed, fail, or is it still in flight. A 'created'
 // row is only genuinely "in progress" while its checkout session could
@@ -62,8 +73,25 @@ echo show_flash();
   <h1>PayPal Dues Orders</h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <a href="income.php" class="btn btn-secondary">← Income Ledger</a>
+    <?php if (!empty($orders)): ?>
+    <form method="POST" onsubmit="return pdoConfirmClearAll(<?= count($orders) ?>)" style="margin:0">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="clear_all">
+      <button type="submit" class="btn btn-danger">Clear All Records</button>
+    </form>
+    <?php endif; ?>
   </div>
 </div>
+<p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Clearing only removes this diagnostic log — it never changes a cadet's paid status or the Income Ledger.</p>
+
+<script>
+function pdoConfirmClearAll(count) {
+  if (!confirm('Permanently delete all ' + count + ' PayPal Dues Order record(s) shown below? This cannot be undone.')) return false;
+  var typed = prompt('Type DELETE (all caps) to confirm.');
+  if (typed !== 'DELETE') { alert('Not confirmed — nothing was deleted.'); return false; }
+  return true;
+}
+</script>
 
 <?php if (empty($orders)): ?>
   <p style="color:#9aa5b4">No online dues checkouts yet.</p>
