@@ -1,12 +1,17 @@
 <?php
 /**
- * Read-only diagnostic/reconciliation view of everything that's come
- * through PayPal on the public site — dues checkouts (paypal_dues_orders)
- * and donations (paypal_donations) merged into one list — so a treasurer
- * can see every online PayPal attempt and its outcome without digging
- * through the PayPal dashboard. No edit actions here; corrections happen
- * through the normal dues-editing UI (edit-dues.php) or the Income Ledger,
- * same as any other payment discrepancy.
+ * Read-only diagnostic/reconciliation view of everything that's touched
+ * PayPal — money coming in (dues checkouts, donations) and money going out
+ * (reimbursement payouts) — merged into one list so a treasurer can see
+ * every PayPal transaction and its outcome without digging through the
+ * PayPal dashboard. No edit actions here; corrections happen through the
+ * normal dues-editing UI (edit-dues.php), the Purchases page (for payouts),
+ * or the Income Ledger, same as any other payment discrepancy.
+ *
+ * Payout rows are read-only reflections of the `purchases` table — that's
+ * the real reimbursement record, not a diagnostic log, so "Clear All
+ * Records" below only ever clears paypal_dues_orders/paypal_donations and
+ * never touches purchases.
  */
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/lib/paypal.php';
@@ -51,6 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_
 // reasonable stand-in for "the donor closed the tab." Donations skip the
 // dues-only 'applied'/'processing' distinction — a donation is done the
 // moment PayPal captures it, there's no separate apply-to-member step.
+// Payouts use PayPal's own Payouts API status vocabulary (SUCCESS/PENDING/
+// etc., set by paypal_send_payout()/paypal_check_payout_status() in
+// admin/lib/paypal.php) plus this app's own SENDING/NEEDS_MANUAL_CHECK —
+// entirely different strings from the dues/donation statuses above, so
+// they get their own branch rather than trying to unify the vocabularies.
 // Nullable params on purpose: a single row with an unexpected null status
 // or timestamp must never fatal the whole list off the page — worst case
 // it just falls through to the generic label below.
@@ -59,6 +69,11 @@ function pdo_display_status(?string $status, ?string $created_at, string $type):
     if ($type === 'donation') {
         if ($status === 'captured') return ['Paid', '#1b5e20'];
         if ($status === 'amount_mismatch') return ['Needs Review', '#c62828'];
+    } elseif ($type === 'payout') {
+        if ($status === 'SUCCESS') return ['Paid', '#1b5e20'];
+        if (in_array($status, ['PENDING', 'SENDING', 'UNCLAIMED'], true)) return ['Pending', '#f57f17'];
+        if (in_array($status, ['FAILED', 'DENIED', 'BLOCKED', 'RETURNED', 'REFUNDED', 'ONHOLD', 'NEEDS_MANUAL_CHECK'], true)) return ['Needs Review', '#c62828'];
+        return [$status !== '' ? ucfirst(strtolower(str_replace('_', ' ', $status))) : 'Unknown', '#5a6a7a'];
     } else {
         if (in_array($status, ['applied', 'already_captured'], true)) return ['Paid', '#1b5e20'];
         if (in_array($status, ['amount_mismatch', 'needs_manual_review', 'capture_ok_apply_failed'], true)) return ['Needs Review', '#c62828'];
@@ -108,7 +123,37 @@ foreach ($donation_stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
     ];
 }
 
-usort($rows, function($a, $b) { return strtotime($b['created_at']) <=> strtotime($a['created_at']); });
+// "Clear All Records" below only deletes the two diagnostic-log tables
+// above — everything counted so far is fair game for that. Payouts,
+// added next, are read-only reflections of the real purchases/reimbursement
+// record and must never be included in that count or that delete.
+$clearable_count = count($rows);
+
+// Money going OUT — reimbursements paid via PayPal (admin/purchase-action.php's
+// "Send via PayPal"). Only purchases where a payout was actually attempted;
+// everything else about a purchase (approval, receipts, etc.) belongs on
+// the Purchases page, not here.
+$payout_stmt = $pdo->query(
+    "SELECT p.vendor, p.amount_total, p.paypal_payout_batch_id, p.paypal_payout_status, p.paypal_payout_sent_at, u.name AS submitted_by_name
+     FROM purchases p
+     LEFT JOIN users u ON u.id = p.submitted_by
+     WHERE p.paypal_payout_batch_id IS NOT NULL AND p.paypal_payout_batch_id <> ''"
+);
+foreach ($payout_stmt->fetchAll(PDO::FETCH_ASSOC) as $po) {
+    $rows[] = [
+        'type'        => 'payout',
+        'created_at'  => $po['paypal_payout_sent_at'],
+        'who'         => $po['submitted_by_name'] ?: 'Unknown',
+        'detail'      => $po['vendor'],
+        'amount'      => $po['amount_total'],
+        'status'      => $po['paypal_payout_status'],
+        'order_id'    => $po['paypal_payout_batch_id'],
+        'capture_id'  => null,
+        'note'        => '',
+    ];
+}
+
+usort($rows, function($a, $b) { return strtotime($b['created_at'] ?? '') <=> strtotime($a['created_at'] ?? ''); });
 
 admin_header('PayPal Activity');
 echo show_flash();
@@ -131,8 +176,8 @@ echo show_flash();
       <input type="hidden" name="action" value="test_connection">
       <button type="submit" class="btn btn-secondary">Test PayPal Connection (<?= h(paypal_mode_label()) ?>)</button>
     </form>
-    <?php if (!empty($rows)): ?>
-    <form method="POST" onsubmit="return pdoConfirmClearAll(<?= count($rows) ?>)" style="margin:0">
+    <?php if ($clearable_count > 0): ?>
+    <form method="POST" onsubmit="return pdoConfirmClearAll(<?= $clearable_count ?>)" style="margin:0">
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="clear_all">
       <button type="submit" class="btn btn-danger">Clear All Records</button>
@@ -140,11 +185,11 @@ echo show_flash();
     <?php endif; ?>
   </div>
 </div>
-<p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Dues checkouts and donations made online via PayPal. Clearing only removes this diagnostic log — it never changes a cadet's paid status or the Income Ledger.</p>
+<p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Everything that's touched PayPal: dues checkouts, donations, and reimbursement payouts. Clear All only removes the dues/donation diagnostic log below — it never changes a cadet's paid status, the Income Ledger, or any purchase/payout record.</p>
 
 <script>
 function pdoConfirmClearAll(count) {
-  if (!confirm('Permanently delete all ' + count + ' PayPal record(s) shown below (dues checkouts and donations)? This cannot be undone.')) return false;
+  if (!confirm('Permanently delete all ' + count + ' dues/donation PayPal record(s) (payouts are not affected)? This cannot be undone.')) return false;
   var typed = prompt('Type DELETE (all caps) to confirm.');
   if (typed !== 'DELETE') { alert('Not confirmed — nothing was deleted.'); return false; }
   return true;
@@ -169,13 +214,15 @@ function pdoConfirmClearAll(count) {
     </tr>
   </thead>
   <tbody>
-  <?php foreach ($rows as $r):
+  <?php
+  $TYPE_LABELS = ['dues' => 'Dues', 'donation' => 'Donation', 'payout' => 'Payout'];
+  $TYPE_COLORS = ['dues' => '#1565c0', 'donation' => '#e65100', 'payout' => '#00695c'];
+  foreach ($rows as $r):
     list($status_label, $sc) = pdo_display_status($r['status'], $r['created_at'], $r['type']);
-    $is_dues = $r['type'] === 'dues';
-    $type_color = $is_dues ? '#1565c0' : '#e65100'; ?>
+    $type_color = $TYPE_COLORS[$r['type']] ?? '#5a6a7a'; ?>
   <tr>
-    <td style="white-space:nowrap"><?= date('M j, Y g:ia', strtotime($r['created_at'])) ?></td>
-    <td><span class="type-pill" style="background:<?= $type_color ?>22;color:<?= $type_color ?>"><?= $is_dues ? 'Dues' : 'Donation' ?></span></td>
+    <td style="white-space:nowrap"><?= $r['created_at'] ? date('M j, Y g:ia', strtotime($r['created_at'])) : '—' ?></td>
+    <td><span class="type-pill" style="background:<?= $type_color ?>22;color:<?= $type_color ?>"><?= h($TYPE_LABELS[$r['type']] ?? $r['type']) ?></span></td>
     <td style="font-weight:600"><?= h($r['who']) ?></td>
     <td style="color:#5a6a7a"><?= h($r['detail']) ?></td>
     <td style="text-align:right;font-weight:700;color:#1b5e20;white-space:nowrap">$<?= number_format($r['amount'],2) ?></td>
