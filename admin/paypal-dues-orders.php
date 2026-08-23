@@ -38,6 +38,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_
     exit;
 }
 
+// Same check, but against a Client ID/Secret typed in on the spot rather
+// than what's saved in config.php — lets a treasurer sanity-check new live
+// credentials before pasting them into config.php. Nothing typed here is
+// ever written to the database, session, or log — used once for this one
+// cURL call and then discarded when the request ends.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_manual') {
+    csrf_verify();
+    $manual_client_id = trim($_POST['manual_client_id'] ?? '');
+    $manual_secret     = trim($_POST['manual_secret'] ?? '');
+    if ($manual_client_id === '' || $manual_secret === '') {
+        flash('error', 'Enter both a Client ID and Secret to test.');
+    } else {
+        $auth = paypal_get_access_token($manual_client_id, $manual_secret, 'live');
+        if ($auth['token']) {
+            flash('success', 'These credentials work (live mode). Safe to paste into config.php.');
+        } else {
+            flash('error', $auth['error']);
+        }
+    }
+    header('Location: paypal-dues-orders.php');
+    exit;
+}
+
 // Collapses the raw internal status into what a treasurer actually wants
 // to know: did this succeed, fail, or is it still in flight. A 'created'
 // row is only genuinely "in progress" while its checkout session could
@@ -104,6 +127,31 @@ echo show_flash();
   </div>
 </div>
 <p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Clearing only removes this diagnostic log — it never changes a cadet's paid status or the Income Ledger.</p>
+
+<div class="card">
+  <h2>Test Different Live Credentials</h2>
+  <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1rem">
+    Sanity-check a Client ID/Secret against PayPal's <strong>live</strong> API before pasting them into config.php.
+    Nothing entered here is saved anywhere — it's used once for this test and discarded.
+  </p>
+  <form method="POST">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="test_manual">
+    <div class="form-row col-3" style="align-items:end">
+      <div class="form-group">
+        <label for="manual_client_id">Client ID</label>
+        <input type="text" id="manual_client_id" name="manual_client_id" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="form-group">
+        <label for="manual_secret">Secret</label>
+        <input type="password" id="manual_secret" name="manual_secret" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="form-group" style="margin-bottom:.9rem">
+        <button type="submit" class="btn btn-primary">Test These Credentials (live)</button>
+      </div>
+    </div>
+  </form>
+</div>
 
 <script>
 function pdoConfirmClearAll(count) {
