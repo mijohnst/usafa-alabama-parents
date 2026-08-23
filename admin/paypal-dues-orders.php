@@ -7,6 +7,7 @@
  * Income Ledger, same as any other payment discrepancy.
  */
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/lib/paypal.php';
 require_finance();
 if (!is_treasurer() && !is_super_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
@@ -18,6 +19,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'clear
     csrf_verify();
     $pdo->exec('DELETE FROM paypal_dues_orders');
     flash('success', 'PayPal Dues Orders log cleared.');
+    header('Location: paypal-dues-orders.php');
+    exit;
+}
+
+// Confirms the PAYPAL_CLIENT_ID/PAYPAL_SECRET in config.php actually work by
+// fetching a real OAuth token, without ever surfacing the secret or the
+// token itself anywhere in the response or on-screen.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_connection') {
+    csrf_verify();
+    $auth = paypal_get_access_token();
+    if ($auth['token']) {
+        flash('success', 'PayPal connection succeeded (' . paypal_mode_label() . ' mode). Credentials are valid.');
+    } else {
+        flash('error', $auth['error']);
+    }
     header('Location: paypal-dues-orders.php');
     exit;
 }
@@ -73,6 +89,11 @@ echo show_flash();
   <h1>PayPal Dues Orders</h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <a href="income.php" class="btn btn-secondary">← Income Ledger</a>
+    <form method="POST" style="margin:0">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="test_connection">
+      <button type="submit" class="btn btn-secondary">Test PayPal Connection (<?= h(paypal_mode_label()) ?>)</button>
+    </form>
     <?php if (!empty($orders)): ?>
     <form method="POST" onsubmit="return pdoConfirmClearAll(<?= count($orders) ?>)" style="margin:0">
       <?= csrf_field() ?>
