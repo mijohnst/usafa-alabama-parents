@@ -117,7 +117,9 @@ foreach ($dues_stmt->fetchAll(PDO::FETCH_ASSOC) as $o) {
 }
 
 $donation_stmt = $pdo->query("SELECT * FROM paypal_donations");
-foreach ($donation_stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
+$donation_rows_raw = $donation_stmt->fetchAll(PDO::FETCH_ASSOC);
+$RAW_DONATION_DEBUG = $donation_rows_raw[0] ?? null;
+foreach ($donation_rows_raw as $d) {
     $rows[] = [
         'type'        => 'donation',
         'created_at'  => $d['created_at'],
@@ -136,6 +138,7 @@ usort($rows, function($a, $b) { return strtotime($b['created_at']) <=> strtotime
 admin_header('PayPal Activity');
 echo show_flash();
 // TEMPORARY DIAGNOSTIC — remove after tracking down the "Unknown" status bug.
+echo '<pre style="background:#111;color:#0f0;padding:1rem;border-radius:6px;font-size:.75rem;overflow-x:auto">RAW donation row straight from PDO fetch (before any of our code touches it):' . "\n" . h(print_r($RAW_DONATION_DEBUG, true)) . "\n\nKeys: " . h(implode(', ', array_keys($RAW_DONATION_DEBUG ?? []))) . '</pre>';
 echo '<pre style="background:#111;color:#0f0;padding:1rem;border-radius:6px;font-size:.75rem;overflow-x:auto">' . h(print_r($rows, true)) . '</pre>';
 ?>
 <style>
