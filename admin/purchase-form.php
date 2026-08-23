@@ -465,10 +465,19 @@ if (!empty($real_errors)): ?>
       ?>
       <div class="form-group">
         <label>Payment Method *</label>
+        <?php
+          // PayPal listed first (and called out as preferred) since it's the
+          // fastest for the treasurer to pay out; PAYMENT_METHODS itself stays
+          // in its original order for the other selects that reuse it.
+          $pm_display_order = array_merge(['', 'PayPal'], array_diff(PAYMENT_METHODS, ['', 'PayPal']));
+        ?>
         <select name="payment_method" id="pm_select" onchange="updatePmFields()" required>
-          <?php foreach (PAYMENT_METHODS as $pm): ?>
+          <?php foreach ($pm_display_order as $pm): ?>
             <option value="<?= h($pm) ?>" <?= $pm_selected===$pm?'selected':''?>>
-              <?= $pm === '' ? '— select —' : h($pm) ?>
+              <?php if ($pm === ''): ?>— select —
+              <?php elseif ($pm === 'PayPal'): ?>PayPal (Preferred method)
+              <?php else: ?><?= h($pm) ?>
+              <?php endif; ?>
             </option>
           <?php endforeach; ?>
         </select>
