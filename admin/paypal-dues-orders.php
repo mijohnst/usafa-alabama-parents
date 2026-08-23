@@ -135,6 +135,8 @@ usort($rows, function($a, $b) { return strtotime($b['created_at']) <=> strtotime
 
 admin_header('PayPal Activity');
 echo show_flash();
+// TEMPORARY DIAGNOSTIC — remove after tracking down the "Unknown" status bug.
+echo '<pre style="background:#111;color:#0f0;padding:1rem;border-radius:6px;font-size:.75rem;overflow-x:auto">' . h(print_r($rows, true)) . '</pre>';
 ?>
 <style>
 .pdo-table td,.pdo-table th{padding:.55rem .9rem}
