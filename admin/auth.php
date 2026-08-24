@@ -448,6 +448,23 @@ const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];
 const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
 const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Birthday / Gift', 'General Operations', 'Other'];
 const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'submitted' => 'Submitted', 'paid' => 'Paid'];
+// Shared between income.php (the ledger) and manual-receipts.php (the
+// receipt-sending tool) so their type/color/method lists can't drift apart.
+const INCOME_SOURCE_TYPES = [
+    'dues'        => 'Dues',
+    'sponsorship' => 'Sponsorship',
+    'event_fee'   => 'Event Fee',
+    'donation'    => 'Donation',
+    'other'       => 'Other',
+];
+const INCOME_TYPE_COLORS = [
+    'dues'        => '#1565c0',
+    'sponsorship' => '#6a1b9a',
+    'event_fee'   => '#1b5e20',
+    'donation'    => '#e65100',
+    'other'       => '#5a6a7a',
+];
+const INCOME_PAYMENT_METHODS = ['Check','Cash','Venmo','Zelle','PayPal','Bank Transfer','Other'];
 // Sequence position of each purchase status — used both to render the
 // progress stepper and to stop a Treasurer's raw Status-field edit from
 // skipping the workflow forward (see purchase-form.php).
