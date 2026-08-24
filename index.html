@@ -188,6 +188,20 @@
     #form-status.error{background:rgba(180,30,30,.1);color:#9a1a1a;border:1px solid rgba(180,30,30,.3);display:block;}
     @media(max-width:768px){.contact-grid{grid-template-columns:1fr;gap:2rem;}.form-row{grid-template-columns:1fr;}}
 
+    /* OPEN VOLUNTEER OPPORTUNITIES — specific dated needs, claimable without a portal login */
+    .vol-opp-card{background:var(--light);border-radius:8px;padding:1.25rem 1.5rem;border-left:4px solid var(--navy);}
+    .vol-opp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;}
+    .vol-opp-head h4{color:var(--navy);font-family:var(--font-display);font-size:1.05rem;margin:0;}
+    .vol-opp-spots{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:var(--navy);padding:.25rem .7rem;border-radius:99px;white-space:nowrap;}
+    .vol-opp-spots.full{background:#9aa5b4;}
+    .vol-opp-meta{color:var(--gray);font-size:.85rem;margin:.4rem 0 0;}
+    .vol-opp-desc{color:var(--gray);font-size:.88rem;margin:.6rem 0 0;line-height:1.5;}
+    .vol-opp-actions{margin-top:1rem;}
+    .vol-opp-claim-form{margin-top:1rem;padding-top:1rem;border-top:1px solid #d0d8e4;}
+    .vol-opp-status{display:none;margin-top:.75rem;padding:.75rem 1rem;border-radius:4px;font-size:.85rem;font-weight:600;}
+    .vol-opp-status.success{background:rgba(50,120,50,.1);color:#1a6a1a;border:1px solid rgba(50,120,50,.3);display:block;}
+    .vol-opp-status.error{background:rgba(180,30,30,.1);color:#9a1a1a;border:1px solid rgba(180,30,30,.3);display:block;}
+
     /* PARENT SPOTLIGHT / LATEST SPONSOR — each half hidden until its feed supplies data */
     #spotlight{background:var(--light);display:none;}
     .spotlight-split{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;position:relative;}
@@ -497,6 +511,13 @@
     <p class="section-label">Get Involved</p>
     <h2 class="section-title">Volunteer with Us</h2>
     <div class="divider"></div>
+
+    <div id="volunteer-opportunities-wrap" style="display:none;margin-bottom:2.75rem">
+      <h3 style="color:var(--navy);font-family:var(--font-display);font-size:1.3rem;margin-bottom:.5rem">Open Volunteer Spots</h3>
+      <p style="color:var(--gray);margin-bottom:1.25rem">Sign up for a specific need below — no club membership or portal account required.</p>
+      <div id="volunteer-opportunities-list" style="display:grid;gap:1rem"></div>
+    </div>
+
     <div class="contact-grid">
       <div class="contact-info">
         <h3>Support our cadets &amp; families</h3>
@@ -676,6 +697,105 @@ if (volForm) {
     }
   });
 }
+
+// ── Open Volunteer Opportunities (specific dated needs, no login required) ─
+(function() {
+  var wrap = document.getElementById('volunteer-opportunities-wrap');
+  var list = document.getElementById('volunteer-opportunities-list');
+  if (!wrap || !list) return;
+
+  fetch('volunteer-opportunities-public.php').then(function(r) { return r.json(); }).then(function(d) {
+    if (!d.success || !d.opportunities || !d.opportunities.length) return;
+    wrap.style.display = 'block';
+    list.innerHTML = d.opportunities.map(renderOppCard).join('');
+    list.querySelectorAll('.vol-opp-claim-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var form = btn.closest('.vol-opp-card').querySelector('.vol-opp-claim-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      });
+    });
+    list.querySelectorAll('.vol-opp-submit-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { submitOppClaim(btn); });
+    });
+  }).catch(function() { /* fail silently — the general interest form below still works */ });
+
+  function renderOppCard(o) {
+    var full = o.filled >= o.spots_needed;
+    var meta = [o.event_date ? formatOppDate(o.event_date) : '', o.location].filter(Boolean).join(' · ');
+    return '<div class="vol-opp-card" data-id="' + o.id + '">'
+      + '<div class="vol-opp-head"><h4>' + escHtml(o.title) + '</h4>'
+      + '<span class="vol-opp-spots' + (full ? ' full' : '') + '">' + (full ? 'Full' : (o.filled + ' of ' + o.spots_needed + ' filled')) + '</span></div>'
+      + (meta ? '<p class="vol-opp-meta">' + escHtml(meta) + '</p>' : '')
+      + (o.description ? '<p class="vol-opp-desc">' + escHtml(o.description) + '</p>' : '')
+      + (full ? '' :
+          '<div class="vol-opp-actions"><button type="button" class="btn btn-dark vol-opp-claim-btn">Claim a Spot</button></div>'
+          + '<div class="vol-opp-claim-form" style="display:none">'
+          + '<div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true"><label>Leave this field empty</label><input type="text" class="vol-opp-website" tabindex="-1" autocomplete="off"></div>'
+          + '<div class="form-row"><div class="form-group"><label>Your Name *</label><input type="text" class="vol-opp-name"></div>'
+          + '<div class="form-group"><label>Email *</label><input type="email" class="vol-opp-email"></div></div>'
+          + '<button type="button" class="btn btn-dark vol-opp-submit-btn">Confirm Sign-Up</button>'
+          + '<div class="vol-opp-status"></div></div>'
+        )
+      + '</div>';
+  }
+
+  // event_date is a plain "YYYY-MM-DD" string — build the Date from parts
+  // rather than passing the string straight to `new Date()`, which parses
+  // it as UTC midnight and can display a day early in US time zones.
+  function formatOppDate(iso) {
+    var parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  function submitOppClaim(btn) {
+    var card     = btn.closest('.vol-opp-card');
+    var form     = btn.closest('.vol-opp-claim-form');
+    var statusEl = form.querySelector('.vol-opp-status');
+    var name     = form.querySelector('.vol-opp-name').value.trim();
+    var email    = form.querySelector('.vol-opp-email').value.trim();
+    var website  = form.querySelector('.vol-opp-website').value;
+
+    statusEl.className = 'vol-opp-status'; statusEl.style.display = 'none';
+    if (!name || !email) {
+      statusEl.textContent = 'Please enter your name and email.';
+      statusEl.className = 'vol-opp-status error';
+      return;
+    }
+
+    var originalText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Submitting…';
+
+    fetch('volunteer-opportunity-claim.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ opportunity_id: card.getAttribute('data-id'), name: name, email: email, website: website })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.success) {
+        form.innerHTML = '<p class="vol-opp-status success" style="display:block">' + escHtml(data.message || "You're signed up — thank you!") + '</p>';
+        var spotsEl  = card.querySelector('.vol-opp-spots');
+        var claimBtn = card.querySelector('.vol-opp-claim-btn');
+        var m = spotsEl ? spotsEl.textContent.match(/^(\d+) of (\d+)/) : null;
+        if (spotsEl && m) {
+          var newFilled = parseInt(m[1], 10) + 1;
+          var total     = parseInt(m[2], 10);
+          spotsEl.textContent = newFilled >= total ? 'Full' : (newFilled + ' of ' + total + ' filled');
+          if (newFilled >= total) spotsEl.classList.add('full');
+        }
+        if (claimBtn) claimBtn.style.display = 'none';
+      } else {
+        statusEl.textContent = data.error || 'Something went wrong. Please try again or email info@alabamafalcons.org.';
+        statusEl.className = 'vol-opp-status error';
+        btn.disabled = false; btn.textContent = originalText;
+      }
+    }).catch(function() {
+      statusEl.textContent = 'Something went wrong. Please try again or email info@alabamafalcons.org.';
+      statusEl.className = 'vol-opp-status error';
+      btn.disabled = false; btn.textContent = originalText;
+    });
+  }
+})();
 
 function fetchWithTimeout(url, ms) {
   var ctrl = new AbortController();
