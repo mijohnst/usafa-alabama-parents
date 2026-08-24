@@ -58,6 +58,23 @@ $budgets = $pdo->query(
      FROM event_budgets b ORDER BY b.event"
 )->fetchAll();
 
+// Categories with no CURRENT-year budget cap get a synthetic, uncapped row
+// (id null marks it as such below) so spend is still visible without
+// forcing a treasurer to set a budget just to see where money's going. A
+// category whose only budget row is for some other/past fiscal_year still
+// counts as uncapped for this year. Real event_budgets rows keep their
+// exact behavior/columns above untouched.
+$capped_events = array_unique(array_column(array_filter($budgets, function($b) use ($current_year) {
+    return $b['fiscal_year'] === '' || $b['fiscal_year'] == $current_year;
+}), 'event'));
+$spend_stmt = $pdo->prepare('SELECT COALESCE(SUM(amount_total),0) FROM purchases WHERE event = ? AND YEAR(purchase_date) = YEAR(NOW())');
+foreach (PURCHASE_EVENTS as $e) {
+    if ($e === '' || in_array($e, $capped_events, true)) continue;
+    $spend_stmt->execute([$e]);
+    $budgets[] = ['id' => null, 'event' => $e, 'fiscal_year' => '', 'budget' => 0, 'notes' => '', 'spent' => (float)$spend_stmt->fetchColumn()];
+}
+usort($budgets, function($a, $b) { return strcmp($a['event'], $b['event']); });
+
 admin_header('Event Budgets');
 echo show_flash();
 ?>
@@ -69,6 +86,7 @@ echo show_flash();
     <a href="purchases.php" class="btn btn-secondary">← Finance</a>
   </div>
 </div>
+<p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Every purchase category is listed with what's been spent this year, even before you set a budget cap for it.</p>
 
 <?php if (!empty($errors)): ?>
   <div class="alert alert-error"><?= implode('<br>', array_map('htmlspecialchars',$errors)) ?></div>
@@ -85,8 +103,9 @@ echo show_flash();
       <div class="form-group">
         <label>Event *</label>
         <select name="event">
+          <?php $prefill_event = $edit['event'] ?? ($_GET['event'] ?? ''); ?>
           <?php foreach (PURCHASE_EVENTS as $e): if (!$e) continue; ?>
-            <option value="<?= h($e) ?>" <?= ($edit['event']??'')===$e?'selected':''?>><?= h($e) ?></option>
+            <option value="<?= h($e) ?>" <?= $prefill_event===$e?'selected':''?>><?= h($e) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -130,24 +149,32 @@ echo show_flash();
     <tr><td colspan="8" style="text-align:center;padding:2rem;color:#5a6a7a">No budgets set. Add one above.</td></tr>
   <?php endif; ?>
   <?php foreach ($budgets as $b):
+    $uncapped = $b['id'] === null;
     $pct  = $b['budget'] > 0 ? min(100, round($b['spent']/$b['budget']*100)) : 0;
     $rem  = $b['budget'] - $b['spent'];
-    $over = $rem < 0;
+    $over = !$uncapped && $rem < 0;
   ?>
   <tr>
     <td><strong><?= h($b['event']) ?></strong></td>
     <td style="color:#5a6a7a"><?= h($b['fiscal_year'] ?: 'Current') ?></td>
-    <td style="text-align:right">$<?= number_format($b['budget'],2) ?></td>
+    <td style="text-align:right"><?= $uncapped ? '<span style="color:#9aa5b4">— no cap set</span>' : '$' . number_format($b['budget'],2) ?></td>
     <td style="text-align:right">$<?= number_format($b['spent'],2) ?></td>
-    <td style="text-align:right;font-weight:700;color:<?= $over?'#A6192E':'#1b5e20' ?>"><?= $over?'-':'' ?>$<?= number_format(abs($rem),2) ?></td>
+    <td style="text-align:right;font-weight:700;color:<?= $over?'#A6192E':'#1b5e20' ?>"><?= $uncapped ? '<span style="color:#9aa5b4;font-weight:400">—</span>' : ($over?'-':'') . '$' . number_format(abs($rem),2) ?></td>
     <td style="min-width:120px">
-      <div style="background:#e1e5eb;border-radius:99px;height:8px;overflow:hidden">
-        <div style="height:100%;width:<?= $pct ?>%;background:<?= $pct>=100?'#A6192E':($pct>=75?'#f57c00':'#1b5e20') ?>;border-radius:99px"></div>
-      </div>
-      <div style="font-size:.7rem;color:#9aa5b4;margin-top:.2rem"><?= $pct ?>%</div>
+      <?php if ($uncapped): ?>
+        <span style="font-size:.78rem;color:#9aa5b4">No budget set</span>
+      <?php else: ?>
+        <div style="background:#e1e5eb;border-radius:99px;height:8px;overflow:hidden">
+          <div style="height:100%;width:<?= $pct ?>%;background:<?= $pct>=100?'#A6192E':($pct>=75?'#f57c00':'#1b5e20') ?>;border-radius:99px"></div>
+        </div>
+        <div style="font-size:.7rem;color:#9aa5b4;margin-top:.2rem"><?= $pct ?>%</div>
+      <?php endif; ?>
     </td>
     <td style="font-size:.78rem;color:#5a6a7a;max-width:180px"><?= h($b['notes']) ?></td>
     <td class="actions">
+      <?php if ($uncapped): ?>
+      <a href="budgets.php?edit=new&event=<?= urlencode($b['event']) ?>" class="btn btn-secondary btn-sm">+ Set Budget</a>
+      <?php else: ?>
       <div class="btn-group">
         <a href="budgets.php?edit=<?= $b['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>
         <form method="POST" onsubmit="return confirm('Delete this budget?')" style="margin:0">
@@ -157,6 +184,7 @@ echo show_flash();
           <button type="submit" class="btn btn-danger btn-sm">Delete</button>
         </form>
       </div>
+      <?php endif; ?>
     </td>
   </tr>
   <?php endforeach; ?>
