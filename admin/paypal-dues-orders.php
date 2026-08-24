@@ -31,6 +31,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'clear
     exit;
 }
 
+// Deletes a single dues or donation diagnostic-log row — same invariant as
+// Clear All above (never touches membership_paid_years or income_entries).
+// Payout rows aren't deletable here on purpose: they reflect a real
+// purchases/reimbursement record, not a diagnostic log, so removing one
+// belongs on the Purchases page where the purchase itself lives.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_one') {
+    csrf_verify();
+    $del_type = $_POST['type'] ?? '';
+    $del_id   = (int)($_POST['id'] ?? 0);
+    if ($del_id > 0 && $del_type === 'dues') {
+        $pdo->prepare('DELETE FROM paypal_dues_orders WHERE id = ?')->execute([$del_id]);
+        flash('success', 'Dues checkout record deleted.');
+    } elseif ($del_id > 0 && $del_type === 'donation') {
+        $pdo->prepare('DELETE FROM paypal_donations WHERE id = ?')->execute([$del_id]);
+        flash('success', 'Donation record deleted.');
+    } else {
+        flash('error', 'Invalid record to delete.');
+    }
+    header('Location: paypal-dues-orders.php');
+    exit;
+}
+
 // Confirms the PAYPAL_CLIENT_ID/PAYPAL_SECRET in config.php actually work by
 // fetching a real OAuth token, without ever surfacing the secret or the
 // token itself anywhere in the response or on-screen.
@@ -97,6 +119,7 @@ foreach ($dues_stmt->fetchAll(PDO::FETCH_ASSOC) as $o) {
     $cadet_name = trim(preg_replace('/\s+/', ' ', ($o['cadet_first_name'] ?? '') . ' ' . ($o['cadet_middle_name'] ?? '') . ' ' . ($o['cadet_last_name'] ?? '') . ' ' . ($o['cadet_suffix'] ?? '')));
     $rows[] = [
         'type'        => 'dues',
+        'id'          => $o['id'],
         'created_at'  => $o['created_at'],
         'who'         => $cadet_name ?: ('Member #' . $o['member_id']),
         'detail'      => $o['years'],
@@ -112,6 +135,7 @@ $donation_stmt = $pdo->query("SELECT * FROM paypal_donations");
 foreach ($donation_stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
     $rows[] = [
         'type'        => 'donation',
+        'id'          => $d['id'],
         'created_at'  => $d['created_at'],
         'who'         => $d['donor_name'] ?: $d['donor_email'],
         'detail'      => $d['donor_email'],
@@ -142,6 +166,7 @@ $payout_stmt = $pdo->query(
 foreach ($payout_stmt->fetchAll(PDO::FETCH_ASSOC) as $po) {
     $rows[] = [
         'type'        => 'payout',
+        'id'          => null,
         'created_at'  => $po['paypal_payout_sent_at'],
         'who'         => $po['submitted_by_name'] ?: 'Unknown',
         'detail'      => $po['vendor'],
@@ -211,6 +236,7 @@ function pdoConfirmClearAll(count) {
       <th>Status</th>
       <th>Order / Capture ID</th>
       <th>Note</th>
+      <th></th>
     </tr>
   </thead>
   <tbody>
@@ -231,6 +257,17 @@ function pdoConfirmClearAll(count) {
       <?= h($r['order_id']) ?><?php if ($r['capture_id']): ?><br><?= h($r['capture_id']) ?><?php endif; ?>
     </td>
     <td style="font-size:.72rem;color:#9aa5b4"><?= h($r['note']) ?></td>
+    <td style="white-space:nowrap">
+      <?php if ($r['id']): ?>
+      <form method="POST" onsubmit="return confirm('Delete this <?= $r['type'] === 'dues' ? 'dues checkout' : 'donation' ?> record? This cannot be undone.')" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="delete_one">
+        <input type="hidden" name="type" value="<?= h($r['type']) ?>">
+        <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      </form>
+      <?php endif; ?>
+    </td>
   </tr>
   <?php endforeach; ?>
   </tbody>
