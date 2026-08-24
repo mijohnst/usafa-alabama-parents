@@ -56,6 +56,9 @@
     .btn-danger-sm { background: #fff; color: #A6192E; border: 1px solid #f0c4cb; padding: .4rem .8rem; border-radius: 4px; font-size: .78rem; font-weight: 600; cursor: pointer; font-family: var(--font-body); }
     .btn-danger-sm:hover { background: #fff3f3; }
 
+    .info-notice { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 1rem 1.25rem; border-radius: 4px; margin-bottom: 1.5rem; font-size: 0.92rem; color: #2e7d32; line-height: 1.5; }
+    .info-notice strong { color: #1b5e20; }
+
     #formStatus, #lookupStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; }
     #formStatus.success, #lookupStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
     #formStatus.error, #lookupStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
@@ -158,7 +161,7 @@
       <div class="hero-content">
         <div class="hero-club-name">USAFA Parents Club of Alabama</div>
         <h1>Letters to Your Cadet</h1>
-        <p>Write your cadet a letter, save it, and download a print-ready PDF to mail or hand-deliver.</p>
+        <p>Write your cadet a letter and save it — that's all you need to do. The club collects every family's letters together and sends them out for printing.</p>
       </div>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" class="hero-banner-flag" title="Alabama" aria-hidden="true">
         <rect width="60" height="40" fill="white"/>
@@ -212,6 +215,9 @@
       <!-- LETTER COMPOSE -->
       <div id="letterBody" style="display:none">
         <h3 id="composeHeading">Write a Letter</h3>
+        <div class="info-notice">
+          <strong>You're all set once you save.</strong> There's no need to download or forward your letter — the Parents Club collects everyone's letters together and sends them out for printing. (Want a personal copy for yourself? You can still download a PDF anytime from "Your Saved Letters" below.)
+        </div>
         <div class="form-group">
           <textarea id="letterText"></textarea>
         </div>
