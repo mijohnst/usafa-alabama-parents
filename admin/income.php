@@ -39,13 +39,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
         $receipt_email = trim($_POST['receipt_email'] ?? '');
         $send_receipt  = !empty($_POST['send_receipt']);
         if (!in_array($type, array_keys($SOURCE_TYPES))) $type = 'other';
+
+        // On failure, redirected back to the same add/edit form with
+        // whatever was typed intact — re-populated below via
+        // $_SESSION['income_old_input'] — rather than reloading blank and
+        // losing everything the treasurer already entered.
+        $redirect_back = 'income.php' . ($action === 'update' && !empty($_POST['id']) ? '?edit=' . (int)$_POST['id'] : '');
         if (!$date || !$source || $amount <= 0 || $amount > 99999.99) {
+            $_SESSION['income_old_input'] = $_POST;
             flash('error','Date, source, and a positive amount are required.');
-            header('Location: income.php'); exit;
+            header('Location: ' . $redirect_back); exit;
         }
         if ($send_receipt && !filter_var($receipt_email, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['income_old_input'] = $_POST;
             flash('error','Enter a valid email address to send a receipt.');
-            header('Location: income.php'); exit;
+            header('Location: ' . $redirect_back); exit;
         }
         if ($action === 'add') {
             $pdo->prepare('INSERT INTO income_entries (entry_date,source,source_type,description,amount,payment_method,notes,received_by,receipt_email) VALUES (?,?,?,?,?,?,?,?,?)')
@@ -141,6 +149,21 @@ if (isset($_GET['edit']) && $can_edit) {
     $editing = $s->fetch(PDO::FETCH_ASSOC);
 }
 
+// Whatever was just typed into a submission that failed validation — takes
+// priority over $editing's DB values below so a treasurer never has to
+// retype a whole entry just because one field (e.g. the email) was invalid.
+// $editing itself is left alone (it still controls Add-vs-Edit mode/heading);
+// only the individual field VALUES shown in the form are affected.
+$old_input = null;
+if (!empty($_SESSION['income_old_input'])) {
+    $old_input = $_SESSION['income_old_input'];
+    unset($_SESSION['income_old_input']);
+}
+function income_field(?array $old, ?array $editing, string $key, string $default = ''): string {
+    if ($old !== null) return (string)($old[$key] ?? $default);
+    return (string)($editing[$key] ?? $default);
+}
+
 admin_header('Income Ledger');
 echo show_flash();
 ?>
@@ -205,32 +228,34 @@ echo show_flash();
     <div class="form-row col-3">
       <div class="form-group">
         <label>Date <span style="color:#A6192E">*</span></label>
-        <input type="date" name="entry_date" required value="<?= h($editing['entry_date'] ?? date('Y-m-d')) ?>">
+        <input type="date" name="entry_date" required value="<?= h(income_field($old_input, $editing, 'entry_date', date('Y-m-d'))) ?>">
       </div>
       <div class="form-group">
         <label>Type <span style="color:#A6192E">*</span></label>
         <select name="source_type">
+          <?php $cur_type = income_field($old_input, $editing, 'source_type', 'other'); ?>
           <?php foreach ($SOURCE_TYPES as $k => $v): ?>
-          <option value="<?= $k ?>" <?= ($editing['source_type']??'other')===$k?'selected':'' ?>><?= $v ?></option>
+          <option value="<?= $k ?>" <?= $cur_type===$k?'selected':'' ?>><?= $v ?></option>
           <?php endforeach; ?>
         </select>
       </div>
       <div class="form-group">
         <label>Amount <span style="color:#A6192E">*</span></label>
-        <input name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" value="<?= h($editing['amount'] ?? '') ?>">
+        <input name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" value="<?= h(income_field($old_input, $editing, 'amount')) ?>">
       </div>
     </div>
     <div class="form-row col-2">
       <div class="form-group">
         <label>Source / Payer Name <span style="color:#A6192E">*</span></label>
-        <input name="source" required placeholder="e.g. John Smith, Alabama Power Co." value="<?= h($editing['source'] ?? '') ?>">
+        <input name="source" required placeholder="e.g. John Smith, Alabama Power Co." value="<?= h(income_field($old_input, $editing, 'source')) ?>">
       </div>
       <div class="form-group">
         <label>Payment Method</label>
         <select name="payment_method">
           <option value="">—</option>
+          <?php $cur_method = income_field($old_input, $editing, 'payment_method'); ?>
           <?php foreach ($PAYMENT_METHODS as $m): ?>
-          <option value="<?= $m ?>" <?= ($editing['payment_method']??'')===$m?'selected':'' ?>><?= $m ?></option>
+          <option value="<?= $m ?>" <?= $cur_method===$m?'selected':'' ?>><?= $m ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -238,22 +263,22 @@ echo show_flash();
     <div class="form-row col-2">
       <div class="form-group">
         <label>Description</label>
-        <input name="description" placeholder="Brief description" value="<?= h($editing['description'] ?? '') ?>">
+        <input name="description" placeholder="Brief description" value="<?= h(income_field($old_input, $editing, 'description')) ?>">
       </div>
       <div class="form-group">
         <label>Notes <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label>
-        <input name="notes" placeholder="Additional notes" value="<?= h($editing['notes'] ?? '') ?>">
+        <input name="notes" placeholder="Additional notes" value="<?= h(income_field($old_input, $editing, 'notes')) ?>">
       </div>
     </div>
     <div class="form-row col-2" style="background:#f7f9fc;border-radius:6px;padding:.9rem 1rem;margin-bottom:1rem;align-items:start">
       <div class="form-group" style="margin-bottom:0">
         <label>Payer Email <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">for a receipt — optional</span></label>
-        <input type="email" name="receipt_email" placeholder="donor@example.com" value="<?= h($editing['receipt_email'] ?? '') ?>">
+        <input type="email" name="receipt_email" placeholder="donor@example.com" value="<?= h(income_field($old_input, $editing, 'receipt_email')) ?>">
       </div>
       <div class="form-group" style="margin-bottom:0;padding-top:1.6rem">
         <?php if (!$editing): ?>
         <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;cursor:pointer">
-          <input type="checkbox" name="send_receipt" value="1" style="width:auto"> Email a receipt now
+          <input type="checkbox" name="send_receipt" value="1" style="width:auto" <?= !empty($old_input['send_receipt']) ? 'checked' : '' ?>> Email a receipt now
         </label>
         <?php else: ?>
         <p style="font-size:.72rem;color:#9aa5b4">Use the Resend Receipt button on the entry below to (re)send — saving here only updates the address on file.</p>
