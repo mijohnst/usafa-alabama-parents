@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
 require_finance();
 if (!is_treasurer() && !is_super_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
@@ -35,22 +36,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
         $method  = trim($_POST['payment_method'] ?? '');
         $desc    = trim($_POST['description']    ?? '');
         $notes   = trim($_POST['notes']          ?? '');
+        $receipt_email = trim($_POST['receipt_email'] ?? '');
+        $send_receipt  = !empty($_POST['send_receipt']);
         if (!in_array($type, array_keys($SOURCE_TYPES))) $type = 'other';
         if (!$date || !$source || $amount <= 0 || $amount > 99999.99) {
             flash('error','Date, source, and a positive amount are required.');
             header('Location: income.php'); exit;
         }
+        if ($send_receipt && !filter_var($receipt_email, FILTER_VALIDATE_EMAIL)) {
+            flash('error','Enter a valid email address to send a receipt.');
+            header('Location: income.php'); exit;
+        }
         if ($action === 'add') {
-            $pdo->prepare('INSERT INTO income_entries (entry_date,source,source_type,description,amount,payment_method,notes,received_by) VALUES (?,?,?,?,?,?,?,?)')
-                ->execute([$date, $source, $type, $desc, $amount, $method, $notes, $_SESSION['user_id'] ?? null]);
-            flash('success','Income entry added.');
+            $pdo->prepare('INSERT INTO income_entries (entry_date,source,source_type,description,amount,payment_method,notes,received_by,receipt_email) VALUES (?,?,?,?,?,?,?,?,?)')
+                ->execute([$date, $source, $type, $desc, $amount, $method, $notes, $_SESSION['user_id'] ?? null, $receipt_email ?: null]);
+            if ($send_receipt) {
+                $sent = send_manual_payment_receipt($receipt_email, $source, $amount, $date, $desc ?: $SOURCE_TYPES[$type]);
+                flash($sent ? 'success' : 'error', $sent
+                    ? "Income entry added. Receipt emailed to $receipt_email."
+                    : "Income entry added, but the receipt email failed to send. Check the address and use Resend Receipt on the entry to try again.");
+            } else {
+                flash('success','Income entry added.');
+            }
         } else {
             $id = (int)($_POST['id'] ?? 0);
-            $pdo->prepare('UPDATE income_entries SET entry_date=?,source=?,source_type=?,description=?,amount=?,payment_method=?,notes=? WHERE id=?')
-                ->execute([$date, $source, $type, $desc, $amount, $method, $notes, $id]);
+            $pdo->prepare('UPDATE income_entries SET entry_date=?,source=?,source_type=?,description=?,amount=?,payment_method=?,notes=?,receipt_email=? WHERE id=?')
+                ->execute([$date, $source, $type, $desc, $amount, $method, $notes, $receipt_email ?: null, $id]);
             flash('success','Entry updated.');
         }
         header('Location: income.php?' . http_build_query(['year'=>date('Y',strtotime($date))])); exit;
+
+    } elseif ($action === 'resend_receipt') {
+        $id = (int)($_POST['id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM income_entries WHERE id=?');
+        $s->execute([$id]);
+        $e = $s->fetch(PDO::FETCH_ASSOC);
+        if (!$e || empty($e['receipt_email'])) {
+            flash('error','This entry has no receipt email on file.');
+        } else {
+            $sent = send_manual_payment_receipt($e['receipt_email'], $e['source'], (float)$e['amount'], $e['entry_date'], $e['description'] ?: $SOURCE_TYPES[$e['source_type']] ?? 'Payment');
+            flash($sent ? 'success' : 'error', $sent
+                ? "Receipt resent to {$e['receipt_email']}."
+                : "Receipt failed to send to {$e['receipt_email']}.");
+        }
+        header('Location: income.php?' . http_build_query(['year'=>date('Y',strtotime($e['entry_date']??'now'))])); exit;
 
     } elseif ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
@@ -216,6 +245,17 @@ echo show_flash();
       <label>Notes <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label>
       <input name="notes" placeholder="Additional notes" value="<?= h($editing['notes'] ?? '') ?>">
     </div>
+    <div class="form-group" style="background:#f7f9fc;border-radius:6px;padding:.9rem 1rem;margin-bottom:1rem">
+      <label>Payer Email <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">for a receipt — optional</span></label>
+      <input type="email" name="receipt_email" placeholder="donor@example.com" value="<?= h($editing['receipt_email'] ?? '') ?>">
+      <?php if (!$editing): ?>
+      <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;margin-top:.6rem;cursor:pointer">
+        <input type="checkbox" name="send_receipt" value="1" style="width:auto"> Email a receipt now
+      </label>
+      <?php else: ?>
+      <p style="font-size:.72rem;color:#9aa5b4;margin-top:.5rem">Use the Resend Receipt button on the entry below to (re)send — saving here only updates the address on file.</p>
+      <?php endif; ?>
+    </div>
     <div style="display:flex;gap:.6rem">
       <button type="submit" class="btn btn-primary"><?= $editing ? 'Save Changes' : 'Add Entry' ?></button>
       <?php if ($editing): ?><a href="income.php?year=<?= $year ?>" class="btn btn-secondary">Cancel</a><?php endif; ?>
@@ -248,7 +288,7 @@ echo show_flash();
     <td style="white-space:nowrap"><?= date('M j, Y', strtotime($e['entry_date'])) ?></td>
     <td style="font-weight:600"><?= h($e['source']) ?></td>
     <td><span class="type-pill" style="background:<?= $tc ?>22;color:<?= $tc ?>"><?= $SOURCE_TYPES[$e['source_type']] ?></span></td>
-    <td style="color:#5a6a7a"><?= h($e['description']) ?><?php if($e['notes']): ?><div style="font-size:.72rem;color:#9aa5b4"><?= h($e['notes']) ?></div><?php endif; ?></td>
+    <td style="color:#5a6a7a"><?= h($e['description']) ?><?php if($e['notes']): ?><div style="font-size:.72rem;color:#9aa5b4"><?= h($e['notes']) ?></div><?php endif; ?><?php if(!empty($e['receipt_email'])): ?><div style="font-size:.72rem;color:#1565c0">Receipt: <?= h($e['receipt_email']) ?></div><?php endif; ?></td>
     <td style="text-align:right;font-weight:700;color:#1b5e20;white-space:nowrap">$<?= number_format($e['amount'],2) ?></td>
     <td style="font-size:.78rem;color:#5a6a7a"><?= h($e['payment_method']) ?></td>
     <td style="font-size:.78rem;color:#5a6a7a;white-space:nowrap"><?= h($e['received_by_name'] ?? '—') ?></td>
@@ -256,6 +296,12 @@ echo show_flash();
     <td>
       <div class="btn-group">
         <a href="income.php?edit=<?= $e['id'] ?>&year=<?= $year ?>" class="btn btn-secondary btn-sm">Edit</a>
+        <?php if (!empty($e['receipt_email'])): ?>
+        <form method="POST" onsubmit="return confirm('Resend the receipt email to <?= h($e['receipt_email']) ?>?')" style="margin:0">
+          <?= csrf_field() ?><input type="hidden" name="action" value="resend_receipt"><input type="hidden" name="id" value="<?= $e['id'] ?>">
+          <button type="submit" class="btn btn-secondary btn-sm">Resend Receipt</button>
+        </form>
+        <?php endif; ?>
         <form method="POST" onsubmit="return confirm('Delete this income entry?')" style="margin:0">
           <?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $e['id'] ?>">
           <button type="submit" class="btn btn-danger btn-sm">Delete</button>
@@ -269,7 +315,7 @@ echo show_flash();
   <tfoot>
     <tr style="background:#f7f9fc;font-weight:700">
       <td colspan="4" style="text-align:right;padding:.6rem .9rem;font-size:.82rem">Total</td>
-      <td style="text-align:right;padding:.6rem .9rem;color:#1b5e20">$<?= number_format($grand_income,2) ?></td>
+      <td style="text-align:right;padding:.6rem .9rem;color:#1b5e20">$<?= number_format($grand_income_total,2) ?></td>
       <td colspan="<?= $can_edit ? 3 : 2 ?>"></td>
     </tr>
   </tfoot>

@@ -30,6 +30,7 @@ define('CLUB_FROM_EMAIL', 'info@alabamafalcons.org');
 define('CLUB_FROM',       'USAFA Parents Club of Alabama <info@alabamafalcons.org>');
 define('ADMIN_URL',       'https://alabamafalcons.org/admin/');
 define('SITE_URL',        'https://alabamafalcons.org/');
+define('CLUB_TAX_ID',     '61-1791020');
 
 // Shared SMTP relay setup — used here and by email.php's Compose Email tool.
 function configure_smtp_relay(PHPMailer $mail): void {
@@ -1070,6 +1071,42 @@ function send_donation_receipt(string $donorEmail, string $donorName, float $amo
              . "If you have any questions, please contact our treasurer at treasurer@alabamafalcons.org.\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
     return send_notification($donorEmail, $subject, $body);
+}
+
+// ── Receipt for a payment the treasurer recorded manually (check, cash,
+// Zelle, etc. — anything that didn't go through the online PayPal flow) ──
+// Mirrors the club's paper donation-receipt letter content in plain text:
+// no-goods-or-services statement + 501(c)(3)/tax-ID language, so it holds
+// up the same way for tax purposes regardless of payment channel.
+function send_manual_payment_receipt(string $payerEmail, string $payerName, float $amount, string $date, string $description): bool {
+    $amt      = '$' . number_format($amount, 2);
+    $dateStr  = date('F j, Y', strtotime($date) ?: time());
+    $name     = $payerName !== '' ? $payerName : 'there';
+    $descLine = $description !== '' ? $description : 'Monetary gift';
+
+    $subject = 'Your Receipt from ' . CLUB_NAME . " — $amt";
+    $body    = CLUB_NAME . "\n"
+             . "Payment Receipt\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "Dear $name,\n\n"
+             . "Thank you for your payment to the " . CLUB_NAME . ". Your generous contribution "
+             . "helps sustain cadet morale and hometown outreach via care packages, special events, "
+             . "and other cadet and family support activities. Your gift makes a real difference in "
+             . "the lives of the Alabama cadets who volunteered to serve our great country while "
+             . "separated from their families throughout their Academy academic and leadership "
+             . "journey. These fine men and women are the future of our armed forces and deserve "
+             . "our unwavering support.\n\n"
+             . "Date:        $dateStr\n"
+             . "Amount:      $amt\n"
+             . "Description: $descLine\n\n"
+             . "No goods or services were provided in return for this contribution.\n\n"
+             . "The " . CLUB_NAME . " is a 501(c)(3) tax-exempt organization (Tax ID: " . CLUB_TAX_ID . "). "
+             . "This contribution is tax-deductible to the extent allowable by law. Please consult a "
+             . "qualified tax professional for further guidance regarding the deductibility of your "
+             . "contribution for your personal tax situation.\n\n"
+             . "Sincerely,\n" . CLUB_NAME . "\n\n"
+             . str_repeat('─', 48) . "\n" . SITE_URL;
+    return send_notification($payerEmail, $subject, $body);
 }
 
 // ── Notify the treasurer of a completed online donation ──────────────────
