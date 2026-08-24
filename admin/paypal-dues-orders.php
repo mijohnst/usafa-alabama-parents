@@ -9,9 +9,8 @@
  * or the Income Ledger, same as any other payment discrepancy.
  *
  * Payout rows are read-only reflections of the `purchases` table — that's
- * the real reimbursement record, not a diagnostic log, so "Clear All
- * Records" below only ever clears paypal_dues_orders/paypal_donations and
- * never touches purchases.
+ * the real reimbursement record, so there's no delete action for them
+ * here; removing one belongs on the Purchases page.
  */
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/lib/paypal.php';
@@ -19,21 +18,10 @@ require_finance();
 if (!is_treasurer() && !is_super_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
-// Clears both diagnostic logs only — never touches members.membership_paid_years
-// or income_entries, so it can't undo a real payment or dues status, only
-// the PayPal order/capture ID breadcrumb trail for looking one up later.
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'clear_all') {
-    csrf_verify();
-    $pdo->exec('DELETE FROM paypal_dues_orders');
-    $pdo->exec('DELETE FROM paypal_donations');
-    flash('success', 'PayPal activity log cleared.');
-    header('Location: paypal-dues-orders.php');
-    exit;
-}
-
-// Deletes a single dues or donation diagnostic-log row — same invariant as
-// Clear All above (never touches membership_paid_years or income_entries).
-// Payout rows aren't deletable here on purpose: they reflect a real
+// Deletes a single dues or donation diagnostic-log row — never touches
+// members.membership_paid_years or income_entries, only the PayPal
+// order/capture ID breadcrumb trail for looking one up later. Payout rows
+// aren't deletable here on purpose: they reflect a real
 // purchases/reimbursement record, not a diagnostic log, so removing one
 // belongs on the Purchases page where the purchase itself lives.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_one') {
@@ -147,12 +135,6 @@ foreach ($donation_stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
     ];
 }
 
-// "Clear All Records" below only deletes the two diagnostic-log tables
-// above — everything counted so far is fair game for that. Payouts,
-// added next, are read-only reflections of the real purchases/reimbursement
-// record and must never be included in that count or that delete.
-$clearable_count = count($rows);
-
 // Money going OUT — reimbursements paid via PayPal (admin/purchase-action.php's
 // "Send via PayPal"). Only purchases where a payout was actually attempted;
 // everything else about a purchase (approval, receipts, etc.) belongs on
@@ -196,30 +178,21 @@ echo show_flash();
   <h1>PayPal Activity</h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <a href="income.php" class="btn btn-secondary">← Income Ledger</a>
-    <form method="POST" style="margin:0">
-      <?= csrf_field() ?>
-      <input type="hidden" name="action" value="test_connection">
-      <button type="submit" class="btn btn-secondary">Test PayPal Connection (<?= h(paypal_mode_label()) ?>)</button>
-    </form>
-    <?php if ($clearable_count > 0): ?>
-    <form method="POST" onsubmit="return pdoConfirmClearAll(<?= $clearable_count ?>)" style="margin:0">
-      <?= csrf_field() ?>
-      <input type="hidden" name="action" value="clear_all">
-      <button type="submit" class="btn btn-danger">Clear All Records</button>
-    </form>
-    <?php endif; ?>
   </div>
 </div>
-<p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Everything that's touched PayPal: dues checkouts, donations, and reimbursement payouts. Clear All only removes the dues/donation diagnostic log below — it never changes a cadet's paid status, the Income Ledger, or any purchase/payout record.</p>
+<p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Everything that's touched PayPal: dues checkouts, donations, and reimbursement payouts.</p>
 
-<script>
-function pdoConfirmClearAll(count) {
-  if (!confirm('Permanently delete all ' + count + ' dues/donation PayPal record(s) (payouts are not affected)? This cannot be undone.')) return false;
-  var typed = prompt('Type DELETE (all caps) to confirm.');
-  if (typed !== 'DELETE') { alert('Not confirmed — nothing was deleted.'); return false; }
-  return true;
-}
-</script>
+<div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
+  <div>
+    <h2 style="margin-bottom:.25rem">PayPal Connection</h2>
+    <p style="font-size:.82rem;color:#5a6a7a;margin:0">Verify the credentials configured in config.php can authenticate with PayPal.</p>
+  </div>
+  <form method="POST" style="margin:0">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="test_connection">
+    <button type="submit" class="btn btn-secondary">Test PayPal Connection (<?= h(paypal_mode_label()) ?>)</button>
+  </form>
+</div>
 
 <?php if (empty($rows)): ?>
   <p style="color:#9aa5b4">No online PayPal activity yet.</p>
