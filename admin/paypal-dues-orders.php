@@ -259,7 +259,7 @@ function pdoConfirmClearAll(count) {
     <td style="font-size:.72rem;color:#9aa5b4"><?= h($r['note']) ?></td>
     <td style="white-space:nowrap">
       <?php if ($r['id']): ?>
-      <form method="POST" onsubmit="return confirm('Delete this <?= $r['type'] === 'dues' ? 'dues checkout' : 'donation' ?> record? This cannot be undone.')" style="margin:0">
+      <form method="POST" onsubmit="return confirm('Are you sure you want to delete this <?= $r['type'] === 'dues' ? 'dues checkout' : 'donation' ?> record? This cannot be undone.')" style="margin:0">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="delete_one">
         <input type="hidden" name="type" value="<?= h($r['type']) ?>">
