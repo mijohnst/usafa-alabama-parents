@@ -196,13 +196,13 @@ echo show_flash();
 
 <?php if ($can_edit): ?>
 <!-- Add / Edit form -->
-<div class="card" style="max-width:640px;margin-bottom:1.75rem">
+<div class="card" style="max-width:920px;margin-bottom:1.75rem">
   <h2 style="margin-bottom:1rem"><?= $editing ? 'Edit Entry' : 'Add Income' ?></h2>
   <form method="POST">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="<?= $editing ? 'update' : 'add' ?>">
     <?php if ($editing): ?><input type="hidden" name="id" value="<?= $editing['id'] ?>"><?php endif; ?>
-    <div class="form-row col-2">
+    <div class="form-row col-3">
       <div class="form-group">
         <label>Date <span style="color:#A6192E">*</span></label>
         <input type="date" name="entry_date" required value="<?= h($editing['entry_date'] ?? date('Y-m-d')) ?>">
@@ -215,18 +215,16 @@ echo show_flash();
           <?php endforeach; ?>
         </select>
       </div>
-    </div>
-    <div class="form-row col-2">
-      <div class="form-group" style="flex:2">
-        <label>Source / Payer Name <span style="color:#A6192E">*</span></label>
-        <input name="source" required placeholder="e.g. John Smith, Alabama Power Co." value="<?= h($editing['source'] ?? '') ?>">
-      </div>
       <div class="form-group">
         <label>Amount <span style="color:#A6192E">*</span></label>
         <input name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" value="<?= h($editing['amount'] ?? '') ?>">
       </div>
     </div>
     <div class="form-row col-2">
+      <div class="form-group">
+        <label>Source / Payer Name <span style="color:#A6192E">*</span></label>
+        <input name="source" required placeholder="e.g. John Smith, Alabama Power Co." value="<?= h($editing['source'] ?? '') ?>">
+      </div>
       <div class="form-group">
         <label>Payment Method</label>
         <select name="payment_method">
@@ -236,25 +234,31 @@ echo show_flash();
           <?php endforeach; ?>
         </select>
       </div>
+    </div>
+    <div class="form-row col-2">
       <div class="form-group">
         <label>Description</label>
         <input name="description" placeholder="Brief description" value="<?= h($editing['description'] ?? '') ?>">
       </div>
+      <div class="form-group">
+        <label>Notes <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label>
+        <input name="notes" placeholder="Additional notes" value="<?= h($editing['notes'] ?? '') ?>">
+      </div>
     </div>
-    <div class="form-group">
-      <label>Notes <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label>
-      <input name="notes" placeholder="Additional notes" value="<?= h($editing['notes'] ?? '') ?>">
-    </div>
-    <div class="form-group" style="background:#f7f9fc;border-radius:6px;padding:.9rem 1rem;margin-bottom:1rem">
-      <label>Payer Email <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">for a receipt — optional</span></label>
-      <input type="email" name="receipt_email" placeholder="donor@example.com" value="<?= h($editing['receipt_email'] ?? '') ?>">
-      <?php if (!$editing): ?>
-      <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;margin-top:.6rem;cursor:pointer">
-        <input type="checkbox" name="send_receipt" value="1" style="width:auto"> Email a receipt now
-      </label>
-      <?php else: ?>
-      <p style="font-size:.72rem;color:#9aa5b4;margin-top:.5rem">Use the Resend Receipt button on the entry below to (re)send — saving here only updates the address on file.</p>
-      <?php endif; ?>
+    <div class="form-row col-2" style="background:#f7f9fc;border-radius:6px;padding:.9rem 1rem;margin-bottom:1rem;align-items:start">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Payer Email <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">for a receipt — optional</span></label>
+        <input type="email" name="receipt_email" placeholder="donor@example.com" value="<?= h($editing['receipt_email'] ?? '') ?>">
+      </div>
+      <div class="form-group" style="margin-bottom:0;padding-top:1.6rem">
+        <?php if (!$editing): ?>
+        <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;cursor:pointer">
+          <input type="checkbox" name="send_receipt" value="1" style="width:auto"> Email a receipt now
+        </label>
+        <?php else: ?>
+        <p style="font-size:.72rem;color:#9aa5b4">Use the Resend Receipt button on the entry below to (re)send — saving here only updates the address on file.</p>
+        <?php endif; ?>
+      </div>
     </div>
     <div style="display:flex;gap:.6rem">
       <button type="submit" class="btn btn-primary"><?= $editing ? 'Save Changes' : 'Add Entry' ?></button>
