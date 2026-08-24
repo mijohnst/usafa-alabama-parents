@@ -15,7 +15,12 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/lib/paypal.php';
 require_finance();
-if (!is_treasurer() && !is_super_admin()) { header('Location: dashboard.php?denied=1'); exit; }
+// Treasurer/Admin/Tech get full access (view + delete rows + test
+// credentials). President/VP (role 'officer') get read-only visibility —
+// they can see what's come through PayPal but can't delete log rows or
+// test the live connection.
+if (!is_treasurer() && !is_super_admin() && !is_officer()) { header('Location: dashboard.php?denied=1'); exit; }
+$can_manage = is_treasurer() || is_super_admin();
 $pdo = get_pdo();
 
 // Deletes a single dues or donation diagnostic-log row — never touches
@@ -26,6 +31,7 @@ $pdo = get_pdo();
 // belongs on the Purchases page where the purchase itself lives.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_one') {
     csrf_verify();
+    if (!$can_manage) { flash('error', 'Only the treasurer or an admin can delete records.'); header('Location: paypal-dues-orders.php'); exit; }
     $del_type = $_POST['type'] ?? '';
     $del_id   = (int)($_POST['id'] ?? 0);
     if ($del_id > 0 && $del_type === 'dues') {
@@ -46,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 // token itself anywhere in the response or on-screen.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_connection') {
     csrf_verify();
+    if (!$can_manage) { flash('error', 'Only the treasurer or an admin can test the PayPal connection.'); header('Location: paypal-dues-orders.php'); exit; }
     $auth = paypal_get_access_token();
     if ($auth['token']) {
         flash('success', 'PayPal connection succeeded (' . paypal_mode_label() . ' mode). Credentials are valid.');
@@ -177,11 +184,12 @@ echo show_flash();
 <div class="page-head">
   <h1>PayPal Activity</h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-    <a href="income.php" class="btn btn-secondary">← Income Ledger</a>
+    <?php if ($can_manage): ?><a href="income.php" class="btn btn-secondary">← Income Ledger</a><?php endif; ?>
   </div>
 </div>
-<p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Everything that's touched PayPal: dues checkouts, donations, and reimbursement payouts.</p>
+<p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Everything that's touched PayPal: dues checkouts, donations, and reimbursement payouts.<?= $can_manage ? '' : ' (Read-only view.)' ?></p>
 
+<?php if ($can_manage): ?>
 <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
   <div>
     <h2 style="margin-bottom:.25rem">PayPal Connection</h2>
@@ -193,6 +201,7 @@ echo show_flash();
     <button type="submit" class="btn btn-secondary">Test PayPal Connection (<?= h(paypal_mode_label()) ?>)</button>
   </form>
 </div>
+<?php endif; ?>
 
 <?php if (empty($rows)): ?>
   <p style="color:#9aa5b4">No online PayPal activity yet.</p>
@@ -209,7 +218,7 @@ echo show_flash();
       <th>Status</th>
       <th>Order / Capture ID</th>
       <th>Note</th>
-      <th></th>
+      <?php if ($can_manage): ?><th></th><?php endif; ?>
     </tr>
   </thead>
   <tbody>
@@ -230,6 +239,7 @@ echo show_flash();
       <?= h($r['order_id']) ?><?php if ($r['capture_id']): ?><br><?= h($r['capture_id']) ?><?php endif; ?>
     </td>
     <td style="font-size:.72rem;color:#9aa5b4"><?= h($r['note']) ?></td>
+    <?php if ($can_manage): ?>
     <td style="white-space:nowrap">
       <?php if ($r['id']): ?>
       <form method="POST" onsubmit="return confirm('Are you sure you want to delete this <?= $r['type'] === 'dues' ? 'dues checkout' : 'donation' ?> record? This cannot be undone.')" style="margin:0">
@@ -241,6 +251,7 @@ echo show_flash();
       </form>
       <?php endif; ?>
     </td>
+    <?php endif; ?>
   </tr>
   <?php endforeach; ?>
   </tbody>
