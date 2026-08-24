@@ -172,6 +172,18 @@ echo show_flash();
   <?php endif; endforeach; ?>
 </div>
 
+<script>
+// Two-step delete: a plain confirm() is too easy to click through without
+// reading, especially for a real financial record. Requires typing DELETE
+// as a second, deliberate step before the form actually submits.
+function confirmDeleteIncomeEntry(label) {
+  if (!confirm('Delete this income entry?\n\n' + label + '\n\nThis cannot be undone.')) return false;
+  var typed = prompt('Type DELETE (all caps) to confirm.');
+  if (typed !== 'DELETE') { alert('Not confirmed — nothing was deleted.'); return false; }
+  return true;
+}
+</script>
+
 <?php if ($can_edit): ?>
 <!-- Add / Edit form -->
 <div class="card" style="max-width:920px;margin-bottom:1.75rem">
@@ -265,7 +277,7 @@ echo show_flash();
     <td>
       <div class="btn-group">
         <a href="income.php?edit=<?= $e['id'] ?>&year=<?= $year ?>" class="btn btn-secondary btn-sm">Edit</a>
-        <form method="POST" onsubmit="return confirm('Delete this income entry?')" style="margin:0">
+        <form method="POST" onsubmit="return confirmDeleteIncomeEntry(<?= h(json_encode($e['source'] . ' — $' . number_format($e['amount'],2) . ' (' . date('M j, Y', strtotime($e['entry_date'])) . ')')) ?>)" style="margin:0">
           <?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $e['id'] ?>">
           <button type="submit" class="btn btn-danger btn-sm">Delete</button>
         </form>

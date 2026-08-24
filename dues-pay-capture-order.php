@@ -91,6 +91,13 @@ function notify_treasurer_capture_issue(string $subject, string $detail): void {
     send_notification('treasurer@alabamafalcons.org', $subject, nl2br(htmlspecialchars($detail)));
 }
 
+// Sandbox mode always reports a successful capture (it's fake test money),
+// but this code has no other way to know that -- it applies the dues years
+// and logs income exactly like a real live payment. Tagging the note/subject
+// is the only thing that keeps a sandbox test from looking identical to a
+// real payment (or a real problem, for the alert emails below) later on.
+$capture_note_prefix = paypal_mode_label() === 'live' ? '' : '[SANDBOX TEST] ';
+
 $capture_id = null;
 $captured_amount = null;
 
@@ -118,7 +125,7 @@ if (abs((float)$captured_amount - (float)$track['amount']) > 0.001) {
     $pdo->prepare("UPDATE paypal_dues_orders SET paypal_capture_id=?, status='amount_mismatch', captured_at=NOW() WHERE id=?")
         ->execute([$capture_id, $track['id']]);
     notify_treasurer_capture_issue(
-        'PayPal dues amount mismatch — needs review',
+        "{$capture_note_prefix}PayPal dues amount mismatch — needs review",
         "Order $order_id / capture $capture_id captured \$$captured_amount but was expected to be \${$track['amount']} for member #$member_id (years: {$track['years']}). Please reconcile manually in the Income Ledger."
     );
     echo json_encode(['success' => true, 'years' => explode(',', $track['years'])]);
@@ -142,7 +149,7 @@ $still_needed = array_values(array_diff($order_years, $current_paid));
 if (!$still_needed) {
     $pdo->prepare("UPDATE paypal_dues_orders SET status='needs_manual_review' WHERE id=?")->execute([$track['id']]);
     notify_treasurer_capture_issue(
-        'PayPal dues payment needs manual review',
+        "{$capture_note_prefix}PayPal dues payment needs manual review",
         "Order $order_id / capture $capture_id for member #$member_id (\${$track['amount']}) captured successfully, but years {$track['years']} were already marked paid by the time we went to apply it. Please confirm this isn't a double payment and reconcile in the Income Ledger."
     );
     echo json_encode(['success' => true, 'years' => $order_years]);
@@ -157,7 +164,7 @@ try {
         true,
         $row,
         'PayPal',
-        "PayPal order $order_id, capture $capture_id"
+        "{$capture_note_prefix}PayPal order $order_id, capture $capture_id"
     );
     $pdo->prepare("UPDATE paypal_dues_orders SET status='applied', applied_at=NOW() WHERE id=?")->execute([$track['id']]);
 } catch (\Throwable $e) {
@@ -173,7 +180,7 @@ try {
             true,
             $row,
             'PayPal',
-            "PayPal order $order_id, capture $capture_id"
+            "{$capture_note_prefix}PayPal order $order_id, capture $capture_id"
         );
         $pdo->prepare("UPDATE paypal_dues_orders SET status='applied', applied_at=NOW() WHERE id=?")->execute([$track['id']]);
     } catch (\Throwable $e2) {
@@ -181,7 +188,7 @@ try {
         $pdo->prepare("UPDATE paypal_dues_orders SET status='capture_ok_apply_failed', error_note=? WHERE id=?")
             ->execute([$e2->getMessage(), $track['id']]);
         notify_treasurer_capture_issue(
-            'ACTION NEEDED: PayPal dues payment captured but not recorded',
+            "{$capture_note_prefix}ACTION NEEDED: PayPal dues payment captured but not recorded",
             "Order $order_id / capture $capture_id for member #$member_id (\${$track['amount']}, years {$track['years']}) was successfully captured by PayPal, but our system failed to record it: {$e2->getMessage()}. Please mark the year(s) paid manually in the member's profile and note the capture id for reference."
         );
     }

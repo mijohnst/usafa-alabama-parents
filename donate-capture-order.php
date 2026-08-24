@@ -75,6 +75,13 @@ function notify_treasurer_donation_issue(string $subject, string $detail): void 
     send_notification('treasurer@alabamafalcons.org', $subject, nl2br(htmlspecialchars($detail)));
 }
 
+// Sandbox mode always reports a successful capture (it's fake test money),
+// but this code has no other way to know that -- it logs income and emails
+// the donor/treasurer exactly like a real live payment. Tagging every
+// notes field/subject line here is the only thing that keeps a sandbox
+// test from looking identical to a real donation later on.
+$capture_note_prefix = paypal_mode_label() === 'live' ? '' : '[SANDBOX TEST] ';
+
 $capture_id = null;
 $captured_amount = null;
 
@@ -102,7 +109,7 @@ if (abs((float)$captured_amount - (float)$track['amount']) > 0.001) {
     $pdo->prepare("UPDATE paypal_donations SET paypal_capture_id=?, status='amount_mismatch', captured_at=NOW() WHERE id=?")
         ->execute([$capture_id, $track['id']]);
     notify_treasurer_donation_issue(
-        'PayPal donation amount mismatch — needs review',
+        "{$capture_note_prefix}PayPal donation amount mismatch — needs review",
         "Order $order_id / capture $capture_id captured \$$captured_amount but was expected to be \${$track['amount']} from {$track['donor_email']}. Please reconcile manually in the Income Ledger."
     );
     echo json_encode(['success' => true, 'amount' => number_format((float)$captured_amount, 2)]);
@@ -125,24 +132,24 @@ try {
         'Online Donation',
         $track['amount'],
         'PayPal',
-        "PayPal order $order_id, capture $capture_id",
+        "{$capture_note_prefix}PayPal order $order_id, capture $capture_id",
         null,
     ]);
 } catch (\Throwable $e) {
     error_log('donate-capture-order: income_entries insert failed for order ' . $order_id . ': ' . $e->getMessage());
     notify_treasurer_donation_issue(
-        'ACTION NEEDED: PayPal donation captured but not recorded',
+        "{$capture_note_prefix}ACTION NEEDED: PayPal donation captured but not recorded",
         "Order $order_id / capture $capture_id from $donor_email (\${$track['amount']}) was successfully captured by PayPal, but our system failed to log it to the Income Ledger: {$e->getMessage()}. Please add it manually."
     );
 }
 
 try {
-    send_donation_receipt($donor_email, $donor_name, (float)$track['amount'], $capture_id);
+    send_donation_receipt($donor_email, $donor_name, (float)$track['amount'], $capture_id, $capture_note_prefix);
 } catch (\Throwable $e) {
     error_log('donate-capture-order: donor receipt email failed for order ' . $order_id . ': ' . $e->getMessage());
 }
 try {
-    notify_treasurer_of_donation($donor_name, $donor_email, (float)$track['amount'], $order_id, (string)$capture_id);
+    notify_treasurer_of_donation($donor_name, $donor_email, (float)$track['amount'], $order_id, (string)$capture_id, $capture_note_prefix);
 } catch (\Throwable $e) {
     error_log('donate-capture-order: treasurer notification email failed for order ' . $order_id . ': ' . $e->getMessage());
 }

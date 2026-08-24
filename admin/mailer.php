@@ -1052,12 +1052,15 @@ function send_portal_invite(string $to, string $name, string $token): bool {
 }
 
 // ── Donation receipt to the donor, sent right after PayPal capture ───────
-function send_donation_receipt(string $donorEmail, string $donorName, float $amount, string $captureId): bool {
+// $subjectPrefix lets the caller flag a sandbox-mode test capture (donate-
+// capture-order.php) so a donor never mistakes a fake test transaction for
+// a real tax-deductible receipt.
+function send_donation_receipt(string $donorEmail, string $donorName, float $amount, string $captureId, string $subjectPrefix = ''): bool {
     $amt  = '$' . number_format($amount, 2);
     $date = date('F j, Y');
     $name = $donorName !== '' ? $donorName : 'there';
 
-    $subject = "Thank You for Your Donation — $amt";
+    $subject = "{$subjectPrefix}Thank You for Your Donation — $amt";
     $body    = CLUB_NAME . "\n"
              . "Donation Receipt\n"
              . str_repeat('─', 48) . "\n\n"
@@ -1110,11 +1113,11 @@ function send_manual_payment_receipt(string $payerEmail, string $payerName, floa
 }
 
 // ── Notify the treasurer of a completed online donation ──────────────────
-function notify_treasurer_of_donation(string $donorName, string $donorEmail, float $amount, string $orderId, string $captureId): bool {
+function notify_treasurer_of_donation(string $donorName, string $donorEmail, float $amount, string $orderId, string $captureId, string $subjectPrefix = ''): bool {
     $amt  = '$' . number_format($amount, 2);
     $date = date('F j, Y g:ia');
 
-    $subject = "New Online Donation Received — $amt";
+    $subject = "{$subjectPrefix}New Online Donation Received — $amt";
     $body    = CLUB_NAME . "\n"
              . "New Online Donation\n"
              . str_repeat('─', 48) . "\n\n"
