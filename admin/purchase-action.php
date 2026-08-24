@@ -28,6 +28,21 @@ $p = $stmt->fetch();
 
 if (!$p) { flash('error', 'Purchase not found.'); header('Location: purchases.php'); exit; }
 
+// PayPal itself already confirmed the money moved (payout status SUCCESS)
+// — there's nothing left for a treasurer to manually verify, so skip
+// straight to the Paid step instead of making them click twice. Only
+// fires from 'submitted', same guard the manual 'paid' action uses; a
+// purchase already marked paid some other way is left alone.
+function auto_mark_paid_from_paypal(PDO $pdo, array $p, int $id): void {
+    if ($p['status'] !== 'submitted') return;
+    $note = 'Automatically marked paid — PayPal payout confirmed SUCCESS.';
+    $pdo->prepare('UPDATE purchases SET status = ?, paid_note = ?, paid_at = NOW(), updated_at = NOW() WHERE id = ?')
+        ->execute(['paid', $note, $id]);
+    flash('success', 'PayPal confirmed the payout — purchase automatically marked paid. Submitter has been notified.');
+    $p['paid_note'] = $note;
+    notify_paid($pdo, $p, 'PayPal (automatic)');
+}
+
 if ($action === 'approve') {
     // Only admins can approve
     if (!is_club_officer()) {
@@ -159,7 +174,11 @@ if ($action === 'approve') {
     if ($result['success']) {
         $pdo->prepare('UPDATE purchases SET paypal_payout_batch_id = ?, paypal_payout_status = ?, paypal_payout_sent_at = NOW(), updated_at = NOW() WHERE id = ?')
             ->execute([$result['batch_id'], $result['status'], $id]);
-        flash('success', "PayPal payout sent to $paypal_email — status: {$result['status']}. Check status before marking paid.");
+        if ($result['status'] === 'SUCCESS') {
+            auto_mark_paid_from_paypal($pdo, $p, $id);
+        } else {
+            flash('success', "PayPal payout sent to $paypal_email — status: {$result['status']}. It'll be marked paid automatically once PayPal confirms.");
+        }
     } elseif (!empty($result['duplicate'])) {
         // PayPal has already accepted this exact batch once before — do
         // NOT release the claim (that would let a treasurer keep retrying
@@ -187,7 +206,11 @@ if ($action === 'approve') {
     if ($result['success']) {
         $pdo->prepare('UPDATE purchases SET paypal_payout_status = ?, updated_at = NOW() WHERE id = ?')
             ->execute([$result['status'], $id]);
-        flash('success', 'PayPal payout status: ' . $result['status']);
+        if ($result['status'] === 'SUCCESS') {
+            auto_mark_paid_from_paypal($pdo, $p, $id);
+        } else {
+            flash('success', 'PayPal payout status: ' . $result['status']);
+        }
     } else {
         flash('error', 'Could not check PayPal status: ' . $result['error']);
     }
