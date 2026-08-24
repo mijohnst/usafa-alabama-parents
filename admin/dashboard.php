@@ -252,13 +252,19 @@ if (can_manage_finances()) {
         $sections['Finance'][] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end & budgets','href'=>'report.php','color'=>'#37474f'];
         $sections['Finance'][] = ['icon'=>'🗂️','label'=>'Receipts','sub'=>'Browse by event or vendor','href'=>'receipts-by.php','color'=>'#37474f'];
         $sections['Finance'][] = ['icon'=>'📥','label'=>'Income','sub'=>'Record & review income','href'=>'income.php','color'=>'#1b5e20'];
-        $sections['Finance'][] = ['icon'=>'🅿️','label'=>'PayPal Activity','sub'=>'Online dues & donations','href'=>'paypal-dues-orders.php','color'=>'#003594'];
         $sections['Finance'][] = ['icon'=>'🏭','label'=>'Vendors','sub'=>'Spend by vendor + 1099','href'=>'vendor-summary.php','color'=>'#1565c0'];
         $sections['Finance'][] = ['icon'=>'📈','label'=>'Year Compare','sub'=>'Multi-year spending','href'=>'year-compare.php','color'=>'#6a1b9a'];
         if (!$sponsors_tile_added) {
             $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
             $sponsors_tile_added = true;
         }
+    }
+    // Matches paypal-dues-orders.php's own access check exactly (Treasurer/
+    // Admin/Tech full access, President/VP read-only) -- was previously
+    // stuck inside the is_treasurer()-only block above, so officers/admins
+    // never saw a tile to reach the page even after it started allowing them in.
+    if (is_treasurer() || is_super_admin() || is_officer()) {
+        $sections['Finance'][] = ['icon'=>'🅿️','label'=>'PayPal Activity','sub'=>'Online dues & donations','href'=>'paypal-dues-orders.php','color'=>'#003594'];
     }
 }
 
