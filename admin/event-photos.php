@@ -72,14 +72,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'bulk_delete') {
         $ids = array_filter(array_map('intval', $_POST['ids'] ?? []));
         $deleted = 0;
-        foreach ($ids as $id) {
-            $row = $pdo->prepare('SELECT filename FROM event_photos WHERE id=? AND album_id=?');
-            $row->execute([$id, $album_id]); $p = $row->fetch(PDO::FETCH_ASSOC);
-            if ($p && preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) {
-                @unlink($photo_dir . $p['filename']);
-                $pdo->prepare('DELETE FROM event_photos WHERE id=? AND album_id=?')->execute([$id, $album_id]);
-                $pdo->prepare('UPDATE event_albums SET cover_photo_id=NULL WHERE cover_photo_id=?')->execute([$id]);
-                $deleted++;
+        if ($ids) {
+            // Batched instead of one SELECT+DELETE+UPDATE per id — same
+            // album-scoped + filename-pattern guard as the single-delete
+            // action above, just resolved for the whole selection at once.
+            $ph = implode(',', array_fill(0, count($ids), '?'));
+            $rows = $pdo->prepare("SELECT id, filename FROM event_photos WHERE album_id=? AND id IN ($ph)");
+            $rows->execute(array_merge([$album_id], $ids));
+            $valid_ids = [];
+            foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $p) {
+                if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) {
+                    @unlink($photo_dir . $p['filename']);
+                    $valid_ids[] = $p['id'];
+                }
+            }
+            if ($valid_ids) {
+                $vph = implode(',', array_fill(0, count($valid_ids), '?'));
+                $pdo->prepare("DELETE FROM event_photos WHERE album_id=? AND id IN ($vph)")
+                    ->execute(array_merge([$album_id], $valid_ids));
+                $pdo->prepare("UPDATE event_albums SET cover_photo_id=NULL WHERE cover_photo_id IN ($vph)")
+                    ->execute($valid_ids);
+                $deleted = count($valid_ids);
             }
         }
         flash('success', "$deleted photo" . ($deleted!=1?'s':'') . " deleted.");

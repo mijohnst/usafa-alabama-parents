@@ -111,15 +111,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'bulk_delete') {
         $ids     = array_filter(array_map('intval', $_POST['ids'] ?? []));
         $deleted = 0;
-        foreach ($ids as $id) {
-            $row = $pdo->prepare('SELECT filename, type FROM event_documents WHERE id=? AND album_id=?');
-            $row->execute([$id, $album_id]); $d = $row->fetch(PDO::FETCH_ASSOC);
-            if ($d) {
+        if ($ids) {
+            // Batched instead of one SELECT+DELETE per id — same
+            // album-scoped guard as the single-delete action above, just
+            // resolved for the whole selection at once.
+            $ph = implode(',', array_fill(0, count($ids), '?'));
+            $rows = $pdo->prepare("SELECT id, filename, type FROM event_documents WHERE album_id=? AND id IN ($ph)");
+            $rows->execute(array_merge([$album_id], $ids));
+            $found = $rows->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($found as $d) {
                 if ($d['type'] === 'file' && preg_match('/^[a-zA-Z0-9._-]+$/', $d['filename'])) {
                     @unlink($doc_dir . $d['filename']);
                 }
-                $pdo->prepare('DELETE FROM event_documents WHERE id=? AND album_id=?')->execute([$id, $album_id]);
-                $deleted++;
+            }
+            if ($found) {
+                $vph = implode(',', array_fill(0, count($found), '?'));
+                $pdo->prepare("DELETE FROM event_documents WHERE album_id=? AND id IN ($vph)")
+                    ->execute(array_merge([$album_id], array_column($found, 'id')));
+                $deleted = count($found);
             }
         }
         flash('success', "$deleted document" . ($deleted!=1?'s':'') . " deleted.");
