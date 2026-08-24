@@ -66,6 +66,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ? "Receipt sent to $email."
             : "Receipt failed to send to $email.");
         header('Location: manual-receipts.php'); exit;
+
+    } elseif ($action === 'delete') {
+        // Same table/effect as Income Ledger's delete (no cascade to member
+        // dues status or PayPal tracking tables) -- just available from here
+        // too, since this page is often where a treasurer is already looking
+        // at a row (e.g. a sandbox-test entry) when they decide to remove it.
+        $id = (int)($_POST['id'] ?? 0);
+        $pdo->prepare('DELETE FROM income_entries WHERE id=?')->execute([$id]);
+        flash('success', 'Entry deleted.');
+        header('Location: manual-receipts.php'); exit;
     }
 }
 
@@ -107,6 +117,20 @@ echo show_flash();
   </div>
 </div>
 <p style="font-size:.78rem;color:#9aa5b4;margin-top:-.75rem;margin-bottom:1.25rem">Email a payer a receipt for anything the club received — a brand-new payment, or an existing ledger entry (including online PayPal dues/donations) that never got one.</p>
+
+<script>
+// Two-step delete: a plain confirm() is too easy to click through without
+// reading, especially for a real financial record. Requires typing DELETE
+// as a second, deliberate step before the form actually submits. Same
+// pattern as Income Ledger's delete -- this page deletes from the same
+// income_entries table.
+function confirmDeleteIncomeEntry(label) {
+  if (!confirm('Delete this income entry?\n\n' + label + '\n\nThis cannot be undone.')) return false;
+  var typed = prompt('Type DELETE (all caps) to confirm.');
+  if (typed !== 'DELETE') { alert('Not confirmed — nothing was deleted.'); return false; }
+  return true;
+}
+</script>
 
 <div class="card" style="max-width:920px;margin-bottom:1.75rem">
   <h2 style="margin-bottom:1rem">Record a New Payment &amp; Send a Receipt</h2>
@@ -190,6 +214,7 @@ echo show_flash();
       <th style="text-align:right">Amount</th>
       <th>Payer Email</th>
       <th></th>
+      <th></th>
     </tr>
   </thead>
   <tbody>
@@ -199,13 +224,21 @@ echo show_flash();
     <td style="font-weight:600"><?= h($e['source']) ?></td>
     <td><span class="type-pill" style="background:<?= $tc ?>22;color:<?= $tc ?>"><?= INCOME_SOURCE_TYPES[$e['source_type']] ?? h($e['source_type']) ?></span></td>
     <td style="text-align:right;font-weight:700;color:#1b5e20;white-space:nowrap">$<?= number_format($e['amount'],2) ?></td>
-    <td colspan="2">
+    <td>
       <form method="POST" style="display:flex;gap:.5rem;align-items:center" onsubmit="return confirm('Send a receipt to this address?')">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="send_existing">
         <input type="hidden" name="id" value="<?= $e['id'] ?>">
         <input type="email" name="receipt_email" class="mr-email-input" placeholder="donor@example.com" value="<?= h($e['receipt_email'] ?? '') ?>" required>
         <button type="submit" class="btn btn-secondary btn-sm" style="white-space:nowrap"><?= !empty($e['receipt_email']) ? 'Resend' : 'Send' ?> Receipt</button>
+      </form>
+    </td>
+    <td>
+      <form method="POST" onsubmit="return confirmDeleteIncomeEntry(<?= h(json_encode($e['source'] . ' — $' . number_format($e['amount'],2) . ' (' . date('M j, Y', strtotime($e['entry_date'])) . ')')) ?>)" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" value="<?= $e['id'] ?>">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
       </form>
     </td>
   </tr>
