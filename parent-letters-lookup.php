@@ -29,11 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-// Letter-writing window closed for this cycle -- flip to true to reopen.
-// Also flagged on the front end (parent-letters.html), but the real
-// enforcement is here: this blocks the lookup even if someone bypasses
-// the page's UI and calls the endpoint directly.
-if (!PARENT_LETTERS_OPEN) {
+$pdo = get_pdo();
+
+// Officer-controlled open/close toggle (admin/parent-letters.php), same
+// setting parent-letters.html reads via settings-feed.php to show its
+// closed notice. Checked here too -- the real enforcement, blocking the
+// lookup even if someone bypasses the page's UI and calls this directly.
+// Defaults open if the setting was never touched.
+$open_row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='parent_letters_open'")->fetch();
+$letters_open = $open_row ? (bool)(int)$open_row['setting_value'] : true;
+if (!$letters_open) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Letter submissions are currently closed. Thank you to everyone who wrote a letter this cycle!']);
     exit();
@@ -52,8 +57,6 @@ if (honeypot_tripped($payload)) {
     echo json_encode(['success' => false, 'error' => "We couldn't find a matching record. Please double-check your information, or contact secretary@alabamafalcons.org."]);
     exit();
 }
-
-$pdo = get_pdo();
 
 if (rate_limited($pdo, 'parent_letters_lookup')) {
     http_response_code(429);

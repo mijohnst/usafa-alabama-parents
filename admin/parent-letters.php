@@ -6,9 +6,19 @@ $pdo = get_pdo();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
-    if (($_POST['action'] ?? '') === 'delete') {
+    $action = $_POST['action'] ?? '';
+    if ($action === 'delete') {
         $pdo->prepare('DELETE FROM parent_letters WHERE id = ?')->execute([(int)($_POST['id'] ?? 0)]);
         flash('success', 'Letter deleted.');
+    } elseif ($action === 'toggle_open') {
+        // Same setting parent-letters-lookup.php/-save.php enforce server-side
+        // and parent-letters.html reads via settings-feed.php for its closed
+        // notice -- this button is the only place that value gets changed.
+        $row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='parent_letters_open'")->fetch();
+        $cur = $row ? (bool)(int)$row['setting_value'] : true;
+        $new_val = $cur ? 0 : 1;
+        $pdo->prepare("INSERT INTO site_settings (setting_key,setting_label,setting_value,setting_type) VALUES ('parent_letters_open','Parent Letters submissions open',?,'number') ON DUPLICATE KEY UPDATE setting_value=?")->execute([$new_val, $new_val]);
+        flash('success', $cur ? 'Letter submissions closed on the public page.' : 'Letter submissions reopened on the public page.');
     }
     header('Location: parent-letters.php'); exit;
 }
@@ -24,6 +34,9 @@ $letters = $pdo->query(
      ORDER BY m.cadet_last_name ASC, m.cadet_first_name ASC, pl.created_at ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
+$open_row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='parent_letters_open'")->fetch();
+$letters_open = $open_row ? (bool)(int)$open_row['setting_value'] : true;
+
 admin_header('Parent Letters');
 echo show_flash();
 ?>
@@ -34,13 +47,22 @@ echo show_flash();
 
 <div class="page-head">
   <h1>Parent Letters</h1>
-  <div style="display:flex;gap:.5rem">
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <?php if (!empty($letters)): ?>
     <a href="parent-letters-pdf-all.php" class="btn btn-primary">⬇️ Download All as PDF (A–Z by Cadet Last Name)</a>
     <?php endif; ?>
+    <form method="POST" style="margin:0">
+      <?= csrf_field() ?><input type="hidden" name="action" value="toggle_open">
+      <button type="submit" class="btn <?= $letters_open ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+        <?= $letters_open ? 'Close Submissions' : '✓ Reopen Submissions' ?>
+      </button>
+    </form>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
 </div>
+<?php if (!$letters_open): ?>
+<div class="alert alert-error" style="margin-bottom:1.25rem">Letter submissions are currently closed on the public page — parents see a closed notice instead of the lookup/write form.</div>
+<?php endif; ?>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">
   Letters parents wrote to their cadets via the public Parent Letters page. Sorted alphabetically by cadet last name — use "Print All" to get every letter as one PDF in that order, ready to match against alphabetized envelopes.
 </p>

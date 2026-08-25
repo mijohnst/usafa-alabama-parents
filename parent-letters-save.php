@@ -27,10 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-// Letter-writing window closed for this cycle -- flip PARENT_LETTERS_OPEN
-// in admin/lib.php to reopen. Real enforcement lives here (and in
-// parent-letters-lookup.php); the front end just mirrors it with a notice.
-if (!PARENT_LETTERS_OPEN) {
+// Officer-controlled open/close toggle (admin/parent-letters.php), same
+// setting parent-letters.html reads via settings-feed.php to show its
+// closed notice. Checked here too -- the real enforcement, blocking saves
+// even if someone bypasses the page's UI and calls this directly.
+// Defaults open if the setting was never touched.
+$open_row = get_pdo()->query("SELECT setting_value FROM site_settings WHERE setting_key='parent_letters_open'")->fetch();
+$letters_open = $open_row ? (bool)(int)$open_row['setting_value'] : true;
+if (!$letters_open) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Letter submissions are currently closed. Thank you to everyone who wrote a letter this cycle!']);
     exit();
