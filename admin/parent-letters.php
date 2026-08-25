@@ -10,6 +10,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         $pdo->prepare('DELETE FROM parent_letters WHERE id = ?')->execute([(int)($_POST['id'] ?? 0)]);
         flash('success', 'Letter deleted.');
+    } elseif ($action === 'delete_all') {
+        $count = (int)$pdo->query('SELECT COUNT(*) FROM parent_letters')->fetchColumn();
+        $pdo->exec('DELETE FROM parent_letters');
+        flash('success', "Deleted all $count letter(s).");
     } elseif ($action === 'toggle_open') {
         // Same setting parent-letters-lookup.php/-save.php enforce server-side
         // and parent-letters.html reads via settings-feed.php for its closed
@@ -53,13 +57,30 @@ echo show_flash();
     <?php endif; ?>
     <form method="POST" style="margin:0">
       <?= csrf_field() ?><input type="hidden" name="action" value="toggle_open">
-      <button type="submit" class="btn <?= $letters_open ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+      <button type="submit" class="btn <?= $letters_open ? 'btn-secondary' : 'btn-primary' ?>">
         <?= $letters_open ? 'Close Submissions' : '✓ Reopen Submissions' ?>
       </button>
     </form>
+    <?php if (!empty($letters)): ?>
+    <form method="POST" style="margin:0" onsubmit="return confirmDeleteAllLetters(<?= count($letters) ?>)">
+      <?= csrf_field() ?><input type="hidden" name="action" value="delete_all">
+      <button type="submit" class="btn btn-danger">Delete All Letters</button>
+    </form>
+    <?php endif; ?>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
 </div>
+
+<script>
+// Two-step delete for the bulk action -- a plain confirm() is too easy to
+// click through, and this permanently deletes every family's letter.
+function confirmDeleteAllLetters(count) {
+  if (!confirm('Permanently delete all ' + count + ' letter(s)? This cannot be undone.')) return false;
+  var typed = prompt('Type DELETE (all caps) to confirm.');
+  if (typed !== 'DELETE') { alert('Not confirmed — nothing was deleted.'); return false; }
+  return true;
+}
+</script>
 <?php if (!$letters_open): ?>
 <div class="alert alert-error" style="margin-bottom:1.25rem">Letter submissions are currently closed on the public page — parents see a closed notice instead of the lookup/write form.</div>
 <?php endif; ?>
