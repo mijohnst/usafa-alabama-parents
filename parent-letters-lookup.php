@@ -29,6 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
+// Letter-writing window closed for this cycle -- flip to true to reopen.
+// Also flagged on the front end (parent-letters.html), but the real
+// enforcement is here: this blocks the lookup even if someone bypasses
+// the page's UI and calls the endpoint directly.
+if (!PARENT_LETTERS_OPEN) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Letter submissions are currently closed. Thank you to everyone who wrote a letter this cycle!']);
+    exit();
+}
+
 $input   = file_get_contents('php://input');
 $payload = json_decode($input, true);
 

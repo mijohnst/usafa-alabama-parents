@@ -3,6 +3,12 @@
 // (auth.php) and the public-facing form handlers (e.g. membership-handler.php)
 // that intentionally don't pull in the full admin bootstrap.
 
+// Letter-writing window toggle for parent-letters.html/-lookup.php/-save.php —
+// flip to true to reopen for the next cycle. Checked both here (the real
+// enforcement, blocking the lookup/save endpoints directly) and mirrored on
+// the front end so parents see a closed notice instead of a working form.
+define('PARENT_LETTERS_OPEN', false);
+
 // Strips punctuation/whitespace differences so "Jimmerson, Jr" and
 // "Jimmerson, Jr." compare equal for duplicate-member detection.
 function normalize_name(string $s): string {
