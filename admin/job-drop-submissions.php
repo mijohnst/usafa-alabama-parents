@@ -75,6 +75,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'delete_all') {
+        // Full reset for a new cadet class -- wipes every pending
+        // submission and everything live on the homepage, plus their
+        // photo files on disk (not just what class_year rotation would
+        // otherwise still be showing here).
+        $sub_files = $pdo->query('SELECT filename FROM job_drop_submissions')->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($sub_files as $fn) { $p = $submissions_dir . basename($fn); if (is_file($p)) @unlink($p); }
+        $live_files = $pdo->query('SELECT filename FROM job_drop_photos')->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($live_files as $fn) { $p = $photos_dir . basename($fn); if (is_file($p)) @unlink($p); }
+        $pending_count = count($sub_files);
+        $live_count    = count($live_files);
+        $pdo->exec('DELETE FROM job_drop_submissions');
+        $pdo->exec('DELETE FROM job_drop_photos');
+        flash('success', "Deleted all $pending_count pending submission(s) and $live_count live entr" . ($live_count === 1 ? 'y' : 'ies') . ".");
+    }
+
     if ($action === 'toggle_section') {
         try {
             $cur = (bool)$pdo->query('SELECT section_visible FROM job_drop_settings WHERE id=1')->fetchColumn();
@@ -226,16 +242,36 @@ echo show_flash();
 
 <div class="page-head">
   <h1>Job Drop Night Submissions</h1>
-  <div style="display:flex;gap:.5rem">
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <form method="POST" style="margin:0">
       <?= csrf_field() ?><input type="hidden" name="action" value="toggle_section">
-      <button type="submit" class="btn <?= $section_visible ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+      <button type="submit" class="btn <?= $section_visible ? 'btn-secondary' : 'btn-primary' ?>">
         <?= $section_visible ? 'Hide Entire Section from Homepage' : '✓ Show Section on Homepage' ?>
       </button>
     </form>
+    <?php if (!empty($pending) || !empty($live)): ?>
+    <form method="POST" style="margin:0" onsubmit="return confirmDeleteAllJobDrop(<?= count($pending) ?>, <?= count($live) ?>)">
+      <?= csrf_field() ?><input type="hidden" name="action" value="delete_all">
+      <button type="submit" class="btn btn-danger">Delete All</button>
+    </form>
+    <?php endif; ?>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
 </div>
+
+<script>
+// Two-step delete for the full reset -- a plain confirm() is too easy to
+// click through, and this permanently deletes every pending submission
+// AND everything live on the homepage (all class years, not just the
+// outgoing one), plus their photo files.
+function confirmDeleteAllJobDrop(pendingCount, liveCount) {
+  var msg = 'Permanently delete all ' + pendingCount + ' pending submission(s) and ' + liveCount + ' live entr' + (liveCount === 1 ? 'y' : 'ies') + '? This cannot be undone.';
+  if (!confirm(msg)) return false;
+  var typed = prompt('Type DELETE (all caps) to confirm.');
+  if (typed !== 'DELETE') { alert('Not confirmed — nothing was deleted.'); return false; }
+  return true;
+}
+</script>
 <?php if (!$section_visible): ?>
 <div class="alert alert-error" style="margin-bottom:1.25rem">The Job Drop Night section is currently hidden from the homepage, regardless of what's approved below.</div>
 <?php endif; ?>
