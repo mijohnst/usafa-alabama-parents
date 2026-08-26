@@ -37,6 +37,8 @@
     .event-header.open{border-bottom:2px solid var(--navy);}
     .event-title{font-family:var(--font-display);font-size:1.05rem;color:var(--navy);letter-spacing:.03em;}
     .event-meta{font-size:.8rem;color:var(--gray);margin-top:.15rem;}
+    .event-location{font-size:.8rem;color:var(--gray);margin-top:.2rem;}
+    .event-location a{color:var(--navy);text-decoration:underline;}
     .event-chevron{font-size:1.1rem;color:var(--navy);transition:transform .25s;flex-shrink:0;margin-left:1rem;}
     .event-header.open .event-chevron{transform:rotate(180deg);}
     .event-body{display:none;padding:1.5rem 1.75rem;}
@@ -260,6 +262,13 @@ function buildEventSection(album, openByDefault) {
   if (album.doc_count)   parts.push(album.doc_count   + ' file'  + (album.doc_count   !== 1 ? 's' : ''));
   if (album.description) parts.push(esc(album.description));
 
+  let locationHtml = '';
+  if (album.location_name) {
+    locationHtml = album.location_url
+      ? `<div class="event-location">&#128205; <a href="${esc(album.location_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(album.location_name)}</a></div>`
+      : `<div class="event-location">&#128205; ${esc(album.location_name)}</div>`;
+  }
+
   const header = document.createElement('div');
   header.className = 'event-header' + (openByDefault ? ' open' : '');
   header.setAttribute('role', 'button');
@@ -270,6 +279,7 @@ function buildEventSection(album, openByDefault) {
     <div>
       <div class="event-title">${esc(album.name)}</div>
       <div class="event-meta" id="${metaId}">${parts.join(' · ')}</div>
+      ${locationHtml}
     </div>
     <span class="event-chevron">&#9660;</span>`;
 

@@ -16,9 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $desc  = trim($_POST['description'] ?? '');
         $date  = trim($_POST['event_date'] ?? '') ?: null;
         $sort  = (int)($_POST['sort_order'] ?? 0);
+        $loc_name = trim($_POST['location_name'] ?? '') ?: null;
+        $loc_url  = trim($_POST['location_url'] ?? '') ?: null;
         if ($name === '') { flash('error','Album name is required.'); header('Location: event-albums.php'); exit; }
-        $pdo->prepare('INSERT INTO event_albums (name,event_date,description,sort_order) VALUES (?,?,?,?)')
-            ->execute([$name, $date, $desc, $sort]);
+        if ($loc_url && !is_safe_http_url($loc_url)) { flash('error','Location URL must start with https:// or http://'); header('Location: event-albums.php'); exit; }
+        $pdo->prepare('INSERT INTO event_albums (name,event_date,description,sort_order,location_name,location_url) VALUES (?,?,?,?,?,?)')
+            ->execute([$name, $date, $desc, $sort, $loc_name, $loc_url]);
         flash('success',"Album '$name' created.");
         header('Location: event-albums.php'); exit;
 
@@ -29,9 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $date = trim($_POST['event_date'] ?? '') ?: null;
         $sort = (int)($_POST['sort_order'] ?? 0);
         $vis  = isset($_POST['visible']) ? 1 : 0;
+        $loc_name = trim($_POST['location_name'] ?? '') ?: null;
+        $loc_url  = trim($_POST['location_url'] ?? '') ?: null;
         if ($name === '') { flash('error','Album name is required.'); header('Location: event-albums.php'); exit; }
-        $pdo->prepare('UPDATE event_albums SET name=?,event_date=?,description=?,sort_order=?,visible=? WHERE id=?')
-            ->execute([$name, $date, $desc, $sort, $vis, $id]);
+        if ($loc_url && !is_safe_http_url($loc_url)) { flash('error','Location URL must start with https:// or http://'); header('Location: event-albums.php?edit=' . $id); exit; }
+        $pdo->prepare('UPDATE event_albums SET name=?,event_date=?,description=?,sort_order=?,visible=?,location_name=?,location_url=? WHERE id=?')
+            ->execute([$name, $date, $desc, $sort, $vis, $loc_name, $loc_url, $id]);
         flash('success','Album updated.');
         header('Location: event-albums.php'); exit;
 
@@ -62,7 +68,7 @@ $editing = null;
 $edit_photos = [];
 
 if ($edit_id) {
-    $s = $pdo->prepare('SELECT id, name, event_date, description, cover_photo_id, sort_order, visible, created_at FROM event_albums WHERE id=?');
+    $s = $pdo->prepare('SELECT id, name, event_date, description, cover_photo_id, sort_order, visible, created_at, location_name, location_url FROM event_albums WHERE id=?');
     $s->execute([$edit_id]);
     $editing = $s->fetch(PDO::FETCH_ASSOC);
     if ($editing) {
@@ -73,7 +79,7 @@ if ($edit_id) {
 }
 
 $albums = $pdo->query('SELECT a.id, a.name, a.event_date, a.description, a.cover_photo_id,
-    a.sort_order, a.visible, a.created_at,
+    a.sort_order, a.visible, a.created_at, a.location_name, a.location_url,
     (SELECT COUNT(*) FROM event_photos WHERE album_id=a.id) AS photo_count,
     (SELECT filename FROM event_photos WHERE id=a.cover_photo_id LIMIT 1) AS cover_filename
     FROM event_albums a
@@ -114,6 +120,16 @@ echo show_flash();
     <div class="form-group">
       <label>Description <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label>
       <input name="description" placeholder="Short description shown under the album title" value="<?= h($editing['description'] ?? '') ?>">
+    </div>
+    <div class="form-row col-2">
+      <div class="form-group">
+        <label>Business/Location Name <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label>
+        <input name="location_name" placeholder="e.g. The Venue Downtown" value="<?= h($editing['location_name'] ?? '') ?>">
+      </div>
+      <div class="form-group">
+        <label>Location Website <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional</span></label>
+        <input type="url" name="location_url" placeholder="https://example.com" value="<?= h($editing['location_url'] ?? '') ?>">
+      </div>
     </div>
     <div class="form-row col-2">
       <div class="form-group">
@@ -178,6 +194,12 @@ echo show_flash();
         <?php if (!$a['visible']): ?> · <span style="color:#A6192E;font-weight:700">Hidden</span><?php endif; ?>
       </div>
       <?php if ($a['description']): ?><div style="font-size:.78rem;color:#5a6a7a;margin-top:.15rem"><?= h($a['description']) ?></div><?php endif; ?>
+      <?php if ($a['location_name']): ?>
+      <div style="font-size:.78rem;color:#5a6a7a;margin-top:.15rem">📍
+        <?php if ($a['location_url']): ?><a href="<?= h($a['location_url']) ?>" target="_blank" rel="noopener"><?= h($a['location_name']) ?></a>
+        <?php else: ?><?= h($a['location_name']) ?><?php endif; ?>
+      </div>
+      <?php endif; ?>
     </div>
     <div style="display:flex;gap:.4rem;flex-shrink:0;flex-wrap:wrap">
       <a href="event-photos.php?album_id=<?= $a['id'] ?>" class="btn btn-secondary btn-sm">📷 Photos</a>

@@ -28,6 +28,7 @@ if ($action === 'albums') {
     // Return all visible albums with photo count, doc count, and cover photo filename
     $rows = $pdo->query("
         SELECT a.id, a.name, a.event_date, a.description, a.sort_order,
+               a.location_name, a.location_url,
                (SELECT COUNT(*) FROM event_photos    WHERE album_id=a.id) AS photo_count,
                (SELECT COUNT(*) FROM event_documents WHERE album_id=a.id) AS doc_count,
                cp.filename AS cover_filename
@@ -41,14 +42,18 @@ if ($action === 'albums') {
 
     $albums = [];
     foreach ($rows as $r) {
+        $loc_url = $r['location_url'];
+        if ($loc_url && !preg_match('/^https?:\/\//i', $loc_url)) $loc_url = null; // re-validate on output too
         $albums[] = [
-            'id'          => (int)$r['id'],
-            'name'        => $r['name'],
-            'event_date'  => $r['event_date'],
-            'description' => $r['description'],
-            'photo_count' => (int)$r['photo_count'],
-            'doc_count'   => (int)$r['doc_count'],
-            'cover_url'   => $r['cover_filename'] ? '/event-photo-serve.php?f=' . rawurlencode($r['cover_filename']) : null,
+            'id'            => (int)$r['id'],
+            'name'          => $r['name'],
+            'event_date'    => $r['event_date'],
+            'description'   => $r['description'],
+            'location_name' => $r['location_name'],
+            'location_url'  => $loc_url,
+            'photo_count'   => (int)$r['photo_count'],
+            'doc_count'     => (int)$r['doc_count'],
+            'cover_url'     => $r['cover_filename'] ? '/event-photo-serve.php?f=' . rawurlencode($r['cover_filename']) : null,
         ];
     }
     echo json_encode(['albums' => $albums]);
