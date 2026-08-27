@@ -239,6 +239,10 @@ if (can_manage_members()) {
     $sections['Member Management'][] = ['icon'=>'📇','label'=>'Committee Interest','sub'=>'See who volunteered','href'=>'committee-interest.php','color'=>'#f57f17'];
 }
 
+if (can_use_digest_composer()) {
+    $sections['Site Management'][] = ['icon'=>'🧵','label'=>'Digest Composer','sub'=>'AI-organize forwarded emails','href'=>'digest-composer.php','color'=>'#6a1b9a'];
+}
+
 if (can_manage_finances()) {
     $pending  = $stats['finance']['pending_count']  ?? 0;
     $approved = $stats['finance']['approved_count'] ?? 0;

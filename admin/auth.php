@@ -136,6 +136,23 @@ function is_super_admin(): bool {
     return is_admin() || is_tech();
 }
 
+// Board (officer/secretary/treasurer) + Admin/Tech — who may use the Digest
+// Composer (digest-composer.php). Deliberately its own check rather than
+// can_manage_members() (excludes Treasurer) or can_manage_finances()
+// (includes plain Member) — this tool is for whoever sends club-wide
+// communications, which is the full board plus super-admins.
+function can_use_digest_composer(): bool {
+    return in_array($_SESSION['role'] ?? '', ['admin', 'tech', 'officer', 'secretary', 'treasurer'], true);
+}
+
+function require_digest_composer_access(): void {
+    require_login();
+    if (!can_use_digest_composer()) {
+        header('Location: index.php?denied=1');
+        exit;
+    }
+}
+
 // Admin, Tech, Officer — full club officer-level access
 function is_club_officer(): bool {
     return is_super_admin() || is_officer();
