@@ -397,3 +397,15 @@ function extract_youtube_id(string $url): ?string {
     }
     return null;
 }
+
+// Shared by digest-generate.php (fresh AI output) and digest-catalog.php
+// (re-derives the plain-text copy after a saved digest is hand-edited) so
+// both stay in sync on the same conversion.
+function digest_html_to_text(string $html): string {
+    $text = trim(html_entity_decode(strip_tags(str_replace(
+        ['<li>', '</li>', '</p>', '</h3>'],
+        ['• ', "\n", "\n\n", "\n\n"],
+        $html
+    )), ENT_QUOTES, 'UTF-8'));
+    return preg_replace("/\n{3,}/", "\n\n", $text);
+}

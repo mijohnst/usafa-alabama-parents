@@ -112,11 +112,6 @@ $html = trim($candidate['content']['parts'][0]['text']);
 // Strip a stray ```html / ``` code fence if the model wraps its output in one.
 $html = preg_replace('/^```(?:html)?\s*|\s*```$/i', '', $html);
 
-$text = trim(html_entity_decode(strip_tags(str_replace(
-    ['<li>', '</li>', '</p>', '</h3>'],
-    ['• ', "\n", "\n\n", "\n\n"],
-    $html
-)), ENT_QUOTES, 'UTF-8'));
-$text = preg_replace("/\n{3,}/", "\n\n", $text);
+$text = digest_html_to_text($html);
 
 echo json_encode(['html' => $html, 'text' => $text, 'csrf' => $fresh_csrf]);

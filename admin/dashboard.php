@@ -241,6 +241,8 @@ if (can_manage_members()) {
 
 if (can_use_digest_composer()) {
     $sections['Site Management'][] = ['icon'=>'🧵','label'=>'Digest Composer','sub'=>'AI-organize forwarded emails','href'=>'digest-composer.php','color'=>'#6a1b9a'];
+    try { $digest_count = (int)get_pdo()->query('SELECT COUNT(*) FROM digest_emails')->fetchColumn(); } catch(Exception $e) { $digest_count = 0; }
+    $sections['Site Management'][] = ['icon'=>'📚','label'=>'Digest Catalog','sub'=>$digest_count>0?"$digest_count saved":'Saved digest drafts','href'=>'digest-catalog.php','color'=>'#6a1b9a'];
 }
 
 if (can_manage_finances()) {

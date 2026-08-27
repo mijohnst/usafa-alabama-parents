@@ -27,7 +27,10 @@ admin_header('Digest Composer');
 
 <div class="page-head">
   <h1>Digest Composer</h1>
-  <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  <div style="display:flex;gap:.5rem">
+    <a href="digest-catalog.php" class="btn btn-secondary">📚 Catalog</a>
+    <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  </div>
 </div>
 
 <div class="digest-card">
@@ -52,7 +55,7 @@ admin_header('Digest Composer');
 <div class="digest-card digest-result" id="digest-result">
   <div class="page-head" style="margin-bottom:.75rem">
     <h2 style="margin:0">Digest Draft</h2>
-    <div style="display:flex;gap:.5rem;align-items:center">
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
       <span class="copy-toast" id="copy-toast">✓ Copied</span>
       <button type="button" class="btn btn-secondary btn-sm" id="copy-plain-btn" onclick="copyPlain()">Copy Plain Text</button>
       <button type="button" class="btn btn-primary btn-sm" id="copy-btn" onclick="copyFormatted()">Copy Formatted (for Gmail)</button>
@@ -63,6 +66,20 @@ admin_header('Digest Composer');
     <summary style="cursor:pointer;font-size:.82rem;color:#5a6a7a">Plain text version</summary>
     <textarea class="digest-textout" id="digest-textout" readonly></textarea>
   </details>
+
+  <div style="border-top:1px solid #e1e5eb;margin-top:1.25rem;padding-top:1rem">
+    <div class="form-group" style="max-width:400px">
+      <label>Save to Catalog As</label>
+      <input type="text" id="digest-title" maxlength="200">
+    </div>
+    <form method="POST" action="digest-catalog.php" id="save-form">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="title" id="save-title-input">
+      <input type="hidden" name="html" id="save-html-input">
+      <button type="submit" class="btn btn-primary">Save to Catalog</button>
+    </form>
+  </div>
 </div>
 
 <script>
@@ -99,6 +116,7 @@ function generateDigest() {
       lastText = data.text;
       document.getElementById('digest-preview').innerHTML = data.html;
       document.getElementById('digest-textout').value = data.text;
+      document.getElementById('digest-title').value = 'Digest — ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       document.getElementById('digest-result').style.display = 'block';
       document.getElementById('digest-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
     })
@@ -142,6 +160,11 @@ function copyPlain() {
     ? navigator.clipboard.writeText(lastText).then(showCopyToast)
     : (document.execCommand('copy'), showCopyToast());
 }
+
+document.getElementById('save-form').addEventListener('submit', function() {
+  document.getElementById('save-title-input').value = document.getElementById('digest-title').value.trim() || 'Untitled Digest';
+  document.getElementById('save-html-input').value = lastHtml;
+});
 </script>
 
 <?php admin_footer(); ?>
