@@ -1,6 +1,6 @@
 <?php
 // AJAX endpoint for digest-composer.php — takes raw pasted emails, asks
-// Claude to organize them into one clean digest, returns HTML + plain text.
+// Gemini to organize them into one clean digest, returns HTML + plain text.
 // Never linked directly; only called via fetch() from digest-composer.php.
 require_once __DIR__ . '/auth.php';
 require_digest_composer_access();
@@ -22,8 +22,8 @@ $fresh_csrf = $_SESSION['csrf'];
 
 require_once __DIR__ . '/config.php';
 
-if (empty(ANTHROPIC_API_KEY)) {
-    echo json_encode(['error' => 'AI service isn\'t configured yet. Add an Anthropic API key to admin/config.php (ANTHROPIC_API_KEY) to enable this tool.', 'csrf' => $fresh_csrf]);
+if (empty(GEMINI_API_KEY)) {
+    echo json_encode(['error' => 'AI service isn\'t configured yet. Add a Gemini API key to admin/config.php (GEMINI_API_KEY) to enable this tool.', 'csrf' => $fresh_csrf]);
     exit;
 }
 
@@ -52,24 +52,26 @@ Rules:
 - Output ONLY the digest body as simple HTML using nothing but these tags: <h3>, <p>, <ul>, <li>, <strong>, <a href="...">. No <html>, <head>, <body>, inline styles, or any other tags. No commentary before or after — just the HTML.
 PROMPT;
 
+// Free-tier-eligible Gemini model via Google AI Studio — swap this constant
+// if Google changes which model the free tier covers.
+const GEMINI_MODEL = 'gemini-2.0-flash';
+
 $payload = json_encode([
-    'model'      => 'claude-sonnet-5',
-    'max_tokens' => 4096,
-    'system'     => $system_prompt,
-    'messages'   => [
-        ['role' => 'user', 'content' => "Here are the emails to organize into one digest:\n\n" . $raw],
+    'system_instruction' => ['parts' => [['text' => $system_prompt]]],
+    'contents'           => [
+        ['role' => 'user', 'parts' => [['text' => "Here are the emails to organize into one digest:\n\n" . $raw]]],
     ],
+    'generationConfig'   => ['maxOutputTokens' => 4096],
 ]);
 
-$ch = curl_init('https://api.anthropic.com/v1/messages');
+$ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/' . GEMINI_MODEL . ':generateContent');
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
     CURLOPT_POSTFIELDS     => $payload,
     CURLOPT_HTTPHEADER     => [
         'Content-Type: application/json',
-        'x-api-key: ' . ANTHROPIC_API_KEY,
-        'anthropic-version: 2023-06-01',
+        'x-goog-api-key: ' . GEMINI_API_KEY,
     ],
     CURLOPT_TIMEOUT => 60,
 ]);
@@ -85,15 +87,20 @@ if ($resp === false) {
 }
 
 $data = json_decode($resp, true);
+$candidate = $data['candidates'][0] ?? null;
 
-if ($code !== 200 || !isset($data['content'][0]['text'])) {
+if ($code !== 200 || !isset($candidate['content']['parts'][0]['text'])) {
     error_log('Digest Composer: API error (HTTP ' . $code . ') — ' . $resp);
-    $msg = $data['error']['message'] ?? 'The AI service returned an unexpected response.';
+    if (($candidate['finishReason'] ?? '') === 'SAFETY') {
+        $msg = 'The AI service declined to process this text (flagged by its safety filter). Try again with a smaller excerpt.';
+    } else {
+        $msg = $data['error']['message'] ?? 'The AI service returned an unexpected response.';
+    }
     echo json_encode(['error' => $msg, 'csrf' => $fresh_csrf]);
     exit;
 }
 
-$html = trim($data['content'][0]['text']);
+$html = trim($candidate['content']['parts'][0]['text']);
 // Strip a stray ```html / ``` code fence if the model wraps its output in one.
 $html = preg_replace('/^```(?:html)?\s*|\s*```$/i', '', $html);
 

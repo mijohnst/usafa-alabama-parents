@@ -33,7 +33,7 @@ admin_header('Digest Composer');
 <div class="digest-card">
   <div class="digest-hint">
     Paste in the emails you've been forwarding to members (copy/paste the whole message, several at once is fine).
-    Claude will organize them into one clean digest — group by topic, pull deadlines to the top, and strip the
+    The AI will organize them into one clean digest — group by topic, pull deadlines to the top, and strip the
     signatures/forwarding clutter. <strong>Always proofread the result</strong> — especially dates, dollar amounts,
     and links — before sending. This tool doesn't send anything; it just gives you something to paste into Gmail.
   </div>
