@@ -53,15 +53,18 @@ Rules:
 PROMPT;
 
 // Free-tier-eligible Gemini model via Google AI Studio — swap this constant
-// if Google changes which model the free tier covers.
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// if Google retires this one too (it already replaced gemini-2.0-flash once).
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 $payload = json_encode([
     'system_instruction' => ['parts' => [['text' => $system_prompt]]],
     'contents'           => [
         ['role' => 'user', 'parts' => [['text' => "Here are the emails to organize into one digest:\n\n" . $raw]]],
     ],
-    'generationConfig'   => ['maxOutputTokens' => 4096],
+    // This model spends part of its output budget on internal "thinking"
+    // tokens before the visible response (observed ~1,400 for a trivial
+    // prompt) — kept generous so a long digest doesn't get cut off.
+    'generationConfig'   => ['maxOutputTokens' => 8192],
 ]);
 
 $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/' . GEMINI_MODEL . ':generateContent');
@@ -97,6 +100,11 @@ if ($code !== 200 || !isset($candidate['content']['parts'][0]['text'])) {
         $msg = $data['error']['message'] ?? 'The AI service returned an unexpected response.';
     }
     echo json_encode(['error' => $msg, 'csrf' => $fresh_csrf]);
+    exit;
+}
+
+if (($candidate['finishReason'] ?? '') === 'MAX_TOKENS') {
+    echo json_encode(['error' => 'That draft got cut off — try again with fewer emails pasted in at once.', 'csrf' => $fresh_csrf]);
     exit;
 }
 
