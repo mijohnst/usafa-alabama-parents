@@ -67,25 +67,39 @@ $payload = json_encode([
     'generationConfig'   => ['maxOutputTokens' => 8192],
 ]);
 
-$ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/' . GEMINI_MODEL . ':generateContent');
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST           => true,
-    CURLOPT_POSTFIELDS     => $payload,
-    CURLOPT_HTTPHEADER     => [
-        'Content-Type: application/json',
-        'x-goog-api-key: ' . GEMINI_API_KEY,
-    ],
-    CURLOPT_TIMEOUT => 60,
-]);
-$resp     = curl_exec($ch);
-$code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curl_err = curl_error($ch);
-curl_close($ch);
+// Google's free tier occasionally returns 503 ("model is currently
+// experiencing high demand") under load — genuinely transient, so retry a
+// couple of times with a short backoff before surfacing it as an error.
+$max_attempts = 3;
+for ($attempt = 1; $attempt <= $max_attempts; $attempt++) {
+    $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/' . GEMINI_MODEL . ':generateContent');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/json',
+            'x-goog-api-key: ' . GEMINI_API_KEY,
+        ],
+        CURLOPT_TIMEOUT => 60,
+    ]);
+    $resp     = curl_exec($ch);
+    $code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_err = curl_error($ch);
+    curl_close($ch);
+
+    if ($resp !== false && $code !== 503) break;
+    if ($attempt < $max_attempts) sleep($attempt); // 1s, then 2s
+}
 
 if ($resp === false) {
     error_log('Digest Composer: cURL error — ' . $curl_err);
     echo json_encode(['error' => 'Could not reach the AI service. Please try again.', 'csrf' => $fresh_csrf]);
+    exit;
+}
+
+if ($code === 503) {
+    echo json_encode(['error' => 'The AI service is under heavy load right now (this is on Google\'s end, not yours). Please wait a moment and try again.', 'csrf' => $fresh_csrf]);
     exit;
 }
 
