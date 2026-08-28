@@ -1,9 +1,13 @@
 <?php
 /**
  * Update-Your-Information Lookup
- * Verifies a cadet last name + graduation year + email already on file
- * (either parent) before returning that family's current record, so the
- * Update form can be pre-filled. Never creates or modifies anything.
+ * Verifies a cadet last name + birthday + graduation year + email already
+ * on file (either parent) before returning that family's current record,
+ * so the Update form can be pre-filled. Graduation year is still required
+ * here (unlike Job Drop Night's lookup) because this page isn't scoped to
+ * one class — without it, birthday + email alone could still land on the
+ * wrong sibling if two cadets in the family share a birthday coincidence
+ * and a parent's email. Never creates or modifies anything.
  */
 
 header('Content-Type: application/json');
@@ -55,13 +59,14 @@ function s(array $p, string $key): string {
     return trim($p[$key] ?? '');
 }
 
-$last  = s($payload, 'cadetLastName');
-$year  = s($payload, 'graduationYear');
-$email = s($payload, 'email');
+$last     = s($payload, 'cadetLastName');
+$birthday = s($payload, 'cadetBirthday');
+$year     = s($payload, 'graduationYear');
+$email    = s($payload, 'email');
 
-if ($last === '' || $year === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+if ($last === '' || $year === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Please enter the cadet last name, graduation year, and the email address on file.']);
+    echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, graduation year, and the email address on file."]);
     exit();
 }
 
@@ -72,10 +77,10 @@ if ($last === '' || $year === '' || $email === '' || !filter_var($email, FILTER_
 // a parent naturally types now that Suffix is its own field.
 $stmt = $pdo->prepare(
     'SELECT * FROM members
-     WHERE archived = 0 AND class_year = :class_year
+     WHERE archived = 0 AND class_year = :class_year AND cadet_birthday = :birthday
        AND (parent1_email = :email OR parent2_email = :email)'
 );
-$stmt->execute(['class_year' => $year, 'email' => $email]);
+$stmt->execute(['class_year' => $year, 'birthday' => $birthday, 'email' => $email]);
 $target_norm = strip_name_suffix(normalize_name($last));
 $m = null;
 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -85,7 +90,7 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
 if (!$m) {
     echo json_encode([
         'success' => false,
-        'error'   => "We couldn't find a matching record. Please double-check the cadet's last name, graduation year, and the email on file, or contact secretary@alabamafalcons.org."
+        'error'   => "We couldn't find a matching record. Please double-check the cadet's last name, birthday, graduation year, and the email on file, or contact secretary@alabamafalcons.org."
     ]);
     exit();
 }

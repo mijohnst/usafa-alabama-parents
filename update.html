@@ -178,10 +178,14 @@
         <div id="lookupSection">
           <div class="form-divider-label" id="fs-lookup">Find Your Record</div>
           <p style="color:var(--gray);font-size:0.95rem;margin-bottom:1.25rem">Enter your cadet's info and a parent email address already on file to pull up your family's current information.</p>
-          <div class="form-row-3">
+          <div class="form-row-4">
             <div class="form-group">
               <label for="lookupLastName">Cadet Last Name *</label>
               <input type="text" id="lookupLastName" required />
+            </div>
+            <div class="form-group">
+              <label for="lookupBirthday">Cadet Birthday *</label>
+              <input type="date" id="lookupBirthday" required />
             </div>
             <div class="form-group">
               <label for="lookupGradYear">Graduation Year *</label>
@@ -204,6 +208,7 @@
         </div>
 
         <input type="hidden" id="verifiedLastName" name="verifiedLastName" />
+        <input type="hidden" id="verifiedBirthday" name="verifiedBirthday" />
         <input type="hidden" id="verifiedYear" name="verifiedYear" />
         <input type="hidden" id="verifiedEmail" name="verifiedEmail" />
         <input type="hidden" id="verifyToken" name="verifyToken" />
@@ -506,20 +511,22 @@
       if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lookupBtn').click(); }
     }
     document.getElementById('lookupLastName').addEventListener('keydown', lookupEnterKey);
+    document.getElementById('lookupBirthday').addEventListener('keydown', lookupEnterKey);
     document.getElementById('lookupEmail').addEventListener('keydown', lookupEnterKey);
 
     document.getElementById('lookupBtn').addEventListener('click', async function() {
       var btn = this;
       var statusEl = document.getElementById('lookupStatus');
-      var last  = document.getElementById('lookupLastName').value.trim();
-      var year  = document.getElementById('lookupGradYear').value;
-      var email = document.getElementById('lookupEmail').value.trim();
+      var last     = document.getElementById('lookupLastName').value.trim();
+      var birthday = document.getElementById('lookupBirthday').value;
+      var year     = document.getElementById('lookupGradYear').value;
+      var email    = document.getElementById('lookupEmail').value.trim();
 
       statusEl.style.display = 'none';
       statusEl.className = '';
 
-      if (!last || !year || !email) {
-        statusEl.textContent = 'Please enter the cadet last name, graduation year, and the email on file.';
+      if (!last || !birthday || !year || !email) {
+        statusEl.textContent = 'Please enter the cadet last name, birthday, graduation year, and the email on file.';
         statusEl.className = 'error';
         statusEl.style.display = 'block';
         return;
@@ -534,6 +541,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             cadetLastName: last,
+            cadetBirthday: birthday,
             graduationYear: year,
             email: email,
             website: document.getElementById('website').value
@@ -544,6 +552,7 @@
         if (result.success) {
           populateForm(result.member);
           document.getElementById('verifiedLastName').value = last;
+          document.getElementById('verifiedBirthday').value = birthday;
           document.getElementById('verifiedYear').value = year;
           document.getElementById('verifiedEmail').value = email;
           document.getElementById('verifyToken').value = result.verifyToken;
