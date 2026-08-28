@@ -39,6 +39,8 @@ if (mb_strlen($raw) > 60000) {
     exit;
 }
 
+$instructions = trim(mb_substr(trim($_POST['instructions'] ?? ''), 0, 500));
+
 $system_prompt = <<<'PROMPT'
 You are helping a volunteer parent-club president turn a pile of forwarded emails into ONE clean, organized digest email for club members. Members are getting fatigued by too many separate emails, so this digest replaces them.
 
@@ -56,10 +58,16 @@ PROMPT;
 // if Google retires this one too (it already replaced gemini-2.0-flash once).
 const GEMINI_MODEL = 'gemini-3.6-flash';
 
+$user_message = "Here are the emails to organize into one digest:\n\n" . $raw;
+if ($instructions !== '') {
+    $user_message .= "\n\n---\nAdditional instructions from the president for this digest (apply these, but the "
+        . "no-invented-facts rule above still applies): " . $instructions;
+}
+
 $payload = json_encode([
     'system_instruction' => ['parts' => [['text' => $system_prompt]]],
     'contents'           => [
-        ['role' => 'user', 'parts' => [['text' => "Here are the emails to organize into one digest:\n\n" . $raw]]],
+        ['role' => 'user', 'parts' => [['text' => $user_message]]],
     ],
     // This model spends part of its output budget on internal "thinking"
     // tokens before the visible response (observed ~1,400 for a trivial

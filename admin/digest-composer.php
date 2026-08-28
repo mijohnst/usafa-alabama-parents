@@ -46,6 +46,11 @@ admin_header('Digest Composer');
     <textarea id="raw-input" placeholder="Paste one or more forwarded emails here…"></textarea>
   </div>
 
+  <div class="form-group">
+    <label>Additional Instructions <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
+    <input type="text" id="instructions-input" maxlength="500" placeholder="e.g. keep it shorter this week, put the fundraiser first">
+  </div>
+
   <div class="digest-actions">
     <button type="button" class="btn btn-primary" id="generate-btn" onclick="generateDigest()">Organize into Digest</button>
     <span class="digest-status" id="digest-status"></span>
@@ -99,6 +104,7 @@ function generateDigest() {
 
   var form = new FormData();
   form.append('raw', raw);
+  form.append('instructions', document.getElementById('instructions-input').value.trim());
   form.append('csrf', csrfToken);
 
   fetch('digest-generate.php', { method: 'POST', body: form })
