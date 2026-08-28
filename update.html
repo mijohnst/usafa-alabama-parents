@@ -177,8 +177,8 @@
         <!-- FIND YOUR RECORD -->
         <div id="lookupSection">
           <div class="form-divider-label" id="fs-lookup">Find Your Record</div>
-          <p style="color:var(--gray);font-size:0.95rem;margin-bottom:1.25rem">Enter your cadet's info and a parent email address already on file to pull up your family's current information.</p>
-          <div class="form-row-4">
+          <p style="color:var(--gray);font-size:0.95rem;margin-bottom:1.25rem">Enter your cadet's last name, birthday, and a parent email address already on file to pull up your family's current information.</p>
+          <div class="form-row-3">
             <div class="form-group">
               <label for="lookupLastName">Cadet Last Name *</label>
               <input type="text" id="lookupLastName" required />
@@ -188,28 +188,17 @@
               <input type="date" id="lookupBirthday" required />
             </div>
             <div class="form-group">
-              <label for="lookupGradYear">Graduation Year *</label>
-              <select id="lookupGradYear" required>
-                <option value="">Select graduation year</option>
-                <option value="2027">2027</option>
-                <option value="2028">2028</option>
-                <option value="2029">2029</option>
-                <option value="2030">2030</option>
-                <option value="Prep School">Prep School</option>
-              </select>
-            </div>
-            <div class="form-group">
               <label for="lookupEmail">Either Parent's Email on File *</label>
               <input type="email" id="lookupEmail" required />
             </div>
           </div>
           <div id="lookupStatus"></div>
           <button type="button" id="lookupBtn" class="cta-button">Find My Record</button>
+          <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Having trouble finding your record? Contact site support at <a href="mailto:mijohnst@alabamafalcons.org" style="color:var(--blue)">mijohnst@alabamafalcons.org</a>.</p>
         </div>
 
         <input type="hidden" id="verifiedLastName" name="verifiedLastName" />
         <input type="hidden" id="verifiedBirthday" name="verifiedBirthday" />
-        <input type="hidden" id="verifiedYear" name="verifiedYear" />
         <input type="hidden" id="verifiedEmail" name="verifiedEmail" />
         <input type="hidden" id="verifyToken" name="verifyToken" />
 
@@ -519,14 +508,13 @@
       var statusEl = document.getElementById('lookupStatus');
       var last     = document.getElementById('lookupLastName').value.trim();
       var birthday = document.getElementById('lookupBirthday').value;
-      var year     = document.getElementById('lookupGradYear').value;
       var email    = document.getElementById('lookupEmail').value.trim();
 
       statusEl.style.display = 'none';
       statusEl.className = '';
 
-      if (!last || !birthday || !year || !email) {
-        statusEl.textContent = 'Please enter the cadet last name, birthday, graduation year, and the email on file.';
+      if (!last || !birthday || !email) {
+        statusEl.textContent = 'Please enter the cadet last name, birthday, and the email on file.';
         statusEl.className = 'error';
         statusEl.style.display = 'block';
         return;
@@ -542,7 +530,6 @@
           body: JSON.stringify({
             cadetLastName: last,
             cadetBirthday: birthday,
-            graduationYear: year,
             email: email,
             website: document.getElementById('website').value
           })
@@ -553,7 +540,6 @@
           populateForm(result.member);
           document.getElementById('verifiedLastName').value = last;
           document.getElementById('verifiedBirthday').value = birthday;
-          document.getElementById('verifiedYear').value = year;
           document.getElementById('verifiedEmail').value = email;
           document.getElementById('verifyToken').value = result.verifyToken;
           document.getElementById('lookupSection').style.display = 'none';
