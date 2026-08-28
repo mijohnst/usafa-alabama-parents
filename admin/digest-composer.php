@@ -78,7 +78,7 @@ admin_header('Digest Composer');
       <input type="text" id="digest-title" maxlength="200">
     </div>
     <form method="POST" action="digest-catalog.php" id="save-form">
-      <?= csrf_field() ?>
+      <input type="hidden" name="csrf" id="save-csrf-input" value="<?= h($csrf_token) ?>">
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="title" id="save-title-input">
       <input type="hidden" name="html" id="save-html-input">
@@ -170,6 +170,10 @@ function copyPlain() {
 document.getElementById('save-form').addEventListener('submit', function() {
   document.getElementById('save-title-input').value = document.getElementById('digest-title').value.trim() || 'Untitled Digest';
   document.getElementById('save-html-input').value = lastHtml;
+  // csrfToken tracks the session's current token (rotated after every
+  // "Organize into Digest" call) — the field rendered at page load goes
+  // stale as soon as more than one draft has been generated.
+  document.getElementById('save-csrf-input').value = csrfToken;
 });
 </script>
 
