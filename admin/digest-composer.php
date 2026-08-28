@@ -54,6 +54,7 @@ admin_header('Digest Composer');
   <div class="digest-actions">
     <button type="button" class="btn btn-primary" id="generate-btn" onclick="generateDigest()">Organize into Digest</button>
     <span class="digest-status" id="digest-status"></span>
+    <a href="#" id="cancel-retry-link" style="display:none;font-size:.85rem;color:#c62828" onclick="cancelRetry(); return false;">Stop retrying</a>
   </div>
 </div>
 
@@ -91,16 +92,41 @@ admin_header('Digest Composer');
 var lastHtml = '', lastText = '';
 var csrfToken = '<?= h($csrf_token) ?>';
 
+var retryTimer = null;
+var retryAttempt = 0;
+var MAX_RETRIES = 20; // with the backoff below, spans roughly 10 minutes
+
 function generateDigest() {
+  clearTimeout(retryTimer);
+  retryAttempt = 0;
+  var raw = document.getElementById('raw-input').value.trim();
+  if (!raw) {
+    var status = document.getElementById('digest-status');
+    status.textContent = 'Paste in some emails first.'; status.style.color = '#c62828';
+    return;
+  }
+  document.getElementById('generate-btn').disabled = true;
+  document.getElementById('digest-result').style.display = 'none';
+  runGenerateAttempt();
+}
+
+function cancelRetry() {
+  clearTimeout(retryTimer);
+  retryAttempt = 0;
+  document.getElementById('generate-btn').disabled = false;
+  document.getElementById('cancel-retry-link').style.display = 'none';
+  var status = document.getElementById('digest-status');
+  status.style.color = '#5a6a7a';
+  status.textContent = 'Stopped.';
+}
+
+function runGenerateAttempt() {
   var raw = document.getElementById('raw-input').value.trim();
   var status = document.getElementById('digest-status');
-  var btn = document.getElementById('generate-btn');
-  if (!raw) { status.textContent = 'Paste in some emails first.'; status.style.color = '#c62828'; return; }
-
-  btn.disabled = true;
   status.style.color = '#5a6a7a';
-  status.textContent = 'Organizing… this can take up to 30 seconds.';
-  document.getElementById('digest-result').style.display = 'none';
+  status.textContent = retryAttempt === 0
+    ? 'Organizing… this can take up to 30 seconds.'
+    : 'Still busy — retrying automatically (attempt ' + (retryAttempt + 1) + ')…';
 
   var form = new FormData();
   form.append('raw', raw);
@@ -110,13 +136,26 @@ function generateDigest() {
   fetch('digest-generate.php', { method: 'POST', body: form })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      btn.disabled = false;
       if (data.csrf) csrfToken = data.csrf;
       if (data.error) {
+        if (data.retryable && retryAttempt < MAX_RETRIES) {
+          retryAttempt++;
+          document.getElementById('cancel-retry-link').style.display = 'inline';
+          var delaySec = Math.min(10 + retryAttempt * 5, 30);
+          status.textContent = 'Google\'s AI service is busy — retrying in ' + delaySec + 's (attempt ' + (retryAttempt + 1) + ')…';
+          retryTimer = setTimeout(runGenerateAttempt, delaySec * 1000);
+          return;
+        }
+        document.getElementById('generate-btn').disabled = false;
+        document.getElementById('cancel-retry-link').style.display = 'none';
         status.style.color = '#c62828';
-        status.textContent = data.error;
+        status.textContent = data.retryable
+          ? 'Still busy after several minutes of retrying — please try again later.'
+          : data.error;
         return;
       }
+      document.getElementById('generate-btn').disabled = false;
+      document.getElementById('cancel-retry-link').style.display = 'none';
       status.textContent = '';
       lastHtml = data.html;
       lastText = data.text;
@@ -127,7 +166,8 @@ function generateDigest() {
       document.getElementById('digest-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
     })
     .catch(function() {
-      btn.disabled = false;
+      document.getElementById('generate-btn').disabled = false;
+      document.getElementById('cancel-retry-link').style.display = 'none';
       status.style.color = '#c62828';
       status.textContent = 'Something went wrong contacting the server. Please try again.';
     });

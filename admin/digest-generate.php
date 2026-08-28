@@ -107,7 +107,7 @@ if ($resp === false) {
 }
 
 if ($code === 503) {
-    echo json_encode(['error' => 'The AI service is under heavy load right now (this is on Google\'s end, not yours). Please wait a moment and try again.', 'csrf' => $fresh_csrf]);
+    echo json_encode(['error' => 'The AI service is under heavy load right now (this is on Google\'s end, not yours).', 'retryable' => true, 'csrf' => $fresh_csrf]);
     exit;
 }
 
