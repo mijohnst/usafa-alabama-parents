@@ -138,6 +138,10 @@ admin_header('Parents Club Badges');
 .badge-table th{padding:.5rem .75rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a7a;background:#f7f9fc;text-align:left;white-space:nowrap}
 .badge-table td{padding:.5rem .75rem;border-top:1px solid #f0f2f5;vertical-align:middle}
 .badge-table tr:hover td{background:#fafbfc}
+.badge-table th:nth-child(4), .badge-table td:nth-child(4),
+.badge-table th:nth-child(5), .badge-table td:nth-child(5),
+.badge-table th:nth-child(6), .badge-table td:nth-child(6),
+.badge-table th:nth-child(7), .badge-table td:nth-child(7) { text-align:center }
 .badge-cb{width:17px;height:17px;accent-color:#1b5e20;cursor:pointer}
 .badge-date{padding:.3rem .4rem;font-size:.8rem;border:1px solid #d0d5dd;border-radius:4px;width:9.5rem}
 .badge-date:disabled{background:#f7f9fc;color:#c3cad4}
