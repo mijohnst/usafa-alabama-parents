@@ -41,6 +41,7 @@ $default_view = ($year === '');
 $current_years = array_merge(current_class_years(), ['Prep School']);
 $search = trim($_GET['q'] ?? '');
 $paid_only = isset($_GET['paid']);
+$needs_only = isset($_GET['needs']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -83,13 +84,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($posted as $r) $up->execute($r);
         $pdo->commit();
         flash('success', 'Badge tracker saved — ' . count($posted) . ' row' . (count($posted) != 1 ? 's' : '') . ' updated.');
-        $qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null]);
+        $qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null, 'needs' => $needs_only ? '1' : null]);
         header('Location: badges.php' . ($qs ? '?' . http_build_query($qs) : ''));
         exit;
     }
 }
 
 // ── Render ──────────────────────────────────────────────────────────────────
+// Existing badge state, keyed the same way as $posted above. Loaded before
+// filtering (not just for whatever survives below) since the "needs a
+// badge" filter and the CSV export both need to know saved state regardless
+// of which slots are currently shown.
+$existing = [];
+$existing_rows = $pdo->query('SELECT * FROM member_badges')->fetchAll(PDO::FETCH_ASSOC);
+foreach ($existing_rows as $r) $existing[$r['member_id'] . ':' . $r['parent_slot']] = $r;
+
 // badge_slots() only filters on a single class_year value; the default view
 // spans several, so fetch everything and filter here in PHP instead.
 $slots = badge_slots($pdo);
@@ -105,12 +114,31 @@ if ($search !== '') {
 if ($paid_only) {
     $slots = array_values(array_filter($slots, fn($s) => $s['paid']));
 }
+if ($needs_only) {
+    $slots = array_values(array_filter($slots, function($s) use ($existing) {
+        if (!$s['paid']) return false;
+        $st = $existing[$s['member_id'] . ':' . $s['slot']] ?? null;
+        return !($st && $st['done']);
+    }));
+}
 
-// Existing badge state, keyed the same way as $posted above.
-$existing = [];
-if ($slots) {
-    $existing_rows = $pdo->query('SELECT * FROM member_badges')->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($existing_rows as $r) $existing[$r['member_id'] . ':' . $r['parent_slot']] = $r;
+// ── CSV export — the currently filtered view, not the whole roster ─────────
+if (($_GET['export'] ?? '') === 'csv') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="badges-' . date('Y-m-d') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['Class Year', 'Cadet', 'Parent', 'City', 'Done', 'Done Date', 'Delivered', 'Delivered Date', 'Comment']);
+    foreach ($slots as $s) {
+        $st = $existing[$s['member_id'] . ':' . $s['slot']] ?? null;
+        fputcsv($out, array_map(fn($v) => is_string($v) ? csv_formula_safe($v) : $v, [
+            $s['class_year'], $s['cadet'], $s['name'], $s['city'] ?? '',
+            ($st && $st['done']) ? 'Yes' : 'No', $st['done_date'] ?? '',
+            ($st && $st['mailed']) ? 'Yes' : 'No', $st['mailed_date'] ?? '',
+            $st['comment'] ?? '',
+        ]));
+    }
+    fclose($out);
+    exit;
 }
 
 // If the form was just re-rendered after a validation error, show what the
@@ -188,6 +216,11 @@ admin_header('Parents Club Badges');
   <label style="font-size:.8rem;color:#5a6a7a;display:flex;align-items:center;gap:.3rem;margin-left:.5rem">
     <input type="checkbox" name="paid" value="1" onchange="this.form.submit()" <?= $paid_only ? 'checked' : '' ?>> Paid members only
   </label>
+  <label style="font-size:.8rem;color:#5a6a7a;display:flex;align-items:center;gap:.3rem">
+    <input type="checkbox" name="needs" value="1" onchange="this.form.submit()" <?= $needs_only ? 'checked' : '' ?>> Needs a badge (paid, not done)
+  </label>
+  <?php $export_qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null, 'needs' => $needs_only ? '1' : null, 'export' => 'csv']); ?>
+  <a href="badges.php?<?= http_build_query($export_qs) ?>" class="btn btn-secondary btn-sm" style="margin-left:.5rem">⬇ Export CSV</a>
 </form>
 
 <?php if (empty($slots)): ?>
@@ -205,12 +238,15 @@ admin_header('Parents Club Badges');
           if ($st && $st['done']) $done_cnt++;
           if ($st && $st['mailed']) $mailed_cnt++;
       }
+      $group_id = 'badge-group-' . preg_replace('/[^a-z0-9]+/i', '-', $gyear);
   ?>
-  <div style="display:flex;align-items:baseline;gap:.6rem;margin:1.25rem 0 .4rem">
+  <div style="display:flex;align-items:baseline;gap:.6rem;margin:1.25rem 0 .4rem;flex-wrap:wrap">
     <h3 style="margin:0;color:#002554"><?= h($gyear) ?></h3>
     <span style="font-size:.78rem;color:#9aa5b4"><?= $done_cnt ?>/<?= count($gslots) ?> done · <?= $mailed_cnt ?>/<?= count($gslots) ?> delivered</span>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="markAllInGroup('<?= h($group_id) ?>', 'done')">Mark All Done Today</button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="markAllInGroup('<?= h($group_id) ?>', 'mailed')">Mark All Delivered Today</button>
   </div>
-  <div class="card" style="padding:0;overflow-x:auto">
+  <div class="card" id="<?= h($group_id) ?>" style="padding:0;overflow-x:auto">
   <table class="badge-table">
     <thead>
       <tr>
@@ -291,6 +327,21 @@ function wireBadgeCheckbox(cbClass, dateClass) {
 }
 wireBadgeCheckbox('badge-done-cb', 'badge-done-date');
 wireBadgeCheckbox('badge-mailed-cb', 'badge-mailed-date');
+
+// Bulk-check every Done/Delivered box in one class-year group at once (the
+// source spreadsheet shows whole classes getting done in a single batch).
+// Still routes through each checkbox's own 'change' handler so the date
+// fill-in and row coloring stay in sync — nothing is saved until the page's
+// own Save button is clicked.
+function markAllInGroup(groupId, kind) {
+    var cbClass = kind === 'done' ? 'badge-done-cb' : 'badge-mailed-cb';
+    document.querySelectorAll('#' + groupId + ' .' + cbClass).forEach(function(cb) {
+        if (!cb.checked) {
+            cb.checked = true;
+            cb.dispatchEvent(new Event('change'));
+        }
+    });
+}
 // Existing checked rows on page load also need `required` set, so the
 // browser's own validation catches someone blanking a date without unchecking.
 document.querySelectorAll('.badge-done-cb:checked').forEach(function(cb) {
