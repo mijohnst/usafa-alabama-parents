@@ -38,6 +38,7 @@ if (!in_array($year, CLASS_YEAR_LIST, true) && $year !== 'all') {
 }
 $default_view = ($year === '');
 $current_years = array_merge(current_class_years(), ['Prep School']);
+$search = trim($_GET['q'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -80,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($posted as $r) $up->execute($r);
         $pdo->commit();
         flash('success', 'Badge tracker saved — ' . count($posted) . ' row' . (count($posted) != 1 ? 's' : '') . ' updated.');
-        header('Location: badges.php' . ($year !== '' ? '?year=' . urlencode($year) : ''));
+        $qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null]);
+        header('Location: badges.php' . ($qs ? '?' . http_build_query($qs) : ''));
         exit;
     }
 }
@@ -93,6 +95,10 @@ if ($default_view) {
     $slots = array_values(array_filter($slots, fn($s) => in_array($s['class_year'], $current_years, true)));
 } elseif ($year !== 'all') {
     $slots = array_values(array_filter($slots, fn($s) => $s['class_year'] === $year));
+}
+if ($search !== '') {
+    $slots = array_values(array_filter($slots, fn($s) =>
+        stripos($s['cadet'], $search) !== false || stripos($s['name'], $search) !== false));
 }
 
 // Existing badge state, keyed the same way as $posted above.
@@ -159,6 +165,10 @@ admin_header('Parents Club Badges');
       <option value="<?= h($y) ?>" <?= $year === $y ? 'selected' : '' ?>><?= h($y) ?></option>
     <?php endforeach; ?>
   </select>
+  <label style="font-size:.75rem;font-weight:700;color:#5a6a7a;margin-left:.5rem">Name:</label>
+  <input type="text" name="q" value="<?= h($search) ?>" placeholder="Cadet or parent name" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
+  <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+  <?php if ($search !== ''): ?><a href="badges.php<?= $year !== '' ? '?year=' . urlencode($year) : '' ?>" style="font-size:.8rem;color:#9aa5b4">Clear</a><?php endif; ?>
 </form>
 
 <?php if (empty($slots)): ?>
