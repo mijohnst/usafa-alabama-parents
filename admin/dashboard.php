@@ -207,6 +207,7 @@ if (can_manage_members()) {
     try { $vcount_v = (int)get_pdo()->query('SELECT COUNT(*) FROM volunteers')->fetchColumn(); } catch(Exception $e) { $vcount_v=0; }
     $sections['Member Management'][] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vcount_v>0?"$vcount_v submission".($vcount_v>1?'s':''):'View signups','href'=>'volunteers.php','color'=>'#1b5e20','badge'=>$vcount_v>0?$vcount_v:0];
     $sections['Member Management'][] = ['icon'=>'👥','label'=>'Leadership','sub'=>'Update officer profiles','href'=>'leadership.php','color'=>'#002554'];
+    $sections['Member Management'][] = ['icon'=>'🏅','label'=>'Badges','sub'=>'Track parent badge orders','href'=>'badges.php','color'=>'#8A8D8F'];
     $sections['Site Management'][] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
     $sections['Site Management'][] = ['icon'=>'🖼️','label'=>'Homepage Gallery','sub'=>'Direct-upload homepage photos','href'=>'gallery.php','color'=>'#1b5e20'];
     $sections['Site Management'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Photos for a specific club event','href'=>'event-albums.php','color'=>'#1565c0'];
