@@ -207,7 +207,7 @@ admin_header('Parents Club Badges');
     <select name="year" onchange="this.form.submit()" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
       <option value="" <?= $default_view ? 'selected' : '' ?>>Current classes (<?= h(implode(', ', $current_years)) ?>)</option>
       <option value="all" <?= $year === 'all' ? 'selected' : '' ?>>All classes</option>
-      <?php foreach (CLASS_YEAR_LIST as $y): if ($y === '') continue; ?>
+      <?php foreach (CLASS_YEAR_LIST as $y): if ($y === '' || $y === 'Graduate') continue; ?>
         <option value="<?= h($y) ?>" <?= $year === $y ? 'selected' : '' ?>><?= h($y) ?></option>
       <?php endforeach; ?>
     </select>
