@@ -10,28 +10,10 @@ $pdo = get_pdo();
 
 $errors = [];
 
-// Authoritative slot list — always rebuilt from `members`, never trusted from
-// the posted form, so someone can't inject a member_id/slot pair that isn't
-// real. Also used to render the page. Filtering by class year happens in PHP
-// at the call sites (small roster — not worth complicating the SQL).
-function badge_slots(PDO $pdo): array {
-    $stmt = $pdo->query("SELECT id, class_year, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix,
-                   parent1_first_name, parent1_last_name, parent1_city,
-                   parent2_first_name, parent2_last_name, parent2_city, membership_paid
-            FROM members WHERE archived = 0
-            ORDER BY class_year ASC, cadet_last_name ASC, cadet_first_name ASC");
-
-    $slots = [];
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $mem) {
-        $cadet = cadet_full_name($mem);
-        $paid = !empty($mem['membership_paid']);
-        $p1 = trim($mem['parent1_first_name'] . ' ' . $mem['parent1_last_name']);
-        $p2 = trim(($mem['parent2_first_name'] ?? '') . ' ' . ($mem['parent2_last_name'] ?? ''));
-        if ($p1 !== '') $slots[] = ['member_id' => (int)$mem['id'], 'slot' => 1, 'name' => $p1, 'cadet' => $cadet, 'class_year' => $mem['class_year'], 'city' => $mem['parent1_city'], 'paid' => $paid];
-        if ($p2 !== '') $slots[] = ['member_id' => (int)$mem['id'], 'slot' => 2, 'name' => $p2, 'cadet' => $cadet, 'class_year' => $mem['class_year'], 'city' => $mem['parent2_city'], 'paid' => $paid];
-    }
-    return $slots;
-}
+// badge_slots() (the authoritative parent-slot list, rebuilt from `members`
+// rather than trusted from a form) lives in lib.php now — shared with
+// badges-report.php so both pages' notion of "who's a badge candidate"
+// can't drift apart.
 
 $year = $_GET['year'] ?? '';
 if (!in_array($year, CLASS_YEAR_LIST, true)) {
@@ -209,6 +191,7 @@ admin_header('Parents Club Badges');
 <div class="page-head">
   <h1>Parents Club Badges</h1>
   <div style="display:flex;gap:.5rem">
+    <a href="badges-report.php" class="btn btn-secondary">📊 Report</a>
     <a href="badges.php" class="btn btn-secondary">Reset Filters</a>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
