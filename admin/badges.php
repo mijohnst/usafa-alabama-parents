@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $comment     = mb_substr(trim($_POST['comment'][$key] ?? ''), 0, 255);
 
         if ($done && $done_date === '') $errors[] = $s['name'] . ' (' . $s['cadet'] . '): "Done" is checked but no Done Date was entered.';
-        if ($mailed && $mailed_date === '') $errors[] = $s['name'] . ' (' . $s['cadet'] . '): "Mailed" is checked but no Mailed Date was entered.';
+        if ($mailed && $mailed_date === '') $errors[] = $s['name'] . ' (' . $s['cadet'] . '): "Delivered" is checked but no Delivered Date was entered.';
 
         if (!$done) $done_date = '';
         if (!$mailed) $mailed_date = '';
@@ -152,7 +152,10 @@ admin_header('Parents Club Badges');
 
 <div class="page-head">
   <h1>Parents Club Badges</h1>
-  <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  <div style="display:flex;gap:.5rem">
+    <a href="badges.php" class="btn btn-secondary">Reset Filters</a>
+    <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  </div>
 </div>
 
 <?= show_flash() ?>
@@ -181,9 +184,6 @@ admin_header('Parents Club Badges');
   <label style="font-size:.8rem;color:#5a6a7a;display:flex;align-items:center;gap:.3rem;margin-left:.5rem">
     <input type="checkbox" name="paid" value="1" onchange="this.form.submit()" <?= $paid_only ? 'checked' : '' ?>> Paid members only
   </label>
-  <?php if ($search !== '' || $paid_only): $clear_qs = array_filter(['year' => $year !== '' ? $year : null]); ?>
-    <a href="badges.php<?= $clear_qs ? '?' . http_build_query($clear_qs) : '' ?>" style="font-size:.8rem;color:#9aa5b4">Clear</a>
-  <?php endif; ?>
 </form>
 
 <?php if (empty($slots)): ?>
@@ -204,7 +204,7 @@ admin_header('Parents Club Badges');
   ?>
   <div style="display:flex;align-items:baseline;gap:.6rem;margin:1.25rem 0 .4rem">
     <h3 style="margin:0;color:#002554"><?= h($gyear) ?></h3>
-    <span style="font-size:.78rem;color:#9aa5b4"><?= $done_cnt ?>/<?= count($gslots) ?> done · <?= $mailed_cnt ?>/<?= count($gslots) ?> mailed</span>
+    <span style="font-size:.78rem;color:#9aa5b4"><?= $done_cnt ?>/<?= count($gslots) ?> done · <?= $mailed_cnt ?>/<?= count($gslots) ?> delivered</span>
   </div>
   <div class="card" style="padding:0;overflow-x:auto">
   <table class="badge-table">
@@ -215,8 +215,8 @@ admin_header('Parents Club Badges');
         <th>City</th>
         <th>Done</th>
         <th>Done Date</th>
-        <th>Mailed</th>
-        <th>Mailed Date</th>
+        <th>Delivered</th>
+        <th>Delivered Date</th>
         <th>Comment</th>
       </tr>
     </thead>
@@ -259,7 +259,7 @@ admin_header('Parents Club Badges');
 </form>
 
 <script>
-// Checking "Done"/"Mailed" enables and requires its date field (and fills
+// Checking "Done"/"Delivered" enables and requires its date field (and fills
 // today's date as a starting point, editable for backfilling); unchecking
 // disables it again — disabled fields don't get submitted, and the server
 // independently blanks the date for any row whose checkbox came back unchecked.
