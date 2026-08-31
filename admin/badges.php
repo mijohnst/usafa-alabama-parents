@@ -42,6 +42,23 @@ $current_years = array_merge(current_class_years(), ['Prep School']);
 $search = trim($_GET['q'] ?? '');
 $paid_only = isset($_GET['paid']);
 $needs_only = isset($_GET['needs']);
+$not_delivered_only = isset($_GET['not_delivered']);
+
+// Builds a badges.php URL that keeps every current filter except the one
+// named in $toggle_key, which is set to $new_value — used to render the
+// Paid/Needs/Not-Delivered controls as toggle buttons rather than a form.
+function badge_filter_url(string $year, string $search, bool $paid, bool $needs, bool $not_delivered, string $toggle_key, bool $new_value): string {
+    $params = [
+        'year' => $year !== '' ? $year : null,
+        'q' => $search !== '' ? $search : null,
+        'paid' => $paid ? '1' : null,
+        'needs' => $needs ? '1' : null,
+        'not_delivered' => $not_delivered ? '1' : null,
+    ];
+    $params[$toggle_key] = $new_value ? '1' : null;
+    $qs = array_filter($params);
+    return 'badges.php' . ($qs ? '?' . http_build_query($qs) : '');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -84,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($posted as $r) $up->execute($r);
         $pdo->commit();
         flash('success', 'Badge tracker saved — ' . count($posted) . ' row' . (count($posted) != 1 ? 's' : '') . ' updated.');
-        $qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null, 'needs' => $needs_only ? '1' : null]);
+        $qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null, 'needs' => $needs_only ? '1' : null, 'not_delivered' => $not_delivered_only ? '1' : null]);
         header('Location: badges.php' . ($qs ? '?' . http_build_query($qs) : ''));
         exit;
     }
@@ -119,6 +136,13 @@ if ($needs_only) {
         if (!$s['paid']) return false;
         $st = $existing[$s['member_id'] . ':' . $s['slot']] ?? null;
         return !($st && $st['done']);
+    }));
+}
+if ($not_delivered_only) {
+    $slots = array_values(array_filter($slots, function($s) use ($existing) {
+        if (!$s['paid']) return false;
+        $st = $existing[$s['member_id'] . ':' . $s['slot']] ?? null;
+        return !($st && $st['mailed']);
     }));
 }
 
@@ -201,7 +225,7 @@ admin_header('Parents Club Badges');
   </div>
 <?php endif; ?>
 
-<form method="GET" style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.25rem">
+<form method="GET" style="margin-bottom:.6rem">
   <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
     <label style="font-size:.75rem;font-weight:700;color:#5a6a7a;text-transform:none;letter-spacing:normal;margin:0">Class:</label>
     <select name="year" onchange="this.form.submit()" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
@@ -215,17 +239,18 @@ admin_header('Parents Club Badges');
     <input type="text" name="q" value="<?= h($search) ?>" placeholder="Cadet or parent name" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
     <button type="submit" class="btn btn-secondary btn-sm">Search</button>
   </div>
-  <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap">
-    <label style="font-size:.85rem;color:#5a6a7a;display:flex;align-items:center;gap:.35rem;text-transform:none;font-weight:400;letter-spacing:normal;margin:0">
-      <input type="checkbox" name="paid" value="1" onchange="this.form.submit()" <?= $paid_only ? 'checked' : '' ?>> Paid members only
-    </label>
-    <label style="font-size:.85rem;color:#5a6a7a;display:flex;align-items:center;gap:.35rem;text-transform:none;font-weight:400;letter-spacing:normal;margin:0">
-      <input type="checkbox" name="needs" value="1" onchange="this.form.submit()" <?= $needs_only ? 'checked' : '' ?>> Needs a badge (paid, not done)
-    </label>
-    <?php $export_qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null, 'needs' => $needs_only ? '1' : null, 'export' => 'csv']); ?>
-    <a href="badges.php?<?= http_build_query($export_qs) ?>" class="btn btn-secondary btn-sm">⬇ Export CSV</a>
-  </div>
 </form>
+
+<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
+  <a href="<?= h(badge_filter_url($year, $search, $paid_only, $needs_only, $not_delivered_only, 'paid', !$paid_only)) ?>"
+     class="btn btn-sm <?= $paid_only ? 'btn-primary' : 'btn-secondary' ?>">Paid members only</a>
+  <a href="<?= h(badge_filter_url($year, $search, $paid_only, $needs_only, $not_delivered_only, 'needs', !$needs_only)) ?>"
+     class="btn btn-sm <?= $needs_only ? 'btn-primary' : 'btn-secondary' ?>">Needs a badge (paid, not done)</a>
+  <a href="<?= h(badge_filter_url($year, $search, $paid_only, $needs_only, $not_delivered_only, 'not_delivered', !$not_delivered_only)) ?>"
+     class="btn btn-sm <?= $not_delivered_only ? 'btn-primary' : 'btn-secondary' ?>">Paid, not delivered</a>
+    <?php $export_qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null, 'needs' => $needs_only ? '1' : null, 'not_delivered' => $not_delivered_only ? '1' : null, 'export' => 'csv']); ?>
+    <a href="badges.php?<?= http_build_query($export_qs) ?>" class="btn btn-secondary btn-sm">⬇ Export CSV</a>
+</div>
 
 <?php if (empty($slots)): ?>
   <p style="color:#9aa5b4">No members found for this filter.</p>
