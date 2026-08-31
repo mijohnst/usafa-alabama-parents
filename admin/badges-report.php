@@ -42,20 +42,29 @@ foreach ($slots as &$s) {
 }
 unset($s);
 
-$stage_labels = [
-    'not_started' => 'Not Started',
-    'made'        => 'Made, Not Delivered',
-    'complete'    => 'Complete',
-    'unpaid'      => 'Not Paid',
-];
-
-$counts = ['not_started' => 0, 'made' => 0, 'complete' => 0, 'unpaid' => 0];
+// Stage counts are per-badge (each parent's badge is tracked and can be in a
+// different stage from the other parent's). Paid/not-paid, though, is a
+// per-cadet attribute — both parent slots on a member always carry the same
+// membership_paid value — so those are tallied by distinct member_id instead
+// of by slot, or a two-parent family would double-count as two "paid families".
+$counts = ['not_started' => 0, 'made' => 0, 'complete' => 0];
 $by_year = [];
+$paid_members = [];   // member_id => class_year
+$unpaid_members = []; // member_id => class_year
+$year_order = [];
 foreach ($slots as $s) {
-    $counts[$s['stage']]++;
-    $by_year[$s['class_year']][$s['stage']] = ($by_year[$s['class_year']][$s['stage']] ?? 0) + 1;
+    if (!in_array($s['class_year'], $year_order, true)) $year_order[] = $s['class_year'];
+    if ($s['stage'] !== 'unpaid') {
+        $counts[$s['stage']]++;
+        $by_year[$s['class_year']][$s['stage']] = ($by_year[$s['class_year']][$s['stage']] ?? 0) + 1;
+    }
+    if ($s['paid']) $paid_members[$s['member_id']] = $s['class_year'];
+    else $unpaid_members[$s['member_id']] = $s['class_year'];
 }
-$paid_total = $counts['not_started'] + $counts['made'] + $counts['complete'];
+$paid_total   = count($paid_members);
+$unpaid_total = count($unpaid_members);
+$paid_by_year   = array_count_values($paid_members);
+$unpaid_by_year = array_count_values($unpaid_members);
 
 admin_header('Badges Status Report');
 ?>
@@ -108,7 +117,7 @@ admin_header('Badges Status Report');
     <div style="font-size:.72rem;color:#5a6a7a;text-transform:uppercase">Not Started</div>
   </div>
   <div class="card" style="padding:1rem;text-align:center;margin:0">
-    <div style="font-size:1.5rem;font-weight:700;color:#9aa5b4"><?= $counts['unpaid'] ?></div>
+    <div style="font-size:1.5rem;font-weight:700;color:#9aa5b4"><?= $unpaid_total ?></div>
     <div style="font-size:.72rem;color:#5a6a7a;text-transform:uppercase">Not Paid</div>
   </div>
 </div>
@@ -128,17 +137,16 @@ admin_header('Badges Status Report');
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($by_year as $gyear => $c):
-          $c += ['not_started' => 0, 'made' => 0, 'complete' => 0, 'unpaid' => 0];
-          $gpaid = $c['not_started'] + $c['made'] + $c['complete'];
+      <?php foreach ($year_order as $gyear):
+          $c = ($by_year[$gyear] ?? []) + ['not_started' => 0, 'made' => 0, 'complete' => 0];
       ?>
       <tr>
         <td><?= h($gyear) ?></td>
-        <td class="num"><?= $gpaid ?></td>
+        <td class="num"><?= $paid_by_year[$gyear] ?? 0 ?></td>
         <td class="num" style="color:#1b5e20;font-weight:700"><?= $c['complete'] ?></td>
         <td class="num" style="color:#f57f17;font-weight:700"><?= $c['made'] ?></td>
         <td class="num" style="color:#A6192E;font-weight:700"><?= $c['not_started'] ?></td>
-        <td class="num" style="color:#9aa5b4"><?= $c['unpaid'] ?></td>
+        <td class="num" style="color:#9aa5b4"><?= $unpaid_by_year[$gyear] ?? 0 ?></td>
       </tr>
       <?php endforeach; ?>
     </tbody>
