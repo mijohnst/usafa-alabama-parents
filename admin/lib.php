@@ -402,6 +402,10 @@ function extract_youtube_id(string $url): ?string {
 // (re-derives the plain-text copy after a saved digest is hand-edited) so
 // both stay in sync on the same conversion.
 function digest_html_to_text(string $html): string {
+    // Pull the URL out before strip_tags() below discards it — the model is
+    // explicitly told to "preserve links exactly," so the plain-text copy
+    // (Copy Plain Text, and the Catalog's list snippet) needs to keep it too.
+    $html = preg_replace('/<a\s[^>]*href=["\']([^"\']*)["\'][^>]*>(.*?)<\/a>/is', '$2 ($1)', $html);
     $text = trim(html_entity_decode(strip_tags(str_replace(
         ['<li>', '</li>', '</p>', '</h3>'],
         ['• ', "\n", "\n\n", "\n\n"],

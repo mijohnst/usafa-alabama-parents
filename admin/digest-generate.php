@@ -76,29 +76,27 @@ $payload = json_encode([
 ]);
 
 // Google's free tier occasionally returns 503 ("model is currently
-// experiencing high demand") under load — genuinely transient, so retry a
-// couple of times with a short backoff before surfacing it as an error.
-$max_attempts = 3;
-for ($attempt = 1; $attempt <= $max_attempts; $attempt++) {
-    $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/' . GEMINI_MODEL . ':generateContent');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $payload,
-        CURLOPT_HTTPHEADER     => [
-            'Content-Type: application/json',
-            'x-goog-api-key: ' . GEMINI_API_KEY,
-        ],
-        CURLOPT_TIMEOUT => 60,
-    ]);
-    $resp     = curl_exec($ch);
-    $code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curl_err = curl_error($ch);
-    curl_close($ch);
-
-    if ($resp !== false && $code !== 503) break;
-    if ($attempt < $max_attempts) sleep($attempt); // 1s, then 2s
-}
+// experiencing high demand") under load — genuinely transient. Sustained
+// retrying happens client-side (digest-composer.php's own backoff loop,
+// which can span minutes); this endpoint makes one attempt per call and
+// reports a 503 back as 'retryable' rather than blocking the request with
+// its own sleep()-based loop, which would just stack under the client's
+// retries and blow past the wait time shown in the UI.
+$ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/' . GEMINI_MODEL . ':generateContent');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => $payload,
+    CURLOPT_HTTPHEADER     => [
+        'Content-Type: application/json',
+        'x-goog-api-key: ' . GEMINI_API_KEY,
+    ],
+    CURLOPT_TIMEOUT => 60,
+]);
+$resp     = curl_exec($ch);
+$code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curl_err = curl_error($ch);
+curl_close($ch);
 
 if ($resp === false) {
     error_log('Digest Composer: cURL error — ' . $curl_err);
@@ -133,6 +131,13 @@ if (($candidate['finishReason'] ?? '') === 'MAX_TOKENS') {
 $html = trim($candidate['content']['parts'][0]['text']);
 // Strip a stray ```html / ``` code fence if the model wraps its output in one.
 $html = preg_replace('/^```(?:html)?\s*|\s*```$/i', '', $html);
+// Sanitize before this ever reaches the browser — digest-composer.php renders
+// it straight into innerHTML for the preview, and a pasted email is
+// untrusted input to the model (prompt injection could coax it into
+// emitting markup outside the plain h3/p/ul/li/strong/a it was instructed
+// to use). digest-catalog.php sanitizes again on save/edit independently;
+// this is the pass that actually protects the preview itself.
+$html = sanitize_rich_html($html);
 
 $text = digest_html_to_text($html);
 

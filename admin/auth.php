@@ -140,9 +140,11 @@ function is_super_admin(): bool {
 // Composer (digest-composer.php). Deliberately its own check rather than
 // can_manage_members() (excludes Treasurer) or can_manage_finances()
 // (includes plain Member) — this tool is for whoever sends club-wide
-// communications, which is the full board plus super-admins.
+// communications, which is the full board plus super-admins. Composed from
+// is_board_role()/is_super_admin() rather than its own role list so it can't
+// silently drift out of sync if either of those changes later.
 function can_use_digest_composer(): bool {
-    return in_array($_SESSION['role'] ?? '', ['admin', 'tech', 'officer', 'secretary', 'treasurer'], true);
+    return is_board_role() || is_super_admin();
 }
 
 function require_digest_composer_access(): void {
