@@ -201,26 +201,30 @@ admin_header('Parents Club Badges');
   </div>
 <?php endif; ?>
 
-<form method="GET" style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem">
-  <label style="font-size:.75rem;font-weight:700;color:#5a6a7a">Class:</label>
-  <select name="year" onchange="this.form.submit()" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
-    <option value="" <?= $default_view ? 'selected' : '' ?>>Current classes (<?= h(implode(', ', $current_years)) ?>)</option>
-    <option value="all" <?= $year === 'all' ? 'selected' : '' ?>>All classes</option>
-    <?php foreach (CLASS_YEAR_LIST as $y): if ($y === '') continue; ?>
-      <option value="<?= h($y) ?>" <?= $year === $y ? 'selected' : '' ?>><?= h($y) ?></option>
-    <?php endforeach; ?>
-  </select>
-  <label style="font-size:.75rem;font-weight:700;color:#5a6a7a;margin-left:.5rem">Name:</label>
-  <input type="text" name="q" value="<?= h($search) ?>" placeholder="Cadet or parent name" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
-  <button type="submit" class="btn btn-secondary btn-sm">Search</button>
-  <label style="font-size:.8rem;color:#5a6a7a;display:flex;align-items:center;gap:.3rem;margin-left:.5rem">
-    <input type="checkbox" name="paid" value="1" onchange="this.form.submit()" <?= $paid_only ? 'checked' : '' ?>> Paid members only
-  </label>
-  <label style="font-size:.8rem;color:#5a6a7a;display:flex;align-items:center;gap:.3rem">
-    <input type="checkbox" name="needs" value="1" onchange="this.form.submit()" <?= $needs_only ? 'checked' : '' ?>> Needs a badge (paid, not done)
-  </label>
-  <?php $export_qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null, 'needs' => $needs_only ? '1' : null, 'export' => 'csv']); ?>
-  <a href="badges.php?<?= http_build_query($export_qs) ?>" class="btn btn-secondary btn-sm" style="margin-left:.5rem">⬇ Export CSV</a>
+<form method="GET" style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.25rem">
+  <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+    <label style="font-size:.75rem;font-weight:700;color:#5a6a7a;text-transform:none;letter-spacing:normal;margin:0">Class:</label>
+    <select name="year" onchange="this.form.submit()" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
+      <option value="" <?= $default_view ? 'selected' : '' ?>>Current classes (<?= h(implode(', ', $current_years)) ?>)</option>
+      <option value="all" <?= $year === 'all' ? 'selected' : '' ?>>All classes</option>
+      <?php foreach (CLASS_YEAR_LIST as $y): if ($y === '') continue; ?>
+        <option value="<?= h($y) ?>" <?= $year === $y ? 'selected' : '' ?>><?= h($y) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <label style="font-size:.75rem;font-weight:700;color:#5a6a7a;text-transform:none;letter-spacing:normal;margin:0 0 0 .5rem">Name:</label>
+    <input type="text" name="q" value="<?= h($search) ?>" placeholder="Cadet or parent name" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
+    <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap">
+    <label style="font-size:.85rem;color:#5a6a7a;display:flex;align-items:center;gap:.35rem;text-transform:none;font-weight:400;letter-spacing:normal;margin:0">
+      <input type="checkbox" name="paid" value="1" onchange="this.form.submit()" <?= $paid_only ? 'checked' : '' ?>> Paid members only
+    </label>
+    <label style="font-size:.85rem;color:#5a6a7a;display:flex;align-items:center;gap:.35rem;text-transform:none;font-weight:400;letter-spacing:normal;margin:0">
+      <input type="checkbox" name="needs" value="1" onchange="this.form.submit()" <?= $needs_only ? 'checked' : '' ?>> Needs a badge (paid, not done)
+    </label>
+    <?php $export_qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null, 'needs' => $needs_only ? '1' : null, 'export' => 'csv']); ?>
+    <a href="badges.php?<?= http_build_query($export_qs) ?>" class="btn btn-secondary btn-sm">⬇ Export CSV</a>
+  </div>
 </form>
 
 <?php if (empty($slots)): ?>
@@ -238,15 +242,12 @@ admin_header('Parents Club Badges');
           if ($st && $st['done']) $done_cnt++;
           if ($st && $st['mailed']) $mailed_cnt++;
       }
-      $group_id = 'badge-group-' . preg_replace('/[^a-z0-9]+/i', '-', $gyear);
   ?>
   <div style="display:flex;align-items:baseline;gap:.6rem;margin:1.25rem 0 .4rem;flex-wrap:wrap">
     <h3 style="margin:0;color:#002554"><?= h($gyear) ?></h3>
     <span style="font-size:.78rem;color:#9aa5b4"><?= $done_cnt ?>/<?= count($gslots) ?> done · <?= $mailed_cnt ?>/<?= count($gslots) ?> delivered</span>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="markAllInGroup('<?= h($group_id) ?>', 'done')">Mark All Done Today</button>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="markAllInGroup('<?= h($group_id) ?>', 'mailed')">Mark All Delivered Today</button>
   </div>
-  <div class="card" id="<?= h($group_id) ?>" style="padding:0;overflow-x:auto">
+  <div class="card" style="padding:0;overflow-x:auto">
   <table class="badge-table">
     <thead>
       <tr>
@@ -327,21 +328,6 @@ function wireBadgeCheckbox(cbClass, dateClass) {
 }
 wireBadgeCheckbox('badge-done-cb', 'badge-done-date');
 wireBadgeCheckbox('badge-mailed-cb', 'badge-mailed-date');
-
-// Bulk-check every Done/Delivered box in one class-year group at once (the
-// source spreadsheet shows whole classes getting done in a single batch).
-// Still routes through each checkbox's own 'change' handler so the date
-// fill-in and row coloring stay in sync — nothing is saved until the page's
-// own Save button is clicked.
-function markAllInGroup(groupId, kind) {
-    var cbClass = kind === 'done' ? 'badge-done-cb' : 'badge-mailed-cb';
-    document.querySelectorAll('#' + groupId + ' .' + cbClass).forEach(function(cb) {
-        if (!cb.checked) {
-            cb.checked = true;
-            cb.dispatchEvent(new Event('change'));
-        }
-    });
-}
 // Existing checked rows on page load also need `required` set, so the
 // browser's own validation catches someone blanking a date without unchecking.
 document.querySelectorAll('.badge-done-cb:checked').forEach(function(cb) {
