@@ -34,8 +34,8 @@ function badge_slots(PDO $pdo): array {
 }
 
 $year = $_GET['year'] ?? '';
-if (!in_array($year, CLASS_YEAR_LIST, true) && $year !== 'all') {
-    $year = ''; // '' = default view below
+if (!in_array($year, CLASS_YEAR_LIST, true)) {
+    $year = ''; // '' = default view below (current classes + Prep School)
 }
 $default_view = ($year === '');
 $current_years = array_merge(current_class_years(), ['Prep School']);
@@ -121,7 +121,7 @@ foreach ($existing_rows as $r) $existing[$r['member_id'] . ':' . $r['parent_slot
 $slots = badge_slots($pdo);
 if ($default_view) {
     $slots = array_values(array_filter($slots, fn($s) => in_array($s['class_year'], $current_years, true)));
-} elseif ($year !== 'all') {
+} else {
     $slots = array_values(array_filter($slots, fn($s) => $s['class_year'] === $year));
 }
 if ($search !== '') {
@@ -229,8 +229,7 @@ admin_header('Parents Club Badges');
   <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
     <label style="font-size:.75rem;font-weight:700;color:#5a6a7a;text-transform:none;letter-spacing:normal;margin:0">Class:</label>
     <select name="year" onchange="this.form.submit()" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
-      <option value="" <?= $default_view ? 'selected' : '' ?>>Current classes (<?= h(implode(', ', $current_years)) ?>)</option>
-      <option value="all" <?= $year === 'all' ? 'selected' : '' ?>>All classes</option>
+      <option value="" <?= $default_view ? 'selected' : '' ?>>All classes (<?= h(implode(', ', $current_years)) ?>)</option>
       <?php foreach (CLASS_YEAR_LIST as $y): if ($y === '' || $y === 'Graduate') continue; ?>
         <option value="<?= h($y) ?>" <?= $year === $y ? 'selected' : '' ?>><?= h($y) ?></option>
       <?php endforeach; ?>
