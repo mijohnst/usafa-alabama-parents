@@ -17,17 +17,18 @@ $errors = [];
 function badge_slots(PDO $pdo): array {
     $stmt = $pdo->query("SELECT id, class_year, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix,
                    parent1_first_name, parent1_last_name, parent1_city,
-                   parent2_first_name, parent2_last_name, parent2_city
+                   parent2_first_name, parent2_last_name, parent2_city, membership_paid
             FROM members WHERE archived = 0
             ORDER BY class_year ASC, cadet_last_name ASC, cadet_first_name ASC");
 
     $slots = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $mem) {
         $cadet = cadet_full_name($mem);
+        $paid = !empty($mem['membership_paid']);
         $p1 = trim($mem['parent1_first_name'] . ' ' . $mem['parent1_last_name']);
         $p2 = trim(($mem['parent2_first_name'] ?? '') . ' ' . ($mem['parent2_last_name'] ?? ''));
-        if ($p1 !== '') $slots[] = ['member_id' => (int)$mem['id'], 'slot' => 1, 'name' => $p1, 'cadet' => $cadet, 'class_year' => $mem['class_year'], 'city' => $mem['parent1_city']];
-        if ($p2 !== '') $slots[] = ['member_id' => (int)$mem['id'], 'slot' => 2, 'name' => $p2, 'cadet' => $cadet, 'class_year' => $mem['class_year'], 'city' => $mem['parent2_city']];
+        if ($p1 !== '') $slots[] = ['member_id' => (int)$mem['id'], 'slot' => 1, 'name' => $p1, 'cadet' => $cadet, 'class_year' => $mem['class_year'], 'city' => $mem['parent1_city'], 'paid' => $paid];
+        if ($p2 !== '') $slots[] = ['member_id' => (int)$mem['id'], 'slot' => 2, 'name' => $p2, 'cadet' => $cadet, 'class_year' => $mem['class_year'], 'city' => $mem['parent2_city'], 'paid' => $paid];
     }
     return $slots;
 }
@@ -39,6 +40,7 @@ if (!in_array($year, CLASS_YEAR_LIST, true) && $year !== 'all') {
 $default_view = ($year === '');
 $current_years = array_merge(current_class_years(), ['Prep School']);
 $search = trim($_GET['q'] ?? '');
+$paid_only = isset($_GET['paid']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -81,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($posted as $r) $up->execute($r);
         $pdo->commit();
         flash('success', 'Badge tracker saved — ' . count($posted) . ' row' . (count($posted) != 1 ? 's' : '') . ' updated.');
-        $qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null]);
+        $qs = array_filter(['year' => $year !== '' ? $year : null, 'q' => $search !== '' ? $search : null, 'paid' => $paid_only ? '1' : null]);
         header('Location: badges.php' . ($qs ? '?' . http_build_query($qs) : ''));
         exit;
     }
@@ -99,6 +101,9 @@ if ($default_view) {
 if ($search !== '') {
     $slots = array_values(array_filter($slots, fn($s) =>
         stripos($s['cadet'], $search) !== false || stripos($s['name'], $search) !== false));
+}
+if ($paid_only) {
+    $slots = array_values(array_filter($slots, fn($s) => $s['paid']));
 }
 
 // Existing badge state, keyed the same way as $posted above.
@@ -138,6 +143,11 @@ admin_header('Parents Club Badges');
 .badge-date:disabled{background:#f7f9fc;color:#c3cad4}
 .badge-comment{padding:.3rem .4rem;font-size:.8rem;border:1px solid #d0d5dd;border-radius:4px;width:100%;min-width:11rem}
 .badge-city{font-size:.75rem;color:#9aa5b4}
+/* Made + delivered = green; made but not yet delivered = yellow */
+.badge-row-mailed td{background:#e8f5e9}
+.badge-row-done td{background:#fff8e1}
+.badge-table tr.badge-row-mailed:hover td{background:#d7ecda}
+.badge-table tr.badge-row-done:hover td{background:#fbeecb}
 </style>
 
 <div class="page-head">
@@ -168,7 +178,12 @@ admin_header('Parents Club Badges');
   <label style="font-size:.75rem;font-weight:700;color:#5a6a7a;margin-left:.5rem">Name:</label>
   <input type="text" name="q" value="<?= h($search) ?>" placeholder="Cadet or parent name" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
   <button type="submit" class="btn btn-secondary btn-sm">Search</button>
-  <?php if ($search !== ''): ?><a href="badges.php<?= $year !== '' ? '?year=' . urlencode($year) : '' ?>" style="font-size:.8rem;color:#9aa5b4">Clear</a><?php endif; ?>
+  <label style="font-size:.8rem;color:#5a6a7a;display:flex;align-items:center;gap:.3rem;margin-left:.5rem">
+    <input type="checkbox" name="paid" value="1" onchange="this.form.submit()" <?= $paid_only ? 'checked' : '' ?>> Paid members only
+  </label>
+  <?php if ($search !== '' || $paid_only): $clear_qs = array_filter(['year' => $year !== '' ? $year : null]); ?>
+    <a href="badges.php<?= $clear_qs ? '?' . http_build_query($clear_qs) : '' ?>" style="font-size:.8rem;color:#9aa5b4">Clear</a>
+  <?php endif; ?>
 </form>
 
 <?php if (empty($slots)): ?>
@@ -215,8 +230,9 @@ admin_header('Parents Club Badges');
           $mailed      = $rp ? $rp['mailed']      : (bool)($st['mailed'] ?? false);
           $mailed_date = $rp ? $rp['mailed_date'] : ($st['mailed_date'] ?? '');
           $comment     = $rp ? $rp['comment']     : ($st['comment'] ?? '');
+          $row_class   = $mailed ? 'badge-row-mailed' : ($done ? 'badge-row-done' : '');
       ?>
-      <tr>
+      <tr class="<?= $row_class ?>">
         <td><?= h($s['cadet']) ?></td>
         <td><?= h($s['name']) ?></td>
         <td class="badge-city"><?= h($s['city'] ?? '') ?></td>
@@ -247,6 +263,14 @@ admin_header('Parents Club Badges');
 // today's date as a starting point, editable for backfilling); unchecking
 // disables it again — disabled fields don't get submitted, and the server
 // independently blanks the date for any row whose checkbox came back unchecked.
+function updateRowColor(cb) {
+    var row = cb.closest('tr');
+    var mailedCb = row.querySelector('.badge-mailed-cb');
+    var doneCb = row.querySelector('.badge-done-cb');
+    row.classList.remove('badge-row-done', 'badge-row-mailed');
+    if (mailedCb.checked) row.classList.add('badge-row-mailed');
+    else if (doneCb.checked) row.classList.add('badge-row-done');
+}
 function wireBadgeCheckbox(cbClass, dateClass) {
     document.querySelectorAll('.' + cbClass).forEach(function(cb) {
         cb.addEventListener('change', function() {
@@ -257,6 +281,7 @@ function wireBadgeCheckbox(cbClass, dateClass) {
                 var today = new Date().toISOString().slice(0, 10);
                 date.value = today;
             }
+            updateRowColor(this);
         });
     });
 }
