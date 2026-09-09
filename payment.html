@@ -254,6 +254,15 @@
       font-family: monospace;
       color: var(--navy);
     }
+    .dues-alt-divider {
+      text-align: center;
+      color: var(--gray);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      margin: 2rem 0 1rem;
+    }
 
     /* CHECK EMAIL BUTTON */
     .email-btn {
@@ -494,6 +503,28 @@
             <div class="dues-years-total" id="duesYearsTotal"></div>
             <div id="duesPayStatus" role="status" aria-live="polite"></div>
             <div id="duesPaypalButtons"></div>
+
+            <div class="dues-alt-divider">&mdash; or pay by Zelle &mdash;</div>
+            <div class="important-notice">
+              <div class="notice-header">
+                <span class="icon">⚠️</span>
+                <h5>Zelle requires one extra step</h5>
+              </div>
+              <p>Zelle must be sent from your own bank's app or online banking &mdash; it can't be triggered from this page, and it won't update your membership automatically like the buttons above do.</p>
+              <p><strong>After sending, please email the Treasurer</strong> with your cadet's name and the amount so we can mark your dues paid.</p>
+            </div>
+            <div class="zelle-qr-section">
+              <h5>Scan to Pay with Zelle</h5>
+              <p style="color: var(--gray); margin-bottom: 1rem; font-size: 0.95rem;">Open your bank's Zelle feature and scan this QR code, or send to the email below:</p>
+              <img src="zelle.jpg" alt="Zelle Payment QR Code">
+              <div class="zelle-recipient">
+                <p style="color: var(--navy); font-size: 0.9rem;"><strong>Send payment to:</strong></p>
+                <p class="email">usafapcofal@gmail.com</p>
+                <p style="color: var(--gray); font-size: 0.85rem;">Recipient: USAFA CLUBOFALABAMA</p>
+                <p id="duesZelleAmountHint" style="margin-top:.5rem;font-weight:700;color:var(--navy)"></p>
+              </div>
+              <a href="#" id="duesZelleEmailBtn" class="email-btn" style="margin-top:1rem;">📧 Email Treasurer After Paying</a>
+            </div>
           </div>
         </div>
       </div>
@@ -617,6 +648,7 @@
       var duesOptions = [];
       var duesCadetYears = [];
       var duesPaidYears = [];
+      var duesCadetName = '';
       var sdkReady = false;
       var buttonsRendered = false;
 
@@ -702,7 +734,8 @@
             duesPaidYears = result.paidYears || [];
             document.getElementById('duesLookupSection').style.display = 'none';
             document.getElementById('duesPaySection').style.display = 'block';
-            document.getElementById('duesPayHeading').textContent = 'Paying dues for ' + (result.cadetName || 'your cadet');
+            duesCadetName = result.cadetName || '';
+            document.getElementById('duesPayHeading').textContent = 'Paying dues for ' + (duesCadetName || 'your cadet');
 
             if (!duesOptions.length) {
               document.getElementById('duesNothingDue').style.display = 'block';
@@ -756,6 +789,22 @@
         totalEl.textContent = years.length
           ? 'Total: $' + total + ' (multi-year discounts are applied automatically)'
           : '';
+        updateDuesZelleInfo(years, total);
+      }
+
+      function updateDuesZelleInfo(years, total) {
+        var hintEl = document.getElementById('duesZelleAmountHint');
+        var emailBtn = document.getElementById('duesZelleEmailBtn');
+        if (!hintEl || !emailBtn) return;
+        if (!years.length) {
+          hintEl.textContent = '';
+          emailBtn.href = 'mailto:treasurer@alabamafalcons.org?subject=Zelle%20Payment%20-%20Membership%20Dues';
+          return;
+        }
+        hintEl.textContent = 'Amount for selected year(s): $' + total;
+        var subject = 'Zelle Payment - Membership Dues for ' + duesCadetName;
+        var body = 'Cadet: ' + duesCadetName + '\nYear(s) paid via Zelle: ' + years.join(', ') + '\nAmount sent: $' + total;
+        emailBtn.href = 'mailto:treasurer@alabamafalcons.org?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
       }
 
       function renderPaypalButtonsIfReady() {
