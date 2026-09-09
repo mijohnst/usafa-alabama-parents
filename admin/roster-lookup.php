@@ -69,6 +69,7 @@ admin_header('Roster Lookup');
 .rl-parent-name{font-weight:600;color:#1a2332}
 .rl-contact{display:inline-flex;align-items:center;gap:.3rem;background:#e8edf6;color:#003594;padding:.4rem .75rem;border-radius:6px;font-size:.82rem;text-decoration:none;font-weight:600}
 .rl-contact:hover{background:#d7e2f5;text-decoration:none}
+.rl-mailbox{display:inline-flex;align-items:center;gap:.3rem;background:#f0f2f5;color:#5a6a7a;padding:.4rem .75rem;border-radius:6px;font-size:.82rem;font-weight:600}
 @media(min-width:700px){.rl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:.85rem}}
 </style>
 
@@ -109,9 +110,21 @@ admin_header('Roster Lookup');
         </div>
       </div>
       <?php if ($sqd): ?><div class="rl-sub">Squadron <?= h($sqd) ?></div><?php endif; ?>
-      <?php if ($m['cadet_email']): ?><a class="rl-contact" href="mailto:<?= h($m['cadet_email']) ?>">✉️ Cadet: <?= h($m['cadet_email']) ?></a><?php endif; ?>
 
       <div class="rl-parents">
+        <?php
+          $cadet_box   = trim($m['cadet_po_box'] ?? '');
+          $cadet_cell  = trim($m['cadet_cell']    ?? '');
+          $cadet_email = trim($m['cadet_email']   ?? '');
+        ?>
+        <?php if ($cadet_box !== '' || $cadet_cell !== '' || $cadet_email !== ''): ?>
+        <div class="rl-parent">
+          <span class="rl-parent-label">Cadet</span>
+          <?php if ($cadet_box !== ''): ?><span class="rl-mailbox">📦 PO Box <?= h($cadet_box) ?></span><?php endif; ?>
+          <?php if ($cadet_cell !== ''): ?><a class="rl-contact" href="tel:<?= h(preg_replace('/\D/', '', $cadet_cell)) ?>">📞 <?= h($cadet_cell) ?></a><?php endif; ?>
+          <?php if ($cadet_email !== ''): ?><a class="rl-contact" href="mailto:<?= h($cadet_email) ?>">✉️ <?= h($cadet_email) ?></a><?php endif; ?>
+        </div>
+        <?php endif; ?>
         <?php foreach ([1, 2] as $n):
           $pname  = trim($m["parent{$n}_first_name"] . ' ' . $m["parent{$n}_last_name"]);
           $pcell  = $m["parent{$n}_cell"]  ?? '';
