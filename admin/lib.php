@@ -407,6 +407,37 @@ function sanitize_style_value(string $style, array $allowed_props): string {
 // params) — or returns null if the string isn't recognizably a YouTube
 // link at all. Never trust a submitted URL directly as an iframe src or
 // href; only ever build one from an ID this function has validated.
+// Resizes an image down to at most $max_dim px on its longest side and
+// writes it out as a JPEG (regardless of source format — transparency is
+// flattened onto white, which is fine for photo thumbnails). Returns false
+// on any failure (missing GD, corrupt image, unwritable dest) rather than
+// throwing, so callers can always fall back to serving the full-size image.
+function generate_photo_thumbnail(string $source_path, string $dest_path, int $max_dim = 400): bool {
+    if (!function_exists('imagecreatefromstring')) return false;
+    $data = @file_get_contents($source_path);
+    if ($data === false) return false;
+    $src = @imagecreatefromstring($data);
+    if (!$src) return false;
+
+    $orig_w = imagesx($src);
+    $orig_h = imagesy($src);
+    if ($orig_w <= 0 || $orig_h <= 0) { imagedestroy($src); return false; }
+
+    $scale = min(1, $max_dim / max($orig_w, $orig_h)); // never upscale
+    $new_w = max(1, (int)round($orig_w * $scale));
+    $new_h = max(1, (int)round($orig_h * $scale));
+
+    $dst = imagecreatetruecolor($new_w, $new_h);
+    $white = imagecolorallocate($dst, 255, 255, 255);
+    imagefilledrectangle($dst, 0, 0, $new_w, $new_h, $white);
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $new_w, $new_h, $orig_w, $orig_h);
+    imagedestroy($src);
+
+    $ok = @imagejpeg($dst, $dest_path, 78);
+    imagedestroy($dst);
+    return $ok;
+}
+
 function extract_youtube_id(string $url): ?string {
     $url = trim($url);
     if ($url === '') return null;

@@ -39,6 +39,29 @@ if (!in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
     http_response_code(404); exit;
 }
 
+// Gallery grids request the small ?thumb=1 variant so a page with dozens of
+// full-resolution originals doesn't have to download all of them just to
+// render a grid of small squares — only the lightbox needs the real file.
+// Thumbnails are generated once (on upload, see admin/event-photos.php) and
+// cached to disk; a photo uploaded before this existed has no cached
+// thumbnail yet, so it's generated here on first request instead of
+// requiring a one-time migration pass over every existing album.
+$want_thumb = isset($_GET['thumb']);
+if ($want_thumb) {
+    $thumb_dir  = $dir . DIRECTORY_SEPARATOR . 'thumbs';
+    $thumb_file = $thumb_dir . DIRECTORY_SEPARATOR . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+    if (!is_file($thumb_file)) {
+        if (!is_dir($thumb_dir)) @mkdir($thumb_dir, 0755, true);
+        generate_photo_thumbnail($file, $thumb_file);
+    }
+    if (is_file($thumb_file)) {
+        $file = $thumb_file;
+        $mime = 'image/jpeg';
+    }
+    // else: generation failed (e.g. GD unavailable) — falls through and
+    // serves the full-size original instead of a broken image.
+}
+
 header('Content-Type: ' . $mime);
 header('X-Content-Type-Options: nosniff');
 header('Content-Length: ' . filesize($file));

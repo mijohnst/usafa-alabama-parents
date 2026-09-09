@@ -4,7 +4,15 @@ require_member_admin();
 $pdo = get_pdo();
 
 $photo_dir = __DIR__ . '/../event-photos/';
+$thumb_dir = $photo_dir . 'thumbs/';
 if (!is_dir($photo_dir)) mkdir($photo_dir, 0755, true);
+if (!is_dir($thumb_dir)) mkdir($thumb_dir, 0755, true);
+
+// Thumbnail filename for a given stored photo filename — always .jpg
+// regardless of the original's extension (see generate_photo_thumbnail()).
+function thumb_filename(string $filename): string {
+    return pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+}
 
 // ── Actions ─────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -39,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ext  = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'][$mime];
                 $name = 'ev_' . $album_id . '_' . date('Ymd') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                 if (!move_uploaded_file($files['tmp_name'][$i], $photo_dir . $name)) { $skipped++; continue; }
+                generate_photo_thumbnail($photo_dir . $name, $thumb_dir . thumb_filename($name));
                 $pdo->prepare('INSERT INTO event_photos (album_id,filename,caption,sort_order) VALUES (?,?,?,?)')
                     ->execute([$album_id, $name, $caption, $next_sort + $i]);
                 $uploaded++;
@@ -63,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $row->execute([$id, $album_id]); $p = $row->fetch(PDO::FETCH_ASSOC);
         if ($p && preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) {
             @unlink($photo_dir . $p['filename']);
+            @unlink($thumb_dir . thumb_filename($p['filename']));
             $pdo->prepare('DELETE FROM event_photos WHERE id=? AND album_id=?')->execute([$id, $album_id]);
             $pdo->prepare('UPDATE event_albums SET cover_photo_id=NULL WHERE cover_photo_id=?')->execute([$id]);
         }
@@ -83,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $p) {
                 if (preg_match('/^[a-zA-Z0-9._-]+$/', $p['filename'])) {
                     @unlink($photo_dir . $p['filename']);
+                    @unlink($thumb_dir . thumb_filename($p['filename']));
                     $valid_ids[] = $p['id'];
                 }
             }
@@ -251,7 +262,7 @@ uploadForm.addEventListener('submit', function(e) {
   <?php foreach ($photos as $p): ?>
   <div class="photo-card" data-id="<?= $p['id'] ?>">
     <div style="position:relative">
-      <img src="/event-photo-serve.php?f=<?= rawurlencode($p['filename']) ?>" alt="<?= h($p['caption']) ?>">
+      <img src="/event-photo-serve.php?f=<?= rawurlencode($p['filename']) ?>&thumb=1" alt="<?= h($p['caption']) ?>" loading="lazy">
       <label style="position:absolute;top:.4rem;left:.4rem;background:rgba(0,0,0,.5);border-radius:3px;padding:.2rem .3rem;cursor:pointer;margin:0">
         <input type="checkbox" class="photo-cb" value="<?= $p['id'] ?>" style="width:auto;cursor:pointer" onchange="updateBulkBar()">
       </label>

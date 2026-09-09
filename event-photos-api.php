@@ -53,7 +53,7 @@ if ($action === 'albums') {
             'location_url'  => $loc_url,
             'photo_count'   => (int)$r['photo_count'],
             'doc_count'     => (int)$r['doc_count'],
-            'cover_url'     => $r['cover_filename'] ? '/event-photo-serve.php?f=' . rawurlencode($r['cover_filename']) : null,
+            'cover_url'     => $r['cover_filename'] ? '/event-photo-serve.php?f=' . rawurlencode($r['cover_filename']) . '&thumb=1' : null,
         ];
     }
     echo json_encode(['albums' => $albums]);
@@ -72,9 +72,10 @@ if ($action === 'albums') {
     $photos = [];
     foreach ($rows->fetchAll() as $p) {
         $photos[] = [
-            'id'      => (int)$p['id'],
-            'url'     => '/event-photo-serve.php?f=' . rawurlencode($p['filename']),
-            'caption' => $p['caption'],
+            'id'        => (int)$p['id'],
+            'url'       => '/event-photo-serve.php?f=' . rawurlencode($p['filename']),
+            'thumb_url' => '/event-photo-serve.php?f=' . rawurlencode($p['filename']) . '&thumb=1',
+            'caption'   => $p['caption'],
         ];
     }
     echo json_encode(['photos' => $photos]);

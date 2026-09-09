@@ -341,7 +341,7 @@ async function fetchEventContent(album, bodyEl) {
         const img = document.createElement('img');
         img.alt = photo.caption || '';
         img.loading = 'lazy';
-        img.src = photo.url;
+        img.src = photo.thumb_url || photo.url;
         img.onload = () => img.classList.add('loaded');
         img.onerror = () => { wrap.style.display = 'none'; };
         wrap.appendChild(img);
