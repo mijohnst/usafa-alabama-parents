@@ -86,9 +86,9 @@
     .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--navy); font-size: 0.9rem; }
     .form-group input { width: 100%; padding: 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; font-family: var(--font-body); color: var(--navy); font-size: 0.95rem; background: var(--white); }
     .form-group input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 2px rgba(0, 53, 148, 0.15); }
-    #duesLookupStatus, #duesPayStatus, #donateStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; text-align: left; }
-    #duesLookupStatus.success, #duesPayStatus.success, #donateStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
-    #duesLookupStatus.error, #duesPayStatus.error, #donateStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
+    #duesLookupStatus, #duesPayStatus, #donateStatus, #duesZelleNotifyStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; text-align: left; }
+    #duesLookupStatus.success, #duesPayStatus.success, #donateStatus.success, #duesZelleNotifyStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
+    #duesLookupStatus.error, #duesPayStatus.error, #donateStatus.error, #duesZelleNotifyStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
     .dues-years-list { text-align: left; margin: 1rem 0; }
     .dues-years-list label { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.95rem; color: var(--navy); }
     .dues-years-list label:hover { background: var(--light); }
@@ -510,8 +510,8 @@
                 <span class="icon">⚠️</span>
                 <h5>Zelle requires one extra step</h5>
               </div>
-              <p>Zelle must be sent from your own bank's app or online banking &mdash; it can't be triggered from this page, and it won't update your membership automatically like the buttons above do.</p>
-              <p><strong>After sending, please email the Treasurer</strong> with your cadet's name and the amount so we can mark your dues paid.</p>
+              <p>Zelle must be sent from your own bank's app or online banking &mdash; it can't be triggered from this page.</p>
+              <p><strong>After sending your payment</strong>, click the button below to let the Treasurer know to expect it &mdash; your membership won't update automatically like the buttons above, so the Treasurer will confirm receipt and mark your dues paid by hand.</p>
             </div>
             <div class="zelle-qr-section">
               <h5>Scan to Pay with Zelle</h5>
@@ -523,7 +523,8 @@
                 <p style="color: var(--gray); font-size: 0.85rem;">Recipient: USAFA CLUBOFALABAMA</p>
                 <p id="duesZelleAmountHint" style="margin-top:.5rem;font-weight:700;color:var(--navy)"></p>
               </div>
-              <a href="#" id="duesZelleEmailBtn" class="email-btn" style="margin-top:1rem;">📧 Email Treasurer After Paying</a>
+              <button type="button" id="duesZelleNotifyBtn" class="email-btn" style="margin-top:1rem;cursor:pointer;">📧 I've Sent My Zelle Payment — Notify Treasurer</button>
+              <div id="duesZelleNotifyStatus" role="status" aria-live="polite" style="margin-top:.75rem;font-size:.85rem;"></div>
             </div>
           </div>
         </div>
@@ -794,17 +795,54 @@
 
       function updateDuesZelleInfo(years, total) {
         var hintEl = document.getElementById('duesZelleAmountHint');
-        var emailBtn = document.getElementById('duesZelleEmailBtn');
-        if (!hintEl || !emailBtn) return;
-        if (!years.length) {
-          hintEl.textContent = '';
-          emailBtn.href = 'mailto:treasurer@alabamafalcons.org?subject=Zelle%20Payment%20-%20Membership%20Dues';
-          return;
-        }
-        hintEl.textContent = 'Amount for selected year(s): $' + total;
-        var subject = 'Zelle Payment - Membership Dues for ' + duesCadetName;
-        var body = 'Cadet: ' + duesCadetName + '\nYear(s) paid via Zelle: ' + years.join(', ') + '\nAmount sent: $' + total;
-        emailBtn.href = 'mailto:treasurer@alabamafalcons.org?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+        if (!hintEl) return;
+        hintEl.textContent = years.length ? ('Amount for selected year(s): $' + total) : '';
+      }
+
+      var duesZelleNotifyBtn = document.getElementById('duesZelleNotifyBtn');
+      if (duesZelleNotifyBtn) {
+        duesZelleNotifyBtn.addEventListener('click', async function() {
+          var btn = this;
+          var statusEl = document.getElementById('duesZelleNotifyStatus');
+          var years = selectedYears();
+
+          statusEl.style.display = 'block';
+          statusEl.className = '';
+
+          if (!years.length) {
+            statusEl.textContent = 'Please select at least one year above first.';
+            statusEl.className = 'error';
+            return;
+          }
+
+          btn.textContent = 'Notifying…';
+          btn.disabled = true;
+
+          try {
+            var resp = await fetch('dues-pay-zelle-notify.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ verifyToken: verifyToken, years: years })
+            });
+            var result = await resp.json();
+
+            if (result.success) {
+              statusEl.textContent = 'Thanks — the Treasurer has been notified to expect your Zelle payment.';
+              statusEl.className = 'success';
+              btn.textContent = '✅ Treasurer Notified';
+            } else {
+              statusEl.textContent = result.error || 'Could not notify the Treasurer. Please try again or email treasurer@alabamafalcons.org.';
+              statusEl.className = 'error';
+              btn.textContent = "📧 I've Sent My Zelle Payment — Notify Treasurer";
+              btn.disabled = false;
+            }
+          } catch (err) {
+            statusEl.textContent = 'Something went wrong. Please try again or email treasurer@alabamafalcons.org.';
+            statusEl.className = 'error';
+            btn.textContent = "📧 I've Sent My Zelle Payment — Notify Treasurer";
+            btn.disabled = false;
+          }
+        });
       }
 
       function renderPaypalButtonsIfReady() {
