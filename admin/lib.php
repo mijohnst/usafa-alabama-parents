@@ -419,6 +419,26 @@ function generate_photo_thumbnail(string $source_path, string $dest_path, int $m
     $src = @imagecreatefromstring($data);
     if (!$src) return false;
 
+    // Phone/camera JPEGs are frequently stored as landscape pixel data plus
+    // an EXIF Orientation tag telling viewers how to rotate them — browsers
+    // honor that tag when displaying the original file directly, but GD only
+    // reads raw pixels and imagejpeg() below doesn't carry EXIF into the
+    // output, so without this correction the thumbnail comes out sideways
+    // even though the full-size original (used by the lightbox) looks fine.
+    if (function_exists('exif_read_data')) {
+        $exif = @exif_read_data($source_path);
+        $orientation = (int)($exif['Orientation'] ?? 1);
+        switch ($orientation) {
+            case 2: imageflip($src, IMG_FLIP_HORIZONTAL); break;
+            case 3: $src = imagerotate($src, 180, 0); break;
+            case 4: imageflip($src, IMG_FLIP_VERTICAL); break;
+            case 5: imageflip($src, IMG_FLIP_VERTICAL); $src = imagerotate($src, -90, 0); break;
+            case 6: $src = imagerotate($src, -90, 0); break;
+            case 7: imageflip($src, IMG_FLIP_HORIZONTAL); $src = imagerotate($src, -90, 0); break;
+            case 8: $src = imagerotate($src, 90, 0); break;
+        }
+    }
+
     $orig_w = imagesx($src);
     $orig_h = imagesy($src);
     if ($orig_w <= 0 || $orig_h <= 0) { imagedestroy($src); return false; }
