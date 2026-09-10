@@ -421,7 +421,6 @@ function admin_header(string $title): void {
     echo '<div class="topbar">';
     echo '<a href="dashboard.php" class="topbar-title" style="color:#fff;text-decoration:none;display:flex;align-items:center;gap:.65rem"><img src="../logo01.png" alt="" style="height:32px;border-radius:3px"><span>USAFA Parents Club of Alabama <small>Club Portal</small></span></a>';
     echo '<nav>';
-    echo '<a href="dashboard.php" title="Home">🏠</a>';
     echo '<a href="../index.html" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none" title="Go to the public website">View Site</a>';
     if (can_view_member_pii()) echo '<a href="index.php">Members</a>';
     if (can_view_member_pii()) echo '<a href="roster-lookup.php" title="Lightweight mobile-friendly lookup">📋 Roster</a>';
@@ -435,7 +434,8 @@ function admin_header(string $title): void {
     try { $open_tickets = (int)get_pdo()->query("SELECT COUNT(*) FROM tickets WHERE status != 'resolved'")->fetchColumn(); } catch(Exception $e) {}
     $tbadge = (can_manage_tickets() && $open_tickets > 0) ? ' <span style="background:#f57c00;color:#fff;font-size:.6rem;padding:.1rem .4rem;border-radius:99px;vertical-align:middle;font-weight:700">' . $open_tickets . '</span>' : '';
     echo '<a href="helpdesk.php">🎫 Support' . $tbadge . '</a>';
-    echo '<a href="change-password.php" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none;margin-left:.25rem" title="Change password">' . h(current_user_name()) . ' 🔑</a>';
+    echo '<span style="width:1px;height:16px;background:rgba(255,255,255,.25);display:inline-block"></span>';
+    echo '<a href="change-password.php" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none" title="Change password">' . h(current_user_name()) . ' 🔑</a>';
     echo '<form method="POST" action="logout.php" style="display:inline;margin:0">' . csrf_field()
        . '<button type="submit" style="background:none;border:none;padding:0;font:inherit;color:rgba(255,255,255,.8);font-size:.85rem;cursor:pointer">Log Out</button></form>';
     echo '</nav></div>';
