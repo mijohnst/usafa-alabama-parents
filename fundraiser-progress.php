@@ -69,7 +69,7 @@ try {
          FROM paypal_donations
          WHERE campaign = ? AND status = 'captured'
          ORDER BY captured_at DESC
-         LIMIT 20"
+         LIMIT 8"
     );
     $stmt->execute([$campaign]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {

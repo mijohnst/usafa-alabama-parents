@@ -37,6 +37,7 @@
     .math-box { background: var(--light); border-left: 4px solid var(--accent); border-radius: 4px; padding: 1.5rem 1.75rem; margin: 1.75rem 0; text-align: center; }
     .math-box .equation { font-family: var(--font-display); font-size: 1.3rem; color: var(--navy); font-weight: 700; letter-spacing: .02em; }
     .math-box .equation span { color: var(--accent); }
+    .math-box .equation span.campaign-cadet-count, .math-box .equation span.campaign-goal { color: var(--navy); }
     .saber-link { display: inline-block; margin-top: .5rem; color: var(--blue); font-weight: 600; text-decoration: underline; }
 
     /* PROGRESS */
@@ -177,9 +178,9 @@
   <section class="section">
     <h2>Why a Saber?</h2>
     <p>Cadets traditionally carry a ceremonial saber during formal ceremonies and graduation — a handcrafted, personalized symbol of everything they've earned across four demanding years at the Academy. It's not required, but for the families who choose one, it becomes one of the most treasured keepsakes of their cadet's journey.</p>
-    <p>We're raising funds so every one of Alabama's 20 Class of <span class="campaign-year">2027</span> cadets can have one, regardless of what any individual family can contribute on their own.</p>
+    <p>We're raising funds so every one of Alabama's <span class="campaign-cadet-count">20</span> Class of <span class="campaign-year">2027</span> cadets can have one, regardless of what any individual family can contribute on their own.</p>
     <div class="math-box">
-      <div class="equation">$450 <span>&times;</span> 20 cadets <span>=</span> $9,000 goal</div>
+      <div class="equation">$450 <span>&times;</span> <span class="campaign-cadet-count">20</span> cadets <span>=</span> $<span class="campaign-goal">9,000</span> goal</div>
       <a class="saber-link" href="https://shop.usafa.org/products/air-force-academy-cadet-saber-usafa" target="_blank" rel="noopener">See the saber on USAFA's official shop &rarr;</a>
     </div>
     <p style="font-size:.9rem">Personalized sabers take <strong>4&ndash;6 weeks</strong> to produce, which is why we're asking for gifts by <strong class="campaign-deadline-text">January 15, 2027</strong> — well ahead of graduation.</p>
@@ -292,6 +293,7 @@
     // same as every other page's <title> on this site.
     var campaignYear = '2027';
     var campaignDeadlineIso = '2027-01-15';
+    var campaignGoal = 9000; // $450/saber — cadet count below is derived from this, not stored separately
 
     function campaignLabel() { return 'Class of ' + campaignYear + ' Saber Fund'; }
 
@@ -307,6 +309,13 @@
       var deadlineStr = formatDeadline(campaignDeadlineIso);
       document.querySelectorAll('.campaign-deadline-text').forEach(function(el) { el.textContent = deadlineStr; });
       document.getElementById('donateComment').placeholder = 'Go Falcons! Proud of you, Class of ' + campaignYear + '.';
+      // Cadet count is derived from the goal ($450/saber), not a separately
+      // admin-edited number — if the Treasurer raises the goal in
+      // admin/fundraiser.php, this recalculates automatically instead of
+      // still saying "20 cadets" next to a goal that no longer implies 20.
+      var cadetCount = Math.round(campaignGoal / 450);
+      document.querySelectorAll('.campaign-cadet-count').forEach(function(el) { el.textContent = cadetCount; });
+      document.querySelectorAll('.campaign-goal').forEach(function(el) { el.textContent = campaignGoal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0}); });
       updateCountdown();
       updateShareLinks();
     }
@@ -342,6 +351,7 @@
           renderRecentDonations(d.recent || []);
           if (d.year) campaignYear = d.year;
           if (d.deadline) campaignDeadlineIso = d.deadline;
+          if (d.goal) campaignGoal = d.goal;
           applyCampaignText();
         })
         .catch(function() {
