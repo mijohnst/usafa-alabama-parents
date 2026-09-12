@@ -83,6 +83,16 @@ if ($campaign !== '' && !isset(DONATION_CAMPAIGNS[$campaign])) {
 }
 $campaign = $campaign !== '' ? $campaign : null;
 
+// Optional short public comment + name-display choice — only meaningful
+// for a campaign page that shows a "recent donations" wall (fundraiser.html);
+// general donations from payment.html never send these, so they default to
+// blank/shown and are simply never displayed anywhere.
+$comment = trim((string)($payload['comment'] ?? ''));
+$comment = preg_replace('/[\x00-\x1F\x7F]/', ' ', $comment); // strip control chars/newlines
+$comment = mb_substr(strip_tags($comment), 0, 240);
+$comment = $comment !== '' ? $comment : null;
+$show_name = (array_key_exists('showName', $payload) && !$payload['showName']) ? 0 : 1;
+
 $reference_id = 'donation-' . bin2hex(random_bytes(6));
 $request_id   = 'create-' . bin2hex(random_bytes(16));
 
@@ -94,9 +104,23 @@ if (!$order['success']) {
     exit();
 }
 
-$pdo->prepare(
-    'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign)
-     VALUES (?, ?, ?, ?, ?, ?)'
-)->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign]);
+// Tries the comment/show_name columns first; falls back to the original
+// insert if they don't exist yet (migration not run) so a deploy of this
+// code ahead of the migration can never break live donation processing —
+// including the general payment.html flow, which shares this endpoint and
+// never sends these fields at all. Only the comment/name-display choice is
+// lost for a donation caught mid-migration, never the donation itself.
+try {
+    $pdo->prepare(
+        'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign, donor_comment, show_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    )->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign, $comment, $show_name]);
+} catch (\PDOException $e) {
+    error_log('donate-create-order: donor_comment/show_name insert failed, falling back — ' . $e->getMessage());
+    $pdo->prepare(
+        'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign)
+         VALUES (?, ?, ?, ?, ?, ?)'
+    )->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign]);
+}
 
 echo json_encode(['success' => true, 'orderId' => $order['order_id']]);

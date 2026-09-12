@@ -59,9 +59,18 @@ $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM paypal_donations WHER
 $stmt->execute([$campaign]);
 $raised_online = (float)$stmt->fetchColumn();
 
-$stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
-$stmt->execute([$campaign]);
-$recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// donor_comment/show_name columns only exist after the comments migration
+// runs — fall back to the pre-comment column list so this page still works
+// against an un-migrated database rather than erroring outright.
+try {
+    $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at, donor_comment, show_name FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
+    $stmt->execute([$campaign]);
+    $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (\PDOException $e) {
+    $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
+    $stmt->execute([$campaign]);
+    $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 $raised_total = $raised_online + $offline;
 $pct = $goal > 0 ? min(100, round($raised_total / $goal * 100)) : 0;
@@ -117,13 +126,15 @@ echo show_flash();
     <p style="color:#9aa5b4;font-size:.85rem">No online donations captured for this campaign yet.</p>
   <?php else: ?>
   <table>
-    <thead><tr><th>Date</th><th>Donor</th><th>Amount</th></tr></thead>
+    <thead><tr><th>Date</th><th>Donor</th><th>Amount</th><th>Public?</th><th>Comment</th></tr></thead>
     <tbody>
       <?php foreach ($recent as $r): ?>
       <tr>
         <td><?= h(date('M j, Y', strtotime($r['captured_at']))) ?></td>
         <td><?= h($r['donor_name'] ?: $r['donor_email']) ?></td>
         <td>$<?= number_format($r['amount'], 2) ?></td>
+        <td><?= !array_key_exists('show_name', $r) ? '—' : ((int)$r['show_name'] === 0 ? 'Anonymous' : 'Shown') ?></td>
+        <td><?= h($r['donor_comment'] ?? '') ?></td>
       </tr>
       <?php endforeach; ?>
     </tbody>

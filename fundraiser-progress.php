@@ -49,6 +49,38 @@ $offline = (float)($vals[$offline_key] ?? 0);
 
 $raised_total = $raised_online + $offline;
 
+// Recent donations wall (name/comment/amount, newest first). Wrapped
+// separately from the totals query above so a pre-migration database
+// (donor_comment/show_name columns not added yet) just yields an empty
+// list here rather than breaking the progress totals the whole page
+// depends on.
+$recent = [];
+try {
+    $stmt = $pdo->prepare(
+        "SELECT donor_name, donor_comment, show_name, amount, captured_at
+         FROM paypal_donations
+         WHERE campaign = ? AND status = 'captured'
+         ORDER BY captured_at DESC
+         LIMIT 20"
+    );
+    $stmt->execute([$campaign]);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $name = trim((string)($row['donor_name'] ?? ''));
+        if ((int)($row['show_name'] ?? 1) === 0) {
+            $display_name = 'Anonymous';
+        } else {
+            $display_name = $name !== '' ? $name : 'A Generous Donor';
+        }
+        $recent[] = [
+            'name'    => $display_name,
+            'comment' => $row['donor_comment'] ?? '',
+            'amount'  => round((float)$row['amount'], 2),
+        ];
+    }
+} catch (\PDOException $e) {
+    error_log('fundraiser-progress: recent donations query failed (migration not run?) — ' . $e->getMessage());
+}
+
 echo json_encode([
     'success'       => true,
     'campaign'      => $campaign,
@@ -57,4 +89,5 @@ echo json_encode([
     'raisedTotal'   => round($raised_total, 2),
     'goal'          => round($goal, 2),
     'pct'           => $goal > 0 ? min(100, round($raised_total / $goal * 100)) : 0,
+    'recent'        => $recent,
 ]);
