@@ -485,6 +485,15 @@ const INCOME_TYPE_COLORS = [
     'other'       => '#5a6a7a',
 ];
 const INCOME_PAYMENT_METHODS = ['Check','Cash','Venmo','Zelle','PayPal','Bank Transfer','Other'];
+// Named online-donation campaigns donate-create-order.php will accept a
+// `campaign` tag for, scoping paypal_donations rows (and
+// fundraiser-progress.php's totals) to one drive without touching the
+// general/unlabeled donation flow. Add an entry here whenever a new
+// time-limited campaign launches — no schema change needed, the
+// paypal_donations.campaign column already stores any slug.
+const DONATION_CAMPAIGNS = [
+    'saber-fund-2027' => 'Class of 2027 Saber Fund',
+];
 // Sequence position of each purchase status — used both to render the
 // progress stepper and to stop a Treasurer's raw Status-field edit from
 // skipping the workflow forward (see purchase-form.php).

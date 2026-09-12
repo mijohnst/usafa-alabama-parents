@@ -122,6 +122,14 @@ $pdo->prepare("UPDATE paypal_donations SET paypal_capture_id=?, status='captured
 $donor_name  = (string)($track['donor_name'] ?? '');
 $donor_email = (string)$track['donor_email'];
 
+// $track['campaign'] only exists once the saber-fund migration has run —
+// read defensively so a pre-migration paypal_donations table (missing the
+// column entirely) just falls back to the general "Online Donation" label
+// instead of throwing.
+$campaign       = $track['campaign'] ?? null;
+$campaign_label = ($campaign && isset(DONATION_CAMPAIGNS[$campaign])) ? DONATION_CAMPAIGNS[$campaign] : null;
+$description    = $campaign_label ? "Online Donation — {$campaign_label}" : 'Online Donation';
+
 try {
     $pdo->prepare(
         'INSERT INTO income_entries (entry_date, source, source_type, description, amount, payment_method, notes, received_by)
@@ -129,7 +137,7 @@ try {
     )->execute([
         $donor_name ?: $donor_email,
         'donation',
-        'Online Donation',
+        $description,
         $track['amount'],
         'PayPal',
         "{$capture_note_prefix}PayPal order $order_id, capture $capture_id",
@@ -144,12 +152,12 @@ try {
 }
 
 try {
-    send_donation_receipt($donor_email, $donor_name, (float)$track['amount'], $capture_id, $capture_note_prefix);
+    send_donation_receipt($donor_email, $donor_name, (float)$track['amount'], $capture_id, $capture_note_prefix, $campaign_label);
 } catch (\Throwable $e) {
     error_log('donate-capture-order: donor receipt email failed for order ' . $order_id . ': ' . $e->getMessage());
 }
 try {
-    notify_treasurer_of_donation($donor_name, $donor_email, (float)$track['amount'], $order_id, (string)$capture_id, $capture_note_prefix);
+    notify_treasurer_of_donation($donor_name, $donor_email, (float)$track['amount'], $order_id, (string)$capture_id, $capture_note_prefix, $campaign_label);
 } catch (\Throwable $e) {
     error_log('donate-capture-order: treasurer notification email failed for order ' . $order_id . ': ' . $e->getMessage());
 }

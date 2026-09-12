@@ -290,6 +290,7 @@ if (can_manage_finances()) {
     // never saw a tile to reach the page even after it started allowing them in.
     if (is_treasurer() || is_super_admin() || is_officer()) {
         $sections['Finance'][] = ['icon'=>'🅿️','label'=>'PayPal Activity','sub'=>'Online dues & donations','href'=>'paypal-dues-orders.php','color'=>'#003594'];
+        $sections['Finance'][] = ['icon'=>'🗡️','label'=>'Saber Fund','sub'=>'Class of 2027 fundraiser progress','href'=>'fundraiser.php','color'=>'#A6192E'];
     }
 }
 

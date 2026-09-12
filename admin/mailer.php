@@ -1055,21 +1055,23 @@ function send_portal_invite(string $to, string $name, string $token): bool {
 // $subjectPrefix lets the caller flag a sandbox-mode test capture (donate-
 // capture-order.php) so a donor never mistakes a fake test transaction for
 // a real tax-deductible receipt.
-function send_donation_receipt(string $donorEmail, string $donorName, float $amount, string $captureId, string $subjectPrefix = ''): bool {
+function send_donation_receipt(string $donorEmail, string $donorName, float $amount, string $captureId, string $subjectPrefix = '', ?string $campaignLabel = null): bool {
     $amt  = '$' . number_format($amount, 2);
     $date = date('F j, Y');
     $name = $donorName !== '' ? $donorName : 'there';
+    $purpose = $campaignLabel ? " in support of the {$campaignLabel}" : '';
 
     $subject = "{$subjectPrefix}Thank You for Your Donation — $amt";
     $body    = CLUB_NAME . "\n"
              . "Donation Receipt\n"
              . str_repeat('─', 48) . "\n\n"
              . "Hi $name,\n\n"
-             . "Thank you for your generous donation of $amt to " . CLUB_NAME . "! "
+             . "Thank you for your generous donation of $amt to " . CLUB_NAME . "{$purpose}! "
              . "Your support directly helps our cadets and families throughout their Academy journey.\n\n"
              . "Donation Details:\n"
              . "  Date:          $date\n"
              . "  Amount:        $amt\n"
+             . ($campaignLabel ? "  Campaign:      $campaignLabel\n" : '')
              . "  PayPal Ref:    $captureId\n\n"
              . "If you have any questions, please contact our treasurer at treasurer@alabamafalcons.org.\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
@@ -1113,22 +1115,24 @@ function send_manual_payment_receipt(string $payerEmail, string $payerName, floa
 }
 
 // ── Notify the treasurer of a completed online donation ──────────────────
-function notify_treasurer_of_donation(string $donorName, string $donorEmail, float $amount, string $orderId, string $captureId, string $subjectPrefix = ''): bool {
+function notify_treasurer_of_donation(string $donorName, string $donorEmail, float $amount, string $orderId, string $captureId, string $subjectPrefix = '', ?string $campaignLabel = null): bool {
     $amt  = '$' . number_format($amount, 2);
     $date = date('F j, Y g:ia');
+    $description = $campaignLabel ? "Online Donation — {$campaignLabel}" : 'Online Donation';
 
     $subject = "{$subjectPrefix}New Online Donation Received — $amt";
     $body    = CLUB_NAME . "\n"
              . "New Online Donation\n"
              . str_repeat('─', 48) . "\n\n"
-             . "A donation was just completed via PayPal on payment.html.\n\n"
+             . "A donation was just completed via PayPal.\n\n"
              . "Donor Name:    " . ($donorName !== '' ? $donorName : '(not provided)') . "\n"
              . "Donor Email:   $donorEmail\n"
              . "Amount:        $amt\n"
              . "Date:          $date\n"
+             . ($campaignLabel ? "Campaign:      $campaignLabel\n" : '')
              . "PayPal Order:   $orderId\n"
              . "PayPal Capture: $captureId\n\n"
-             . "This has been logged in the Income Ledger automatically (source: Online Donation).\n\n"
+             . "This has been logged in the Income Ledger automatically (source: {$description}).\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
     return send_notification('treasurer@alabamafalcons.org', $subject, $body);
 }

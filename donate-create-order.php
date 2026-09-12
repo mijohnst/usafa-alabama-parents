@@ -72,6 +72,17 @@ if (!filter_var($donor_email, FILTER_VALIDATE_EMAIL)) {
 $amount = round($amount, 2);
 $donor_name = mb_substr($donor_name, 0, 200);
 
+// Optional campaign tag (e.g. a time-limited fundraiser page like
+// fundraiser.html) — general donations from payment.html never send this,
+// so it defaults to null and the row looks identical to today.
+$campaign = trim((string)($payload['campaign'] ?? ''));
+if ($campaign !== '' && !isset(DONATION_CAMPAIGNS[$campaign])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Unknown campaign.']);
+    exit();
+}
+$campaign = $campaign !== '' ? $campaign : null;
+
 $reference_id = 'donation-' . bin2hex(random_bytes(6));
 $request_id   = 'create-' . bin2hex(random_bytes(16));
 
@@ -84,8 +95,8 @@ if (!$order['success']) {
 }
 
 $pdo->prepare(
-    'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status)
-     VALUES (?, ?, ?, ?, ?)'
-)->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created']);
+    'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign)
+     VALUES (?, ?, ?, ?, ?, ?)'
+)->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign]);
 
 echo json_encode(['success' => true, 'orderId' => $order['order_id']]);
