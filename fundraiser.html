@@ -83,6 +83,9 @@
     .share-row { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
     .share-btn { display: inline-flex; align-items: center; gap: .5rem; padding: .75rem 1.4rem; border-radius: 6px; font-size: .85rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: opacity .15s; }
     .share-btn:hover { opacity: .88; text-decoration: none; }
+    .share-native { background: var(--accent); color: #fff; }
+    .share-sms { background: #34c759; color: #fff; }
+    .share-email { background: var(--navy); color: #fff; }
     .share-fb { background: #1877f2; color: #fff; }
     .share-x { background: #000; color: #fff; }
     .share-copy { background: var(--silver); color: #fff; }
@@ -270,6 +273,9 @@
     <h2>Help Us Spread the Word</h2>
     <p>The easiest way to help even if you can't give right now — share this page with friends and family.</p>
     <div class="share-row">
+      <button type="button" class="share-btn share-native" id="shareNative" style="display:none">📤 Share&hellip;</button>
+      <a class="share-btn share-sms" id="shareSms" href="#">💬 Text a Friend</a>
+      <a class="share-btn share-email" id="shareEmail" href="#">✉️ Email a Friend</a>
       <a class="share-btn share-fb" id="shareFb" href="#" target="_blank" rel="noopener">📘 Share on Facebook</a>
       <a class="share-btn share-x" id="shareX" href="#" target="_blank" rel="noopener">✕ Share on X</a>
       <button type="button" class="share-btn share-copy" id="shareCopy">🔗 Copy Link</button>
@@ -432,9 +438,30 @@
     function updateShareLinks() {
       var pageUrl = window.location.href;
       var shareText = 'Help us give every USAFA Class of ' + campaignYear + ' Alabama cadet a graduation saber!';
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      document.getElementById('shareSms').href = 'sms:' + (isIOS ? '&' : '?') + 'body=' + encodeURIComponent(shareText + ' ' + pageUrl);
+      document.getElementById('shareEmail').href = 'mailto:?subject=' + encodeURIComponent(campaignLabel()) + '&body=' + encodeURIComponent(shareText + '\n\n' + pageUrl);
       document.getElementById('shareFb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(pageUrl);
       document.getElementById('shareX').href = 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(pageUrl) + '&text=' + encodeURIComponent(shareText);
     }
+
+    // Native device share sheet (mobile Safari/Chrome) — gives one-tap
+    // access to whatever the phone has installed (WhatsApp, Messages,
+    // Instagram DMs, Mail, etc.) without needing a dedicated button per app.
+    // Only shown where navigator.share actually exists (mostly mobile) —
+    // desktop browsers fall back to the explicit buttons below it.
+    var nativeShareBtn = document.getElementById('shareNative');
+    if (navigator.share) {
+      nativeShareBtn.style.display = '';
+      nativeShareBtn.addEventListener('click', function() {
+        navigator.share({
+          title: campaignLabel(),
+          text: 'Help us give every USAFA Class of ' + campaignYear + ' Alabama cadet a graduation saber!',
+          url: window.location.href
+        }).catch(function() {});
+      });
+    }
+
     document.getElementById('shareCopy').addEventListener('click', function() {
       var btn = this;
       var pageUrl = window.location.href;
