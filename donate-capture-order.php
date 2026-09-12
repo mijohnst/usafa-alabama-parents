@@ -127,7 +127,7 @@ $donor_email = (string)$track['donor_email'];
 // column entirely) just falls back to the general "Online Donation" label
 // instead of throwing.
 $campaign       = $track['campaign'] ?? null;
-$campaign_label = ($campaign && isset(DONATION_CAMPAIGNS[$campaign])) ? DONATION_CAMPAIGNS[$campaign] : null;
+$campaign_label = ($campaign && isset(DONATION_CAMPAIGNS[$campaign])) ? saber_fund_label($pdo, $campaign, DONATION_CAMPAIGNS[$campaign]) : null;
 $description    = $campaign_label ? "Online Donation — {$campaign_label}" : 'Online Donation';
 
 try {

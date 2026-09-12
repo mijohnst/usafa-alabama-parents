@@ -458,6 +458,24 @@ function generate_photo_thumbnail(string $source_path, string $dest_path, int $m
     return $ok;
 }
 
+// Best-effort "Class of {year} Saber Fund" label built from this campaign's
+// admin-editable target year (site_settings fundraiser_{slug}_year, edited
+// via admin/fundraiser.php), so the Income Ledger description and donor/
+// treasurer emails stay in sync with whatever year the public page
+// currently shows — instead of the static DONATION_CAMPAIGNS string going
+// stale the moment someone updates the year for next year's cadets.
+// Falls back to $fallback if the setting is missing (migration not run
+// yet) or the row can't be read.
+function saber_fund_label(PDO $pdo, string $slug, string $fallback): string {
+    try {
+        $stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+        $stmt->execute(["fundraiser_{$slug}_year"]);
+        $year = $stmt->fetchColumn();
+        if ($year) return "Class of {$year} Saber Fund";
+    } catch (\PDOException $e) {}
+    return $fallback;
+}
+
 function extract_youtube_id(string $url): ?string {
     $url = trim($url);
     if ($url === '') return null;

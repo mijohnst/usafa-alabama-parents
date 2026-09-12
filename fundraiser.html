@@ -24,6 +24,7 @@
     .hero-motto { font-size: .72rem; letter-spacing: .3em; text-transform: uppercase; color: var(--silver2); margin-bottom: 1.25rem; }
     .hero h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; letter-spacing: .03em; margin-bottom: 1rem; line-height: 1.15; }
     .hero h1 span { color: var(--silver2); display: block; font-size: .55em; letter-spacing: .08em; margin-top: .4rem; }
+    .hero h1 span.campaign-year { display: inline; color: inherit; font-size: 1em; letter-spacing: inherit; margin-top: 0; }
     .hero p.mission { font-size: 1.05rem; color: rgba(245,245,240,.88); max-width: 600px; margin: 0 auto 1.75rem; line-height: 1.6; }
     .saber-motif { font-size: 1.6rem; letter-spacing: .5rem; color: var(--accent); margin-bottom: 1.25rem; }
     .countdown-badge { display: inline-flex; align-items: center; gap: .5rem; background: rgba(166,25,46,.18); border: 1px solid rgba(166,25,46,.5); color: var(--white); padding: .55rem 1.25rem; border-radius: 99px; font-size: .85rem; font-weight: 600; }
@@ -166,8 +167,8 @@
     <div class="hero-content">
       <p class="hero-motto">USAFA Parents Club of Alabama</p>
       <div class="saber-motif" aria-hidden="true">&#10022;&#10022;&#10022;</div>
-      <h1>Class of 2027<span>Saber Fund</span></h1>
-      <p class="mission">Help us equip every Alabama cadet graduating with USAFA's Class of 2027 with a ceremonial saber — a lifelong keepsake and symbol of the honor, precision, and Air Force heritage they've earned.</p>
+      <h1>Class of <span class="campaign-year">2027</span><span>Saber Fund</span></h1>
+      <p class="mission">Help us equip every Alabama cadet graduating with USAFA's Class of <span class="campaign-year">2027</span> with a ceremonial saber — a lifelong keepsake and symbol of the honor, precision, and Air Force heritage they've earned.</p>
       <div class="countdown-badge">🗓️ <span id="countdown-text">Loading countdown&hellip;</span></div>
     </div>
   </div>
@@ -176,12 +177,12 @@
   <section class="section">
     <h2>Why a Saber?</h2>
     <p>Cadets traditionally carry a ceremonial saber during formal ceremonies and graduation — a handcrafted, personalized symbol of everything they've earned across four demanding years at the Academy. It's not required, but for the families who choose one, it becomes one of the most treasured keepsakes of their cadet's journey.</p>
-    <p>We're raising funds so every one of Alabama's 20 Class of 2027 cadets can have one, regardless of what any individual family can contribute on their own.</p>
+    <p>We're raising funds so every one of Alabama's 20 Class of <span class="campaign-year">2027</span> cadets can have one, regardless of what any individual family can contribute on their own.</p>
     <div class="math-box">
       <div class="equation">$450 <span>&times;</span> 20 cadets <span>=</span> $9,000 goal</div>
       <a class="saber-link" href="https://shop.usafa.org/products/air-force-academy-cadet-saber-usafa" target="_blank" rel="noopener">See the saber on USAFA's official shop &rarr;</a>
     </div>
-    <p style="font-size:.9rem">Personalized sabers take <strong>4&ndash;6 weeks</strong> to produce, which is why we're asking for gifts by <strong>January 15, 2027</strong> — well ahead of graduation.</p>
+    <p style="font-size:.9rem">Personalized sabers take <strong>4&ndash;6 weeks</strong> to produce, which is why we're asking for gifts by <strong class="campaign-deadline-text">January 15, 2027</strong> — well ahead of graduation.</p>
   </section>
 
   <!-- PROGRESS -->
@@ -233,7 +234,7 @@
           </div>
           <div class="form-group">
             <label for="donateName">Your Name (optional)</label>
-            <input type="text" id="donateName" placeholder="Jane Doe" />
+            <input type="text" id="donateName" placeholder="Paul D. Moga" />
           </div>
           <div class="form-group">
             <label for="donateEmail">Your Email *</label>
@@ -280,17 +281,49 @@
   <script>
     var CAMPAIGN = 'saber-fund-2027';
 
+    // ─── CAMPAIGN TEXT (year / deadline) ─────────────────────────────────────
+    // Admin-editable via admin/fundraiser.php (site_settings, fetched below
+    // through fundraiser-progress.php) so next year's officers can reuse this
+    // same page for a new class year without a code change. These defaults
+    // match today's copy and are what render before the fetch resolves (and
+    // what stay in place if it fails or the migration hasn't been run yet) —
+    // the page's <title> and Open Graph tags are NOT wired to this since
+    // social-share crawlers don't run JavaScript; those stay static text,
+    // same as every other page's <title> on this site.
+    var campaignYear = '2027';
+    var campaignDeadlineIso = '2027-01-15';
+
+    function campaignLabel() { return 'Class of ' + campaignYear + ' Saber Fund'; }
+
+    function formatDeadline(iso) {
+      var parts = (iso || '').split('-');
+      if (parts.length !== 3) return 'January 15, ' + campaignYear;
+      var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return d.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
+    }
+
+    function applyCampaignText() {
+      document.querySelectorAll('.campaign-year').forEach(function(el) { el.textContent = campaignYear; });
+      var deadlineStr = formatDeadline(campaignDeadlineIso);
+      document.querySelectorAll('.campaign-deadline-text').forEach(function(el) { el.textContent = deadlineStr; });
+      document.getElementById('donateComment').placeholder = 'Go Falcons! Proud of you, Class of ' + campaignYear + '.';
+      updateCountdown();
+      updateShareLinks();
+    }
+
     // ─── COUNTDOWN ──────────────────────────────────────────────────────────
-    (function() {
-      var deadline = new Date('2027-01-15T23:59:59-06:00');
+    function updateCountdown() {
+      var deadline = new Date(campaignDeadlineIso + 'T23:59:59-06:00');
       var el = document.getElementById('countdown-text');
       var days = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
       if (days > 0) {
-        el.innerHTML = '<strong>' + days + ' day' + (days !== 1 ? 's' : '') + '</strong> left to give &mdash; deadline January 15, 2027';
+        el.innerHTML = '<strong>' + days + ' day' + (days !== 1 ? 's' : '') + '</strong> left to give &mdash; deadline ' + formatDeadline(campaignDeadlineIso);
       } else {
-        el.innerHTML = 'Our January 15, 2027 deadline has passed &mdash; thank you to everyone who gave!';
+        el.textContent = 'Our ' + formatDeadline(campaignDeadlineIso) + ' deadline has passed — thank you to everyone who gave!';
       }
-    })();
+    }
+
+    applyCampaignText();
 
     // ─── LIVE PROGRESS ──────────────────────────────────────────────────────
     function loadProgress() {
@@ -307,6 +340,9 @@
           document.getElementById('progress-online').textContent = '$' + d.raisedOnline.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
           document.getElementById('progress-offline').textContent = '$' + d.raisedOffline.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
           renderRecentDonations(d.recent || []);
+          if (d.year) campaignYear = d.year;
+          if (d.deadline) campaignDeadlineIso = d.deadline;
+          applyCampaignText();
         })
         .catch(function() {
           document.getElementById('progress-loading').textContent = 'Help us reach our $9,000 goal! (progress temporarily unavailable)';
@@ -378,22 +414,23 @@
     });
 
     // ─── SOCIAL SHARE ───────────────────────────────────────────────────────
-    (function() {
+    function updateShareLinks() {
       var pageUrl = window.location.href;
-      var shareText = 'Help us give every USAFA Class of 2027 Alabama cadet a graduation saber!';
+      var shareText = 'Help us give every USAFA Class of ' + campaignYear + ' Alabama cadet a graduation saber!';
       document.getElementById('shareFb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(pageUrl);
       document.getElementById('shareX').href = 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(pageUrl) + '&text=' + encodeURIComponent(shareText);
-      document.getElementById('shareCopy').addEventListener('click', function() {
-        var btn = this;
-        navigator.clipboard.writeText(pageUrl).then(function() {
-          var original = btn.innerHTML;
-          btn.innerHTML = '✅ Copied!';
-          setTimeout(function() { btn.innerHTML = original; }, 2000);
-        }).catch(function() {
-          window.prompt('Copy this link:', pageUrl);
-        });
+    }
+    document.getElementById('shareCopy').addEventListener('click', function() {
+      var btn = this;
+      var pageUrl = window.location.href;
+      navigator.clipboard.writeText(pageUrl).then(function() {
+        var original = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        setTimeout(function() { btn.innerHTML = original; }, 2000);
+      }).catch(function() {
+        window.prompt('Copy this link:', pageUrl);
       });
-    })();
+    });
 
     // ─── PAYPAL DONATE FLOW ─────────────────────────────────────────────────
     (function() {
@@ -472,7 +509,7 @@
                 // it could no longer find the element it was tearing down.
                 document.getElementById('donateFormFields').style.display = 'none';
                 var thankYou = document.getElementById('donateThankYou');
-                thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + ' toward the Class of 2027 Saber Fund! A receipt has been sent to your email.</p>';
+                thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + ' toward the ' + campaignLabel() + '! A receipt has been sent to your email.</p>';
                 thankYou.style.display = 'block';
                 loadProgress();
               } else {
