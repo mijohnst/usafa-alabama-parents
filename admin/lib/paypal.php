@@ -154,17 +154,32 @@ function paypal_check_payout_status(string $batchId): array {
 // same still-open order instead of creating a second one. Returns
 // ['success'=>true,'order_id'=>...,'status'=>...] or
 // ['success'=>false,'error'=>...].
-function paypal_create_order(float $amount, string $referenceId, string $requestId): array {
+// $description/$customId are optional — when set (e.g. a named campaign
+// like the Saber Fund), they land on the order's purchase_unit exactly as
+// PayPal defines them: `description` is the free-text line shown in
+// PayPal's own transaction details and the buyer's receipt email;
+// `custom_id` is a merchant-defined tag (not shown to the buyer) that
+// appears in the seller's PayPal Activity/transaction detail view and in
+// PayPal's transaction-history CSV exports, so it can be filtered/searched
+// there independent of this site's own admin panel. Both are capped at
+// PayPal's own 127-character limit for these fields. General donations
+// (no campaign) leave both null, so the order looks exactly as it did
+// before this parameter existed.
+function paypal_create_order(float $amount, string $referenceId, string $requestId, ?string $description = null, ?string $customId = null): array {
     $auth = paypal_get_access_token();
     if (!$auth['token']) return ['success' => false, 'error' => $auth['error']];
     $token = $auth['token'];
 
+    $purchase_unit = [
+        'reference_id' => $referenceId,
+        'amount' => ['currency_code' => 'USD', 'value' => number_format($amount, 2, '.', '')],
+    ];
+    if ($description !== null) $purchase_unit['description'] = mb_substr($description, 0, 127);
+    if ($customId !== null)    $purchase_unit['custom_id']   = mb_substr($customId, 0, 127);
+
     $payload = [
         'intent' => 'CAPTURE',
-        'purchase_units' => [[
-            'reference_id' => $referenceId,
-            'amount' => ['currency_code' => 'USD', 'value' => number_format($amount, 2, '.', '')],
-        ]],
+        'purchase_units' => [$purchase_unit],
     ];
 
     $ch = curl_init(paypal_api_base() . '/v2/checkout/orders');

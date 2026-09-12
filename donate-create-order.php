@@ -96,7 +96,13 @@ $show_name = (array_key_exists('showName', $payload) && !$payload['showName']) ?
 $reference_id = 'donation-' . bin2hex(random_bytes(6));
 $request_id   = 'create-' . bin2hex(random_bytes(16));
 
-$order = paypal_create_order($amount, $reference_id, $request_id);
+// Tags the order itself with the campaign so it's identifiable directly in
+// PayPal's own dashboard/receipts, not just in this site's admin panel —
+// custom_id (searchable in PayPal's Activity/CSV export, not shown to the
+// donor) gets the stable slug, description (shown to the donor and in
+// PayPal's transaction details) gets the current human-readable label.
+$paypal_description = $campaign ? saber_fund_label($pdo, $campaign, DONATION_CAMPAIGNS[$campaign]) : null;
+$order = paypal_create_order($amount, $reference_id, $request_id, $paypal_description, $campaign);
 if (!$order['success']) {
     error_log('donate-create-order: ' . $order['error']);
     http_response_code(502);
