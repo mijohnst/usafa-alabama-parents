@@ -608,24 +608,27 @@
       </p>
 
       <div id="donateFormWrap" style="max-width: 480px; margin: 0 auto;">
-        <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
-          <label for="donateWebsite">Leave this field empty</label>
-          <input type="text" id="donateWebsite" name="donateWebsite" tabindex="-1" autocomplete="off">
+        <div id="donateFormFields">
+          <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+            <label for="donateWebsite">Leave this field empty</label>
+            <input type="text" id="donateWebsite" name="donateWebsite" tabindex="-1" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="donateAmount">Donation Amount (USD) *</label>
+            <input type="number" id="donateAmount" min="1" step="0.01" placeholder="25.00" />
+          </div>
+          <div class="form-group">
+            <label for="donateName">Your Name (optional)</label>
+            <input type="text" id="donateName" placeholder="Jane Doe" />
+          </div>
+          <div class="form-group">
+            <label for="donateEmail">Your Email *</label>
+            <input type="email" id="donateEmail" placeholder="you@example.com" />
+          </div>
+          <div id="donateStatus" role="status" aria-live="polite"></div>
+          <div id="donatePaypalButtons"></div>
         </div>
-        <div class="form-group">
-          <label for="donateAmount">Donation Amount (USD) *</label>
-          <input type="number" id="donateAmount" min="1" step="0.01" placeholder="25.00" />
-        </div>
-        <div class="form-group">
-          <label for="donateName">Your Name (optional)</label>
-          <input type="text" id="donateName" placeholder="Jane Doe" />
-        </div>
-        <div class="form-group">
-          <label for="donateEmail">Your Email *</label>
-          <input type="email" id="donateEmail" placeholder="you@example.com" />
-        </div>
-        <div id="donateStatus" role="status" aria-live="polite"></div>
-        <div id="donatePaypalButtons"></div>
+        <div id="donateThankYou" style="display:none"></div>
       </div>
 
       <p style="color: var(--gray); margin-top: 1.5rem; font-size: 0.9rem; text-align: center;">
@@ -961,8 +964,17 @@
               body: JSON.stringify({ orderId: data.orderID })
             }).then(function(r) { return r.json(); }).then(function(result) {
               if (result.success) {
-                document.getElementById('donateFormWrap').innerHTML =
-                  '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + '! A receipt has been sent to your email.</p>';
+                // Hide the form rather than destroying it outright — some
+                // funding sources (Venmo's QR/app-switch flow in particular)
+                // still have their own async cleanup to do against the
+                // button container after onApprove resolves, and ripping
+                // #donatePaypalButtons out of the DOM here left PayPal's own
+                // "completing your purchase" overlay spinning forever since
+                // it could no longer find the element it was tearing down.
+                document.getElementById('donateFormFields').style.display = 'none';
+                var thankYou = document.getElementById('donateThankYou');
+                thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + '! A receipt has been sent to your email.</p>';
+                thankYou.style.display = 'block';
               } else {
                 statusEl.textContent = result.error || 'Payment could not be completed. Please try again.';
                 statusEl.className = 'error';
