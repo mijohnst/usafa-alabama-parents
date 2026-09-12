@@ -45,11 +45,22 @@
     .progress-card { background: var(--white); border-radius: 8px; padding: 2rem 2rem 2.25rem; box-shadow: 0 4px 16px rgba(0,53,148,.08); text-align: center; }
     .progress-amount { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 2.75rem); color: var(--navy); font-weight: 700; margin-bottom: .25rem; }
     .progress-amount .of-goal { font-size: .5em; color: var(--gray); font-weight: 400; font-family: var(--font-body); }
-    .progress-track { background: #e1e5eb; border-radius: 99px; height: 20px; overflow: hidden; margin: 1.25rem 0 .75rem; }
-    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #d62d47); border-radius: 99px; transition: width .6s ease; }
+    .progress-track-wrap { display: flex; align-items: center; gap: .6rem; margin: 1.25rem 0 .75rem; }
+    .progress-hilt { flex-shrink: 0; width: 22px; height: 22px; }
+    .progress-track { flex: 1; background: #e1e5eb; border-radius: 99px; height: 20px; overflow: hidden; position: relative; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #d62d47); border-radius: 99px; transition: width .6s ease; position: relative; }
+    .progress-fill-tip { position: absolute; top: 50%; right: 0; transform: translate(50%, -50%); width: 10px; height: 10px; background: #FFC72C; border-radius: 50%; box-shadow: 0 0 8px 3px rgba(255,199,44,.75); display: none; }
+    .progress-fill-tip.show { display: block; }
     .progress-meta { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; font-size: .82rem; color: var(--gray); margin-top: .5rem; }
     .progress-meta strong { display: block; color: var(--navy); font-size: 1rem; }
     .progress-loading { color: var(--gray); font-size: .9rem; }
+
+    /* SABER COLLECTION */
+    .saber-collection { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid #e1e5eb; }
+    .saber-collection-label { font-size: .85rem; font-weight: 700; color: var(--navy); margin-bottom: .85rem; text-transform: uppercase; letter-spacing: .04em; }
+    .saber-row { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; }
+    .saber-icon { opacity: .5; transition: opacity .4s ease, transform .3s ease; }
+    .saber-icon.filled { opacity: 1; filter: drop-shadow(0 0 3px rgba(255,199,44,.55)); }
 
     /* DONATE + RECENT DONATIONS (side by side) */
     .donate-recent-section { max-width: 1100px; }
@@ -199,11 +210,24 @@
       <div id="progress-loading" class="progress-loading">Loading progress&hellip;</div>
       <div id="progress-content" style="display:none">
         <div class="progress-amount"><span id="progress-raised">$0</span> <span class="of-goal">of <span id="progress-goal">$9,000</span> goal</span></div>
-        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-track-wrap">
+          <svg class="progress-hilt" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="8" y="2" width="3" height="20" rx="1" fill="#8A8D8F"/>
+            <rect x="2" y="8" width="6" height="8" rx="1.5" fill="#FFC72C"/>
+            <circle cx="3" cy="12" r="2.5" fill="#FFC72C"/>
+          </svg>
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"><span class="progress-fill-tip" id="progress-fill-tip"></span></div>
+          </div>
+        </div>
         <div class="progress-meta">
           <div><strong id="progress-pct">0%</strong>Funded</div>
           <div><strong id="progress-online">$0</strong>Online</div>
           <div><strong id="progress-offline">$0</strong>Checks / Zelle</div>
+        </div>
+        <div class="saber-collection">
+          <p class="saber-collection-label">🗡️ <span id="saber-collection-count">0</span> of <span class="campaign-cadet-count">20</span> Sabers Funded</p>
+          <div class="saber-row" id="saber-row"></div>
         </div>
       </div>
     </div>
@@ -359,17 +383,52 @@
           document.getElementById('progress-pct').textContent = d.pct + '%';
           document.getElementById('progress-online').textContent = '$' + d.raisedOnline.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
           document.getElementById('progress-offline').textContent = '$' + d.raisedOffline.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+          document.getElementById('progress-fill-tip').classList.toggle('show', d.pct > 0);
           renderRecentDonations(d.recent || []);
           if (d.year) campaignYear = d.year;
           if (d.deadline) campaignDeadlineIso = d.deadline;
           if (d.goal) campaignGoal = d.goal;
           applyCampaignText();
+
+          // Each $450 raised "funds" one saber — a literal, countable
+          // visualization of progress rather than just an abstract percentage.
+          var cadetCount = Math.max(1, Math.round(d.goal / 450));
+          var fundedCount = Math.min(cadetCount, Math.floor(d.raisedTotal / 450));
+          document.getElementById('saber-collection-count').textContent = fundedCount;
+          renderSaberCollection(cadetCount, fundedCount);
         })
         .catch(function() {
           document.getElementById('progress-loading').textContent = 'Help us reach our $9,000 goal! (progress temporarily unavailable)';
         });
     }
     loadProgress();
+
+    // ─── SABER COLLECTION ROW ─────────────────────────────────────────────────
+    // Small inline SVG saber, drawn flat (no gradients) so it stays cheap to
+    // repeat many times. All markup here is our own static string — no
+    // donor-supplied data — so building it via innerHTML is safe.
+    function saberIconSvg(filled) {
+      var steel = filled ? '#8A8D8F' : '#d7dade';
+      var gold  = filled ? '#FFC72C' : '#d7dade';
+      return '<svg viewBox="0 0 24 60" width="16" height="40" aria-hidden="true">'
+           + '<polygon points="12,2 15,12 15,38 9,38 9,12" fill="' + (filled ? '#eef0f2' : 'none') + '" stroke="' + steel + '" stroke-width="1.5"/>'
+           + '<rect x="4" y="38" width="16" height="4" rx="1" fill="' + steel + '"/>'
+           + '<rect x="9" y="42" width="6" height="13" rx="1.5" fill="' + gold + '"/>'
+           + '<circle cx="12" cy="57" r="3" fill="' + gold + '"/>'
+           + '</svg>';
+    }
+    function renderSaberCollection(total, funded) {
+      var row = document.getElementById('saber-row');
+      row.innerHTML = '';
+      for (var i = 0; i < total; i++) {
+        var filled = i < funded;
+        var wrap = document.createElement('div');
+        wrap.className = 'saber-icon' + (filled ? ' filled' : '');
+        wrap.title = filled ? 'Saber funded!' : 'Not yet funded';
+        wrap.innerHTML = saberIconSvg(filled);
+        row.appendChild(wrap);
+      }
+    }
 
     // ─── RECENT DONATIONS WALL ────────────────────────────────────────────────
     // Uses textContent exclusively for donor-supplied strings (name, comment)
