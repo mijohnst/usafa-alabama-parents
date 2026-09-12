@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Class of 2027 Saber Fund - USAFA Parents Club of Alabama</title>
-  <meta name="description" content="Help us equip all 20 Alabama cadets in USAFA's Class of 2027 with a ceremonial graduation saber. $9,000 goal before January 15, 2027." />
+  <meta name="description" content="Help us equip all 20 Alabama cadets in USAFA's Class of 2027 with a ceremonial graduation saber. $10,000 goal before January 15, 2027." />
   <meta property="og:title" content="Class of 2027 Saber Fund" />
-  <meta property="og:description" content="Help us equip all 20 Alabama cadets in USAFA's Class of 2027 with a ceremonial graduation saber. $9,000 goal before January 15, 2027." />
+  <meta property="og:description" content="Help us equip all 20 Alabama cadets in USAFA's Class of 2027 with a ceremonial graduation saber. $10,000 goal before January 15, 2027." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://alabamafalcons.org/fundraiser.html" />
   <meta property="og:image" content="https://alabamafalcons.org/logo01.png" />
@@ -197,7 +197,7 @@
     <p>Cadets traditionally carry a ceremonial saber during formal ceremonies and graduation — a handcrafted, personalized symbol of everything they've earned across four demanding years at the Academy. It's not required, but for the families who choose one, it becomes one of the most treasured keepsakes of their cadet's journey.</p>
     <p>We're raising funds so every one of Alabama's <span class="campaign-cadet-count">20</span> Class of <span class="campaign-year">2027</span> cadets can have one, regardless of what any individual family can contribute on their own.</p>
     <div class="math-box">
-      <div class="equation">$450 <span>&times;</span> <span class="campaign-cadet-count">20</span> cadets <span>=</span> $<span class="campaign-goal">9,000</span> goal</div>
+      <div class="equation">$500 <span>&times;</span> <span class="campaign-cadet-count">20</span> cadets <span>=</span> $<span class="campaign-goal">10,000</span> goal</div>
       <a class="saber-link" href="https://shop.usafa.org/products/air-force-academy-cadet-saber-usafa" target="_blank" rel="noopener">See the saber on USAFA's official shop &rarr;</a>
     </div>
     <p style="font-size:.9rem">Personalized sabers take <strong>4&ndash;6 weeks</strong> to produce, which is why we're asking for gifts by <strong class="campaign-deadline-text">January 15, 2027</strong> — well ahead of graduation.</p>
@@ -209,7 +209,7 @@
     <div class="progress-card">
       <div id="progress-loading" class="progress-loading">Loading progress&hellip;</div>
       <div id="progress-content" style="display:none">
-        <div class="progress-amount"><span id="progress-raised">$0</span> <span class="of-goal">of <span id="progress-goal">$9,000</span> goal</span></div>
+        <div class="progress-amount"><span id="progress-raised">$0</span> <span class="of-goal">of <span id="progress-goal">$10,000</span> goal</span></div>
         <div class="progress-track-wrap">
           <svg class="progress-hilt" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="8" y="2" width="3" height="20" rx="1" fill="#8A8D8F"/>
@@ -249,7 +249,7 @@
                 <button type="button" class="quick-amt-btn" data-amt="25">$25</button>
                 <button type="button" class="quick-amt-btn" data-amt="50">$50</button>
                 <button type="button" class="quick-amt-btn" data-amt="100">$100</button>
-                <button type="button" class="quick-amt-btn" data-amt="450">$450 &mdash; Fund One Saber</button>
+                <button type="button" class="quick-amt-btn" data-amt="500">$500 &mdash; Fund One Saber</button>
                 <button type="button" class="quick-amt-btn" id="customAmtBtn" data-amt="">Custom Amount</button>
               </div>
               <div class="form-group">
@@ -328,7 +328,8 @@
     // same as every other page's <title> on this site.
     var campaignYear = '2027';
     var campaignDeadlineIso = '2027-01-15';
-    var campaignGoal = 9000; // $450/saber — cadet count below is derived from this, not stored separately
+    var campaignGoal = 10000;
+    var SABER_PRICE = 500; // single source of truth — cadet counts everywhere are goal / SABER_PRICE, never a separately hardcoded number
 
     function campaignLabel() { return 'Class of ' + campaignYear + ' Saber Fund'; }
 
@@ -344,11 +345,11 @@
       var deadlineStr = formatDeadline(campaignDeadlineIso);
       document.querySelectorAll('.campaign-deadline-text').forEach(function(el) { el.textContent = deadlineStr; });
       document.getElementById('donateComment').placeholder = 'Go Falcons! Proud of you, Class of ' + campaignYear + '.';
-      // Cadet count is derived from the goal ($450/saber), not a separately
-      // admin-edited number — if the Treasurer raises the goal in
+      // Cadet count is derived from the goal (SABER_PRICE/saber), not a
+      // separately admin-edited number — if the Treasurer raises the goal in
       // admin/fundraiser.php, this recalculates automatically instead of
       // still saying "20 cadets" next to a goal that no longer implies 20.
-      var cadetCount = Math.round(campaignGoal / 450);
+      var cadetCount = Math.round(campaignGoal / SABER_PRICE);
       document.querySelectorAll('.campaign-cadet-count').forEach(function(el) { el.textContent = cadetCount; });
       document.querySelectorAll('.campaign-goal').forEach(function(el) { el.textContent = campaignGoal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0}); });
       updateCountdown();
@@ -390,15 +391,15 @@
           if (d.goal) campaignGoal = d.goal;
           applyCampaignText();
 
-          // Each $450 raised "funds" one saber — a literal, countable
+          // Each SABER_PRICE raised "funds" one saber — a literal, countable
           // visualization of progress rather than just an abstract percentage.
-          var cadetCount = Math.max(1, Math.round(d.goal / 450));
-          var fundedCount = Math.min(cadetCount, Math.floor(d.raisedTotal / 450));
+          var cadetCount = Math.max(1, Math.round(d.goal / SABER_PRICE));
+          var fundedCount = Math.min(cadetCount, Math.floor(d.raisedTotal / SABER_PRICE));
           document.getElementById('saber-collection-count').textContent = fundedCount;
           renderSaberCollection(cadetCount, fundedCount);
         })
         .catch(function() {
-          document.getElementById('progress-loading').textContent = 'Help us reach our $9,000 goal! (progress temporarily unavailable)';
+          document.getElementById('progress-loading').textContent = 'Help us reach our $10,000 goal! (progress temporarily unavailable)';
         });
     }
     loadProgress();
