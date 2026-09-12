@@ -55,15 +55,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
         $year_key     => mb_substr($year_raw, 0, 20),
         $deadline_key => $deadline_raw,
     ];
-    $stmt = $pdo->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?');
-    $missing = [];
-    foreach ($updates as $key => $val) {
-        $stmt->execute([$val, $key]);
-        if ($stmt->rowCount() === 0) $missing[] = $key;
-    }
+
+    // Check which rows actually exist via SELECT first, rather than
+    // inferring existence from UPDATE's affected-row count — PDO's MySQL
+    // driver reports 0 affected rows whenever the new value is identical to
+    // what's already stored (not just when the row is missing), which was
+    // flagging an unchanged field as "missing" on every re-save.
+    $keys = array_keys($updates);
+    $stmt = $pdo->prepare('SELECT setting_key FROM site_settings WHERE setting_key IN (' . implode(',', array_fill(0, count($keys), '?')) . ')');
+    $stmt->execute($keys);
+    $found = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $missing = array_diff($keys, $found);
+
     if ($missing) {
         flash('error', 'Some settings could not be saved — has the saber-fund migration been fully run? Missing: ' . h(implode(', ', $missing)));
     } else {
+        $stmt = $pdo->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?');
+        foreach ($updates as $key => $val) $stmt->execute([$val, $key]);
         flash('success', 'Campaign settings updated.');
     }
     header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
