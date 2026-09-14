@@ -57,6 +57,21 @@ if (isset($_GET['export'])) {
 
 $status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','submitted'=>'#6a1b9a','paid'=>'#003594'];
 
+// Reconciliation safeguard: a purchase can be marked "Paid" two ways —
+// automatically once PayPal's payout confirms SUCCESS, or manually via
+// the treasurer-only "Mark Paid" button, which sets status regardless of
+// what PayPal actually reports. That manual path is legitimate (checks,
+// cash, or a treasurer who already confirmed elsewhere) but can also mean
+// "Paid" was clicked before the PayPal payout actually finished — flag
+// that gap here instead of it only surfacing when someone cross-references
+// this page against PayPal Activity by hand.
+function purchase_payout_mismatch(array $p): bool {
+    return $p['status'] === 'paid'
+        && !empty($p['paypal_payout_batch_id'])
+        && ($p['paypal_payout_status'] ?? '') !== 'SUCCESS';
+}
+$mismatch_count = count(array_filter($purchases, 'purchase_payout_mismatch'));
+
 admin_header('Finance');
 ?>
 <style>
@@ -69,6 +84,11 @@ admin_header('Finance');
 </style>
 
 <?= show_flash() ?>
+<?php if ($mismatch_count > 0): ?>
+<div class="alert alert-error">
+  ⚠️ <?= $mismatch_count ?> purchase<?= $mismatch_count === 1 ? '' : 's' ?> marked <strong>Paid</strong> whose PayPal payout hasn't confirmed <strong>SUCCESS</strong> yet — look for the ⚠️ next to the status below and use its 🔄 refresh button to check the real payout status.
+</div>
+<?php endif; ?>
 <div class="page-head">
   <h1>Finance</h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
@@ -198,10 +218,13 @@ admin_header('Finance');
       <td style="text-align:right;white-space:nowrap;color:#5a6a7a">$<?= number_format($p['amount_shipping'],2) ?></td>
       <td style="text-align:right;white-space:nowrap;font-weight:700">$<?= number_format($p['amount_total'],2) ?></td>
       <td>
-        <?php $sc = $status_colors[$p['status']] ?? '#5a6a7a'; ?>
+        <?php $sc = $status_colors[$p['status']] ?? '#5a6a7a'; $mismatch = purchase_payout_mismatch($p); ?>
         <span class="status-badge" style="background:<?= $sc ?>22;color:<?= $sc ?>">
           <?= h(PURCHASE_STATUSES[$p['status']] ?? ($p['status'] !== '' ? ucfirst($p['status']) : '(no status)')) ?>
         </span>
+        <?php if ($mismatch): ?>
+        <span class="status-badge" style="background:#c6282822;color:#c62828" title="Marked Paid, but PayPal's payout status is still &quot;<?= h($p['paypal_payout_status'] ?? 'unknown') ?>&quot; — not yet confirmed SUCCESS.">⚠️ PayPal: <?= h($p['paypal_payout_status'] ?? 'Unknown') ?></span>
+        <?php endif; ?>
       </td>
       <td style="font-size:.78rem;color:#5a6a7a;white-space:nowrap"><?= h($p['submitted_by_name'] ?? '—') ?></td>
       <td class="actions">
@@ -256,6 +279,14 @@ admin_header('Finance');
             <input type="hidden" name="note" id="pn-<?= (int)$p['id'] ?>">
             <button type="button" class="btn btn-sm" style="background:#003594;color:#fff;white-space:nowrap"
               onclick="doAction('pf-<?= (int)$p['id'] ?>','pn-<?= (int)$p['id'] ?>','Note (optional):','Confirm this purchase has been paid?')">✓ Mark Paid</button>
+          </form>
+          <?php endif; ?>
+          <?php if ($mismatch && is_treasurer()): ?>
+          <form method="POST" action="purchase-action.php" style="margin:0">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="check_paypal_status">
+            <button type="submit" class="btn btn-secondary btn-sm" style="white-space:nowrap" title="Already marked Paid — this re-checks whether PayPal's payout has actually confirmed.">🔄 PayPal: <?= h($p['paypal_payout_status'] ?? 'Sent') ?></button>
           </form>
           <?php endif; ?>
           <?php if (is_treasurer()): ?>
