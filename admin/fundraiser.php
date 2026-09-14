@@ -26,20 +26,21 @@ if (!isset(DONATION_CAMPAIGNS[$campaign])) {
 }
 
 $goal_key     = "fundraiser_{$campaign}_goal";
+$cadet_key    = "fundraiser_{$campaign}_cadet_count";
 $offline_key  = "fundraiser_{$campaign}_offline_raised";
 $year_key     = "fundraiser_{$campaign}_year";
 $deadline_key = "fundraiser_{$campaign}_deadline";
-$all_keys     = [$goal_key, $offline_key, $year_key, $deadline_key];
+$all_keys     = [$goal_key, $cadet_key, $offline_key, $year_key, $deadline_key];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
     csrf_verify();
-    $goal_raw     = trim($_POST['goal'] ?? '');
+    $cadet_raw    = trim($_POST['cadet_count'] ?? '');
     $offline_raw  = trim($_POST['offline_raised'] ?? '');
     $year_raw     = trim($_POST['year'] ?? '');
     $deadline_raw = trim($_POST['deadline'] ?? '');
 
     $errors = [];
-    if (!is_numeric($goal_raw) || (float)$goal_raw <= 0)          $errors[] = 'Goal must be a number greater than $0.';
+    if (!ctype_digit($cadet_raw) || (int)$cadet_raw <= 0)          $errors[] = 'Number of cadets must be a whole number greater than 0.';
     if (!is_numeric($offline_raw) || (float)$offline_raw < 0)     $errors[] = 'Offline total must be a number of $0 or more.';
     if ($year_raw === '')                                          $errors[] = 'Target class year cannot be blank.';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $deadline_raw))       $errors[] = 'Deadline must be a valid date.';
@@ -49,8 +50,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
         header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
     }
 
+    // Goal is derived from cadet count × the per-saber price, not entered
+    // directly — the dollar goal is a consequence of how many cadets need
+    // one, and letting the two drift independently is how you'd end up
+    // with a goal that no longer matches "$500 x N cadets" on the public page.
+    $cadet_count_new = (int)$cadet_raw;
+    $goal_computed    = $cadet_count_new * SABER_PRICE;
+
     $updates = [
-        $goal_key     => number_format((float)$goal_raw, 2, '.', ''),
+        $goal_key     => number_format($goal_computed, 2, '.', ''),
+        $cadet_key    => (string)$cadet_count_new,
         $offline_key  => number_format((float)$offline_raw, 2, '.', ''),
         $year_key     => mb_substr($year_raw, 0, 20),
         $deadline_key => $deadline_raw,
@@ -85,6 +94,10 @@ $goal     = (float)($vals[$goal_key] ?? 0);
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
 $deadline = $vals[$deadline_key] ?? '';
+// Falls back to deriving cadet count from the existing goal (the old
+// relationship) so this page still shows a sane number before
+// migrate_saber_fund_cadet_count.sql has been run, rather than "0 cadets".
+$cadet_count = isset($vals[$cadet_key]) ? (int)$vals[$cadet_key] : (int)round($goal / SABER_PRICE);
 $settings_missing = count($vals) < count($all_keys);
 $campaign_label = saber_fund_label($pdo, $campaign, DONATION_CAMPAIGNS[$campaign]);
 
@@ -119,8 +132,8 @@ echo show_flash();
 
 <?php if ($settings_missing): ?>
 <div class="alert alert-error">
-  Missing one or more <code>site_settings</code> rows for this campaign. Run <code>migrate_saber_fund.sql</code> and
-  <code>migrate_saber_fund_year.sql</code> in phpMyAdmin, then reload this page.
+  Missing one or more <code>site_settings</code> rows for this campaign. Run <code>migrate_saber_fund.sql</code>,
+  <code>migrate_saber_fund_year.sql</code>, and <code>migrate_saber_fund_cadet_count.sql</code> in phpMyAdmin, then reload this page.
 </div>
 <?php endif; ?>
 
@@ -143,15 +156,22 @@ echo show_flash();
     <?= csrf_field() ?>
     <div class="form-row col-2">
       <div class="form-group">
-        <label>Goal ($)</label>
-        <input type="number" step="0.01" min="0.01" name="goal" value="<?= h(number_format($goal, 2, '.', '')) ?>">
+        <label>Number of Cadets</label>
+        <input type="number" step="1" min="1" name="cadet_count" id="cadetCountInput" value="<?= h($cadet_count) ?>">
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Goal = cadets &times; $<?= number_format(SABER_PRICE,0) ?>/saber = <strong id="cadetCountGoalPreview">$<?= number_format($cadet_count * SABER_PRICE, 2) ?></strong></p>
       </div>
       <div class="form-group">
         <label>Offline Total Raised ($)</label>
         <input type="number" step="0.01" min="0" name="offline_raised" value="<?= h(number_format($offline, 2, '.', '')) ?>">
       </div>
     </div>
-    <p style="font-size:.72rem;color:#9aa5b4;margin:-.5rem 0 1rem">Update "Offline Total Raised" whenever a check, Zelle, or cash gift comes in — enter the new running total, not just the latest gift.</p>
+    <p style="font-size:.72rem;color:#9aa5b4;margin:-.5rem 0 1rem">Update "Offline Total Raised" whenever a check, Zelle, or cash gift comes in — enter the new running total, not just the latest gift. If a cadet drops out of the program, lower "Number of Cadets" here and the goal recalculates automatically — no need to compute the new dollar total yourself.</p>
+    <script>
+      document.getElementById('cadetCountInput').addEventListener('input', function() {
+        var n = parseInt(this.value, 10) || 0;
+        document.getElementById('cadetCountGoalPreview').textContent = '$' + (n * <?= (int)SABER_PRICE ?>).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      });
+    </script>
     <div class="form-row col-2">
       <div class="form-group">
         <label>Target Class Year</label>

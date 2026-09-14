@@ -494,6 +494,13 @@ const INCOME_PAYMENT_METHODS = ['Check','Cash','Venmo','Zelle','PayPal','Bank Tr
 const DONATION_CAMPAIGNS = [
     'saber-fund-2027' => 'Class of 2027 Saber Fund',
 ];
+// Must match SABER_PRICE in fundraiser.html's JS — two separate sources of
+// truth (server-side goal math here in admin/fundraiser.php, client-side
+// display math there) since PHP and a static page's JS can't literally
+// share one constant. admin/fundraiser.php uses this to compute the dollar
+// goal from the Treasurer-edited cadet count, so this is the one place a
+// per-saber price change needs to happen server-side.
+const SABER_PRICE = 500;
 // Sequence position of each purchase status — used both to render the
 // progress stepper and to stop a Treasurer's raw Status-field edit from
 // skipping the workflow forward (see purchase-form.php).

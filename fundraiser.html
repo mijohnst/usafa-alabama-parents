@@ -353,10 +353,12 @@
       var deadlineStr = formatDeadline(campaignDeadlineIso);
       document.querySelectorAll('.campaign-deadline-text').forEach(function(el) { el.textContent = deadlineStr; });
       document.getElementById('donateComment').placeholder = 'Go Falcons! Proud of you, Class of ' + campaignYear + '.';
-      // Cadet count is derived from the goal (SABER_PRICE/saber), not a
-      // separately admin-edited number — if the Treasurer raises the goal in
-      // admin/fundraiser.php, this recalculates automatically instead of
-      // still saying "20 cadets" next to a goal that no longer implies 20.
+      // Cadet count isn't its own field here — it's re-derived as
+      // goal/SABER_PRICE. admin/fundraiser.php now treats "Number of
+      // Cadets" as the thing the Treasurer actually edits and computes the
+      // goal from it (cadets x SABER_PRICE there too), so goal is always an
+      // exact multiple of SABER_PRICE and this division recovers the same
+      // integer without needing its own admin-editable settings key here.
       var cadetCount = Math.round(campaignGoal / SABER_PRICE);
       document.querySelectorAll('.campaign-cadet-count').forEach(function(el) { el.textContent = cadetCount; });
       document.querySelectorAll('.campaign-goal').forEach(function(el) { el.textContent = campaignGoal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0}); });
