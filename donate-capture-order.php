@@ -84,11 +84,13 @@ $capture_note_prefix = paypal_mode_label() === 'live' ? '' : '[SANDBOX TEST] ';
 
 $capture_id = null;
 $captured_amount = null;
+$funding_source = 'PayPal';
 
 $result = paypal_capture_order($order_id, 'capture-' . $order_id);
 if ($result['success']) {
     $capture_id = $result['capture_id'];
     $captured_amount = $result['captured_amount'];
+    $funding_source = $result['funding_source'];
 } elseif (!empty($result['already_captured'])) {
     $recover = paypal_get_order($order_id);
     if (!$recover['success']) {
@@ -99,6 +101,7 @@ if ($result['success']) {
     }
     $capture_id = $recover['capture_id'];
     $captured_amount = $recover['captured_amount'];
+    $funding_source = $recover['funding_source'];
 } else {
     error_log('donate-capture-order: capture failed for order ' . $order_id . ': ' . $result['error']);
     echo json_encode(['success' => false, 'error' => 'Your donation could not be completed. Please try again.']);
@@ -116,8 +119,16 @@ if (abs((float)$captured_amount - (float)$track['amount']) > 0.001) {
     exit();
 }
 
-$pdo->prepare("UPDATE paypal_donations SET paypal_capture_id=?, status='captured', captured_at=NOW() WHERE id=?")
-    ->execute([$capture_id, $track['id']]);
+// funding_source only exists once migrate_paypal_funding_source.sql has
+// run — fall back to the pre-migration UPDATE so this endpoint (the only
+// place a donation is actually applied) never breaks on an un-migrated DB.
+try {
+    $pdo->prepare("UPDATE paypal_donations SET paypal_capture_id=?, status='captured', captured_at=NOW(), funding_source=? WHERE id=?")
+        ->execute([$capture_id, $funding_source, $track['id']]);
+} catch (\PDOException $e) {
+    $pdo->prepare("UPDATE paypal_donations SET paypal_capture_id=?, status='captured', captured_at=NOW() WHERE id=?")
+        ->execute([$capture_id, $track['id']]);
+}
 
 $donor_name  = (string)($track['donor_name'] ?? '');
 $donor_email = (string)$track['donor_email'];
@@ -139,7 +150,7 @@ try {
         'donation',
         $description,
         $track['amount'],
-        'PayPal',
+        $funding_source,
         "{$capture_note_prefix}PayPal order $order_id, capture $capture_id",
         null,
     ]);

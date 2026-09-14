@@ -100,11 +100,13 @@ $capture_note_prefix = paypal_mode_label() === 'live' ? '' : '[SANDBOX TEST] ';
 
 $capture_id = null;
 $captured_amount = null;
+$funding_source = 'PayPal';
 
 $result = paypal_capture_order($order_id, 'capture-' . $order_id);
 if ($result['success']) {
     $capture_id = $result['capture_id'];
     $captured_amount = $result['captured_amount'];
+    $funding_source = $result['funding_source'];
 } elseif (!empty($result['already_captured'])) {
     $recover = paypal_get_order($order_id);
     if (!$recover['success']) {
@@ -115,6 +117,7 @@ if ($result['success']) {
     }
     $capture_id = $recover['capture_id'];
     $captured_amount = $recover['captured_amount'];
+    $funding_source = $recover['funding_source'];
 } else {
     error_log('dues-pay-capture-order: capture failed for order ' . $order_id . ': ' . $result['error']);
     echo json_encode(['success' => false, 'error' => 'Your payment could not be completed. Please try again, or use another payment method.']);
@@ -163,7 +166,7 @@ try {
         array_merge($current_paid, $still_needed),
         true,
         $row,
-        'PayPal',
+        $funding_source,
         "{$capture_note_prefix}PayPal order $order_id, capture $capture_id"
     );
     $pdo->prepare("UPDATE paypal_dues_orders SET status='applied', applied_at=NOW() WHERE id=?")->execute([$track['id']]);
@@ -179,7 +182,7 @@ try {
             array_merge($current_paid, $still_needed),
             true,
             $row,
-            'PayPal',
+            $funding_source,
             "{$capture_note_prefix}PayPal order $order_id, capture $capture_id"
         );
         $pdo->prepare("UPDATE paypal_dues_orders SET status='applied', applied_at=NOW() WHERE id=?")->execute([$track['id']]);

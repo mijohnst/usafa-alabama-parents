@@ -7,6 +7,21 @@
  * API hosts and completely separate credentials/money.
  */
 
+// Orders v2 responses carry a top-level payment_source object keyed by
+// whichever funding instrument the payer actually used (paypal/venmo/
+// card/apple_pay/google_pay) — distinct from and not derivable off the
+// purchase_units/captures block. This is the only place that "PayPal vs
+// Venmo vs Apple Pay" is knowable per-transaction; callers persist the
+// label so the Finance Report can break income down by real payment
+// source instead of every online payment reading as generic "PayPal".
+function paypal_funding_source_label(array $data): string {
+    $labels = ['paypal' => 'PayPal', 'venmo' => 'Venmo', 'apple_pay' => 'Apple Pay', 'google_pay' => 'Google Pay', 'card' => 'Card'];
+    foreach ($data['payment_source'] ?? [] as $key => $val) {
+        if (isset($labels[$key])) return $labels[$key];
+    }
+    return 'PayPal';
+}
+
 function paypal_api_base(): string {
     return (defined('PAYPAL_MODE') && PAYPAL_MODE === 'live')
         ? 'https://api-m.paypal.com'
@@ -235,6 +250,7 @@ function paypal_capture_order(string $orderId, string $requestId): array {
             'status'          => $capture['status'],
             'capture_id'      => $capture['id'],
             'captured_amount' => (float)($capture['amount']['value'] ?? 0),
+            'funding_source'  => paypal_funding_source_label($data),
         ];
     }
     error_log('paypal_capture_order failed: HTTP ' . $code . ' ' . $resp);
@@ -271,6 +287,7 @@ function paypal_get_order(string $orderId): array {
             'status'          => $capture['status'] ?? 'UNKNOWN',
             'capture_id'      => $capture['id'] ?? null,
             'captured_amount' => (float)($capture['amount']['value'] ?? 0),
+            'funding_source'  => paypal_funding_source_label($data),
         ];
     }
     error_log('paypal_get_order failed: HTTP ' . $code . ' ' . $resp);
