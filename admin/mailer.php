@@ -1073,6 +1073,11 @@ function send_donation_receipt(string $donorEmail, string $donorName, float $amo
              . "  Amount:        $amt\n"
              . ($campaignLabel ? "  Campaign:      $campaignLabel\n" : '')
              . "  PayPal Ref:    $captureId\n\n"
+             . "No goods or services were provided in return for this contribution.\n\n"
+             . "The " . CLUB_NAME . " is a 501(c)(3) tax-exempt organization (Tax ID: " . CLUB_TAX_ID . "). "
+             . "This contribution is tax-deductible to the extent allowable by law. Please consult a "
+             . "qualified tax professional for further guidance regarding the deductibility of your "
+             . "contribution for your personal tax situation.\n\n"
              . "If you have any questions, please contact our treasurer at treasurer@alabamafalcons.org.\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
     return send_notification($donorEmail, $subject, $body);
