@@ -54,6 +54,9 @@
     .progress-meta { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; font-size: .82rem; color: var(--gray); margin-top: .5rem; }
     .progress-meta strong { display: block; color: var(--navy); font-size: 1rem; }
     .progress-loading { color: var(--gray); font-size: .9rem; }
+    .goal-reached-banner { display: none; background: linear-gradient(135deg, #FFC72C, #ffb300); color: #4a3300; border-radius: 6px; padding: .9rem 1.25rem; margin-bottom: 1.25rem; font-weight: 600; font-size: .92rem; }
+    .goal-reached-banner.show { display: block; }
+    .progress-fill.goal-reached { background: linear-gradient(90deg, #FFC72C, #ffb300); }
 
     /* SABER COLLECTION */
     .saber-collection { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid #e1e5eb; }
@@ -209,6 +212,7 @@
     <div class="progress-card">
       <div id="progress-loading" class="progress-loading">Loading progress&hellip;</div>
       <div id="progress-content" style="display:none">
+        <div id="goalReachedBanner" class="goal-reached-banner">🎉 <span id="goalReachedText"></span></div>
         <div class="progress-amount"><span id="progress-raised">$0</span> <span class="of-goal">of <span id="progress-goal">$10,000</span> goal</span></div>
         <div class="progress-track-wrap">
           <svg class="progress-hilt" viewBox="0 0 24 24" aria-hidden="true">
@@ -222,6 +226,7 @@
         </div>
         <div class="progress-meta">
           <div><strong id="progress-pct">0%</strong>Funded</div>
+          <div><strong id="progress-donors">0</strong>Donors</div>
           <div><strong id="progress-online">$0</strong>Online</div>
           <div><strong id="progress-offline">$0</strong>Checks / Zelle</div>
         </div>
@@ -384,10 +389,19 @@
           document.getElementById('progress-raised').textContent = '$' + d.raisedTotal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
           document.getElementById('progress-goal').textContent = '$' + d.goal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
           document.getElementById('progress-fill').style.width = d.pct + '%';
+          document.getElementById('progress-fill').classList.toggle('goal-reached', !!d.goalReached);
           document.getElementById('progress-pct').textContent = d.pct + '%';
+          document.getElementById('progress-donors').textContent = (d.donorCount || 0).toLocaleString();
           document.getElementById('progress-online').textContent = '$' + d.raisedOnline.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
           document.getElementById('progress-offline').textContent = '$' + d.raisedOffline.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
           document.getElementById('progress-fill-tip').classList.toggle('show', d.pct > 0);
+          var banner = document.getElementById('goalReachedBanner');
+          if (d.goalReached) {
+            document.getElementById('goalReachedText').textContent = 'Goal reached! Thank you to everyone who gave — additional gifts help cover any remaining cadets or roll into next year’s fund.';
+            banner.classList.add('show');
+          } else {
+            banner.classList.remove('show');
+          }
           renderRecentDonations(d.recent || []);
           if (d.year) campaignYear = d.year;
           if (d.deadline) campaignDeadlineIso = d.deadline;

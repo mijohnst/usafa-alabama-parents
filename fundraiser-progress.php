@@ -32,9 +32,11 @@ if (!isset(DONATION_CAMPAIGNS[$campaign])) {
 
 $pdo = get_pdo();
 
-$stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM paypal_donations WHERE campaign = ? AND status = 'captured'");
+$stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0), COUNT(*) FROM paypal_donations WHERE campaign = ? AND status = 'captured'");
 $stmt->execute([$campaign]);
-$raised_online = (float)$stmt->fetchColumn();
+list($raised_online, $donor_count) = $stmt->fetch(PDO::FETCH_NUM);
+$raised_online = (float)$raised_online;
+$donor_count   = (int)$donor_count;
 
 $goal_key     = "fundraiser_{$campaign}_goal";
 $offline_key  = "fundraiser_{$campaign}_offline_raised";
@@ -97,6 +99,8 @@ echo json_encode([
     'raisedTotal'   => round($raised_total, 2),
     'goal'          => round($goal, 2),
     'pct'           => $goal > 0 ? min(100, round($raised_total / $goal * 100)) : 0,
+    'donorCount'    => $donor_count,
+    'goalReached'   => $goal > 0 && $raised_total >= $goal,
     'recent'        => $recent,
     'year'          => $year,
     'deadline'      => $deadline,
