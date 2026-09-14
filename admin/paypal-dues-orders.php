@@ -34,12 +34,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     if (!$can_manage) { flash('error', 'Only the treasurer or an admin can delete records.'); header('Location: paypal-dues-orders.php'); exit; }
     $del_type = $_POST['type'] ?? '';
     $del_id   = (int)($_POST['id'] ?? 0);
+    // 'created' is the only status meaning PayPal never actually captured
+    // anything for this row — a checkout the payer started but abandoned.
+    // Every other status (captured/applied/amount_mismatch/etc.) means
+    // money has already moved, so the row can't be deleted regardless of
+    // role — same rule as Paid purchases on the Finance page. Re-checked
+    // here even though the button below is already hidden for those rows,
+    // so this can't be bypassed by posting directly to this action.
     if ($del_id > 0 && $del_type === 'dues') {
-        $pdo->prepare('DELETE FROM paypal_dues_orders WHERE id = ?')->execute([$del_id]);
-        flash('success', 'Dues checkout record deleted.');
+        $status = $pdo->prepare('SELECT status FROM paypal_dues_orders WHERE id = ?');
+        $status->execute([$del_id]);
+        if ($status->fetchColumn() !== 'created') {
+            flash('error', 'This dues checkout has already been captured by PayPal and cannot be deleted.');
+        } else {
+            $pdo->prepare('DELETE FROM paypal_dues_orders WHERE id = ?')->execute([$del_id]);
+            flash('success', 'Dues checkout record deleted.');
+        }
     } elseif ($del_id > 0 && $del_type === 'donation') {
-        $pdo->prepare('DELETE FROM paypal_donations WHERE id = ?')->execute([$del_id]);
-        flash('success', 'Donation record deleted.');
+        $status = $pdo->prepare('SELECT status FROM paypal_donations WHERE id = ?');
+        $status->execute([$del_id]);
+        if ($status->fetchColumn() !== 'created') {
+            flash('error', 'This donation has already been captured by PayPal and cannot be deleted.');
+        } else {
+            $pdo->prepare('DELETE FROM paypal_donations WHERE id = ?')->execute([$del_id]);
+            flash('success', 'Donation record deleted.');
+        }
     } else {
         flash('error', 'Invalid record to delete.');
     }
@@ -241,7 +260,7 @@ echo show_flash();
     <td style="font-size:.72rem;color:#9aa5b4"><?= h($r['note']) ?></td>
     <?php if ($can_manage): ?>
     <td style="white-space:nowrap">
-      <?php if ($r['id']): ?>
+      <?php if ($r['id'] && $r['status'] === 'created'): ?>
       <form method="POST" onsubmit="return confirm('Are you sure you want to delete this <?= $r['type'] === 'dues' ? 'dues checkout' : 'donation' ?> record? This cannot be undone.')" style="margin:0">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="delete_one">
