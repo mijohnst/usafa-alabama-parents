@@ -70,7 +70,6 @@ function purchase_payout_mismatch(array $p): bool {
         && !empty($p['paypal_payout_batch_id'])
         && ($p['paypal_payout_status'] ?? '') !== 'SUCCESS';
 }
-$mismatch_count = count(array_filter($purchases, 'purchase_payout_mismatch'));
 
 admin_header('Finance');
 ?>
@@ -84,11 +83,6 @@ admin_header('Finance');
 </style>
 
 <?= show_flash() ?>
-<?php if ($mismatch_count > 0): ?>
-<div class="alert alert-error">
-  ⚠️ <?= $mismatch_count ?> purchase<?= $mismatch_count === 1 ? '' : 's' ?> marked <strong>Paid</strong> whose PayPal payout hasn't confirmed <strong>SUCCESS</strong> yet — look for the ⚠️ next to the status below and use its 🔄 refresh button to check the real payout status.
-</div>
-<?php endif; ?>
 <div class="page-head">
   <h1>Finance</h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
@@ -223,7 +217,7 @@ admin_header('Finance');
           <?= h(PURCHASE_STATUSES[$p['status']] ?? ($p['status'] !== '' ? ucfirst($p['status']) : '(no status)')) ?>
         </span>
         <?php if ($mismatch): ?>
-        <span class="status-badge" style="background:#c6282822;color:#c62828" title="Marked Paid, but PayPal's payout status is still &quot;<?= h($p['paypal_payout_status'] ?? 'unknown') ?>&quot; — not yet confirmed SUCCESS.">⚠️ PayPal: <?= h($p['paypal_payout_status'] ?? 'Unknown') ?></span>
+        <div style="font-size:.68rem;color:#9a7b1f;margin-top:.2rem;white-space:nowrap" title="Marked Paid, but PayPal's payout status is still &quot;<?= h($p['paypal_payout_status'] ?? 'unknown') ?>&quot; — not yet confirmed SUCCESS.">payout <?= h(strtolower($p['paypal_payout_status'] ?? 'unknown')) ?></div>
         <?php endif; ?>
       </td>
       <td style="font-size:.78rem;color:#5a6a7a;white-space:nowrap"><?= h($p['submitted_by_name'] ?? '—') ?></td>
@@ -286,7 +280,7 @@ admin_header('Finance');
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
             <input type="hidden" name="action" value="check_paypal_status">
-            <button type="submit" class="btn btn-secondary btn-sm" style="white-space:nowrap" title="Already marked Paid — this re-checks whether PayPal's payout has actually confirmed.">🔄 PayPal: <?= h($p['paypal_payout_status'] ?? 'Sent') ?></button>
+            <button type="submit" class="btn btn-secondary btn-sm" title="Already marked Paid — payout still shows &quot;<?= h($p['paypal_payout_status'] ?? 'unknown') ?>&quot;. Click to re-check with PayPal.">🔄</button>
           </form>
           <?php endif; ?>
           <?php if (is_treasurer()): ?>
