@@ -160,6 +160,52 @@ function paypal_check_payout_status(string $batchId): array {
     return ['success' => false, 'error' => $data['message'] ?? ('PayPal returned HTTP ' . $code)];
 }
 
+// Passive reconciliation for admin/purchases.php: rather than requiring a
+// treasurer to click a manual refresh button, re-checks any purchase whose
+// payout is still in an in-flight PayPal state every time the Finance page
+// loads, updating both the DB and the in-memory $purchases array (by
+// reference) so this same page render reflects the fresh status without a
+// second query. Capped at $limit checks per page load — each one is a full
+// OAuth-token-plus-status-lookup round trip to PayPal, so an unbounded loop
+// here would make Finance noticeably slower to load whenever several
+// payouts are in flight at once. Terminal states (SUCCESS, and the
+// FAILED/DENIED/etc. family) are left alone — they need a human to look at
+// them, not repeated polling.
+//
+// Deliberately does not call flash() the way the manual check_paypal_status
+// action does: flash() is single-slot ($_SESSION['flash'] holds only the
+// latest message), so looping it here across multiple confirmations would
+// silently drop all but the last one. The status badge updating in place is
+// the feedback for this passive path; notify_paid() below still emails the
+// submitter same as the manual path does.
+function paypal_refresh_pending_purchase_payouts(PDO $pdo, array &$purchases, int $limit = 8): void {
+    $in_flight = ['PENDING', 'SENDING', 'UNCLAIMED'];
+    $checked = 0;
+    foreach ($purchases as &$p) {
+        if ($checked >= $limit) break;
+        if (empty($p['paypal_payout_batch_id'])) continue;
+        if (!in_array($p['paypal_payout_status'] ?? '', $in_flight, true)) continue;
+        $checked++;
+
+        $result = paypal_check_payout_status($p['paypal_payout_batch_id']);
+        if (!$result['success']) continue;
+
+        $pdo->prepare('UPDATE purchases SET paypal_payout_status = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$result['status'], $p['id']]);
+        $p['paypal_payout_status'] = $result['status'];
+
+        if ($result['status'] === 'SUCCESS' && $p['status'] === 'submitted') {
+            $note = 'Automatically marked paid — PayPal payout confirmed SUCCESS.';
+            $pdo->prepare('UPDATE purchases SET status = ?, paid_note = ?, paid_at = NOW(), updated_at = NOW() WHERE id = ?')
+                ->execute(['paid', $note, $p['id']]);
+            $p['status']    = 'paid';
+            $p['paid_note'] = $note;
+            notify_paid($pdo, $p, 'PayPal (automatic)');
+        }
+    }
+    unset($p);
+}
+
 // ── Orders API — collects a payment (the reverse of Payouts, above,
 // which sends one) ─────────────────────────────────────────────────────
 

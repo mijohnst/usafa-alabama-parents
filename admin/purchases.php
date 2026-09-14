@@ -1,9 +1,10 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/lib/paypal.php';
 require_finance();
 $pdo = get_pdo();
 
-$pending_count = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status IN ('approved','submitted')")->fetchColumn();
 $filter_status   = $_GET['status']   ?? '';
 $filter_category = $_GET['category'] ?? '';
 $filter_event    = $_GET['event']    ?? '';
@@ -34,6 +35,19 @@ $sql = 'SELECT p.*, u.name as submitted_by_name
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $purchases = $stmt->fetchAll();
+
+// Passive reconciliation — check any still-in-flight PayPal payout against
+// PayPal directly on every page load, instead of requiring the treasurer to
+// click a manual refresh button. Treasurer/admin only: they're the only
+// roles who can act on the result anyway, and it keeps this added latency
+// off of every plain member's page load.
+if (is_treasurer() || is_super_admin()) {
+    paypal_refresh_pending_purchase_payouts($pdo, $purchases);
+}
+
+// Computed after the refresh above so an auto-confirmed payout (submitted
+// -> paid) during this same request is reflected in the badge count too.
+$pending_count = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status IN ('approved','submitted')")->fetchColumn();
 
 // Totals
 $total_pretax  = array_sum(array_column($purchases, 'amount_pretax'));
@@ -259,12 +273,7 @@ admin_header('Finance');
             <button type="submit" class="btn btn-sm" style="background:#0070ba;color:#fff;white-space:nowrap">🅿️ Send via PayPal</button>
           </form>
           <?php elseif (!empty($p['paypal_payout_batch_id'])): ?>
-          <form method="POST" action="purchase-action.php" style="margin:0">
-            <?= csrf_field() ?>
-            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
-            <input type="hidden" name="action" value="check_paypal_status">
-            <button type="submit" class="btn btn-secondary btn-sm" style="white-space:nowrap">🔄 PayPal: <?= h($p['paypal_payout_status'] ?? 'Sent') ?></button>
-          </form>
+          <span style="font-size:.72rem;color:#9aa5b4;white-space:nowrap" title="Re-checked automatically every time this page loads.">PayPal: <?= h($p['paypal_payout_status'] ?? 'Sent') ?></span>
           <?php endif; ?>
           <form id="pf-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
             <?= csrf_field() ?>
@@ -273,14 +282,6 @@ admin_header('Finance');
             <input type="hidden" name="note" id="pn-<?= (int)$p['id'] ?>">
             <button type="button" class="btn btn-sm" style="background:#003594;color:#fff;white-space:nowrap"
               onclick="doAction('pf-<?= (int)$p['id'] ?>','pn-<?= (int)$p['id'] ?>','Note (optional):','Confirm this purchase has been paid?')">✓ Mark Paid</button>
-          </form>
-          <?php endif; ?>
-          <?php if ($mismatch && is_treasurer()): ?>
-          <form method="POST" action="purchase-action.php" style="margin:0">
-            <?= csrf_field() ?>
-            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
-            <input type="hidden" name="action" value="check_paypal_status">
-            <button type="submit" class="btn btn-secondary btn-sm" title="Already marked Paid — payout still shows &quot;<?= h($p['paypal_payout_status'] ?? 'unknown') ?>&quot;. Click to re-check with PayPal.">🔄</button>
           </form>
           <?php endif; ?>
           <?php if (is_treasurer()): ?>

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/lib/paypal.php';
 require_finance();
 $pdo = get_pdo();
 
@@ -16,6 +17,16 @@ $sql = "SELECT p.*, u.name as submitted_by_name, u.email as submitted_by_email
 $stmt = $pdo->prepare($sql);
 $stmt->execute(is_member() ? ['me' => $_SESSION['user_id'] ?? 0] : []);
 $purchases = $stmt->fetchAll();
+
+// Same passive reconciliation as admin/purchases.php — re-check any
+// still-in-flight PayPal payout on every load instead of a manual button.
+// A row can flip to 'paid' mid-refresh (PayPal confirmed SUCCESS) — drop it
+// from this list right away rather than leaving a "Paid" row sitting in a
+// page titled "Pending Payments" until the next reload.
+if (is_treasurer() || is_super_admin()) {
+    paypal_refresh_pending_purchase_payouts($pdo, $purchases);
+    $purchases = array_values(array_filter($purchases, function($p) { return in_array($p['status'], ['approved', 'submitted'], true); }));
+}
 
 $total = array_sum(array_column($purchases, 'amount_total'));
 $status_colors = ['approved'=>'#1b5e20','submitted'=>'#6a1b9a'];
@@ -119,12 +130,7 @@ echo show_flash();
         <button type="submit" class="btn btn-sm" style="background:#0070ba;color:#fff">🅿️ Send via PayPal</button>
       </form>
       <?php elseif (!empty($p['paypal_payout_batch_id'])): ?>
-      <form method="POST" action="purchase-action.php" style="margin:0">
-        <?= csrf_field() ?>
-        <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
-        <input type="hidden" name="action" value="check_paypal_status">
-        <button type="submit" class="btn btn-secondary btn-sm">🔄 PayPal: <?= h($p['paypal_payout_status'] ?? 'Sent') ?></button>
-      </form>
+      <span style="font-size:.72rem;color:#9aa5b4;white-space:nowrap" title="Re-checked automatically every time this page loads.">PayPal: <?= h($p['paypal_payout_status'] ?? 'Sent') ?></span>
       <?php endif; ?>
       <form id="pf-pr-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
         <?= csrf_field() ?>
