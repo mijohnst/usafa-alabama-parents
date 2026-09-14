@@ -1,0 +1,5 @@
+Options -Indexes
+
+<Files "apple-developer-merchantid-domain-association">
+  ForceType application/octet-stream
+</Files>
