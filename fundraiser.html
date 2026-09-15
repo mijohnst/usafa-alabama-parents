@@ -97,9 +97,11 @@
 
     /* SHARE */
     .share-section { text-align: center; }
-    .share-row { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
-    .share-btn { display: inline-flex; align-items: center; gap: .5rem; padding: .75rem 1.4rem; border-radius: 6px; font-size: .85rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: opacity .15s; }
-    .share-btn:hover { opacity: .88; text-decoration: none; }
+    .share-row { display: flex; gap: .9rem; justify-content: center; flex-wrap: wrap; margin-top: 1.25rem; }
+    .share-btn { display: inline-flex; align-items: center; gap: .7rem; padding: .4rem 1.5rem .4rem .4rem; border-radius: 999px; font-size: .88rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; box-shadow: 0 2px 6px rgba(0,0,0,.18); transition: transform .15s ease, box-shadow .15s ease; }
+    .share-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(0,0,0,.24); text-decoration: none; }
+    .share-icon-badge { width: 36px; height: 36px; border-radius: 50%; background: #fff; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+    .share-icon-badge svg { width: 19px; height: 19px; }
     .share-native { background: var(--accent); color: #fff; }
     .share-sms { background: #34c759; color: #fff; }
     .share-email { background: var(--navy); color: #fff; }
@@ -107,6 +109,12 @@
     .share-x { background: #000; color: #fff; }
     .share-copy { background: var(--silver); color: #fff; }
     .share-flyer { background: #FFC72C; color: var(--navy); }
+    .share-native .share-icon-badge svg { color: var(--accent); }
+    .share-sms .share-icon-badge svg { color: #34c759; }
+    .share-email .share-icon-badge svg { color: var(--navy); }
+    .share-fb .share-icon-badge svg { color: #1877f2; }
+    .share-x .share-icon-badge svg { color: #000; }
+    .share-copy .share-icon-badge svg { color: var(--silver); }
 
     /* FOOTER */
     footer { background: var(--topbar); color: rgba(245,245,240,.6); text-align: center; padding: 2rem; font-size: .85rem; }
@@ -319,13 +327,13 @@
     <h2>Help Us Spread the Word</h2>
     <p>The easiest way to help even if you can't give right now — share this page with friends and family, or print and post the flyer below.</p>
     <div class="share-row">
-      <button type="button" class="share-btn share-native" id="shareNative" style="display:none"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Z"/><path d="M3 15.75a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z"/></svg> Share&hellip;</button>
-      <a class="share-btn share-sms" id="shareSms" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg> Text a Friend</a>
-      <a class="share-btn share-email" id="shareEmail" href="#"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M1.5 8.67v8.58a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V8.67l-8.928 5.493a3 3 0 0 1-3.144 0L1.5 8.67Z"/><path d="M22.5 6.908V6.75a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3v.158l9.714 5.978a1.5 1.5 0 0 0 1.572 0L22.5 6.908Z"/></svg> Email a Friend</a>
-      <a class="share-btn share-fb" id="shareFb" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.462.099 2.795.144v3.24l-1.918.001c-1.504 0-1.795.716-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.324v-21.351c0-.732-.593-1.325-1.325-1.325z"/></svg> Share on Facebook</a>
-      <a class="share-btn share-x" id="shareX" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> Share on X</a>
-      <button type="button" class="share-btn share-copy" id="shareCopy"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757a.75.75 0 1 1 1.06 1.06l-1.757 1.757a3 3 0 1 0 4.243 4.243l4.5-4.5a3 3 0 0 0-.827-4.83.75.75 0 0 1 .646-1.353Z"/><path d="M11.556 4.006a4.5 4.5 0 0 1 6.364 0 4.5 4.5 0 0 1 0 6.364l-1.757 1.757a.75.75 0 1 1-1.06-1.06l1.757-1.757a3 3 0 1 0-4.243-4.243l-4.5 4.5a3 3 0 0 0 .827 4.83.75.75 0 0 1-.646 1.353 4.5 4.5 0 0 1-1.242-7.244l4.5-4.5Z"/></svg> Copy Link</button>
-      <a class="share-btn share-flyer" href="saber-fund-flyer.pdf" target="_blank"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#fff"/><path d="M14 2v4a2 2 0 0 0 2 2h4z" fill="#cfd8dc"/><rect x="3.2" y="13.6" width="15.6" height="6.2" rx="1" fill="#e53935"/><text x="11" y="18.4" font-size="5.6" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#fff" text-anchor="middle">PDF</text></svg> Download Printable Flyer</a>
+      <button type="button" class="share-btn share-native" id="shareNative" style="display:none"><span class="share-icon-badge"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.97 4.28a.75.75 0 0 0-1.06 0L3.72 9.47a.75.75 0 0 0 1.06 1.06l3.97-3.97V16.5a.75.75 0 0 0 1.5 0V6.56l3.97 3.97a.75.75 0 1 0 1.06-1.06L9.97 4.28ZM3.75 15a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-2.25a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-2.25a.75.75 0 0 1 .75-.75Z"/></svg></span> Share&hellip;</button>
+      <a class="share-btn share-sms" id="shareSms" href="#"><span class="share-icon-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg></span> Text a Friend</a>
+      <a class="share-btn share-email" id="shareEmail" href="#"><span class="share-icon-badge"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.5 8.67v8.58a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V8.67l-8.928 5.493a3 3 0 0 1-3.144 0L1.5 8.67Z"/><path d="M22.5 6.908V6.75a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3v.158l9.714 5.978a1.5 1.5 0 0 0 1.572 0L22.5 6.908Z"/></svg></span> Email a Friend</a>
+      <a class="share-btn share-fb" id="shareFb" href="#" target="_blank" rel="noopener"><span class="share-icon-badge"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.462.099 2.795.144v3.24l-1.918.001c-1.504 0-1.795.716-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.324v-21.351c0-.732-.593-1.325-1.325-1.325z"/></svg></span> Share on Facebook</a>
+      <a class="share-btn share-x" id="shareX" href="#" target="_blank" rel="noopener"><span class="share-icon-badge"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span> Share on X</a>
+      <button type="button" class="share-btn share-copy" id="shareCopy"><span class="share-icon-badge"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757a.75.75 0 1 1 1.06 1.06l-1.757 1.757a3 3 0 1 0 4.243 4.243l4.5-4.5a3 3 0 0 0-.827-4.83.75.75 0 0 1 .646-1.353Z"/><path d="M11.556 4.006a4.5 4.5 0 0 1 6.364 0 4.5 4.5 0 0 1 0 6.364l-1.757 1.757a.75.75 0 1 1-1.06-1.06l1.757-1.757a3 3 0 1 0-4.243-4.243l-4.5 4.5a3 3 0 0 0 .827 4.83.75.75 0 0 1-.646 1.353 4.5 4.5 0 0 1-1.242-7.244l4.5-4.5Z"/></svg></span> Copy Link</button>
+      <a class="share-btn share-flyer" href="saber-fund-flyer.pdf" target="_blank"><span class="share-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#eceff1"/><path d="M14 2v4a2 2 0 0 0 2 2h4z" fill="#cfd8dc"/><rect x="3.2" y="13.6" width="15.6" height="6.2" rx="1" fill="#e53935"/><text x="11" y="18.4" font-size="5.6" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#fff" text-anchor="middle">PDF</text></svg></span> Download Printable Flyer</a>
     </div>
   </section>
 
