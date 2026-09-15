@@ -1141,3 +1141,76 @@ function notify_treasurer_of_donation(string $donorName, string $donorEmail, flo
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
     return send_notification('treasurer@alabamafalcons.org', $subject, $body);
 }
+
+// Club Store order confirmation — deliberately NOT modeled on
+// send_donation_receipt(): a store purchase is goods in exchange for
+// money, not a gift, so none of the "no goods or services were provided" /
+// 501(c)(3) tax-deductibility language belongs here. This is an itemized
+// order confirmation with pickup instructions, not a tax receipt.
+// $items: array of rows from store_order_items (product_name_snapshot,
+// variant_label_snapshot, unit_price, quantity, line_total).
+function send_store_receipt(string $customerEmail, string $customerName, array $items, float $total, string $captureId, string $subjectPrefix = ''): bool {
+    $name = $customerName !== '' ? $customerName : 'there';
+    $date = date('F j, Y');
+
+    $lines = '';
+    foreach ($items as $item) {
+        $label = $item['product_name_snapshot'];
+        if (!empty($item['variant_label_snapshot'])) $label .= ' (' . $item['variant_label_snapshot'] . ')';
+        $lines .= sprintf(
+            "  %-40s x%-3d $%8s\n",
+            mb_strimwidth($label, 0, 40, ''),
+            (int)$item['quantity'],
+            number_format((float)$item['line_total'], 2)
+        );
+    }
+
+    $subject = "{$subjectPrefix}Your Club Store Order — $" . number_format($total, 2);
+    $body    = CLUB_NAME . "\n"
+             . "Order Confirmation\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "Hi $name,\n\n"
+             . "Thanks for your order from the Club Store! Here's your confirmation:\n\n"
+             . "Order Date:    $date\n"
+             . "PayPal Ref:    $captureId\n\n"
+             . "Items:\n"
+             . $lines . "\n"
+             . "Total:         $" . number_format($total, 2) . "\n\n"
+             . "This order is for pickup — we'll be in touch about when and where to pick it up. "
+             . "If you have any questions, please contact treasurer@alabamafalcons.org.\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+    return send_notification($customerEmail, $subject, $body);
+}
+
+function notify_treasurer_of_store_order(string $customerName, string $customerEmail, array $items, float $total, string $orderId, string $captureId, string $subjectPrefix = ''): bool {
+    $date = date('F j, Y g:ia');
+
+    $lines = '';
+    foreach ($items as $item) {
+        $label = $item['product_name_snapshot'];
+        if (!empty($item['variant_label_snapshot'])) $label .= ' (' . $item['variant_label_snapshot'] . ')';
+        $lines .= sprintf(
+            "  %-40s x%-3d $%8s\n",
+            mb_strimwidth($label, 0, 40, ''),
+            (int)$item['quantity'],
+            number_format((float)$item['line_total'], 2)
+        );
+    }
+
+    $subject = "{$subjectPrefix}New Club Store Order — $" . number_format($total, 2);
+    $body    = CLUB_NAME . "\n"
+             . "New Club Store Order (needs fulfillment)\n"
+             . str_repeat('─', 48) . "\n\n"
+             . "Customer Name:  $customerName\n"
+             . "Customer Email: $customerEmail\n"
+             . "Date:           $date\n\n"
+             . "Items:\n"
+             . $lines . "\n"
+             . "Total:          $" . number_format($total, 2) . "\n\n"
+             . "PayPal Order:   $orderId\n"
+             . "PayPal Capture: $captureId\n\n"
+             . "This has been logged in the Income Ledger automatically (source: Store Sales). "
+             . "Mark it ready for pickup once fulfilled in the Club Store order ledger.\n\n"
+             . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
+    return send_notification('treasurer@alabamafalcons.org', $subject, $body);
+}

@@ -226,17 +226,50 @@ function paypal_refresh_pending_purchase_payouts(PDO $pdo, array &$purchases, in
 // PayPal's own 127-character limit for these fields. General donations
 // (no campaign) leave both null, so the order looks exactly as it did
 // before this parameter existed.
-function paypal_create_order(float $amount, string $referenceId, string $requestId, ?string $description = null, ?string $customId = null): array {
+//
+// $items is optional — the Club Store's only caller. Each entry:
+// ['name'=>string, 'quantity'=>int, 'unit_amount'=>float]. PayPal requires
+// amount.breakdown.item_total to equal the sum of (unit_amount*quantity)
+// across all items, AND requires the top-level amount.value to equal that
+// same breakdown total (no tax/shipping/discount here) — a mismatch of
+// even a cent gets the whole order creation rejected with a 422. The
+// caller is responsible for computing $amount from the exact same
+// item/quantity data passed here (see store_price_cart() in
+// admin/lib/store.php), not as an independently-rounded number.
+function paypal_create_order(float $amount, string $referenceId, string $requestId, ?string $description = null, ?string $customId = null, ?array $items = null): array {
     $auth = paypal_get_access_token();
     if (!$auth['token']) return ['success' => false, 'error' => $auth['error']];
     $token = $auth['token'];
 
+    $amount_str = number_format($amount, 2, '.', '');
     $purchase_unit = [
         'reference_id' => $referenceId,
-        'amount' => ['currency_code' => 'USD', 'value' => number_format($amount, 2, '.', '')],
+        'amount' => ['currency_code' => 'USD', 'value' => $amount_str],
     ];
     if ($description !== null) $purchase_unit['description'] = mb_substr($description, 0, 127);
     if ($customId !== null)    $purchase_unit['custom_id']   = mb_substr($customId, 0, 127);
+
+    if ($items !== null) {
+        $purchase_unit['items'] = array_map(function ($item) {
+            return [
+                'name'        => mb_substr((string)$item['name'], 0, 127),
+                'quantity'    => (string)(int)$item['quantity'],
+                'unit_amount' => ['currency_code' => 'USD', 'value' => number_format((float)$item['unit_amount'], 2, '.', '')],
+            ];
+        }, $items);
+        // Must equal amount.value exactly (no tax/shipping/discount) —
+        // recomputed here from the same rounded unit_amount strings just
+        // built above, rather than trusting the caller's $amount to
+        // already agree with them to the cent.
+        $item_total = 0.0;
+        foreach ($purchase_unit['items'] as $it) {
+            $item_total += (float)$it['unit_amount']['value'] * (int)$it['quantity'];
+        }
+        $purchase_unit['amount']['value'] = number_format($item_total, 2, '.', '');
+        $purchase_unit['amount']['breakdown'] = [
+            'item_total' => ['currency_code' => 'USD', 'value' => number_format($item_total, 2, '.', '')],
+        ];
+    }
 
     $payload = [
         'intent' => 'CAPTURE',

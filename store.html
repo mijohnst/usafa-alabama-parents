@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Club Store - USAFA Parents Club of Alabama</title>
+  <meta name="description" content="Shirts, hats, ornaments, and other USAFA Parents Club of Alabama merchandise — pickup only." />
+  <meta property="og:title" content="Club Store" />
+  <meta property="og:description" content="Shirts, hats, ornaments, and other USAFA Parents Club of Alabama merchandise — pickup only." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://alabamafalcons.org/store.html" />
+  <meta property="og:image" content="https://alabamafalcons.org/logo01.png" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" type="image/png" href="logo01.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    /* HERO */
+    .hero { margin-top: 64px; background: linear-gradient(135deg, var(--navy) 0%, #001e52 100%); color: var(--white); padding: 3rem 2rem 2.5rem; text-align: center; }
+    .hero h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 700; margin-bottom: .5rem; }
+    .hero p { font-size: 1rem; color: rgba(245,245,240,.88); max-width: 600px; margin: 0 auto; }
+
+    /* SECTION */
+    .section { padding: 2.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .section h2 { font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; color: var(--navy); margin-bottom: 1.25rem; text-align: center; }
+
+    /* PRODUCT GRID */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem; }
+    .product-card { background: var(--white); border-radius: 8px; box-shadow: 0 2px 10px rgba(0,53,148,.08); overflow: hidden; display: flex; flex-direction: column; }
+    .product-photo { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: var(--light); }
+    .product-photo.placeholder { display: flex; align-items: center; justify-content: center; color: var(--silver); font-size: 2rem; }
+    .product-body { padding: 1rem; display: flex; flex-direction: column; gap: .6rem; flex: 1; }
+    .product-name { font-weight: 700; color: var(--navy); font-size: 1rem; }
+    .product-desc { font-size: .82rem; color: var(--gray); line-height: 1.5; }
+    .product-price { font-family: var(--font-display); font-weight: 700; color: var(--accent); font-size: 1.1rem; }
+    .product-controls { display: flex; flex-direction: column; gap: .5rem; margin-top: auto; }
+    .product-controls select, .product-controls input[type=number] { padding: .5rem; border: 1px solid var(--silver2); border-radius: 4px; font-size: .85rem; }
+    .add-to-cart-btn { background: var(--navy); color: #fff; border: none; padding: .65rem; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: .85rem; transition: opacity .15s; }
+    .add-to-cart-btn:hover { opacity: .88; }
+    .add-to-cart-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .catalog-empty, .catalog-loading { text-align: center; color: var(--gray); padding: 2rem; grid-column: 1/-1; }
+
+    /* CART BUTTON + DRAWER */
+    .cart-fab { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--accent); color: #fff; border: none; border-radius: 99px; padding: .85rem 1.4rem; font-weight: 700; font-size: .9rem; box-shadow: 0 4px 14px rgba(0,0,0,.25); cursor: pointer; z-index: 500; }
+    .cart-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 600; display: none; }
+    .cart-overlay.open { display: block; }
+    .cart-drawer { position: fixed; top: 0; right: 0; width: min(420px, 100%); height: 100%; background: var(--white); z-index: 601; box-shadow: -4px 0 20px rgba(0,0,0,.2); transform: translateX(100%); transition: transform .25s ease; display: flex; flex-direction: column; }
+    .cart-drawer.open { transform: translateX(0); }
+    .cart-drawer-header { padding: 1.25rem; border-bottom: 1px solid var(--light); display: flex; justify-content: space-between; align-items: center; }
+    .cart-drawer-header h3 { font-family: var(--font-display); color: var(--navy); }
+    .cart-drawer-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--gray); }
+    .cart-drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+    .cart-line { display: flex; justify-content: space-between; gap: .75rem; padding: .75rem 0; border-bottom: 1px solid var(--light); font-size: .85rem; }
+    .cart-line-name { font-weight: 600; color: var(--navy); }
+    .cart-line-meta { color: var(--gray); font-size: .78rem; }
+    .cart-line-invalid { color: #c62828; font-size: .78rem; margin-top: .2rem; }
+    .cart-line-remove { background: none; border: none; color: #c62828; cursor: pointer; font-size: .78rem; text-decoration: underline; padding: 0; margin-top: .3rem; }
+    .cart-qty-input { width: 50px; padding: .3rem; border: 1px solid var(--silver2); border-radius: 4px; text-align: center; }
+    .cart-empty { text-align: center; color: var(--gray); padding: 2rem 0; }
+    .cart-drawer-footer { padding: 1.25rem; border-top: 1px solid var(--light); }
+    .cart-total-row { display: flex; justify-content: space-between; font-weight: 700; color: var(--navy); font-size: 1.1rem; margin-bottom: 1rem; }
+    .checkout-btn { width: 100%; background: var(--navy); color: #fff; border: none; padding: .85rem; border-radius: 6px; font-weight: 700; cursor: pointer; }
+    .checkout-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* CHECKOUT PANEL */
+    #checkoutPanel { padding-top: 1rem; }
+    #checkoutPanel .form-group { margin-bottom: .9rem; text-align: left; }
+    #checkoutPanel label { display: block; margin-bottom: .35rem; font-weight: 600; color: var(--navy); font-size: .85rem; }
+    #checkoutPanel input { width: 100%; padding: .65rem; border: 1px solid var(--silver2); border-radius: 4px; font-size: .9rem; }
+    #checkoutStatus { margin: .75rem 0; padding: .75rem; border-radius: 4px; display: none; font-weight: 600; font-size: .82rem; }
+    #checkoutStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
+    #checkoutPaypalLoadStatus { font-size: .8rem; color: var(--gray); text-align: center; padding: .5rem 0; }
+    #checkoutPaypalButtons { opacity: .4; pointer-events: none; transition: opacity .2s ease; }
+    #checkoutReadyHint { font-size: .78rem; color: var(--gray); text-align: center; margin-bottom: .5rem; }
+    #cartThankYou { display: none; text-align: center; padding: 1rem 0; }
+
+    footer { background: var(--topbar); color: rgba(245,245,240,.6); text-align: center; padding: 2rem; font-size: .85rem; }
+  </style>
+  <script src="shared-nav.js" defer></script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+  <a href="index.html" class="nav-brand">
+    <img src="logo01.png" alt="USAFA Parents Club of Alabama" />
+    <span>USAFA Parents Club<small>of Alabama <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" height="11" width="16" style="display:inline-block;vertical-align:middle;margin-left:.15rem;" title="Alabama" aria-hidden="true">
+      <rect width="60" height="40" fill="white"/>
+      <line x1="0" y1="0" x2="60" y2="40" stroke="#A6192E" stroke-width="9"/>
+      <line x1="60" y1="0" x2="0" y2="40" stroke="#A6192E" stroke-width="9"/>
+    </svg></small></span>
+  </a>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <ul class="nav-links" id="nav-links">
+    <li class="nav-dropdown">
+      <a href="index.html#about">About</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#about">About Us</a></li>
+        <li><a href="index.html#leadership">Leadership</a></li>
+        <li><a href="president-letter.html">President's Letter</a></li>
+        <li><a href="index.html#photos">Member Photos</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="#">Programs</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="liaison.html">Liaison</a></li>
+        <li><a href="familyresources.html">Family Resources</a></li>
+        <li><a href="cadetconnection.html">Cadet Connection</a></li>
+        <li><a href="communitysupport.html">Community Support</a></li>
+        <li><a href="nominations.html">Alabama Delegation</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="index.html#membership">Get Involved</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#membership">Membership</a></li>
+        <li><a href="update.html">Update Your Information</a></li>
+        <li><a href="index.html#volunteer">Volunteer with Us</a></li>
+        <li><a href="job-drop-night.html">Job Drop Night</a></li>
+        <li><a href="sponsorship.html">Sponsors</a></li>
+        <li><a href="store.html">Club Store</a></li>
+        <li><a href="https://www.facebook.com/groups/usafaal" target="_blank" rel="noopener">Alabama Falcons Facebook</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="index.html#events">Events</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#events">Club Events</a></li>
+        <li><a href="events-calendar.html">Academy Calendar</a></li>
+        <li><a href="gallery.html">Event Photos</a></li>
+      </ul>
+    </li>
+    <li class="nav-dropdown">
+      <a href="index.html#usafa-news">Resources</a>
+      <ul class="nav-dropdown-menu">
+        <li><a href="index.html#usafa-news">USAFA News</a></li>
+        <li><a href="https://usafa.org/checkpoints_online" target="_blank" rel="noopener">Checkpoints Online <span class="nav-new-badge">NEW</span></a></li>
+        <li><a href="https://www.usafa.edu" target="_blank" rel="noopener">USAFA Official Site</a></li>
+        <li><a href="https://www.usafa.edu/parents" target="_blank" rel="noopener">USAFA Parents Page</a></li>
+        <li><a href="https://www.usafa.edu/academics/academic-calendar/" target="_blank" rel="noopener">USAFA Calendars</a></li>
+        <li><a href="https://www.usafa.edu/contact-us/" target="_blank" rel="noopener">USAFA Key Contacts</a></li>
+        <li><a href="https://www.usafa.edu/military/basic-cadet-training/" target="_blank" rel="noopener">Basic Training Info</a></li>
+        <li><a href="https://www.usafa.org/" target="_blank" rel="noopener">Alumni Association (AOG)</a></li>
+        <li><a href="https://www.usafawebguy.com/" target="_blank" rel="noopener">Webguy</a></li>
+        <li><a href="https://shop.usafa.org/products/air-force-academy-cadet-saber-usafa" target="_blank" rel="noopener">Saber Orders</a></li>
+      </ul>
+    </li>
+    <li><a href="index.html#volunteer">Contact</a></li>
+    <li><a href="/admin/login.php" class="nav-login-btn">Member Login</a></li>
+  </ul>
+</nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Club Store</h1>
+    <p>Shirts, hats, ornaments, and other USAFA Parents Club of Alabama merchandise. Orders are for pickup — we'll let you know when and where once your order is ready.</p>
+  </div>
+
+  <!-- CATALOG -->
+  <section class="section">
+    <h2>Shop</h2>
+    <div class="product-grid" id="productGrid">
+      <div class="catalog-loading">Loading products&hellip;</div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-bottom">
+      <span>&copy; 2026 USAFA Parents Club of Alabama. All rights reserved.</span>
+      <span>Aim High &middot; Fly &middot; Fight &middot; Win</span>
+    </div>
+  </footer>
+
+  <!-- CART -->
+  <button class="cart-fab" id="cartFab">🛒 Cart (<span id="cartCount">0</span>)</button>
+  <div class="cart-overlay" id="cartOverlay"></div>
+  <div class="cart-drawer" id="cartDrawer">
+    <div class="cart-drawer-header">
+      <h3>Your Cart</h3>
+      <button class="cart-drawer-close" id="cartDrawerClose" aria-label="Close cart">&times;</button>
+    </div>
+    <div class="cart-drawer-body" id="cartDrawerBody">
+      <div class="cart-empty">Your cart is empty.</div>
+    </div>
+    <div class="cart-drawer-footer" id="cartDrawerFooter" style="display:none">
+      <div class="cart-total-row"><span>Total</span><span id="cartTotalAmount">$0.00</span></div>
+      <button class="checkout-btn" id="showCheckoutBtn">Checkout</button>
+    </div>
+  </div>
+
+  <!-- CHECKOUT MODAL (reuses the cart drawer's overlay) -->
+  <div class="cart-drawer" id="checkoutDrawer" style="display:none">
+    <div class="cart-drawer-header">
+      <h3>Checkout</h3>
+      <button class="cart-drawer-close" id="checkoutDrawerClose" aria-label="Close checkout">&times;</button>
+    </div>
+    <div class="cart-drawer-body">
+      <div id="checkoutPanel">
+        <div class="cart-total-row"><span>Total</span><span id="checkoutTotalAmount">$0.00</span></div>
+        <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+          <label for="checkoutWebsite">Leave this field empty</label>
+          <input type="text" id="checkoutWebsite" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="checkoutName">Your Name *</label>
+          <input type="text" id="checkoutName" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label for="checkoutEmail">Your Email *</label>
+          <input type="email" id="checkoutEmail" autocomplete="email" required>
+          <p style="font-size:.72rem;color:var(--gray);margin-top:.35rem">Used to send your order confirmation and pickup details.</p>
+        </div>
+        <div class="form-group">
+          <label for="checkoutPhone">Phone (optional)</label>
+          <input type="tel" id="checkoutPhone" autocomplete="tel">
+        </div>
+        <div id="checkoutStatus" role="status" aria-live="polite"></div>
+        <div id="checkoutPaypalLoadStatus">Loading payment options&hellip;</div>
+        <p id="checkoutReadyHint">Enter your name and email above to continue to payment.</p>
+        <div id="checkoutPaypalButtons"></div>
+        <p style="font-size:.78rem;color:var(--gray);margin-top:1rem;text-align:center">Pickup only — no items are shipped. Prefer Zelle or check? Email <a href="mailto:treasurer@alabamafalcons.org">treasurer@alabamafalcons.org</a>.</p>
+      </div>
+      <div id="cartThankYou"></div>
+    </div>
+  </div>
+
+  <script>
+    // ─── CART STORAGE ─────────────────────────────────────────────────────────
+    // Cart holds ONLY {productId, variantId, qty} tuples — never prices or
+    // names. Every price shown anywhere on this page comes from a fresh
+    // server response (store-catalog.php for browsing, store-cart-price.php
+    // for the cart/checkout total), never from what's remembered here. This
+    // matches the same "never trust the client for money" discipline this
+    // site's donation/dues checkouts already follow.
+    var CART_KEY = 'usafa_store_cart_v1';
+    function getCart() {
+      try {
+        var raw = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+        if (!Array.isArray(raw)) return [];
+        return raw.filter(function(l) {
+          return l && typeof l.productId === 'number' && typeof l.qty === 'number' && l.qty > 0;
+        });
+      } catch (e) { return []; }
+    }
+    function setCart(cart) {
+      try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {}
+      updateCartCount();
+    }
+    function addToCart(productId, variantId, qty) {
+      var cart = getCart();
+      var existing = cart.find(function(l) { return l.productId === productId && l.variantId === variantId; });
+      if (existing) existing.qty += qty;
+      else cart.push({ productId: productId, variantId: variantId, qty: qty });
+      setCart(cart);
+    }
+    function updateCartCount() {
+      var cart = getCart();
+      var count = cart.reduce(function(sum, l) { return sum + l.qty; }, 0);
+      document.getElementById('cartCount').textContent = count;
+    }
+    updateCartCount();
+
+    // ─── CATALOG ────────────────────────────────────────────────────────────
+    var catalogProducts = [];
+    fetch('store-catalog.php')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.success) throw new Error('catalog fetch failed');
+        catalogProducts = d.products || [];
+        renderCatalog();
+      })
+      .catch(function() {
+        document.getElementById('productGrid').innerHTML = '<div class="catalog-empty">Could not load the store right now. Please try again later.</div>';
+      });
+
+    function renderCatalog() {
+      var grid = document.getElementById('productGrid');
+      grid.innerHTML = '';
+      if (!catalogProducts.length) {
+        grid.innerHTML = '<div class="catalog-empty">No products available yet — check back soon!</div>';
+        return;
+      }
+      catalogProducts.forEach(function(p) {
+        var card = document.createElement('div');
+        card.className = 'product-card';
+
+        var photo = document.createElement('div');
+        if (p.photos && p.photos.length) {
+          var img = document.createElement('img');
+          img.className = 'product-photo';
+          img.src = 'product-photo-serve.php?f=' + encodeURIComponent(p.photos[0]) + '&thumb=1';
+          img.alt = p.name;
+          photo.appendChild(img);
+        } else {
+          photo.className = 'product-photo placeholder';
+          photo.textContent = '🛍️';
+        }
+        card.appendChild(photo);
+
+        var body = document.createElement('div');
+        body.className = 'product-body';
+
+        var nameEl = document.createElement('div');
+        nameEl.className = 'product-name';
+        nameEl.textContent = p.name;
+        body.appendChild(nameEl);
+
+        if (p.description) {
+          var descEl = document.createElement('div');
+          descEl.className = 'product-desc';
+          descEl.textContent = p.description;
+          body.appendChild(descEl);
+        }
+
+        var priceEl = document.createElement('div');
+        priceEl.className = 'product-price';
+        priceEl.textContent = '$' + p.basePrice.toFixed(2);
+        body.appendChild(priceEl);
+
+        var controls = document.createElement('div');
+        controls.className = 'product-controls';
+
+        var variantSelect = null;
+        if (p.variants && p.variants.length) {
+          variantSelect = document.createElement('select');
+          p.variants.forEach(function(v) {
+            var opt = document.createElement('option');
+            opt.value = v.id;
+            var label = [v.size, v.color].filter(Boolean).join(' / ') || 'Standard';
+            opt.textContent = label + ' — $' + v.price.toFixed(2);
+            variantSelect.appendChild(opt);
+          });
+          controls.appendChild(variantSelect);
+        }
+
+        var qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.min = '1';
+        qtyInput.value = '1';
+        controls.appendChild(qtyInput);
+
+        var addBtn = document.createElement('button');
+        addBtn.className = 'add-to-cart-btn';
+        addBtn.textContent = 'Add to Cart';
+        addBtn.addEventListener('click', function() {
+          var qty = parseInt(qtyInput.value, 10) || 1;
+          var variantId = variantSelect ? parseInt(variantSelect.value, 10) : null;
+          addToCart(p.id, variantId, qty);
+          addBtn.textContent = 'Added!';
+          setTimeout(function() { addBtn.textContent = 'Add to Cart'; }, 1200);
+        });
+        controls.appendChild(addBtn);
+
+        body.appendChild(controls);
+        card.appendChild(body);
+        grid.appendChild(card);
+      });
+    }
+
+    // ─── CART DRAWER ────────────────────────────────────────────────────────
+    var cartFab = document.getElementById('cartFab');
+    var cartOverlay = document.getElementById('cartOverlay');
+    var cartDrawer = document.getElementById('cartDrawer');
+    var checkoutDrawer = document.getElementById('checkoutDrawer');
+    var lastPricedLines = [];
+
+    function openCart() {
+      renderCartDrawer();
+      cartOverlay.classList.add('open');
+      cartDrawer.classList.add('open');
+    }
+    function closeCart() {
+      cartOverlay.classList.remove('open');
+      cartDrawer.classList.remove('open');
+    }
+    cartFab.addEventListener('click', openCart);
+    document.getElementById('cartDrawerClose').addEventListener('click', closeCart);
+    cartOverlay.addEventListener('click', function() {
+      closeCart();
+      closeCheckout();
+    });
+
+    function productPhotoFor(productId) {
+      var p = catalogProducts.find(function(x) { return x.id === productId; });
+      return p && p.photos && p.photos.length ? p.photos[0] : null;
+    }
+
+    function renderCartDrawer() {
+      var cart = getCart();
+      var body = document.getElementById('cartDrawerBody');
+      var footer = document.getElementById('cartDrawerFooter');
+      if (!cart.length) {
+        body.innerHTML = '<div class="cart-empty">Your cart is empty.</div>';
+        footer.style.display = 'none';
+        return;
+      }
+      body.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:.85rem">Loading cart&hellip;</div>';
+      fetch('store-cart-price.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: cart })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (!d.success) throw new Error('pricing failed');
+        lastPricedLines = d.lines;
+        body.innerHTML = '';
+        d.lines.forEach(function(line, i) {
+          var row = document.createElement('div');
+          row.className = 'cart-line';
+
+          var left = document.createElement('div');
+          var nameEl = document.createElement('div');
+          nameEl.className = 'cart-line-name';
+          nameEl.textContent = line.name || 'Item';
+          left.appendChild(nameEl);
+          if (line.variantLabel) {
+            var metaEl = document.createElement('div');
+            metaEl.className = 'cart-line-meta';
+            metaEl.textContent = line.variantLabel;
+            left.appendChild(metaEl);
+          }
+          if (!line.valid) {
+            var invalidEl = document.createElement('div');
+            invalidEl.className = 'cart-line-invalid';
+            invalidEl.textContent = line.reason || 'No longer available.';
+            left.appendChild(invalidEl);
+          }
+          var qtyRow = document.createElement('div');
+          qtyRow.style.marginTop = '.4rem';
+          var qtyInput = document.createElement('input');
+          qtyInput.className = 'cart-qty-input';
+          qtyInput.type = 'number';
+          qtyInput.min = '1';
+          qtyInput.value = line.qty;
+          qtyInput.addEventListener('change', function() {
+            var newCart = getCart();
+            newCart[i].qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+            setCart(newCart);
+            renderCartDrawer();
+          });
+          qtyRow.appendChild(qtyInput);
+          left.appendChild(qtyRow);
+          var removeBtn = document.createElement('button');
+          removeBtn.className = 'cart-line-remove';
+          removeBtn.textContent = 'Remove';
+          removeBtn.addEventListener('click', function() {
+            var newCart = getCart();
+            newCart.splice(i, 1);
+            setCart(newCart);
+            renderCartDrawer();
+          });
+          left.appendChild(removeBtn);
+          row.appendChild(left);
+
+          var right = document.createElement('div');
+          right.style.fontWeight = '700';
+          right.style.color = 'var(--navy)';
+          right.textContent = line.valid ? '$' + line.lineTotal.toFixed(2) : '—';
+          row.appendChild(right);
+
+          body.appendChild(row);
+        });
+        document.getElementById('cartTotalAmount').textContent = '$' + d.total.toFixed(2);
+        footer.style.display = d.lines.length ? 'block' : 'none';
+        document.getElementById('showCheckoutBtn').disabled = d.hasInvalid || d.total <= 0;
+      }).catch(function() {
+        body.innerHTML = '<div class="cart-empty">Could not load your cart. Please try again.</div>';
+        footer.style.display = 'none';
+      });
+    }
+
+    // ─── CHECKOUT ───────────────────────────────────────────────────────────
+    function openCheckout() {
+      closeCart();
+      document.getElementById('checkoutPanel').style.display = 'block';
+      document.getElementById('cartThankYou').style.display = 'none';
+      document.getElementById('checkoutTotalAmount').textContent = document.getElementById('cartTotalAmount').textContent;
+      checkoutDrawer.style.display = 'flex';
+      cartOverlay.classList.add('open');
+      requestAnimationFrame(function() { checkoutDrawer.classList.add('open'); });
+      updateCheckoutReadiness();
+    }
+    function closeCheckout() {
+      checkoutDrawer.classList.remove('open');
+      cartOverlay.classList.remove('open');
+      setTimeout(function() { checkoutDrawer.style.display = 'none'; }, 250);
+    }
+    document.getElementById('showCheckoutBtn').addEventListener('click', openCheckout);
+    document.getElementById('checkoutDrawerClose').addEventListener('click', closeCheckout);
+
+    var checkoutNameInput  = document.getElementById('checkoutName');
+    var checkoutEmailInput = document.getElementById('checkoutEmail');
+    var checkoutButtonsEl  = document.getElementById('checkoutPaypalButtons');
+    var checkoutReadyHint  = document.getElementById('checkoutReadyHint');
+    function updateCheckoutReadiness() {
+      var ready = checkoutNameInput.value.trim() !== '' && /\S+@\S+\.\S+/.test(checkoutEmailInput.value.trim());
+      checkoutButtonsEl.style.opacity = ready ? '1' : '.4';
+      checkoutButtonsEl.style.pointerEvents = ready ? 'auto' : 'none';
+      checkoutReadyHint.style.display = ready ? 'none' : 'block';
+    }
+    checkoutNameInput.addEventListener('input', updateCheckoutReadiness);
+    checkoutEmailInput.addEventListener('input', updateCheckoutReadiness);
+
+    // ─── PAYPAL SDK LOAD ────────────────────────────────────────────────────
+    (function() {
+      var sdkReady = false;
+      var buttonsRendered = false;
+
+      // Previously (on other pages) a client-id fetch failure or SDK script
+      // load failure was silently swallowed — shown explicitly here from
+      // the start instead, with a retry option, matching the pattern
+      // added to fundraiser.html/payment.html this same session.
+      function showPaypalUnavailable() {
+        if (buttonsRendered) return;
+        document.getElementById('checkoutPaypalLoadStatus').innerHTML =
+          '<div style="text-align:left;background:#fff3e0;border-left:4px solid #f57c00;border-radius:4px;padding:.75rem 1rem;font-size:.82rem;color:#5a4632">' +
+          '<strong>Online payment isn’t loading right now.</strong> This can happen from a slow connection or an ad/tracker blocker.<br>' +
+          '<button type="button" onclick="location.reload()" style="margin:.5rem .5rem 0 0;padding:.4rem .9rem;border:1px solid #f57c00;background:#fff;border-radius:4px;cursor:pointer;font-size:.8rem;color:#5a4632">Try Again</button>' +
+          'or email treasurer@alabamafalcons.org.</div>';
+      }
+      var loadTimeout = setTimeout(showPaypalUnavailable, 10000);
+
+      fetch('paypal-client-id.php').then(function(r) { return r.json(); }).then(function(d) {
+        if (!d.success || !d.clientId) { showPaypalUnavailable(); return; }
+        var s = document.createElement('script');
+        s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(d.clientId) + '&currency=USD&intent=capture&disable-funding=paylater&enable-funding=venmo,applepay';
+        s.onload = function() { sdkReady = true; clearTimeout(loadTimeout); renderButtonsIfReady(); };
+        s.onerror = showPaypalUnavailable;
+        document.head.appendChild(s);
+      }).catch(showPaypalUnavailable);
+
+      function renderButtonsIfReady() {
+        if (!sdkReady || buttonsRendered || typeof paypal === 'undefined') return;
+        buttonsRendered = true;
+        document.getElementById('checkoutPaypalLoadStatus').style.display = 'none';
+        paypal.Buttons({
+          createOrder: function() {
+            var statusEl = document.getElementById('checkoutStatus');
+            statusEl.style.display = 'none';
+            statusEl.className = '';
+            var name  = checkoutNameInput.value.trim();
+            var email = checkoutEmailInput.value.trim();
+            if (!name) {
+              statusEl.textContent = 'Please enter your name.';
+              statusEl.className = 'error'; statusEl.style.display = 'block';
+              return Promise.reject(new Error('No name entered'));
+            }
+            if (!email) {
+              statusEl.textContent = 'Please enter your email so we can send your order confirmation.';
+              statusEl.className = 'error'; statusEl.style.display = 'block';
+              return Promise.reject(new Error('No email entered'));
+            }
+            var cart = getCart();
+            if (!cart.length) {
+              statusEl.textContent = 'Your cart is empty.';
+              statusEl.className = 'error'; statusEl.style.display = 'block';
+              return Promise.reject(new Error('Empty cart'));
+            }
+            return fetch('store-create-order.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: cart,
+                customerName: name,
+                customerEmail: email,
+                customerPhone: document.getElementById('checkoutPhone').value.trim(),
+                website: document.getElementById('checkoutWebsite').value
+              })
+            }).then(function(r) { return r.json(); }).then(function(result) {
+              if (!result.success) {
+                statusEl.textContent = result.error || 'Could not start checkout. Please review your cart and try again.';
+                statusEl.className = 'error'; statusEl.style.display = 'block';
+                if (result.lines) renderCartDrawer();
+                throw new Error(result.error || 'create order failed');
+              }
+              return result.orderId;
+            });
+          },
+          onApprove: function(data) {
+            var statusEl = document.getElementById('checkoutStatus');
+            // PayPal has already approved the payment at this point — this
+            // fetch is just our own server confirming/recording it.
+            statusEl.textContent = 'Finishing up — please don’t close this window…';
+            statusEl.className = ''; statusEl.style.display = 'block';
+            return fetch('store-capture-order.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: data.orderID })
+            }).then(function(r) { return r.json(); }).then(function(result) {
+              if (result.success) {
+                setCart([]);
+                document.getElementById('checkoutPanel').style.display = 'none';
+                var thankYou = document.getElementById('cartThankYou');
+                thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your order (total $' + result.total + ')! A confirmation has been sent to your email — we\'ll be in touch about pickup.</p>';
+                thankYou.style.display = 'block';
+              } else if (result.manualReview) {
+                setCart([]);
+                document.getElementById('checkoutPanel').style.display = 'none';
+                var reviewMsg = document.getElementById('cartThankYou');
+                reviewMsg.innerHTML = '<p style="color:#8a6d1f;font-weight:600;background:#fff8e1;border-left:4px solid #f9a825;padding:.85rem 1rem;border-radius:4px">' + (result.error || "Your payment was received but couldn't be recorded automatically. The treasurer has been notified and will follow up shortly — please don't submit payment again.") + '</p>';
+                reviewMsg.style.display = 'block';
+              } else {
+                statusEl.textContent = result.error || 'Payment could not be completed. Please try again.';
+                statusEl.className = 'error'; statusEl.style.display = 'block';
+              }
+            });
+          },
+          onCancel: function() {
+            var statusEl = document.getElementById('checkoutStatus');
+            statusEl.textContent = 'Checkout cancelled — your cart is still here whenever you\'re ready.';
+            statusEl.className = ''; statusEl.style.display = 'block';
+          },
+          onError: function(err) {
+            console.error('PayPal onError (store):', err);
+            var statusEl = document.getElementById('checkoutStatus');
+            statusEl.textContent = 'Something went wrong with PayPal. Please try again or email treasurer@alabamafalcons.org.';
+            statusEl.className = 'error'; statusEl.style.display = 'block';
+          }
+        }).render('#checkoutPaypalButtons');
+      }
+    })();
+  </script>
+</body>
+</html>

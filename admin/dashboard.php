@@ -492,4 +492,13 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
 </div>
 <?php endif; ?>
 
+<?php if (can_manage_store()): ?>
+<p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin:1.25rem 0 .6rem">Club Store</p>
+<div style="display:flex;gap:.6rem;flex-wrap:wrap">
+  <a href="store-products.php" class="btn btn-secondary btn-sm">🛍️ Manage Products</a>
+  <a href="store-orders.php" class="btn btn-secondary btn-sm">📦 Order Ledger</a>
+  <a href="store-orders.php?mode=vendor" class="btn btn-secondary btn-sm">🏭 Vendor Export</a>
+</div>
+<?php endif; ?>
+
 <?php admin_footer(); ?>

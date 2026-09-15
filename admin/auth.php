@@ -190,6 +190,14 @@ function can_manage_finances(): bool {
     return in_array($_SESSION['role'] ?? '', ['admin', 'tech', 'officer', 'treasurer', 'member', 'secretary']);
 }
 
+// Board members who can create/edit products and manage the order ledger
+// for the Club Store — same "officer or above, plus treasurer/secretary"
+// shape as can_manage_members()/can_manage_finances(), not a separate
+// hardcoded role list.
+function can_manage_store(): bool {
+    return is_club_officer() || is_treasurer() || is_secretary();
+}
+
 // Admin/Treasurer can edit any purchase; Member/Secretary can only edit
 // their own. Officer (President/VP specifically, not Tech) can edit only a
 // still-Pending purchase — just enough that one redirected here to attach a
@@ -225,6 +233,14 @@ function require_admin(): void {
 function require_finance(): void {
     require_login();
     if (!can_manage_finances()) {
+        header('Location: index.php?denied=1');
+        exit;
+    }
+}
+
+function require_store_admin(): void {
+    require_login();
+    if (!can_manage_store()) {
         header('Location: index.php?denied=1');
         exit;
     }
@@ -468,6 +484,25 @@ const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];
 const PURCHASE_CATEGORIES = ['', 'Supplies', 'Food & Beverages', 'Decorations', 'Postage / Shipping', 'Printing', 'Equipment', 'Venue / Facility', 'Transportation', 'Awards / Recognition', 'Technology / Domain Hosting', 'Non-Profit Fees', 'Other'];
 const PURCHASE_EVENTS     = ['', 'Parents Weekend', 'Care Packages', 'Appointee Send-off', 'Taste of Home', 'Birthday / Gift', 'General Operations', 'Other'];
 const PURCHASE_STATUSES   = ['pending' => 'Pending', 'approved' => 'Approved', 'submitted' => 'Submitted', 'paid' => 'Paid'];
+const STORE_CATEGORIES = ['', 'Apparel', 'Headwear', 'Ornaments', 'Accessories', 'Other'];
+// Payment lifecycle mirrors paypal_donations exactly (see donate-capture-order.php)
+// — 'processing' is the brief atomic-claim window, 'amount_mismatch'/
+// 'capture_ok_apply_failed'/'needs_manual_review' all mean a human needs to
+// look at it. Kept separate from fulfillment (has the order been handed to
+// the customer?), which is its own independent status below.
+const STORE_ORDER_STATUSES = [
+    'created'                 => 'Created',
+    'processing'              => 'Processing',
+    'captured'                => 'Paid',
+    'amount_mismatch'         => 'Needs Review',
+    'capture_ok_apply_failed' => 'Needs Review',
+    'needs_manual_review'     => 'Needs Review',
+];
+const STORE_FULFILLMENT_STATUSES = [
+    'pending'          => 'Pending',
+    'ready_for_pickup' => 'Ready for Pickup',
+    'picked_up'        => 'Picked Up',
+];
 // Shared between income.php (the ledger) and manual-receipts.php (the
 // receipt-sending tool) so their type/color/method lists can't drift apart.
 const INCOME_SOURCE_TYPES = [
@@ -475,6 +510,7 @@ const INCOME_SOURCE_TYPES = [
     'sponsorship' => 'Sponsorship',
     'event_fee'   => 'Event Fee',
     'donation'    => 'Donation',
+    'store'       => 'Store Sales',
     'other'       => 'Other',
 ];
 const INCOME_TYPE_COLORS = [
@@ -482,6 +518,7 @@ const INCOME_TYPE_COLORS = [
     'sponsorship' => '#6a1b9a',
     'event_fee'   => '#1b5e20',
     'donation'    => '#e65100',
+    'store'       => '#00695c',
     'other'       => '#5a6a7a',
 ];
 const INCOME_PAYMENT_METHODS = ['Check','Cash','Venmo','Zelle','PayPal','Bank Transfer','Other'];

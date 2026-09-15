@@ -1,0 +1,146 @@
+<?php
+/**
+ * Public Club Store — Create Order
+ * The cart (a localStorage list of {productId, variantId, qty} — never
+ * prices) is sent here as-is. Every line is re-priced and re-validated
+ * server-side via store_price_cart() — the same function the cart page
+ * itself calls to display live totals — so nothing about what PayPal
+ * actually charges ever depends on client-supplied numbers. Order + line
+ * items are snapshotted (name/variant label/price at this moment) in one
+ * transaction so later catalog edits can never retroactively change a
+ * historical order's record.
+ */
+
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: https://alabamafalcons.org');
+
+require_once __DIR__ . '/admin/auth.php';
+require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/lib/paypal.php';
+require_once __DIR__ . '/admin/lib/store.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('Access-Control-Allow-Methods: POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
+    http_response_code(200);
+    exit();
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+    exit();
+}
+
+$payload = json_decode(file_get_contents('php://input'), true);
+if (!$payload) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid request data.']);
+    exit();
+}
+
+if (honeypot_tripped($payload, 'website')) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid request.']);
+    exit();
+}
+
+$pdo = get_pdo();
+
+if (rate_limited($pdo, 'store_create_order')) {
+    http_response_code(429);
+    echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email treasurer@alabamafalcons.org.']);
+    exit();
+}
+
+$customer_name  = trim((string)($payload['customerName']  ?? ''));
+$customer_email = trim((string)($payload['customerEmail'] ?? ''));
+$customer_phone = trim((string)($payload['customerPhone'] ?? ''));
+$items          = is_array($payload['items'] ?? null) ? $payload['items'] : [];
+
+if ($customer_name === '') {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Please enter your name.']);
+    exit();
+}
+if (!filter_var($customer_email, FILTER_VALIDATE_EMAIL)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Please enter a valid email address.']);
+    exit();
+}
+$customer_name  = mb_substr($customer_name, 0, 200);
+$customer_phone = mb_substr($customer_phone, 0, 40);
+
+$priced = store_price_cart($pdo, $items);
+if ($priced['hasInvalid']) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Some items in your cart changed — please review your cart and try again.', 'lines' => $priced['lines']]);
+    exit();
+}
+if (empty($priced['lines']) || $priced['total'] <= 0) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Your cart is empty.']);
+    exit();
+}
+// Sanity ceiling — a real order this large from the public store would be
+// unusual for club merch; catches a malformed payload, not a legitimate
+// large order (same reasoning as donate-create-order.php's $25,000 cap).
+if ($priced['total'] > 5000) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'This order is too large for online checkout. Please email treasurer@alabamafalcons.org.']);
+    exit();
+}
+
+$paypal_items = array_map(function ($line) {
+    return [
+        'name'        => $line['name'] . ($line['variantLabel'] ? ' - ' . $line['variantLabel'] : ''),
+        'quantity'    => $line['qty'],
+        'unit_amount' => $line['unitPrice'],
+    ];
+}, $priced['lines']);
+
+$reference_id = 'store-order-' . bin2hex(random_bytes(6));
+$request_id   = 'create-' . bin2hex(random_bytes(16));
+
+$order = paypal_create_order($priced['total'], $reference_id, $request_id, 'Club Store order', null, $paypal_items);
+if (!$order['success']) {
+    error_log('store-create-order: ' . $order['error']);
+    http_response_code(502);
+    echo json_encode(['success' => false, 'error' => 'We could not start the PayPal checkout. Please try again in a moment.']);
+    exit();
+}
+
+try {
+    $pdo->beginTransaction();
+    $pdo->prepare(
+        'INSERT INTO store_orders (customer_name, customer_email, customer_phone, status, paypal_order_id, subtotal, total)
+         VALUES (?, ?, ?, ?, ?, ?, ?)'
+    )->execute([$customer_name, $customer_email, $customer_phone ?: null, 'created', $order['order_id'], $priced['subtotal'], $priced['total']]);
+    $order_row_id = (int)$pdo->lastInsertId();
+
+    $item_stmt = $pdo->prepare(
+        'INSERT INTO store_order_items (order_id, product_id, variant_id, product_name_snapshot, variant_label_snapshot, unit_price, quantity, line_total)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    foreach ($priced['lines'] as $line) {
+        $item_stmt->execute([
+            $order_row_id,
+            $line['productId'],
+            $line['variantId'],
+            $line['name'],
+            $line['variantLabel'] ?: null,
+            $line['unitPrice'],
+            $line['qty'],
+            $line['lineTotal'],
+        ]);
+    }
+    $pdo->commit();
+} catch (\Throwable $e) {
+    $pdo->rollBack();
+    error_log('store-create-order: order/items insert failed for PayPal order ' . $order['order_id'] . ': ' . $e->getMessage());
+    http_response_code(502);
+    echo json_encode(['success' => false, 'error' => 'We could not record your order. Please try again or email treasurer@alabamafalcons.org.']);
+    exit();
+}
+
+echo json_encode(['success' => true, 'orderId' => $order['order_id']]);
