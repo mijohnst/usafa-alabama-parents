@@ -327,15 +327,26 @@ function paypal_get_order(string $orderId): array {
 
     $data = json_decode((string)$resp, true);
     $capture = $data['purchase_units'][0]['payments']['captures'][0] ?? null;
-    if ($code >= 200 && $code < 300 && $capture) {
+    // Must require COMPLETED here, same as paypal_capture_order() above —
+    // a capture object existing at all doesn't mean it succeeded. PayPal
+    // uses this same resource for DECLINED/PENDING/FAILED captures too, and
+    // this function exists specifically to recover the real outcome after
+    // a crash/retry, so treating any non-empty capture as success would
+    // let a declined or still-pending payment get reported to the browser
+    // (and recorded in the ledger) as a completed one.
+    if ($code >= 200 && $code < 300 && $capture && ($capture['status'] ?? '') === 'COMPLETED') {
         return [
             'success'         => true,
-            'status'          => $capture['status'] ?? 'UNKNOWN',
+            'status'          => $capture['status'],
             'capture_id'      => $capture['id'] ?? null,
             'captured_amount' => (float)($capture['amount']['value'] ?? 0),
             'funding_source'  => paypal_funding_source_label($data),
         ];
     }
-    error_log('paypal_get_order failed: HTTP ' . $code . ' ' . $resp);
-    return ['success' => false, 'error' => $data['message'] ?? ('PayPal returned HTTP ' . $code)];
+    $actual_status = $capture['status'] ?? null;
+    error_log('paypal_get_order failed: HTTP ' . $code . ' status=' . ($actual_status ?? 'none') . ' ' . $resp);
+    return [
+        'success' => false,
+        'error'   => $actual_status ? "PayPal capture status is \"$actual_status\", not completed." : ($data['message'] ?? ('PayPal returned HTTP ' . $code)),
+    ];
 }

@@ -91,6 +91,36 @@ function notify_treasurer_capture_issue(string $subject, string $detail): void {
     send_notification('treasurer@alabamafalcons.org', $subject, nl2br(htmlspecialchars($detail)));
 }
 
+// Atomic claim: without this, two near-simultaneous requests for the same
+// order (a duplicate onApprove firing twice, a double-click) could both
+// pass the "not yet applied" check above, both call PayPal, and both
+// proceed to apply dues years and log income below — PayPal's own
+// idempotency key stops a second real charge, but nothing stops duplicate
+// bookkeeping. Mirrors the same claim-before-external-call pattern
+// admin/purchase-action.php's send_paypal action already uses for outgoing
+// payouts.
+$claim = $pdo->prepare("UPDATE paypal_dues_orders SET status = 'processing' WHERE id = ? AND status = 'created'");
+$claim->execute([$track['id']]);
+if ($claim->rowCount() !== 1) {
+    // Someone else already claimed this exact order (or it resolved to a
+    // terminal state) between our SELECT above and now — re-fetch rather
+    // than assume, so a request that lost the race still reports the real
+    // outcome instead of a generic "still processing" for a payment that
+    // actually already finished.
+    $recheck = $pdo->prepare('SELECT * FROM paypal_dues_orders WHERE id = ?');
+    $recheck->execute([$track['id']]);
+    $track = $recheck->fetch(PDO::FETCH_ASSOC);
+    $status = $track['status'] ?? '';
+    if ($status === 'applied') {
+        echo json_encode(['success' => true, 'years' => explode(',', $track['years'])]);
+    } elseif (in_array($status, ['amount_mismatch', 'capture_ok_apply_failed', 'needs_manual_review'], true)) {
+        echo json_encode(['success' => false, 'manualReview' => true, 'error' => "PayPal received this payment, but we couldn't automatically apply it. The treasurer has been notified and will follow up — please don't submit payment again."]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'This payment is already being processed. Please wait a moment before trying again.']);
+    }
+    exit();
+}
+
 // Sandbox mode always reports a successful capture (it's fake test money),
 // but this code has no other way to know that -- it applies the dues years
 // and logs income exactly like a real live payment. Tagging the note/subject
@@ -131,7 +161,18 @@ if (abs((float)$captured_amount - (float)$track['amount']) > 0.001) {
         "{$capture_note_prefix}PayPal dues amount mismatch — needs review",
         "Order $order_id / capture $capture_id captured \$$captured_amount but was expected to be \${$track['amount']} for member #$member_id (years: {$track['years']}). Please reconcile manually in the Income Ledger."
     );
-    echo json_encode(['success' => true, 'years' => explode(',', $track['years'])]);
+    // PayPal captured real money here, just not the expected amount, and
+    // the years below were never actually applied to the member's record —
+    // the old response claiming 'years' were paid was flatly untrue. This
+    // must not read as a completed payment (a plain success lies about
+    // membership state) nor as a failure (inviting a second, duplicate
+    // payment) — manualReview is the distinct third state the front end
+    // checks for.
+    echo json_encode([
+        'success'      => false,
+        'manualReview' => true,
+        'error'        => "PayPal received your payment, but the amount didn't match what we expected, so we couldn't automatically apply it. The treasurer has been notified and will follow up shortly — please don't submit payment again.",
+    ]);
     exit();
 }
 
@@ -159,6 +200,16 @@ if (!$still_needed) {
     exit();
 }
 
+// save_dues_years() does its own separate UPDATE (members) and, when the
+// price actually changed, INSERT (income_entries) — wrapped in a
+// transaction together with the status='applied' update below so a crash
+// partway through (host-level kill, fatal error, timeout) can never leave
+// dues marked applied with a half-written members/income_entries state, or
+// vice versa. Previously this whole block fell through to an unconditional
+// "success" response at the bottom regardless of whether either attempt
+// below actually succeeded — $applied_ok now tracks the real outcome.
+$applied_ok = false;
+$pdo->beginTransaction();
 try {
     save_dues_years(
         $pdo,
@@ -170,11 +221,15 @@ try {
         "{$capture_note_prefix}PayPal order $order_id, capture $capture_id"
     );
     $pdo->prepare("UPDATE paypal_dues_orders SET status='applied', applied_at=NOW() WHERE id=?")->execute([$track['id']]);
+    $pdo->commit();
+    $applied_ok = true;
 } catch (\Throwable $e) {
+    $pdo->rollBack();
     error_log('dues-pay-capture-order: save_dues_years failed for order ' . $order_id . ': ' . $e->getMessage());
     // One retry, in case of a transient DB hiccup, before giving up and
     // flagging for the treasurer — the capture already succeeded at
     // PayPal, so this money must never be silently lost track of.
+    $pdo->beginTransaction();
     try {
         save_dues_years(
             $pdo,
@@ -186,7 +241,10 @@ try {
             "{$capture_note_prefix}PayPal order $order_id, capture $capture_id"
         );
         $pdo->prepare("UPDATE paypal_dues_orders SET status='applied', applied_at=NOW() WHERE id=?")->execute([$track['id']]);
+        $pdo->commit();
+        $applied_ok = true;
     } catch (\Throwable $e2) {
+        $pdo->rollBack();
         error_log('dues-pay-capture-order: save_dues_years retry failed for order ' . $order_id . ': ' . $e2->getMessage());
         $pdo->prepare("UPDATE paypal_dues_orders SET status='capture_ok_apply_failed', error_note=? WHERE id=?")
             ->execute([$e2->getMessage(), $track['id']]);
@@ -201,4 +259,17 @@ try {
 // paying for multiple non-contiguous years doesn't need to re-verify.
 $_SESSION['dues_verified'][$token]['pending_order'] = null;
 
-echo json_encode(['success' => true, 'years' => $order_years]);
+if ($applied_ok) {
+    echo json_encode(['success' => true, 'years' => $order_years]);
+} else {
+    // The old response claimed success (and listed years as paid) even
+    // when both attempts above failed — membership was never actually
+    // updated. manualReview is the same distinct third state used by the
+    // amount-mismatch branch above: not a completed payment, but not an
+    // invitation to pay again either.
+    echo json_encode([
+        'success'      => false,
+        'manualReview' => true,
+        'error'        => "PayPal received your payment, but we couldn't automatically apply it to your cadet's dues record. The treasurer has been notified and will follow up shortly — please don't submit payment again.",
+    ]);
+}

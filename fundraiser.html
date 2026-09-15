@@ -278,6 +278,7 @@
                 <label for="donateAnonymous" style="margin:0;font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;color:var(--gray)">Donate anonymously (hide my name below, still shows the amount/message)</label>
               </div>
               <div id="donateStatus" role="status" aria-live="polite"></div>
+              <div id="donatePaypalLoadStatus" style="font-size:.85rem;color:var(--gray);text-align:center;padding:.5rem 0">Loading payment options&hellip;</div>
               <div id="donatePaypalButtons"></div>
             </div>
             <div id="donateThankYou" style="display:none"></div>
@@ -558,17 +559,37 @@
       var sdkReady = false;
       var buttonsRendered = false;
 
+      // Previously a client-id fetch failure or SDK script load failure was
+      // silently swallowed — the donate form would just sit there with an
+      // empty gap where the buttons should be, indistinguishable from a
+      // slow connection except that it never resolves. Now shown explicitly
+      // with a retry option and the (already-present) Zelle/check
+      // alternative, instead of looking broken with no explanation.
+      function showPaypalUnavailable() {
+        if (buttonsRendered) return; // already succeeded — a late failure/timeout firing after success is a no-op
+        var el = document.getElementById('donatePaypalLoadStatus');
+        el.innerHTML = '<div style="text-align:left;background:#fff3e0;border-left:4px solid #f57c00;border-radius:4px;padding:.85rem 1rem;font-size:.85rem;color:#5a4632">' +
+          '<strong>Online payment isn’t loading right now.</strong> This can happen from a slow connection or an ad/tracker blocker.<br>' +
+          '<button type="button" onclick="location.reload()" style="margin:.5rem .5rem 0 0;padding:.4rem .9rem;border:1px solid #f57c00;background:#fff;border-radius:4px;cursor:pointer;font-size:.82rem;color:#5a4632">Try Again</button>' +
+          'or use the Zelle/check option below.</div>';
+      }
+
+      var loadTimeout = setTimeout(showPaypalUnavailable, 10000);
+
       fetch('paypal-client-id.php').then(function(r) { return r.json(); }).then(function(d) {
-        if (!d.success || !d.clientId) return;
+        if (!d.success || !d.clientId) { showPaypalUnavailable(); return; }
         var s = document.createElement('script');
         s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(d.clientId) + '&currency=USD&intent=capture&disable-funding=paylater&enable-funding=venmo,applepay';
         s.onload = function() { sdkReady = true; renderButtonsIfReady(); };
+        s.onerror = showPaypalUnavailable;
         document.head.appendChild(s);
-      }).catch(function() {});
+      }).catch(showPaypalUnavailable);
 
       function renderButtonsIfReady() {
         if (!sdkReady || buttonsRendered || typeof paypal === 'undefined') return;
         buttonsRendered = true;
+        clearTimeout(loadTimeout);
+        document.getElementById('donatePaypalLoadStatus').style.display = 'none';
         paypal.Buttons({
           createOrder: function() {
             var statusEl = document.getElementById('donateStatus');
@@ -633,6 +654,16 @@
                 thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + ' toward the ' + campaignLabel() + '! A receipt has been sent to your email.</p>';
                 thankYou.style.display = 'block';
                 loadProgress();
+              } else if (result.manualReview) {
+                // Distinct from both success and failure: PayPal did take
+                // the money, but it couldn't be recorded automatically.
+                // Must not say "try again" here — a second attempt would be
+                // a second real charge for a donation that already went
+                // through once.
+                document.getElementById('donateFormFields').style.display = 'none';
+                var reviewMsg = document.getElementById('donateThankYou');
+                reviewMsg.innerHTML = '<p style="color:#8a6d1f;font-weight:600;background:#fff8e1;border-left:4px solid #f9a825;padding:.85rem 1rem;border-radius:4px">' + (result.error || "Your payment was received but couldn't be recorded automatically. The treasurer has been notified and will follow up shortly — please don't submit payment again.") + '</p>';
+                reviewMsg.style.display = 'block';
               } else {
                 statusEl.textContent = result.error || 'Payment could not be completed. Please try again.';
                 statusEl.className = 'error';
