@@ -29,6 +29,9 @@
     .saber-motif { font-size: 1.6rem; letter-spacing: .5rem; color: var(--accent); margin-bottom: 1.25rem; }
     .countdown-badge { display: inline-flex; align-items: center; gap: .5rem; background: rgba(166,25,46,.18); border: 1px solid rgba(166,25,46,.5); color: var(--white); padding: .55rem 1.25rem; border-radius: 99px; font-size: .85rem; font-weight: 600; }
     .countdown-badge strong { color: #FFC72C; }
+    .hero-donate-btn { display: inline-block; margin-top: 1.5rem; background: var(--accent); color: var(--white); font-weight: 700; padding: .85rem 2rem; border-radius: 6px; text-decoration: none; letter-spacing: .02em; box-shadow: 0 4px 14px rgba(166,25,46,.4); transition: transform .15s ease; }
+    .hero-donate-btn:hover { transform: translateY(-2px); text-decoration: none; }
+    .progress-donate-link { display: inline-block; margin-top: 1.25rem; color: var(--navy); font-weight: 600; text-decoration: underline; font-size: .9rem; }
 
     /* SECTION */
     .section { padding: 3.5rem 2rem; max-width: 900px; margin: 0 auto; }
@@ -191,6 +194,7 @@
       <h1>Class of <span class="campaign-year">2027</span><span>Saber Fund</span></h1>
       <p class="mission">Help us equip every Alabama cadet graduating with USAFA's Class of <span class="campaign-year">2027</span> with a ceremonial saber — a lifelong keepsake and symbol of the honor, precision, and Air Force heritage they've earned.</p>
       <div class="countdown-badge">🗓️ <span id="countdown-text">Loading countdown&hellip;</span></div>
+      <div><a href="#donate" class="hero-donate-btn">Make a Gift ↓</a></div>
     </div>
   </div>
 
@@ -234,12 +238,13 @@
           <p class="saber-collection-label">🗡️ <span id="saber-collection-count">0</span> of <span class="campaign-cadet-count">20</span> Sabers Funded</p>
           <div class="saber-row" id="saber-row"></div>
         </div>
+        <a href="#donate" class="progress-donate-link">Make a Gift ↓</a>
       </div>
     </div>
   </section>
 
   <!-- DONATE + RECENT DONATIONS -->
-  <section class="section donate-recent-section">
+  <section class="section donate-recent-section" id="donate">
     <div class="donate-recent-grid">
       <div class="donate-col">
         <h2>Make a Gift</h2>
@@ -259,15 +264,16 @@
               </div>
               <div class="form-group">
                 <label for="donateAmount">Donation Amount (USD) *</label>
-                <input type="number" id="donateAmount" min="1" step="0.01" placeholder="25.00" />
+                <input type="number" id="donateAmount" min="1" step="0.01" inputmode="decimal" placeholder="25.00" required />
               </div>
               <div class="form-group">
                 <label for="donateName">Your Name (optional)</label>
-                <input type="text" id="donateName" placeholder="Paul D. Moga" />
+                <input type="text" id="donateName" placeholder="Paul D. Moga" autocomplete="name" />
               </div>
               <div class="form-group">
                 <label for="donateEmail">Your Email *</label>
-                <input type="email" id="donateEmail" placeholder="you@example.com" />
+                <input type="email" id="donateEmail" placeholder="you@example.com" autocomplete="email" required />
+                <p style="font-size:.72rem;color:var(--gray);margin-top:.35rem">Used only to send your receipt.</p>
               </div>
               <div class="form-group">
                 <label for="donateComment">Leave a Short Message (optional)</label>
@@ -275,11 +281,16 @@
               </div>
               <div class="form-group" style="display:flex;align-items:center;gap:.5rem;text-align:left">
                 <input type="checkbox" id="donateAnonymous" style="width:auto">
-                <label for="donateAnonymous" style="margin:0;font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;color:var(--gray)">Donate anonymously (hide my name below, still shows the amount/message)</label>
+                <label for="donateAnonymous" style="margin:0;font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;color:var(--gray)">Donate anonymously (hide my name below — note a public message can still identify you)</label>
+              </div>
+              <div id="donateSummary" style="display:none;background:var(--light);border-radius:6px;padding:.75rem 1rem;margin-bottom:1.1rem;text-align:center">
+                <div style="font-size:1.15rem;font-weight:700;color:var(--navy)">Your gift: <span id="donateSummaryAmount">$0.00</span></div>
+                <div id="donateSummaryNote" style="font-size:.8rem;color:var(--gray);margin-top:.15rem"></div>
               </div>
               <div id="donateStatus" role="status" aria-live="polite"></div>
               <div id="donatePaypalLoadStatus" style="font-size:.85rem;color:var(--gray);text-align:center;padding:.5rem 0">Loading payment options&hellip;</div>
-              <div id="donatePaypalButtons"></div>
+              <p id="donateReadyHint" style="font-size:.8rem;color:var(--gray);text-align:center;margin-bottom:.5rem">Enter an amount and email above to continue to payment.</p>
+              <div id="donatePaypalButtons" style="opacity:.4;pointer-events:none;transition:opacity .2s ease"></div>
             </div>
             <div id="donateThankYou" style="display:none"></div>
           </div>
@@ -526,6 +537,41 @@
     amountInput.addEventListener('input', function() {
       quickBtns.forEach(function(b) { b.classList.toggle('active', b.dataset.amt === amountInput.value); });
     });
+
+    // ─── GIFT SUMMARY + PAYMENT READINESS ────────────────────────────────────
+    // The PayPal buttons already reject an incomplete form inside
+    // createOrder() below, but that meant clicking PayPal with a blank
+    // amount/email did nothing visible except an error appearing — dimming
+    // the buttons until both look filled in makes that obvious up front
+    // instead of after a click. This is a UX nicety only; the server is
+    // still the real gatekeeper regardless of what this class toggles.
+    var donateEmailInput      = document.getElementById('donateEmail');
+    var donateSummary         = document.getElementById('donateSummary');
+    var donateSummaryAmount   = document.getElementById('donateSummaryAmount');
+    var donateSummaryNote     = document.getElementById('donateSummaryNote');
+    var donateReadyHint       = document.getElementById('donateReadyHint');
+    var donatePaypalButtonsEl = document.getElementById('donatePaypalButtons');
+
+    function updateDonateSummaryAndReadiness() {
+      var amount = parseFloat(amountInput.value);
+      if (amount > 0) {
+        donateSummary.style.display = 'block';
+        donateSummaryAmount.textContent = '$' + amount.toFixed(2);
+        donateSummaryNote.textContent = amount >= SABER_PRICE ? 'Funds one ceremonial saber' : '';
+      } else {
+        donateSummary.style.display = 'none';
+      }
+
+      var emailLooksValid = /\S+@\S+\.\S+/.test(donateEmailInput.value.trim());
+      var ready = amount > 0 && emailLooksValid;
+      donatePaypalButtonsEl.style.opacity = ready ? '1' : '.4';
+      donatePaypalButtonsEl.style.pointerEvents = ready ? 'auto' : 'none';
+      donateReadyHint.style.display = ready ? 'none' : 'block';
+    }
+    amountInput.addEventListener('input', updateDonateSummaryAndReadiness);
+    donateEmailInput.addEventListener('input', updateDonateSummaryAndReadiness);
+    quickBtns.forEach(function(btn) { btn.addEventListener('click', updateDonateSummaryAndReadiness); });
+    updateDonateSummaryAndReadiness();
 
     // ─── SOCIAL SHARE ───────────────────────────────────────────────────────
     function updateShareLinks() {
