@@ -20,9 +20,17 @@ $pdo = get_pdo();
 // hand-entered offline figure.
 $can_edit = is_treasurer() || is_super_admin();
 
-$campaign = trim($_GET['campaign'] ?? '');
-if (!isset(DONATION_CAMPAIGNS[$campaign])) {
-    $campaign = array_key_first(DONATION_CAMPAIGNS);
+// DB-backed instead of the old hardcoded DONATION_CAMPAIGNS constant — lets
+// the Treasurer start next year's drive (see the "Start a New Campaign"
+// form below) without a code deploy. $active_slug is whichever one
+// fundraiser.html actually shows to the public right now; the campaign
+// being *viewed/edited* on this page ($campaign) can be a different one if
+// the Treasurer picks an older campaign from the switcher.
+$campaigns   = donation_campaigns($pdo);
+$active_slug = active_campaign_slug($pdo);
+$campaign    = trim($_GET['campaign'] ?? '');
+if (!isset($campaigns[$campaign])) {
+    $campaign = $active_slug ?? array_key_first($campaigns) ?? '';
 }
 
 $goal_key     = "fundraiser_{$campaign}_goal";
@@ -30,9 +38,57 @@ $cadet_key    = "fundraiser_{$campaign}_cadet_count";
 $offline_key  = "fundraiser_{$campaign}_offline_raised";
 $year_key     = "fundraiser_{$campaign}_year";
 $deadline_key = "fundraiser_{$campaign}_deadline";
-$all_keys     = [$goal_key, $cadet_key, $offline_key, $year_key, $deadline_key];
+$all_keys     = $campaign !== '' ? [$goal_key, $cadet_key, $offline_key, $year_key, $deadline_key] : [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
+$post_action = trim($_POST['action'] ?? 'save');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'activate') {
+    csrf_verify();
+    $target = trim($_POST['campaign'] ?? '');
+    if (!isset($campaigns[$target])) {
+        flash('error', 'Unknown campaign.');
+    } else {
+        activate_donation_campaign($pdo, $target);
+        flash('success', h($campaigns[$target]) . ' is now the active campaign — fundraiser.html will show it.');
+    }
+    header('Location: fundraiser.php?campaign=' . urlencode($target)); exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'create') {
+    csrf_verify();
+    $new_slug_raw  = trim($_POST['new_slug'] ?? '');
+    $new_label_raw = trim($_POST['new_label'] ?? '');
+    $new_cadet_raw = trim($_POST['new_cadet_count'] ?? '');
+    $new_year_raw  = trim($_POST['new_year'] ?? '');
+    $new_deadline_raw = trim($_POST['new_deadline'] ?? '');
+
+    $errors = [];
+    if (!preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $new_slug_raw)) $errors[] = 'Campaign ID must be lowercase letters, numbers, and hyphens only (e.g. saber-fund-2028).';
+    elseif (isset($campaigns[$new_slug_raw]))                     $errors[] = 'That campaign ID already exists — pick a different one.';
+    if ($new_label_raw === '')                                     $errors[] = 'Campaign name cannot be blank.';
+    if (!ctype_digit($new_cadet_raw) || (int)$new_cadet_raw <= 0)  $errors[] = 'Number of cadets must be a whole number greater than 0.';
+    if ($new_year_raw === '')                                      $errors[] = 'Target class year cannot be blank.';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $new_deadline_raw))   $errors[] = 'Deadline must be a valid date.';
+
+    if ($errors) {
+        flash('error', implode(' ', $errors));
+        header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
+    }
+
+    create_donation_campaign(
+        $pdo,
+        $new_slug_raw,
+        $new_label_raw,
+        (int)$new_cadet_raw,
+        (int)$new_cadet_raw * SABER_PRICE,
+        $new_year_raw,
+        $new_deadline_raw
+    );
+    flash('success', 'Started "' . h($new_label_raw) . '" and made it active — fundraiser.html now shows this campaign.');
+    header('Location: fundraiser.php?campaign=' . urlencode($new_slug_raw)); exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'save') {
     csrf_verify();
     $cadet_raw    = trim($_POST['cadet_count'] ?? '');
     $offline_raw  = trim($_POST['offline_raised'] ?? '');
@@ -86,10 +142,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit) {
     header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
 }
 
-$stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (' . implode(',', array_fill(0, count($all_keys), '?')) . ')');
-$stmt->execute($all_keys);
 $vals = [];
-foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
+if ($all_keys) {
+    $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (' . implode(',', array_fill(0, count($all_keys), '?')) . ')');
+    $stmt->execute($all_keys);
+    foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
+}
 $goal     = (float)($vals[$goal_key] ?? 0);
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
@@ -98,37 +156,79 @@ $deadline = $vals[$deadline_key] ?? '';
 // relationship) so this page still shows a sane number before
 // migrate_saber_fund_cadet_count.sql has been run, rather than "0 cadets".
 $cadet_count = isset($vals[$cadet_key]) ? (int)$vals[$cadet_key] : (int)round($goal / SABER_PRICE);
-$settings_missing = count($vals) < count($all_keys);
-$campaign_label = saber_fund_label($pdo, $campaign, DONATION_CAMPAIGNS[$campaign]);
+$settings_missing = $campaign !== '' && count($vals) < count($all_keys);
+$campaign_label = $campaign !== '' ? saber_fund_label($pdo, $campaign, $campaigns[$campaign]) : '';
 
-$stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM paypal_donations WHERE campaign = ? AND status = 'captured'");
-$stmt->execute([$campaign]);
-$raised_online = (float)$stmt->fetchColumn();
+$raised_online = 0.0;
+$recent = [];
+if ($campaign !== '') {
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM paypal_donations WHERE campaign = ? AND status = 'captured'");
+    $stmt->execute([$campaign]);
+    $raised_online = (float)$stmt->fetchColumn();
 
-// donor_comment/show_name columns only exist after the comments migration
-// runs — fall back to the pre-comment column list so this page still works
-// against an un-migrated database rather than erroring outright.
-try {
-    $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at, donor_comment, show_name FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
-    $stmt->execute([$campaign]);
-    $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (\PDOException $e) {
-    $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
-    $stmt->execute([$campaign]);
-    $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // donor_comment/show_name columns only exist after the comments migration
+    // runs — fall back to the pre-comment column list so this page still works
+    // against an un-migrated database rather than erroring outright.
+    try {
+        $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at, donor_comment, show_name FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
+        $stmt->execute([$campaign]);
+        $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (\PDOException $e) {
+        $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
+        $stmt->execute([$campaign]);
+        $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 $raised_total = $raised_online + $offline;
 $pct = $goal > 0 ? min(100, round($raised_total / $goal * 100)) : 0;
 
-admin_header('Fundraiser: ' . $campaign_label);
+// Suggests the next slug/label/year for "Start a New Campaign" based on the
+// currently *active* campaign's year (not whichever one is being viewed
+// above) — next year's cadets follow from whichever drive is actually
+// running now, regardless of what the Treasurer happens to be looking at.
+$suggest_year = (int)date('Y') + 1;
+if ($active_slug) {
+    $active_year_val = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    $active_year_val->execute(["fundraiser_{$active_slug}_year"]);
+    $active_year = (int)$active_year_val->fetchColumn();
+    if ($active_year > 0) $suggest_year = $active_year + 1;
+}
+$suggest_slug = 'saber-fund-' . $suggest_year;
+if (isset($campaigns[$suggest_slug])) $suggest_slug = ''; // already exists — Treasurer picks their own instead of a colliding default
+
+admin_header($campaign_label !== '' ? 'Fundraiser: ' . $campaign_label : 'Fundraiser Campaigns');
 echo show_flash();
 ?>
 
 <div class="page-head">
-  <h1>🗡️ <?= h($campaign_label) ?></h1>
+  <h1>🗡️ <?= $campaign_label !== '' ? h($campaign_label) : 'Fundraiser Campaigns' ?></h1>
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
+
+<?php if ($campaigns): ?>
+<form method="GET" class="card" style="max-width:640px;display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap">
+  <div class="form-group" style="margin:0;flex:1;min-width:220px">
+    <label style="font-size:.72rem">Viewing Campaign</label>
+    <select name="campaign" onchange="this.form.submit()">
+      <?php foreach ($campaigns as $slug => $label): ?>
+      <option value="<?= h($slug) ?>" <?= $slug===$campaign?'selected':'' ?>><?= h($label) ?><?= $slug===$active_slug?' (active)':'' ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
+  <?php if ($can_edit && $campaign !== $active_slug): ?>
+  <noscript><button type="submit" class="btn btn-secondary btn-sm">Switch</button></noscript>
+  <?php endif; ?>
+</form>
+<?php if ($can_edit && $campaign !== '' && $campaign !== $active_slug): ?>
+<form method="POST" style="margin:0 0 1.5rem">
+  <?= csrf_field() ?>
+  <input type="hidden" name="action" value="activate">
+  <input type="hidden" name="campaign" value="<?= h($campaign) ?>">
+  <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Make this the campaign fundraiser.html shows to the public?')">Make This Campaign Active</button>
+</form>
+<?php endif; ?>
+<?php endif; ?>
 
 <?php if ($settings_missing): ?>
 <div class="alert alert-error">
@@ -137,6 +237,7 @@ echo show_flash();
 </div>
 <?php endif; ?>
 
+<?php if ($campaign !== ''): ?>
 <div class="card" style="max-width:640px">
   <h2 style="margin-bottom:1rem">Progress</h2>
   <div style="font-size:2rem;font-weight:700;color:#002554;margin-bottom:.25rem">
@@ -154,6 +255,7 @@ echo show_flash();
   <?php if ($can_edit): ?>
   <form method="POST">
     <?= csrf_field() ?>
+    <input type="hidden" name="action" value="save">
     <div class="form-row col-2">
       <div class="form-group">
         <label>Number of Cadets</label>
@@ -211,5 +313,50 @@ echo show_flash();
   </table>
   <?php endif; ?>
 </div>
+<?php endif; ?>
+
+<?php if ($can_edit): ?>
+<div class="card" style="max-width:640px">
+  <h2 style="margin-bottom:.25rem">Start a New Campaign</h2>
+  <p style="font-size:.82rem;color:#9aa5b4;margin-bottom:1rem">Use this once a year, when a new class's cadets need sabers — it creates a fresh campaign and makes it the one <code>fundraiser.html</code> shows publicly. The campaign you're currently viewing above stays untouched, for the treasurer's own records.</p>
+  <form method="POST">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="create">
+    <div class="form-row col-2">
+      <div class="form-group">
+        <label>Campaign ID</label>
+        <input type="text" name="new_slug" value="<?= h($suggest_slug) ?>" placeholder="saber-fund-2028" pattern="[a-z0-9]+(-[a-z0-9]+)*">
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Lowercase letters, numbers, and hyphens only — used internally to tag donations, never shown to donors.</p>
+      </div>
+      <div class="form-group">
+        <label>Campaign Name</label>
+        <input type="text" name="new_label" value="Class of <?= h($suggest_year) ?> Saber Fund" placeholder="Class of 2028 Saber Fund">
+      </div>
+    </div>
+    <div class="form-row col-2">
+      <div class="form-group">
+        <label>Number of Cadets</label>
+        <input type="number" step="1" min="1" name="new_cadet_count" id="newCadetCountInput" placeholder="20">
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Goal = cadets &times; $<?= number_format(SABER_PRICE,0) ?>/saber = <strong id="newCadetCountGoalPreview">$0.00</strong></p>
+      </div>
+      <div class="form-group">
+        <label>Target Class Year</label>
+        <input type="text" name="new_year" value="<?= h($suggest_year) ?>" placeholder="2028">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Deadline</label>
+      <input type="date" name="new_deadline">
+    </div>
+    <script>
+      document.getElementById('newCadetCountInput').addEventListener('input', function() {
+        var n = parseInt(this.value, 10) || 0;
+        document.getElementById('newCadetCountGoalPreview').textContent = '$' + (n * <?= (int)SABER_PRICE ?>).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      });
+    </script>
+    <button type="submit" class="btn btn-primary" onclick="return confirm('Start this new campaign and make it the one fundraiser.html shows publicly?')">Start Campaign &amp; Make It Active</button>
+  </form>
+</div>
+<?php endif; ?>
 
 <?php admin_footer(); ?>

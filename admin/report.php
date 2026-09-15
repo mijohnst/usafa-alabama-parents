@@ -50,7 +50,7 @@ arsort($by_income_type); arsort($by_payment_method);
 // against the goal), all-time rather than scoped to $year since a
 // campaign's deadline rarely lines up with a calendar year.
 $campaigns = [];
-foreach (DONATION_CAMPAIGNS as $slug => $fallback_label) {
+foreach (donation_campaigns($pdo) as $slug => $fallback_label) {
     $cstmt = $pdo->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?, ?)");
     $cstmt->execute(["fundraiser_{$slug}_goal", "fundraiser_{$slug}_offline_raised", "fundraiser_{$slug}_deadline"]);
     $vals = [];

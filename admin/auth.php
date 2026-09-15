@@ -485,15 +485,13 @@ const INCOME_TYPE_COLORS = [
     'other'       => '#5a6a7a',
 ];
 const INCOME_PAYMENT_METHODS = ['Check','Cash','Venmo','Zelle','PayPal','Bank Transfer','Other'];
-// Named online-donation campaigns donate-create-order.php will accept a
-// `campaign` tag for, scoping paypal_donations rows (and
-// fundraiser-progress.php's totals) to one drive without touching the
-// general/unlabeled donation flow. Add an entry here whenever a new
-// time-limited campaign launches — no schema change needed, the
-// paypal_donations.campaign column already stores any slug.
-const DONATION_CAMPAIGNS = [
-    'saber-fund-2027' => 'Class of 2027 Saber Fund',
-];
+// Named online-donation campaigns are DB-backed (donation_campaigns table,
+// see donation_campaigns()/active_campaign_slug()/create_donation_campaign()
+// in lib.php) rather than a hardcoded list here — this used to be a PHP
+// constant, which meant starting the Saber Fund's next yearly cycle needed
+// a code deploy. Now admin/fundraiser.php can create a new campaign (and
+// switch which one is "active" — the one fundraiser.html shows) entirely
+// from the admin UI.
 // Must match SABER_PRICE in fundraiser.html's JS — two separate sources of
 // truth (server-side goal math here in admin/fundraiser.php, client-side
 // display math there) since PHP and a static page's JS can't literally

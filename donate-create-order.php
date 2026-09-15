@@ -75,8 +75,9 @@ $donor_name = mb_substr($donor_name, 0, 200);
 // Optional campaign tag (e.g. a time-limited fundraiser page like
 // fundraiser.html) — general donations from payment.html never send this,
 // so it defaults to null and the row looks identical to today.
+$campaigns = donation_campaigns($pdo);
 $campaign = trim((string)($payload['campaign'] ?? ''));
-if ($campaign !== '' && !isset(DONATION_CAMPAIGNS[$campaign])) {
+if ($campaign !== '' && !isset($campaigns[$campaign])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Unknown campaign.']);
     exit();
@@ -101,7 +102,7 @@ $request_id   = 'create-' . bin2hex(random_bytes(16));
 // custom_id (searchable in PayPal's Activity/CSV export, not shown to the
 // donor) gets the stable slug, description (shown to the donor and in
 // PayPal's transaction details) gets the current human-readable label.
-$paypal_description = $campaign ? saber_fund_label($pdo, $campaign, DONATION_CAMPAIGNS[$campaign]) : null;
+$paypal_description = $campaign ? saber_fund_label($pdo, $campaign, $campaigns[$campaign]) : null;
 $order = paypal_create_order($amount, $reference_id, $request_id, $paypal_description, $campaign);
 if (!$order['success']) {
     error_log('donate-create-order: ' . $order['error']);

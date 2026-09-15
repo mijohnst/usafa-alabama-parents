@@ -23,14 +23,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
+$pdo = get_pdo();
+
+// No campaign specified resolves to whichever one is currently active —
+// this is how fundraiser.html tracks "this year's" drive without a
+// hardcoded slug baked into the page: it just asks for progress with no
+// campaign param and gets back whichever campaign admin/fundraiser.php has
+// marked active, including which slug that actually is (see 'campaign' in
+// the response below) so the page can tag the donation it creates with it.
 $campaign = trim((string)($_GET['campaign'] ?? ''));
-if (!isset(DONATION_CAMPAIGNS[$campaign])) {
+$campaigns = donation_campaigns($pdo);
+if ($campaign === '') {
+    $campaign = active_campaign_slug($pdo) ?? '';
+}
+if ($campaign === '' || !isset($campaigns[$campaign])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Unknown campaign.']);
     exit();
 }
-
-$pdo = get_pdo();
 
 $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0), COUNT(*) FROM paypal_donations WHERE campaign = ? AND status = 'captured'");
 $stmt->execute([$campaign]);

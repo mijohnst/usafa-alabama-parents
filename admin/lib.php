@@ -476,6 +476,57 @@ function saber_fund_label(PDO $pdo, string $slug, string $fallback): string {
     return $fallback;
 }
 
+// Replaces the old hardcoded DONATION_CAMPAIGNS constant — every campaign
+// that has ever existed, newest first, as [slug => label]. Falls back to an
+// empty list if migrate_donation_campaigns.sql hasn't run yet (table
+// doesn't exist) so callers degrade to "no campaigns" instead of a hard
+// error.
+function donation_campaigns(PDO $pdo): array {
+    try {
+        return $pdo->query('SELECT slug, label FROM donation_campaigns ORDER BY created_at DESC')->fetchAll(PDO::FETCH_KEY_PAIR);
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+// The one campaign fundraiser.html shows by default — whichever campaign is
+// currently flagged active. Null if none is active yet (migration not run,
+// or somehow nothing was ever activated).
+function active_campaign_slug(PDO $pdo): ?string {
+    try {
+        $slug = $pdo->query('SELECT slug FROM donation_campaigns WHERE is_active = 1 LIMIT 1')->fetchColumn();
+        return $slug ?: null;
+    } catch (\PDOException $e) {
+        return null;
+    }
+}
+
+// Creates a brand-new campaign row plus its site_settings rows in one call,
+// and marks it active (atomically deactivating whatever was active before)
+// — this is what lets a treasurer start next year's Saber Fund drive
+// entirely from admin/fundraiser.php, with no code deploy or manual
+// migration the way the very first campaign needed.
+function create_donation_campaign(PDO $pdo, string $slug, string $label, int $cadetCount, float $goal, string $year, string $deadline): void {
+    $pdo->prepare('INSERT INTO donation_campaigns (slug, label, is_active) VALUES (?, ?, 0)')->execute([$slug, $label]);
+    $settings = [
+        "fundraiser_{$slug}_goal"           => number_format($goal, 2, '.', ''),
+        "fundraiser_{$slug}_cadet_count"    => (string)$cadetCount,
+        "fundraiser_{$slug}_offline_raised" => '0.00',
+        "fundraiser_{$slug}_year"           => mb_substr($year, 0, 20),
+        "fundraiser_{$slug}_deadline"       => $deadline,
+    ];
+    $stmt = $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)');
+    foreach ($settings as $key => $val) $stmt->execute([$key, $val]);
+    activate_donation_campaign($pdo, $slug);
+}
+
+// Switches which campaign fundraiser.html shows, without creating a new
+// one — lets a treasurer flip back to an earlier campaign if a new one was
+// started by mistake, or re-run a paused drive.
+function activate_donation_campaign(PDO $pdo, string $slug): void {
+    $pdo->prepare('UPDATE donation_campaigns SET is_active = (slug = ?)')->execute([$slug]);
+}
+
 function extract_youtube_id(string $url): ?string {
     $url = trim($url);
     if ($url === '') return null;

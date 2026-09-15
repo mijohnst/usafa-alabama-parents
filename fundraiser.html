@@ -324,7 +324,13 @@
   </footer>
 
   <script>
-    var CAMPAIGN = 'saber-fund-2027';
+    // Resolved from fundraiser-progress.php's response once loadProgress()
+    // first succeeds (see below) — no longer a hardcoded slug baked into
+    // this page, so a treasurer can start next year's campaign from
+    // admin/fundraiser.php alone and this same page automatically starts
+    // showing (and tagging donations with) whichever campaign is active,
+    // no code change needed here.
+    var CAMPAIGN = null;
 
     // ─── CAMPAIGN TEXT (year / deadline) ─────────────────────────────────────
     // Admin-editable via admin/fundraiser.php (site_settings, fetched below
@@ -383,10 +389,17 @@
 
     // ─── LIVE PROGRESS ──────────────────────────────────────────────────────
     function loadProgress() {
-      fetch('fundraiser-progress.php?campaign=' + encodeURIComponent(CAMPAIGN))
+      // No campaign param on first load (CAMPAIGN is still null) — the
+      // server resolves that to whichever campaign is currently active.
+      // Once resolved, reuse the exact same slug on every later refresh
+      // (goal-reached checks, post-donation reloads) so a campaign switch
+      // mid-visit can't retag an in-progress donation to the new one.
+      var url = 'fundraiser-progress.php' + (CAMPAIGN ? '?campaign=' + encodeURIComponent(CAMPAIGN) : '');
+      fetch(url)
         .then(function(r) { return r.json(); })
         .then(function(d) {
           if (!d.success) throw new Error(d.error || 'progress fetch failed');
+          CAMPAIGN = d.campaign;
           document.getElementById('progress-loading').style.display = 'none';
           document.getElementById('progress-content').style.display = 'block';
           document.getElementById('progress-raised').textContent = '$' + d.raisedTotal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
@@ -610,6 +623,19 @@
               statusEl.className = 'error';
               statusEl.style.display = 'block';
               return Promise.reject(new Error('No email entered'));
+            }
+            // CAMPAIGN resolves from the progress fetch (see loadProgress
+            // above), which fires on page load — this should never actually
+            // be empty by the time someone can click the PayPal button
+            // (which itself waits on the slower SDK load), but if it
+            // somehow is, sending campaign: null would silently record the
+            // gift as a general, untagged donation instead of toward this
+            // fundraiser.
+            if (!CAMPAIGN) {
+              statusEl.textContent = 'Still loading this campaign — please wait a moment and try again.';
+              statusEl.className = 'error';
+              statusEl.style.display = 'block';
+              return Promise.reject(new Error('Campaign not resolved yet'));
             }
 
             return fetch('donate-create-order.php', {
