@@ -97,7 +97,7 @@ if ($claim->rowCount() !== 1) {
     $status = $track['status'] ?? '';
     if ($status === 'captured') {
         echo json_encode(['success' => true, 'amount' => number_format((float)$track['amount'], 2), 'captureId' => $track['paypal_capture_id'] ?? null]);
-    } elseif ($status === 'amount_mismatch' || $status === 'capture_ok_apply_failed') {
+    } elseif (in_array($status, ['amount_mismatch', 'capture_ok_apply_failed', 'needs_manual_review'], true)) {
         echo json_encode(['success' => false, 'manualReview' => true, 'error' => "PayPal received this payment, but we couldn't automatically record it. The treasurer has been notified and will follow up — please don't submit payment again."]);
     } else {
         echo json_encode(['success' => false, 'error' => 'This donation is already being processed. Please wait a moment before trying again.']);
@@ -125,6 +125,17 @@ if ($result['success']) {
     $recover = paypal_get_order($order_id);
     if (!$recover['success']) {
         error_log('donate-capture-order: recovery failed for order ' . $order_id . ': ' . $recover['error']);
+        // PayPal told us this order was already captured, but we couldn't
+        // confirm the details — unlike an ordinary failure below, we do
+        // NOT know money didn't move, so this must not be left claimable
+        // by a retry (that could risk a second real charge) nor silently
+        // stuck at 'processing' forever. Flag for a human to check PayPal
+        // directly instead.
+        $pdo->prepare("UPDATE paypal_donations SET status = 'needs_manual_review' WHERE id = ?")->execute([$track['id']]);
+        notify_treasurer_donation_issue(
+            "{$capture_note_prefix}ACTION NEEDED: PayPal donation status unconfirmed after retry",
+            "Order $order_id from {$track['donor_email']} (\${$track['amount']}) — PayPal reported this order was already captured, but we could not retrieve the capture details ({$recover['error']}). Please check the PayPal dashboard directly for order $order_id and reconcile manually in the Income Ledger if it succeeded."
+        );
         http_response_code(502);
         echo json_encode(['success' => false, 'error' => 'We could not confirm your donation status. Please contact treasurer@alabamafalcons.org with your PayPal receipt.']);
         exit();
@@ -134,6 +145,12 @@ if ($result['success']) {
     $funding_source = $recover['funding_source'];
 } else {
     error_log('donate-capture-order: capture failed for order ' . $order_id . ': ' . $result['error']);
+    // PayPal never captured anything here (unlike the already_captured
+    // branch above), so it's safe to release the claim taken earlier —
+    // without this, the row stays stuck at 'processing' forever and every
+    // retry falls into the "already being processed" recheck above,
+    // permanently blocking a payer who just had an ordinary declined card.
+    $pdo->prepare("UPDATE paypal_donations SET status = 'created' WHERE id = ? AND status = 'processing'")->execute([$track['id']]);
     echo json_encode(['success' => false, 'error' => 'Your donation could not be completed — no charge was made. Please try again, or email treasurer@alabamafalcons.org to give by Zelle or check instead.']);
     exit();
 }

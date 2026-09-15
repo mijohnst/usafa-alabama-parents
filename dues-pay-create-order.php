@@ -68,7 +68,7 @@ if (!$row) {
 
 $cadet_years  = cadet_dues_years($row['class_year'] ?? '');
 $paid_years   = parse_dues_years($row['membership_paid_years']);
-$requested_in = array_map('strval', (array)($payload['years'] ?? []));
+$requested_in = array_unique(array_map('strval', (array)($payload['years'] ?? [])));
 $requested    = array_values(array_diff(array_intersect($requested_in, $cadet_years), $paid_years));
 
 if (!$requested) {

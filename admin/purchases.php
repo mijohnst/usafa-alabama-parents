@@ -289,11 +289,15 @@ admin_header('Finance');
           <?php endif; ?>
           <?php
             $own_purchase = (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0);
-            // Paid means money has actually moved — never deletable, by
-            // anyone, regardless of role. Deleting a paid record would
-            // erase the only trace of a real transaction; corrections
-            // belong in Edit/notes instead.
-            if ($p['status'] !== 'paid' && (is_treasurer() || is_super_admin() || ((is_member()||is_secretary()) && $own_purchase))): ?>
+            // Mirrors purchase-delete.php's actual server-side rule exactly
+            // (a member/secretary may only delete their own still-pending
+            // purchase — once it's approved or submitted, only the
+            // treasurer can) — this used to show the button for approved/
+            // submitted purchases too, which the server then always
+            // rejected. Paid means money has actually moved — never
+            // deletable, by anyone, regardless of role; corrections belong
+            // in Edit/notes instead.
+            if ($p['status'] !== 'paid' && (is_treasurer() || is_super_admin() || ((is_member()||is_secretary()) && $own_purchase && $p['status'] === 'pending'))): ?>
           <form method="POST" action="purchase-delete.php" onsubmit="return confirm('Delete this purchase? This cannot be undone.')">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">

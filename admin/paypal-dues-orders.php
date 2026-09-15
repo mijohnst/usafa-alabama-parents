@@ -104,7 +104,7 @@ function pdo_display_status(?string $status, ?string $created_at, string $type):
     $status = $status ?? '';
     if ($type === 'donation') {
         if ($status === 'captured') return ['Paid', '#1b5e20'];
-        if ($status === 'amount_mismatch') return ['Needs Review', '#c62828'];
+        if (in_array($status, ['amount_mismatch', 'needs_manual_review', 'capture_ok_apply_failed'], true)) return ['Needs Review', '#c62828'];
     } elseif ($type === 'payout') {
         if ($status === 'SUCCESS') return ['Paid', '#1b5e20'];
         if (in_array($status, ['PENDING', 'SENDING', 'UNCLAIMED'], true)) return ['Pending', '#f57f17'];

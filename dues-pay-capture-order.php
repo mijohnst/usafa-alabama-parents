@@ -141,6 +141,17 @@ if ($result['success']) {
     $recover = paypal_get_order($order_id);
     if (!$recover['success']) {
         error_log('dues-pay-capture-order: recovery failed for order ' . $order_id . ': ' . $recover['error']);
+        // PayPal told us this order was already captured, but we couldn't
+        // confirm the details — unlike an ordinary failure below, we do
+        // NOT know money didn't move, so this must not be left claimable
+        // by a retry (that could risk a second real charge) nor silently
+        // stuck at 'processing' forever. Flag for a human to check PayPal
+        // directly instead.
+        $pdo->prepare("UPDATE paypal_dues_orders SET status = 'needs_manual_review' WHERE id = ?")->execute([$track['id']]);
+        notify_treasurer_capture_issue(
+            "{$capture_note_prefix}ACTION NEEDED: PayPal dues status unconfirmed after retry",
+            "Order $order_id for member #$member_id (\${$track['amount']}, years {$track['years']}) — PayPal reported this order was already captured, but we could not retrieve the capture details ({$recover['error']}). Please check the PayPal dashboard directly for order $order_id and reconcile manually if it succeeded."
+        );
         http_response_code(502);
         echo json_encode(['success' => false, 'error' => 'We could not confirm your payment status. Please contact treasurer@alabamafalcons.org with your PayPal receipt.']);
         exit();
@@ -150,6 +161,12 @@ if ($result['success']) {
     $funding_source = $recover['funding_source'];
 } else {
     error_log('dues-pay-capture-order: capture failed for order ' . $order_id . ': ' . $result['error']);
+    // PayPal never captured anything here (unlike the already_captured
+    // branch above), so it's safe to release the claim taken earlier —
+    // without this, the row stays stuck at 'processing' forever and every
+    // retry falls into the "already being processed" recheck above,
+    // permanently blocking a parent who just had an ordinary declined card.
+    $pdo->prepare("UPDATE paypal_dues_orders SET status = 'created' WHERE id = ? AND status = 'processing'")->execute([$track['id']]);
     echo json_encode(['success' => false, 'error' => 'Your payment could not be completed — no charge was made. Please try again, use the Zelle option below, or email treasurer@alabamafalcons.org.']);
     exit();
 }
