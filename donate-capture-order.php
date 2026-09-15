@@ -67,7 +67,7 @@ if (!$track) {
 // Idempotent no-op: this order was already fully captured by an earlier
 // call (e.g. a duplicate onApprove firing twice in the browser).
 if ($track['status'] === 'captured') {
-    echo json_encode(['success' => true, 'amount' => number_format((float)$track['amount'], 2)]);
+    echo json_encode(['success' => true, 'amount' => number_format((float)$track['amount'], 2), 'captureId' => $track['paypal_capture_id'] ?? null]);
     exit();
 }
 
@@ -96,7 +96,7 @@ if ($claim->rowCount() !== 1) {
     $track = $recheck->fetch(PDO::FETCH_ASSOC);
     $status = $track['status'] ?? '';
     if ($status === 'captured') {
-        echo json_encode(['success' => true, 'amount' => number_format((float)$track['amount'], 2)]);
+        echo json_encode(['success' => true, 'amount' => number_format((float)$track['amount'], 2), 'captureId' => $track['paypal_capture_id'] ?? null]);
     } elseif ($status === 'amount_mismatch' || $status === 'capture_ok_apply_failed') {
         echo json_encode(['success' => false, 'manualReview' => true, 'error' => "PayPal received this payment, but we couldn't automatically record it. The treasurer has been notified and will follow up — please don't submit payment again."]);
     } else {
@@ -134,7 +134,7 @@ if ($result['success']) {
     $funding_source = $recover['funding_source'];
 } else {
     error_log('donate-capture-order: capture failed for order ' . $order_id . ': ' . $result['error']);
-    echo json_encode(['success' => false, 'error' => 'Your donation could not be completed. Please try again.']);
+    echo json_encode(['success' => false, 'error' => 'Your donation could not be completed — no charge was made. Please try again, or email treasurer@alabamafalcons.org to give by Zelle or check instead.']);
     exit();
 }
 
@@ -240,7 +240,7 @@ try {
 }
 
 if ($applied_ok) {
-    echo json_encode(['success' => true, 'amount' => number_format((float)$track['amount'], 2)]);
+    echo json_encode(['success' => true, 'amount' => number_format((float)$track['amount'], 2), 'captureId' => $capture_id]);
 } else {
     echo json_encode([
         'success'      => false,

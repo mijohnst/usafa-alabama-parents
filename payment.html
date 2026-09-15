@@ -463,7 +463,7 @@
         <h4>Pay Dues Online</h4>
       </div>
       <div class="box-content">
-        <p>Look up your cadet below to pay online instantly by card, PayPal balance, or Venmo &mdash; no need to email a receipt, your membership updates automatically.</p>
+        <p>Look up your cadet below to pay online instantly with PayPal, a debit/credit card, or (where available on your device) Venmo or Apple Pay &mdash; no need to email a receipt, your membership updates automatically.</p>
 
         <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
           <label for="duesWebsite">Leave this field empty</label>
@@ -605,7 +605,7 @@
         Beyond membership dues, we welcome donations of any amount. Your generosity directly supports our cadets and families throughout their Academy journey.
       </p>
       <p style="color: var(--navy); margin-bottom: 1.5rem; font-size: 0.95rem; font-weight: 600;">
-        Donate securely below with PayPal — card, PayPal balance, or Venmo all work, and you'll get an emailed receipt automatically.
+        Donate securely below with PayPal, a debit/credit card, or (where available on your device) Venmo or Apple Pay — you'll get an emailed receipt automatically.
       </p>
 
       <div id="donateFormWrap" style="max-width: 480px; margin: 0 auto;">
@@ -903,6 +903,15 @@
           },
           onApprove: function(data) {
             var statusEl = document.getElementById('duesPayStatus');
+            // PayPal has already approved the payment at this point — this
+            // fetch is just our own server confirming/recording it, but a
+            // visitor has no way to know that distinction. Closing the tab
+            // mid-request wouldn't undo the charge, just risk missing the
+            // confirmation, so say so explicitly rather than leaving the
+            // screen looking idle.
+            statusEl.textContent = 'Finishing up — please don’t close this window…';
+            statusEl.className = '';
+            statusEl.style.display = 'block';
             return fetch('dues-pay-capture-order.php', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -910,7 +919,8 @@
             }).then(function(r) { return r.json(); }).then(function(result) {
               if (result.success) {
                 document.getElementById('duesYearsBody').innerHTML =
-                  '<p style="color:#2e7d32;font-weight:600">Payment received — thank you! Your membership has been updated for ' + (result.years || []).join(', ') + '.</p>';
+                  '<p style="color:#2e7d32;font-weight:600">Payment received — thank you! Your membership has been updated for ' + (result.years || []).join(', ') + '.</p>' +
+                  (result.captureId ? '<p style="color:var(--gray);font-size:.78rem;margin-top:.35rem">PayPal reference: ' + result.captureId + '</p>' : '');
               } else if (result.manualReview) {
                 // Distinct from both success and failure: PayPal did take
                 // the money, but it couldn't be applied automatically. Must
@@ -991,6 +1001,15 @@
           },
           onApprove: function(data) {
             var statusEl = document.getElementById('donateStatus');
+            // PayPal has already approved the payment at this point — this
+            // fetch is just our own server confirming/recording it, but a
+            // visitor has no way to know that distinction. Closing the tab
+            // mid-request wouldn't undo the charge, just risk missing the
+            // confirmation, so say so explicitly rather than leaving the
+            // screen looking idle.
+            statusEl.textContent = 'Finishing up — please don’t close this window…';
+            statusEl.className = '';
+            statusEl.style.display = 'block';
             return fetch('donate-capture-order.php', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1006,7 +1025,8 @@
                 // it could no longer find the element it was tearing down.
                 document.getElementById('donateFormFields').style.display = 'none';
                 var thankYou = document.getElementById('donateThankYou');
-                thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + '! A receipt has been sent to your email.</p>';
+                thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + '! A receipt has been sent to your email.</p>' +
+                  (result.captureId ? '<p style="color:var(--gray);font-size:.78rem;margin-top:.35rem">PayPal reference: ' + result.captureId + '</p>' : '');
                 thankYou.style.display = 'block';
               } else if (result.manualReview) {
                 // Distinct from both success and failure: PayPal did take

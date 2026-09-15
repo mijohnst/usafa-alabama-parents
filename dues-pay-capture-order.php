@@ -83,7 +83,7 @@ if (!$track) {
 // Idempotent no-op: this order was already fully applied by an earlier
 // call (e.g. a duplicate onApprove firing twice in the browser).
 if ($track['status'] === 'applied') {
-    echo json_encode(['success' => true, 'years' => explode(',', $track['years'])]);
+    echo json_encode(['success' => true, 'years' => explode(',', $track['years']), 'captureId' => $track['paypal_capture_id'] ?? null]);
     exit();
 }
 
@@ -112,7 +112,7 @@ if ($claim->rowCount() !== 1) {
     $track = $recheck->fetch(PDO::FETCH_ASSOC);
     $status = $track['status'] ?? '';
     if ($status === 'applied') {
-        echo json_encode(['success' => true, 'years' => explode(',', $track['years'])]);
+        echo json_encode(['success' => true, 'years' => explode(',', $track['years']), 'captureId' => $track['paypal_capture_id'] ?? null]);
     } elseif (in_array($status, ['amount_mismatch', 'capture_ok_apply_failed', 'needs_manual_review'], true)) {
         echo json_encode(['success' => false, 'manualReview' => true, 'error' => "PayPal received this payment, but we couldn't automatically apply it. The treasurer has been notified and will follow up — please don't submit payment again."]);
     } else {
@@ -150,7 +150,7 @@ if ($result['success']) {
     $funding_source = $recover['funding_source'];
 } else {
     error_log('dues-pay-capture-order: capture failed for order ' . $order_id . ': ' . $result['error']);
-    echo json_encode(['success' => false, 'error' => 'Your payment could not be completed. Please try again, or use another payment method.']);
+    echo json_encode(['success' => false, 'error' => 'Your payment could not be completed — no charge was made. Please try again, use the Zelle option below, or email treasurer@alabamafalcons.org.']);
     exit();
 }
 
@@ -196,7 +196,7 @@ if (!$still_needed) {
         "{$capture_note_prefix}PayPal dues payment needs manual review",
         "Order $order_id / capture $capture_id for member #$member_id (\${$track['amount']}) captured successfully, but years {$track['years']} were already marked paid by the time we went to apply it. Please confirm this isn't a double payment and reconcile in the Income Ledger."
     );
-    echo json_encode(['success' => true, 'years' => $order_years]);
+    echo json_encode(['success' => true, 'years' => $order_years, 'captureId' => $capture_id]);
     exit();
 }
 
@@ -260,7 +260,7 @@ try {
 $_SESSION['dues_verified'][$token]['pending_order'] = null;
 
 if ($applied_ok) {
-    echo json_encode(['success' => true, 'years' => $order_years]);
+    echo json_encode(['success' => true, 'years' => $order_years, 'captureId' => $capture_id]);
 } else {
     // The old response claimed success (and listed years as paid) even
     // when both attempts above failed — membership was never actually

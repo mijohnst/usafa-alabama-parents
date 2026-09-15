@@ -636,6 +636,15 @@
           },
           onApprove: function(data) {
             var statusEl = document.getElementById('donateStatus');
+            // PayPal has already approved the payment at this point — this
+            // fetch is just our own server confirming/recording it, but a
+            // visitor has no way to know that distinction. Closing the tab
+            // mid-request wouldn't undo the charge, just risk missing the
+            // confirmation, so say so explicitly rather than leaving the
+            // screen looking idle.
+            statusEl.textContent = 'Finishing up — please don’t close this window…';
+            statusEl.className = '';
+            statusEl.style.display = 'block';
             return fetch('donate-capture-order.php', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -651,7 +660,8 @@
                 // it could no longer find the element it was tearing down.
                 document.getElementById('donateFormFields').style.display = 'none';
                 var thankYou = document.getElementById('donateThankYou');
-                thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + ' toward the ' + campaignLabel() + '! A receipt has been sent to your email.</p>';
+                thankYou.innerHTML = '<p style="color:#2e7d32;font-weight:600">Thank you for your donation of $' + result.amount + ' toward the ' + campaignLabel() + '! A receipt has been sent to your email.</p>' +
+                  (result.captureId ? '<p style="color:var(--gray);font-size:.78rem;margin-top:.35rem">PayPal reference: ' + result.captureId + '</p>' : '');
                 thankYou.style.display = 'block';
                 loadProgress();
               } else if (result.manualReview) {
