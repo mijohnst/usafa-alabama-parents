@@ -307,6 +307,15 @@ if (can_manage_members() || is_treasurer()) {
     try { $vcount = (int)get_pdo()->query('SELECT COUNT(*) FROM vault_documents')->fetchColumn(); } catch(Exception $e) { $vcount = 0; }
     $sections['Site Management'][] = ['icon'=>'🔒','label'=>'Document Vault','sub'=>$vcount>0?"$vcount document".($vcount>1?'s':''):'Secure file storage','href'=>'vault.php','color'=>'#37474f'];
 }
+
+if (can_manage_store()) {
+    try {
+        $store_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM store_orders WHERE status='captured' AND fulfillment_status='pending'")->fetchColumn();
+    } catch (Exception $e) { $store_pending = 0; }
+    $sections['Site Management'][] = ['icon'=>'🛍️','label'=>'Manage Products','sub'=>'Club Store catalog & photos','href'=>'store-products.php','color'=>'#00695c'];
+    $sections['Site Management'][] = ['icon'=>'📦','label'=>'Order Ledger','sub'=>$store_pending>0?"$store_pending awaiting pickup":'All orders fulfilled','href'=>'store-orders.php','color'=>$store_pending>0?'#f57c00':'#1b5e20','badge'=>$store_pending>0?$store_pending:0];
+    $sections['Site Management'][] = ['icon'=>'🏭','label'=>'Vendor Export','sub'=>'Quantities to order by product','href'=>'store-orders.php?mode=vendor','color'=>'#1565c0'];
+}
 $sections['For You'][] = ['icon'=>'👤','label'=>'My Profile','sub'=>'Photo & password','href'=>'change-password.php','color'=>'#546e7a'];
 $sections['Site Management'][] = ['icon'=>'📚','label'=>'Staff Guide','sub'=>'Portal orientation','href'=>'staff-guide.php','color'=>'#002554'];
 
@@ -489,15 +498,6 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
   <a href="income.php" class="btn btn-secondary btn-sm">📥 Income Ledger</a>
   <a href="vendor-summary.php" class="btn btn-secondary btn-sm">🏭 Vendor Summary</a>
   <a href="year-compare.php" class="btn btn-secondary btn-sm">📈 Year Compare</a>
-</div>
-<?php endif; ?>
-
-<?php if (can_manage_store()): ?>
-<p style="font-size:.72rem;font-weight:700;color:#5a6a7a;text-transform:uppercase;letter-spacing:.08em;margin:1.25rem 0 .6rem">Club Store</p>
-<div style="display:flex;gap:.6rem;flex-wrap:wrap">
-  <a href="store-products.php" class="btn btn-secondary btn-sm">🛍️ Manage Products</a>
-  <a href="store-orders.php" class="btn btn-secondary btn-sm">📦 Order Ledger</a>
-  <a href="store-orders.php?mode=vendor" class="btn btn-secondary btn-sm">🏭 Vendor Export</a>
 </div>
 <?php endif; ?>
 
