@@ -52,10 +52,10 @@ arsort($by_income_type); arsort($by_payment_method);
 $campaigns = [];
 foreach (donation_campaigns($pdo) as $slug => $fallback_label) {
     $cstmt = $pdo->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?, ?)");
-    $cstmt->execute(["fundraiser_{$slug}_goal", "fundraiser_{$slug}_offline_raised", "fundraiser_{$slug}_deadline"]);
+    $cstmt->execute(["fundraiser_{$slug}_year", "fundraiser_{$slug}_offline_raised", "fundraiser_{$slug}_deadline"]);
     $vals = [];
     foreach ($cstmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
-    if (!isset($vals["fundraiser_{$slug}_goal"])) continue; // campaign not migrated/configured — skip rather than show a bare $0 card
+    if (!isset($vals["fundraiser_{$slug}_year"])) continue; // campaign not migrated/configured — skip rather than show a bare $0 card
 
     $ostmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM paypal_donations WHERE campaign = ? AND status = 'captured'");
     $ostmt->execute([$slug]);
@@ -70,7 +70,10 @@ foreach (donation_campaigns($pdo) as $slug => $fallback_label) {
         // funding_source column not migrated yet — breakdown just stays empty.
     }
 
-    $goal    = (float)$vals["fundraiser_{$slug}_goal"];
+    // Goal is never stored — always live paid-cadet-count × per-saber price,
+    // same as admin/fundraiser.php and fundraiser-progress.php, so this
+    // report can never show a stale target.
+    $goal    = campaign_paid_cadet_count($pdo, $vals["fundraiser_{$slug}_year"]) * SABER_PRICE;
     $offline = (float)($vals["fundraiser_{$slug}_offline_raised"] ?? 0);
     $campaigns[] = [
         'label'    => saber_fund_label($pdo, $slug, $fallback_label),

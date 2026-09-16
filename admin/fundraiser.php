@@ -33,12 +33,10 @@ if (!isset($campaigns[$campaign])) {
     $campaign = $active_slug ?? array_key_first($campaigns) ?? '';
 }
 
-$goal_key     = "fundraiser_{$campaign}_goal";
-$cadet_key    = "fundraiser_{$campaign}_cadet_count";
 $offline_key  = "fundraiser_{$campaign}_offline_raised";
 $year_key     = "fundraiser_{$campaign}_year";
 $deadline_key = "fundraiser_{$campaign}_deadline";
-$all_keys     = $campaign !== '' ? [$goal_key, $cadet_key, $offline_key, $year_key, $deadline_key] : [];
+$all_keys     = $campaign !== '' ? [$offline_key, $year_key, $deadline_key] : [];
 
 $post_action = trim($_POST['action'] ?? 'save');
 
@@ -58,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'crea
     csrf_verify();
     $new_slug_raw  = trim($_POST['new_slug'] ?? '');
     $new_label_raw = trim($_POST['new_label'] ?? '');
-    $new_cadet_raw = trim($_POST['new_cadet_count'] ?? '');
     $new_year_raw  = trim($_POST['new_year'] ?? '');
     $new_deadline_raw = trim($_POST['new_deadline'] ?? '');
 
@@ -66,7 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'crea
     if (!preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $new_slug_raw)) $errors[] = 'Campaign ID must be lowercase letters, numbers, and hyphens only (e.g. saber-fund-2028).';
     elseif (isset($campaigns[$new_slug_raw]))                     $errors[] = 'That campaign ID already exists — pick a different one.';
     if ($new_label_raw === '')                                     $errors[] = 'Campaign name cannot be blank.';
-    if (!ctype_digit($new_cadet_raw) || (int)$new_cadet_raw <= 0)  $errors[] = 'Number of cadets must be a whole number greater than 0.';
     if ($new_year_raw === '')                                      $errors[] = 'Target class year cannot be blank.';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $new_deadline_raw))   $errors[] = 'Deadline must be a valid date.';
 
@@ -75,28 +71,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'crea
         header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
     }
 
-    create_donation_campaign(
-        $pdo,
-        $new_slug_raw,
-        $new_label_raw,
-        (int)$new_cadet_raw,
-        (int)$new_cadet_raw * SABER_PRICE,
-        $new_year_raw,
-        $new_deadline_raw
-    );
+    create_donation_campaign($pdo, $new_slug_raw, $new_label_raw, $new_year_raw, $new_deadline_raw);
     flash('success', 'Started "' . h($new_label_raw) . '" and made it active — fundraiser.html now shows this campaign.');
     header('Location: fundraiser.php?campaign=' . urlencode($new_slug_raw)); exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'save') {
     csrf_verify();
-    $cadet_raw    = trim($_POST['cadet_count'] ?? '');
     $offline_raw  = trim($_POST['offline_raised'] ?? '');
     $year_raw     = trim($_POST['year'] ?? '');
     $deadline_raw = trim($_POST['deadline'] ?? '');
 
     $errors = [];
-    if (!ctype_digit($cadet_raw) || (int)$cadet_raw <= 0)          $errors[] = 'Number of cadets must be a whole number greater than 0.';
     if (!is_numeric($offline_raw) || (float)$offline_raw < 0)     $errors[] = 'Offline total must be a number of $0 or more.';
     if ($year_raw === '')                                          $errors[] = 'Target class year cannot be blank.';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $deadline_raw))       $errors[] = 'Deadline must be a valid date.';
@@ -106,16 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'save
         header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
     }
 
-    // Goal is derived from cadet count × the per-saber price, not entered
-    // directly — the dollar goal is a consequence of how many cadets need
-    // one, and letting the two drift independently is how you'd end up
-    // with a goal that no longer matches "$500 x N cadets" on the public page.
-    $cadet_count_new = (int)$cadet_raw;
-    $goal_computed    = $cadet_count_new * SABER_PRICE;
-
     $updates = [
-        $goal_key     => number_format($goal_computed, 2, '.', ''),
-        $cadet_key    => (string)$cadet_count_new,
         $offline_key  => number_format((float)$offline_raw, 2, '.', ''),
         $year_key     => mb_substr($year_raw, 0, 20),
         $deadline_key => $deadline_raw,
@@ -148,14 +125,15 @@ if ($all_keys) {
     $stmt->execute($all_keys);
     foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
 }
-$goal     = (float)($vals[$goal_key] ?? 0);
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
 $deadline = $vals[$deadline_key] ?? '';
-// Falls back to deriving cadet count from the existing goal (the old
-// relationship) so this page still shows a sane number before
-// migrate_saber_fund_cadet_count.sql has been run, rather than "0 cadets".
-$cadet_count = isset($vals[$cadet_key]) ? (int)$vals[$cadet_key] : (int)round($goal / SABER_PRICE);
+// The one place this number comes from now — see campaign_paid_cadet_count()
+// in admin/lib.php. Not a stored setting, so it can never go stale: it's
+// exactly how many paid members' cadets are in this campaign's class year
+// right now, and the goal is always this times the per-saber price.
+$cadet_count = campaign_paid_cadet_count($pdo, $year);
+$goal = $cadet_count * SABER_PRICE;
 $settings_missing = $campaign !== '' && count($vals) < count($all_keys);
 $campaign_label = $campaign !== '' ? saber_fund_label($pdo, $campaign, $campaigns[$campaign]) : '';
 
@@ -263,8 +241,8 @@ echo show_flash();
 
 <?php if ($settings_missing): ?>
 <div class="alert alert-error">
-  Missing one or more <code>site_settings</code> rows for this campaign. Run <code>migrate_saber_fund.sql</code>,
-  <code>migrate_saber_fund_year.sql</code>, and <code>migrate_saber_fund_cadet_count.sql</code> in phpMyAdmin, then reload this page.
+  Missing one or more <code>site_settings</code> rows for this campaign. Run <code>migrate_saber_fund.sql</code> and
+  <code>migrate_saber_fund_year.sql</code> in phpMyAdmin, then reload this page.
 </div>
 <?php endif; ?>
 
@@ -282,6 +260,10 @@ echo show_flash();
     <div><strong style="color:#003594;font-size:1.1rem;display:block">$<?= number_format($offline, 2) ?></strong>Offline (checks/Zelle/cash)</div>
     <div><strong style="color:#003594;font-size:1.1rem;display:block"><?= $pct ?>%</strong>Funded</div>
   </div>
+  <div style="background:#f7f9fc;border-radius:6px;padding:.85rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:#5a6a7a">
+    <strong style="color:#003594"><?= $cadet_count ?> paid cadet<?= $cadet_count === 1 ? '' : 's' ?></strong> in the Class of <?= h($year ?: '—') ?> &times; $<?= number_format(SABER_PRICE, 0) ?>/saber = <strong style="color:#003594">$<?= number_format($goal, 2) ?> goal</strong>
+    <br>Counted automatically from paid members — no manual entry, updates as families pay dues.
+  </div>
 
   <?php if ($can_edit): ?>
   <form method="POST">
@@ -289,33 +271,22 @@ echo show_flash();
     <input type="hidden" name="action" value="save">
     <div class="form-row col-2">
       <div class="form-group">
-        <label>Number of Cadets</label>
-        <input type="number" step="1" min="1" name="cadet_count" id="cadetCountInput" value="<?= h($cadet_count) ?>">
-        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Goal = cadets &times; $<?= number_format(SABER_PRICE,0) ?>/saber = <strong id="cadetCountGoalPreview">$<?= number_format($cadet_count * SABER_PRICE, 2) ?></strong></p>
-      </div>
-      <div class="form-group">
         <label>Offline Total Raised ($)</label>
         <input type="number" step="0.01" min="0" name="offline_raised" value="<?= h(number_format($offline, 2, '.', '')) ?>">
       </div>
-    </div>
-    <p style="font-size:.72rem;color:#9aa5b4;margin:-.5rem 0 1rem">Update "Offline Total Raised" whenever a check, Zelle, or cash gift comes in — enter the new running total, not just the latest gift. If a cadet drops out of the program, lower "Number of Cadets" here and the goal recalculates automatically — no need to compute the new dollar total yourself.</p>
-    <script>
-      document.getElementById('cadetCountInput').addEventListener('input', function() {
-        var n = parseInt(this.value, 10) || 0;
-        document.getElementById('cadetCountGoalPreview').textContent = '$' + (n * <?= (int)SABER_PRICE ?>).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-      });
-    </script>
-    <div class="form-row col-2">
       <div class="form-group">
         <label>Target Class Year</label>
         <input type="text" name="year" value="<?= h($year) ?>" placeholder="2027">
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Must match cadets' Graduation Year on file exactly — this is what the paid-cadet count above is based on.</p>
       </div>
+    </div>
+    <div class="form-row col-2">
       <div class="form-group">
         <label>Deadline</label>
         <input type="date" name="deadline" value="<?= h($deadline) ?>">
       </div>
     </div>
-    <p style="font-size:.72rem;color:#9aa5b4;margin:-.5rem 0 1rem">These feed the public fundraiser page's headline, story text, and countdown automatically — reuse this same page next year by updating them here instead of asking for a code change. The browser-tab title and social-share preview text are separate and still static — those would need a one-off edit to fully match.</p>
+    <p style="font-size:.72rem;color:#9aa5b4;margin:-.5rem 0 1rem">Update "Offline Total Raised" whenever a check, Zelle, or cash gift comes in — enter the new running total, not just the latest gift. These feed the public fundraiser page's headline, story text, and countdown automatically. The browser-tab title and social-share preview text are separate and still static — those would need a one-off edit to fully match.</p>
     <button type="submit" class="btn btn-primary">Save Campaign Settings</button>
   </form>
   <?php else: ?>
@@ -394,25 +365,15 @@ echo show_flash();
     </div>
     <div class="form-row col-2">
       <div class="form-group">
-        <label>Number of Cadets</label>
-        <input type="number" step="1" min="1" name="new_cadet_count" id="newCadetCountInput" placeholder="20">
-        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Goal = cadets &times; $<?= number_format(SABER_PRICE,0) ?>/saber = <strong id="newCadetCountGoalPreview">$0.00</strong></p>
-      </div>
-      <div class="form-group">
         <label>Target Class Year</label>
         <input type="text" name="new_year" value="<?= h($suggest_year) ?>" placeholder="2028">
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Must match cadets' Graduation Year on file exactly. Number of cadets/goal are counted automatically from paid members in this year — no need to enter them.</p>
+      </div>
+      <div class="form-group">
+        <label>Deadline</label>
+        <input type="date" name="new_deadline">
       </div>
     </div>
-    <div class="form-group">
-      <label>Deadline</label>
-      <input type="date" name="new_deadline">
-    </div>
-    <script>
-      document.getElementById('newCadetCountInput').addEventListener('input', function() {
-        var n = parseInt(this.value, 10) || 0;
-        document.getElementById('newCadetCountGoalPreview').textContent = '$' + (n * <?= (int)SABER_PRICE ?>).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-      });
-    </script>
     <button type="submit" class="btn btn-primary" onclick="return confirm('Start this new campaign and make it the one fundraiser.html shows publicly?')">Start Campaign &amp; Make It Active</button>
   </form>
 </div>

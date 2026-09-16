@@ -48,11 +48,10 @@ list($raised_online, $donor_count) = $stmt->fetch(PDO::FETCH_NUM);
 $raised_online = (float)$raised_online;
 $donor_count   = (int)$donor_count;
 
-$goal_key     = "fundraiser_{$campaign}_goal";
 $offline_key  = "fundraiser_{$campaign}_offline_raised";
 $year_key     = "fundraiser_{$campaign}_year";
 $deadline_key = "fundraiser_{$campaign}_deadline";
-$all_keys     = [$goal_key, $offline_key, $year_key, $deadline_key];
+$all_keys     = [$offline_key, $year_key, $deadline_key];
 $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (' . implode(',', array_fill(0, count($all_keys), '?')) . ')');
 $stmt->execute($all_keys);
 $vals = [];
@@ -62,10 +61,15 @@ foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value']
 // page displays directly, so they default to blank if not set yet (an
 // older campaign, or migrate_saber_fund_year.sql not run yet) rather than
 // erroring — fundraiser.html falls back to its own hardcoded copy in that case.
-$goal     = (float)($vals[$goal_key] ?? 0);
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
 $deadline = $vals[$deadline_key] ?? '';
+// Goal is never stored — it's always live paid-cadet-count × per-saber
+// price (see campaign_paid_cadet_count() in admin/lib.php), so it can never
+// go stale as more families pay dues through the year. fundraiser.html
+// itself derives its displayed cadet count back out of this same goal
+// (goal / SABER_PRICE), so nothing else needs to change there.
+$goal = campaign_paid_cadet_count($pdo, $year) * SABER_PRICE;
 
 $raised_total = $raised_online + $offline;
 

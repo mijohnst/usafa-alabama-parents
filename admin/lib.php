@@ -466,6 +466,20 @@ function generate_photo_thumbnail(string $source_path, string $dest_path, int $m
 // stale the moment someone updates the year for next year's cadets.
 // Falls back to $fallback if the setting is missing (migration not run
 // yet) or the row can't be read.
+// Live count of paid members' cadets in a given graduating class year — the
+// authoritative "how many sabers are we funding" figure for a Saber Fund
+// campaign, computed fresh every time rather than a manually-typed number
+// that would otherwise drift out of date as more families pay dues over
+// the course of the year. Same eligibility rule (archived=0,
+// membership_paid=1, matching class_year) as fundraiser-honorees.php's "in
+// honor of" cadet list, so the two always agree on who counts.
+function campaign_paid_cadet_count(PDO $pdo, string $classYear): int {
+    if ($classYear === '') return 0;
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM members WHERE archived = 0 AND membership_paid = 1 AND class_year = ?');
+    $stmt->execute([$classYear]);
+    return (int)$stmt->fetchColumn();
+}
+
 function saber_fund_label(PDO $pdo, string $slug, string $fallback): string {
     try {
         $stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
@@ -505,12 +519,14 @@ function active_campaign_slug(PDO $pdo): ?string {
 // and marks it active (atomically deactivating whatever was active before)
 // — this is what lets a treasurer start next year's Saber Fund drive
 // entirely from admin/fundraiser.php, with no code deploy or manual
-// migration the way the very first campaign needed.
-function create_donation_campaign(PDO $pdo, string $slug, string $label, int $cadetCount, float $goal, string $year, string $deadline): void {
+// migration the way the very first campaign needed. No cadet count/goal is
+// stored here — both are computed live from campaign_paid_cadet_count()
+// wherever they're needed (admin/fundraiser.php, fundraiser-progress.php,
+// admin/report.php), so the goal always tracks real paid membership
+// instead of a number typed in once and left to go stale.
+function create_donation_campaign(PDO $pdo, string $slug, string $label, string $year, string $deadline): void {
     $pdo->prepare('INSERT INTO donation_campaigns (slug, label, is_active) VALUES (?, ?, 0)')->execute([$slug, $label]);
     $settings = [
-        "fundraiser_{$slug}_goal"           => number_format($goal, 2, '.', ''),
-        "fundraiser_{$slug}_cadet_count"    => (string)$cadetCount,
         "fundraiser_{$slug}_offline_raised" => '0.00',
         "fundraiser_{$slug}_year"           => mb_substr($year, 0, 20),
         "fundraiser_{$slug}_deadline"       => $deadline,
