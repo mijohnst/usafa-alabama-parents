@@ -34,5 +34,6 @@ $items = is_array($payload['items'] ?? null) ? $payload['items'] : [];
 
 $pdo = get_pdo();
 $priced = store_price_cart($pdo, $items);
+$priced['shippingIfShipped'] = store_cart_shipping_total($priced['lines']);
 
 echo json_encode(array_merge(['success' => true], $priced));

@@ -105,9 +105,10 @@ if (empty($priced['lines']) || $priced['subtotal'] <= 0) {
     exit();
 }
 
-// Shipping is never trusted from the client — the flat rate is looked up
-// fresh here, same discipline as store_price_cart() for item prices.
-$shipping_amount = $fulfillment_method === 'ship' ? store_shipping_flat_rate($pdo) : 0.0;
+// Shipping is never trusted from the client — recomputed fresh here from
+// each item's own shipping_cost, same discipline as store_price_cart() for
+// item prices.
+$shipping_amount = $fulfillment_method === 'ship' ? store_cart_shipping_total($priced['lines']) : 0.0;
 $total = round($priced['subtotal'] + $shipping_amount, 2);
 
 // Sanity ceiling — a real order this large from the public store would be

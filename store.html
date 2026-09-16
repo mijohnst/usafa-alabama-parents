@@ -224,7 +224,7 @@
           <label>Fulfillment *</label>
           <div style="display:flex;gap:1.25rem;flex-wrap:wrap">
             <label style="font-weight:400;display:flex;align-items:center;gap:.4rem;text-transform:none"><input type="radio" name="fulfillmentMethod" value="pickup" id="fulfillPickup" checked style="width:auto"> Pickup (free)</label>
-            <label style="font-weight:400;display:flex;align-items:center;gap:.4rem;text-transform:none"><input type="radio" name="fulfillmentMethod" value="ship" id="fulfillShip" style="width:auto"> Ship to me (+$<span id="shipRateDisplay">6.00</span>)</label>
+            <label style="font-weight:400;display:flex;align-items:center;gap:.4rem;text-transform:none"><input type="radio" name="fulfillmentMethod" value="ship" id="fulfillShip" style="width:auto"> Ship to me (+$<span id="shipRateDisplay">…</span>)</label>
           </div>
         </div>
         <div id="shippingAddressFields" style="display:none">
@@ -290,14 +290,11 @@
 
     // ─── CATALOG ────────────────────────────────────────────────────────────
     var catalogProducts = [];
-    var shippingFlatRate = 0;
     fetch('store-catalog.php')
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (!d.success) throw new Error('catalog fetch failed');
         catalogProducts = d.products || [];
-        shippingFlatRate = Number(d.shippingFlatRate) || 0;
-        document.getElementById('shipRateDisplay').textContent = shippingFlatRate.toFixed(2);
         renderCatalog();
       })
       .catch(function() {
@@ -356,6 +353,13 @@
         priceEl.textContent = '$' + p.basePrice.toFixed(2);
         body.appendChild(priceEl);
 
+        if (p.shippingCost) {
+          var shipNoteEl = document.createElement('div');
+          shipNoteEl.style.cssText = 'font-size:.75rem;color:var(--gray)';
+          shipNoteEl.textContent = '+$' + p.shippingCost.toFixed(2) + ' to ship, per item';
+          body.appendChild(shipNoteEl);
+        }
+
         var controls = document.createElement('div');
         controls.className = 'product-controls';
 
@@ -403,6 +407,7 @@
     var checkoutDrawer = document.getElementById('checkoutDrawer');
     var lastPricedLines = [];
     var cartSubtotal = 0;
+    var cartShippingIfShipped = 0;
 
     function openCart() {
       renderCartDrawer();
@@ -500,6 +505,8 @@
           body.appendChild(row);
         });
         cartSubtotal = d.total;
+        cartShippingIfShipped = Number(d.shippingIfShipped) || 0;
+        document.getElementById('shipRateDisplay').textContent = cartShippingIfShipped.toFixed(2);
         document.getElementById('cartTotalAmount').textContent = '$' + d.total.toFixed(2);
         footer.style.display = d.lines.length ? 'block' : 'none';
         document.getElementById('showCheckoutBtn').disabled = d.hasInvalid || d.total <= 0;
@@ -514,7 +521,7 @@
       return document.getElementById('fulfillShip').checked;
     }
     function updateCheckoutTotal() {
-      var total = cartSubtotal + (isShipSelected() ? shippingFlatRate : 0);
+      var total = cartSubtotal + (isShipSelected() ? cartShippingIfShipped : 0);
       document.getElementById('checkoutTotalAmount').textContent = '$' + total.toFixed(2);
     }
     function openCheckout() {

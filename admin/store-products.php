@@ -31,18 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'save_shipping_rate') {
-        $rate = round((float)str_replace(',', '', $_POST['shipping_rate'] ?? '0'), 2);
-        if ($rate < 0 || $rate > 999.99) {
-            flash('error', 'Shipping rate must be zero or a positive amount.');
-        } else {
-            $pdo->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?')
-                ->execute([number_format($rate, 2, '.', ''), 'store_shipping_flat_rate']);
-            flash('success', 'Shipping rate updated.');
-        }
-        header('Location: store-products.php'); exit;
-
-    } elseif ($action === 'save') {
+    if ($action === 'save') {
         $id          = (int)($_POST['id'] ?? 0);
         $name        = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
@@ -50,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $base_price  = round((float)str_replace(',', '', $_POST['base_price'] ?? '0'), 2);
         $cost_raw    = trim($_POST['unit_cost'] ?? '');
         $unit_cost   = $cost_raw !== '' ? round((float)str_replace(',', '', $cost_raw), 2) : null;
+        $shipping_cost = round((float)str_replace(',', '', $_POST['shipping_cost'] ?? '0'), 2);
         $sale_ends_at = trim($_POST['sale_ends_at'] ?? '') ?: null;
         $is_active   = !empty($_POST['is_active']) ? 1 : 0;
 
@@ -57,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($name === '') $errors[] = 'Product name is required.';
         if ($base_price <= 0 || $base_price > 99999.99) $errors[] = 'Price must be a positive amount.';
         if ($unit_cost !== null && ($unit_cost < 0 || $unit_cost > 99999.99)) $errors[] = 'Cost to make must be zero or a positive amount.';
+        if ($shipping_cost < 0 || $shipping_cost > 999.99) $errors[] = 'Shipping cost must be zero or a positive amount.';
         if ($sale_ends_at !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $sale_ends_at)) $errors[] = 'Sale end date is invalid.';
         if (!in_array($category, STORE_CATEGORIES, true)) $category = '';
 
@@ -67,11 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($id) {
-            $pdo->prepare('UPDATE store_products SET name=?, description=?, category=?, base_price=?, unit_cost=?, sale_ends_at=?, is_active=? WHERE id=?')
-                ->execute([$name, $description, $category, $base_price, $unit_cost, $sale_ends_at, $is_active, $id]);
+            $pdo->prepare('UPDATE store_products SET name=?, description=?, category=?, base_price=?, unit_cost=?, shipping_cost=?, sale_ends_at=?, is_active=? WHERE id=?')
+                ->execute([$name, $description, $category, $base_price, $unit_cost, $shipping_cost, $sale_ends_at, $is_active, $id]);
         } else {
-            $pdo->prepare('INSERT INTO store_products (name, description, category, base_price, unit_cost, sale_ends_at, is_active, created_by) VALUES (?,?,?,?,?,?,?,?)')
-                ->execute([$name, $description, $category, $base_price, $unit_cost, $sale_ends_at, $is_active, $_SESSION['user_id'] ?? null]);
+            $pdo->prepare('INSERT INTO store_products (name, description, category, base_price, unit_cost, shipping_cost, sale_ends_at, is_active, created_by) VALUES (?,?,?,?,?,?,?,?,?)')
+                ->execute([$name, $description, $category, $base_price, $unit_cost, $shipping_cost, $sale_ends_at, $is_active, $_SESSION['user_id'] ?? null]);
             $id = (int)$pdo->lastInsertId();
         }
 
@@ -245,8 +236,6 @@ function store_field(?array $old, ?array $editing, string $key, string $default 
     return (string)($editing[$key] ?? $default);
 }
 
-$shipping_rate = store_shipping_flat_rate($pdo);
-
 admin_header('Club Store — Products');
 echo show_flash();
 ?>
@@ -271,20 +260,6 @@ echo show_flash();
     <a href="store-orders.php" class="btn btn-secondary">📦 Order Ledger</a>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
-</div>
-
-<div class="card" style="max-width:420px">
-  <h2 style="margin-bottom:.75rem;font-size:1rem">🚚 Shipping</h2>
-  <p style="font-size:.78rem;color:#9aa5b4;margin-bottom:.75rem">Flat rate added to an order when a customer chooses "Ship to me" at checkout instead of pickup. Pickup stays free.</p>
-  <form method="POST" style="display:flex;gap:.6rem;align-items:flex-end">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="save_shipping_rate">
-    <div class="form-group" style="margin:0">
-      <label style="font-size:.72rem">Flat Rate ($)</label>
-      <input type="number" name="shipping_rate" step="0.01" min="0" value="<?= h(number_format($shipping_rate, 2, '.', '')) ?>" style="width:110px">
-    </div>
-    <button type="submit" class="btn btn-secondary btn-sm">Save</button>
-  </form>
 </div>
 
 <?php if ($editing || $adding_new): ?>
@@ -313,7 +288,7 @@ echo show_flash();
       <label>Description</label>
       <textarea name="description" rows="3"><?= h(store_field($old_input, $editing, 'description')) ?></textarea>
     </div>
-    <div class="form-row col-4">
+    <div class="form-row col-3">
       <div class="form-group">
         <label>Base Price ($) <span style="color:#A6192E">*</span></label>
         <input type="number" name="base_price" step="0.01" min="0.01" required value="<?= h(store_field($old_input, $editing, 'base_price')) ?>">
@@ -324,6 +299,13 @@ echo show_flash();
         <input type="number" name="unit_cost" step="0.01" min="0" value="<?= h(store_field($old_input, $editing, 'unit_cost')) ?>">
         <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">What this costs the club, for margin reporting only — never shown to shoppers.</p>
       </div>
+      <div class="form-group">
+        <label>Shipping Cost ($) <span style="color:#A6192E">*</span></label>
+        <input type="number" name="shipping_cost" step="0.01" min="0" required value="<?= h(store_field($old_input, $editing, 'shipping_cost', '6.00')) ?>">
+        <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">What it costs to ship <strong>one</strong> of this item — charged per unit and summed across the cart when a customer chooses to ship.</p>
+      </div>
+    </div>
+    <div class="form-row col-2">
       <div class="form-group">
         <label>Sale Ends On (optional)</label>
         <input type="date" name="sale_ends_at" value="<?= h(store_field($old_input, $editing, 'sale_ends_at')) ?>">
@@ -427,7 +409,7 @@ echo show_flash();
 <div class="card" style="padding:0;overflow-x:auto">
 <table class="sp-table" style="width:100%;border-collapse:collapse">
   <thead>
-    <tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Status</th><th>Actions</th></tr>
+    <tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Ships</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Status</th><th>Actions</th></tr>
   </thead>
   <tbody>
     <?php foreach ($products as $p): ?>
@@ -444,6 +426,7 @@ echo show_flash();
       <td style="font-weight:600"><?= h($p['name']) ?></td>
       <td style="color:#5a6a7a"><?= h($p['category'] ?: '—') ?></td>
       <td>$<?= number_format((float)$p['base_price'], 2) ?></td>
+      <td style="color:#5a6a7a">$<?= number_format((float)$p['shipping_cost'], 2) ?></td>
       <td style="color:#5a6a7a"><?= $p['unit_cost'] !== null ? '$' . number_format((float)$p['unit_cost'], 2) : '—' ?></td>
       <td style="<?= $p['unit_cost'] !== null ? 'color:#1b5e20;font-weight:600' : 'color:#9aa5b4' ?>"><?= $p['unit_cost'] !== null ? '$' . number_format((float)$p['base_price'] - (float)$p['unit_cost'], 2) : '—' ?></td>
       <td style="color:#5a6a7a"><?= $vcount ?: '—' ?></td>
@@ -472,7 +455,7 @@ echo show_flash();
     </tr>
     <?php endforeach; ?>
     <?php if (empty($products)): ?>
-    <tr><td colspan="9" style="text-align:center;color:#9aa5b4;padding:1.5rem">No products yet — add one above.</td></tr>
+    <tr><td colspan="10" style="text-align:center;color:#9aa5b4;padding:1.5rem">No products yet — add one above.</td></tr>
     <?php endif; ?>
   </tbody>
 </table>

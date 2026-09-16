@@ -14,21 +14,22 @@
 
 const STORE_MAX_LINE_QTY   = 50;
 const STORE_MAX_CART_LINES = 30;
-const STORE_DEFAULT_SHIPPING_RATE = 6.00;
 
-// Site-wide flat shipping rate, editable by a store admin on
-// store-products.php (stored in site_settings like the fundraiser's
-// campaign-year settings). Falls back to a hardcoded default if the
-// migration hasn't run yet or the row is somehow missing — a checkout
-// should never hard-fail just because this one setting is absent.
-function store_shipping_flat_rate(PDO $pdo): float {
-    try {
-        $stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
-        $stmt->execute(['store_shipping_flat_rate']);
-        $val = $stmt->fetchColumn();
-        if ($val !== false && $val !== null && $val !== '') return round((float)$val, 2);
-    } catch (\PDOException $e) {}
-    return STORE_DEFAULT_SHIPPING_RATE;
+// Sums each valid line's own per-unit shipping_cost * qty — the actual
+// shipping charge when the customer picks "Ship" at checkout. Deliberately
+// a straight sum, not a single package/box guess: a 3-shirt order really
+// does cost more to ship than 1. Takes store_price_cart()'s output rather
+// than re-querying, so this and the pricing it's built from can never
+// drift out of sync — call it right after store_price_cart() wherever a
+// shipping total is needed (store-cart-price.php for display,
+// store-create-order.php for the actual charge).
+function store_cart_shipping_total(array $lines): float {
+    $total = 0.0;
+    foreach ($lines as $line) {
+        if (!$line['valid']) continue;
+        $total += (float)($line['shippingCost'] ?? 0) * (int)$line['qty'];
+    }
+    return round($total, 2);
 }
 
 // Admin-only bookkeeping figure — what this specific line actually cost the
@@ -57,8 +58,10 @@ function store_unit_cost(PDO $pdo, int $productId, ?int $variantId): ?float {
 
 // $items: array of ['productId'=>int, 'variantId'=>?int, 'qty'=>int].
 // Returns ['lines'=>[...], 'subtotal'=>float, 'total'=>float, 'hasInvalid'=>bool].
-// Each line: productId, variantId, name, variantLabel, unitPrice, qty,
-// lineTotal, valid (bool), reason (string, only set when !valid).
+// Each line: productId, variantId, name, variantLabel, unitPrice,
+// shippingCost (per unit — see store_cart_shipping_total() below to sum
+// across the cart), qty, lineTotal, valid (bool), reason (string, only set
+// when !valid).
 // Invalid lines (deleted/hidden product, missing required variant, bad
 // qty) are still returned — with valid=false and a human reason — rather
 // than silently dropped, so the cart page can show the shopper exactly
@@ -87,6 +90,7 @@ function store_price_cart(PDO $pdo, array $items): array {
             'name'         => null,
             'variantLabel' => null,
             'unitPrice'    => 0.0,
+            'shippingCost' => 0.0,
             'qty'          => $qty,
             'lineTotal'    => 0.0,
             'valid'        => false,
@@ -113,6 +117,7 @@ function store_price_cart(PDO $pdo, array $items): array {
             $lines[] = $line; $hasInvalid = true; continue;
         }
         $line['name'] = $product['name'];
+        $line['shippingCost'] = round((float)$product['shipping_cost'], 2);
 
         $active_variant_count_stmt->execute([$product_id]);
         $requires_variant = (int)$active_variant_count_stmt->fetchColumn() > 0;
