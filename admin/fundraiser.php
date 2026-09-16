@@ -166,17 +166,48 @@ if ($campaign !== '') {
     $stmt->execute([$campaign]);
     $raised_online = (float)$stmt->fetchColumn();
 
-    // donor_comment/show_name columns only exist after the comments migration
-    // runs — fall back to the pre-comment column list so this page still works
-    // against an un-migrated database rather than erroring outright.
+    // donor_comment/show_name/honoree_last_name columns only exist after
+    // their respective migrations run — fall back one column set at a time
+    // so this page still works against an un-migrated database rather than
+    // erroring outright.
     try {
-        $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at, donor_comment, show_name FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
+        $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at, donor_comment, show_name, honoree_last_name FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
         $stmt->execute([$campaign]);
         $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (\PDOException $e) {
-        $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
+        try {
+            $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at, donor_comment, show_name FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
+            $stmt->execute([$campaign]);
+            $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e2) {
+            $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
+            $stmt->execute([$campaign]);
+            $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+}
+
+// Grouped by honoree for handing each cadet a list of who gave in their
+// honor — separate from $recent above (which is capped at 25 and sorted by
+// date, the wrong shape for "everything for cadet X"). Always shows the
+// donor's real name here regardless of their public show-name preference:
+// that preference only controls the public donor wall on fundraiser.html,
+// not this internal, treasurer-only list.
+$by_honoree = [];
+if ($campaign !== '') {
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT honoree_last_name, donor_name, donor_email, amount, captured_at
+             FROM paypal_donations
+             WHERE campaign = ? AND status = 'captured' AND honoree_last_name IS NOT NULL AND honoree_last_name <> ''
+             ORDER BY honoree_last_name ASC, captured_at ASC"
+        );
         $stmt->execute([$campaign]);
-        $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $by_honoree[$row['honoree_last_name']][] = $row;
+        }
+    } catch (\PDOException $e) {
+        // honoree_last_name column doesn't exist yet — no honoree section, not an error.
     }
 }
 
@@ -298,7 +329,7 @@ echo show_flash();
     <p style="color:#9aa5b4;font-size:.85rem">No online donations captured for this campaign yet.</p>
   <?php else: ?>
   <table>
-    <thead><tr><th>Date</th><th>Donor</th><th>Amount</th><th>Public?</th><th>Comment</th></tr></thead>
+    <thead><tr><th>Date</th><th>Donor</th><th>Amount</th><th>Public?</th><th>In Honor Of</th><th>Comment</th></tr></thead>
     <tbody>
       <?php foreach ($recent as $r): ?>
       <tr>
@@ -306,11 +337,39 @@ echo show_flash();
         <td><?= h($r['donor_name'] ?: $r['donor_email']) ?></td>
         <td>$<?= number_format($r['amount'], 2) ?></td>
         <td><?= !array_key_exists('show_name', $r) ? '—' : ((int)$r['show_name'] === 0 ? 'Anonymous' : 'Shown') ?></td>
+        <td><?= h($r['honoree_last_name'] ?? '') ?: '—' ?></td>
         <td><?= h($r['donor_comment'] ?? '') ?></td>
       </tr>
       <?php endforeach; ?>
     </tbody>
   </table>
+  <?php endif; ?>
+</div>
+
+<div class="card" style="max-width:640px">
+  <h2 style="margin-bottom:.25rem">Donations by Cadet</h2>
+  <p style="font-size:.82rem;color:#9aa5b4;margin-bottom:1rem">Every gift given "in honor of" a specific cadet, grouped for handing that cadet their own list of who gave toward their saber. Real donor names are always shown here regardless of a donor's public "anonymous" choice — that setting only affects the public donor wall on the fundraiser page.</p>
+  <?php if (empty($by_honoree)): ?>
+    <p style="color:#9aa5b4;font-size:.85rem">No donations have been designated for a specific cadet yet.</p>
+  <?php else: ?>
+    <?php foreach ($by_honoree as $last_name => $gifts): ?>
+    <?php $subtotal = array_sum(array_column($gifts, 'amount')); ?>
+    <div style="margin-bottom:1.5rem">
+      <h3 style="font-size:.95rem;color:#003594;margin-bottom:.5rem">Cadet <?= h($last_name) ?> — <span style="color:#1b5e20">$<?= number_format($subtotal, 2) ?> total</span></h3>
+      <table>
+        <thead><tr><th>Date</th><th>Donor</th><th>Amount</th></tr></thead>
+        <tbody>
+          <?php foreach ($gifts as $g): ?>
+          <tr>
+            <td><?= h(date('M j, Y', strtotime($g['captured_at']))) ?></td>
+            <td><?= h($g['donor_name'] ?: $g['donor_email']) ?></td>
+            <td>$<?= number_format($g['amount'], 2) ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 <?php endif; ?>

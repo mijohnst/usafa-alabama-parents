@@ -94,6 +94,27 @@ $comment = mb_substr(strip_tags($comment), 0, 240);
 $comment = $comment !== '' ? $comment : null;
 $show_name = (array_key_exists('showName', $payload) && !$payload['showName']) ? 0 : 1;
 
+// Optional "in honor of" cadet tag — re-derived from the id server-side
+// (never trusted as free text) and re-validated against this campaign's
+// actual target class year + paid-member list, the same list
+// fundraiser-honorees.php offered, so a stale/tampered id can't attach an
+// arbitrary name to a donation. Snapshotted as plain text (not a member_id
+// FK) so this row is self-contained even if that member record is later
+// edited, renamed, or archived.
+$honoree_last_name = null;
+$honoree_id = (int)($payload['honoreeMemberId'] ?? 0);
+if ($honoree_id > 0 && $campaign !== null) {
+    $year_stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    $year_stmt->execute(["fundraiser_{$campaign}_year"]);
+    $target_year = trim((string)$year_stmt->fetchColumn());
+    if ($target_year !== '') {
+        $hstmt = $pdo->prepare('SELECT cadet_last_name FROM members WHERE id = ? AND archived = 0 AND membership_paid = 1 AND class_year = ?');
+        $hstmt->execute([$honoree_id, $target_year]);
+        $found = $hstmt->fetchColumn();
+        if ($found !== false && trim((string)$found) !== '') $honoree_last_name = trim((string)$found);
+    }
+}
+
 $reference_id = 'donation-' . bin2hex(random_bytes(6));
 $request_id   = 'create-' . bin2hex(random_bytes(16));
 
@@ -119,15 +140,22 @@ if (!$order['success']) {
 // lost for a donation caught mid-migration, never the donation itself.
 try {
     $pdo->prepare(
-        'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign, donor_comment, show_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    )->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign, $comment, $show_name]);
+        'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign, donor_comment, show_name, honoree_last_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    )->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign, $comment, $show_name, $honoree_last_name]);
 } catch (\PDOException $e) {
-    error_log('donate-create-order: donor_comment/show_name insert failed, falling back — ' . $e->getMessage());
-    $pdo->prepare(
-        'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign)
-         VALUES (?, ?, ?, ?, ?, ?)'
-    )->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign]);
+    error_log('donate-create-order: donor_comment/show_name/honoree_last_name insert failed, falling back — ' . $e->getMessage());
+    try {
+        $pdo->prepare(
+            'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign, donor_comment, show_name)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign, $comment, $show_name]);
+    } catch (\PDOException $e2) {
+        $pdo->prepare(
+            'INSERT INTO paypal_donations (donor_name, donor_email, paypal_order_id, amount, status, campaign)
+             VALUES (?, ?, ?, ?, ?, ?)'
+        )->execute([$donor_name ?: null, $donor_email, $order['order_id'], $amount, 'created', $campaign]);
+    }
 }
 
 echo json_encode(['success' => true, 'orderId' => $order['order_id']]);

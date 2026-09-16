@@ -88,8 +88,8 @@
     .quick-amt-btn:hover, .quick-amt-btn.active { border-color: var(--accent); background: #fdecef; }
     .form-group { margin-bottom: 1.1rem; text-align: left; }
     .form-group label { display: block; margin-bottom: .4rem; font-weight: 600; color: var(--navy); font-size: .9rem; }
-    .form-group input { width: 100%; padding: .75rem; border: 1px solid var(--silver2); border-radius: 4px; font-family: var(--font-body); color: var(--navy); font-size: .95rem; background: var(--white); }
-    .form-group input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 2px rgba(0,53,148,.15); }
+    .form-group input, .form-group select { width: 100%; padding: .75rem; border: 1px solid var(--silver2); border-radius: 4px; font-family: var(--font-body); color: var(--navy); font-size: .95rem; background: var(--white); }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 2px rgba(0,53,148,.15); }
     #donateStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; text-align: left; font-size: .88rem; }
     #donateStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
     #donateStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
@@ -289,6 +289,13 @@
                 <label for="donateComment">Leave a Short Message (optional)</label>
                 <input type="text" id="donateComment" maxlength="240" placeholder="Go Falcons! Proud of you, Class of 2027." />
               </div>
+              <div class="form-group" id="donateHonoreeGroup" style="display:none">
+                <label for="donateHonoree">In Honor of a Specific Cadet (optional)</label>
+                <select id="donateHonoree">
+                  <option value="">General Fund — no specific cadet</option>
+                </select>
+                <p style="font-size:.72rem;color:var(--gray);margin-top:.35rem">We keep a list of gifts given in each cadet's honor to share with them.</p>
+              </div>
               <div class="form-group" style="display:flex;align-items:center;gap:.5rem;text-align:left">
                 <input type="checkbox" id="donateAnonymous" style="width:auto">
                 <label for="donateAnonymous" style="margin:0;font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;color:var(--gray)">Donate anonymously (hide my name below — note a public message can still identify you)</label>
@@ -353,6 +360,34 @@
     // showing (and tagging donations with) whichever campaign is active,
     // no code change needed here.
     var CAMPAIGN = null;
+
+    // ─── IN HONOR OF (optional cadet dropdown) ───────────────────────────────
+    // Fetched once CAMPAIGN resolves below (loadProgress()'s success
+    // handler) rather than on a hardcoded slug, so this follows whichever
+    // campaign is actually active the same way everything else on this page
+    // does. Last-name-only options, per club policy — see
+    // fundraiser-honorees.php for why. The group stays hidden entirely if
+    // there are no paid members in this campaign's class year yet, rather
+    // than showing an empty, confusing dropdown.
+    var honoreesLoaded = false;
+    function loadHonorees() {
+      if (honoreesLoaded || !CAMPAIGN) return;
+      honoreesLoaded = true;
+      fetch('fundraiser-honorees.php?campaign=' + encodeURIComponent(CAMPAIGN))
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (!d.success || !d.options || !d.options.length) return;
+          var select = document.getElementById('donateHonoree');
+          d.options.forEach(function(opt) {
+            var el = document.createElement('option');
+            el.value = opt.id;
+            el.textContent = opt.lastName;
+            select.appendChild(el);
+          });
+          document.getElementById('donateHonoreeGroup').style.display = 'block';
+        })
+        .catch(function() { /* optional feature — fail silently */ });
+    }
 
     // ─── CAMPAIGN TEXT (year / deadline) ─────────────────────────────────────
     // Admin-editable via admin/fundraiser.php (site_settings, fetched below
@@ -422,6 +457,7 @@
         .then(function(d) {
           if (!d.success) throw new Error(d.error || 'progress fetch failed');
           CAMPAIGN = d.campaign;
+          loadHonorees();
           document.getElementById('progress-loading').style.display = 'none';
           document.getElementById('progress-content').style.display = 'block';
           document.getElementById('progress-raised').textContent = '$' + d.raisedTotal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
@@ -705,7 +741,8 @@
                 website: document.getElementById('donateWebsite').value,
                 campaign: CAMPAIGN,
                 comment: document.getElementById('donateComment').value.trim(),
-                showName: !document.getElementById('donateAnonymous').checked
+                showName: !document.getElementById('donateAnonymous').checked,
+                honoreeMemberId: document.getElementById('donateHonoree').value || null
               })
             }).then(function(r) { return r.json(); }).then(function(result) {
               if (!result.success) {
