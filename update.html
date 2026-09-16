@@ -52,9 +52,17 @@
     .cta-button:hover { background: linear-gradient(180deg, #2166cc 0%, #003080 100%); box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,.2); top: 2px; }
     .cta-button:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    #formStatus, #lookupStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; }
-    #formStatus.success, #lookupStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
-    #formStatus.error, #lookupStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
+    #formStatus, #lookupStatus, #duesPayStatus { margin: 1rem 0; padding: 1rem; border-radius: 4px; display: none; font-weight: 600; }
+    #formStatus.success, #lookupStatus.success, #duesPayStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
+    #formStatus.error, #lookupStatus.error, #duesPayStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
+
+    /* DUES / MEMBERSHIP STATUS */
+    .dues-years-list { text-align: left; margin: 1rem 0; }
+    .dues-years-list label { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.95rem; color: var(--navy); }
+    .dues-years-list label:hover { background: var(--light); }
+    .dues-years-list input { width: auto; }
+    .dues-years-total { font-weight: 700; color: var(--navy); font-size: 1.05rem; margin: 1rem 0; }
+    #duesPaypalButtons { max-width: 400px; margin: 1rem auto 0; }
 
     /* INFO BOX */
     .info-box { background: var(--light); border-left: 4px solid var(--blue); border-radius: 4px; padding: 1.5rem 2rem; margin: 2rem 0; }
@@ -202,6 +210,25 @@
         <input type="hidden" id="verifiedBirthday" name="verifiedBirthday" />
         <input type="hidden" id="verifiedEmail" name="verifiedEmail" />
         <input type="hidden" id="verifyToken" name="verifyToken" />
+
+        <!-- MEMBERSHIP & DUES STATUS -->
+        <div id="duesSection" style="display:none">
+          <div class="form-divider-label">Membership &amp; Dues Status</div>
+          <div id="duesStatusSummary" style="margin-bottom:1rem;color:var(--navy);font-weight:600"></div>
+          <div id="duesNothingDue" style="display:none">
+            <div class="info-box"><p>This cadet's membership dues are fully paid up through the years shown above. Thank you!</p></div>
+          </div>
+          <div id="duesYearsBody" style="display:none">
+            <p style="color:var(--gray)">Select the year(s) you'd like to pay for:</p>
+            <div class="dues-years-list" id="duesYearsList"></div>
+            <div class="dues-years-total" id="duesYearsTotal"></div>
+            <div id="duesPayStatus" role="status" aria-live="polite"></div>
+            <div id="duesPaypalLoadStatus" style="font-size:.85rem;color:var(--gray);text-align:center;padding:.5rem 0">Loading payment options&hellip;</div>
+            <div id="duesPaypalButtons"></div>
+            <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem;text-align:center">Prefer another way to pay? Visit <a href="payment.html" style="color:var(--blue)">our payment page</a> for Zelle and check options.</p>
+          </div>
+          <hr class="form-divider" style="margin-top:1.5rem" />
+        </div>
 
         <div id="formBody" style="display:none">
         <!-- CADET INFORMATION -->
@@ -462,6 +489,198 @@
       }
     });
 
+    // ── Membership & Dues Status/Payment ────────────────────────────────────
+    // Reuses the exact PayPal dues-payment machinery already live on
+    // payment.html (dues-pay-lookup.php / dues-pay-create-order.php /
+    // dues-pay-capture-order.php) completely unmodified — those endpoints
+    // only require a valid token in the session's dues_verified pool, and
+    // don't care which page created it. Triggered by the same "Find My
+    // Record" click as the info-update lookup above (same 3 identity
+    // fields), so nobody has to enter their info twice on this page.
+    (function() {
+      var duesVerifyToken = '';
+      var duesOptions = [];
+      var duesCadetYears = [];
+      var duesPaidYears = [];
+      var sdkReady = false;
+      var buttonsRendered = false;
+
+      // Mirrors dues_years_price() in admin/lib.php — see payment.html for
+      // the identical copy of this function and why it exists (display-only
+      // estimate; the server always recomputes and validates the real charge).
+      function duesPrice(paidYears, cadetYears) {
+        if (!cadetYears.length) return uniq(paidYears).length * 75;
+        var undergrad = cadetYears.slice(-4);
+        var hasFullUndergrad = undergrad.length === 4 && undergrad.every(function(y) { return paidYears.indexOf(y) !== -1; });
+        if (!hasFullUndergrad) {
+          return cadetYears.filter(function(y) { return paidYears.indexOf(y) !== -1; }).length * 75;
+        }
+        var price = 275;
+        var prepYear = cadetYears.length === 5 ? cadetYears[0] : null;
+        if (prepYear !== null && paidYears.indexOf(prepYear) !== -1) price += 75;
+        return price;
+      }
+      function uniq(arr) {
+        return arr.filter(function(v, i) { return arr.indexOf(v) === i; });
+      }
+
+      function showPaypalUnavailable() {
+        if (buttonsRendered) return;
+        document.getElementById('duesPaypalLoadStatus').innerHTML =
+          '<div style="text-align:left;background:#fff3e0;border-left:4px solid #f57c00;border-radius:4px;padding:.85rem 1rem;font-size:.85rem;color:#5a4632">' +
+          '<strong>Online payment isn’t loading right now.</strong> This can happen from a slow connection or an ad/tracker blocker.<br>' +
+          '<button type="button" onclick="location.reload()" style="margin:.5rem .5rem 0 0;padding:.4rem .9rem;border:1px solid #f57c00;background:#fff;border-radius:4px;cursor:pointer;font-size:.82rem;color:#5a4632">Try Again</button>' +
+          'or visit <a href="payment.html">our payment page</a> for other options.</div>';
+      }
+      var loadTimeout = setTimeout(showPaypalUnavailable, 10000);
+
+      fetch('paypal-client-id.php').then(function(r) { return r.json(); }).then(function(d) {
+        if (!d.success || !d.clientId) { showPaypalUnavailable(); return; }
+        var s = document.createElement('script');
+        s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(d.clientId) + '&currency=USD&intent=capture&disable-funding=paylater&enable-funding=venmo,applepay';
+        s.onload = function() { sdkReady = true; clearTimeout(loadTimeout); renderPaypalButtonsIfReady(); };
+        s.onerror = showPaypalUnavailable;
+        document.head.appendChild(s);
+      }).catch(showPaypalUnavailable);
+
+      // Called from the main "Find My Record" success handler below, with
+      // the same identity fields already entered once. A failure here is
+      // silent — dues status is a bonus on this page, not its primary job,
+      // and must never block the info-update flow that already succeeded.
+      window.loadDuesStatus = async function(last, birthday, email) {
+        try {
+          var resp = await fetch('dues-pay-lookup.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cadetLastName: last,
+              cadetBirthday: birthday,
+              email: email,
+              website: document.getElementById('website').value
+            })
+          });
+          var result = await resp.json();
+          if (!result.success) return;
+
+          duesVerifyToken = result.verifyToken;
+          duesOptions = result.options || [];
+          duesCadetYears = result.cadetYears || [];
+          duesPaidYears = result.paidYears || [];
+
+          document.getElementById('duesSection').style.display = 'block';
+          document.getElementById('duesStatusSummary').textContent = duesPaidYears.length
+            ? 'Membership dues paid for: ' + duesPaidYears.slice().sort().join(', ')
+            : 'No membership dues payments on file yet for this cadet.';
+
+          if (!duesOptions.length) {
+            document.getElementById('duesNothingDue').style.display = 'block';
+          } else {
+            document.getElementById('duesYearsBody').style.display = 'block';
+            var list = document.getElementById('duesYearsList');
+            list.innerHTML = '';
+            duesOptions.forEach(function(opt) {
+              var solo = duesPrice(duesPaidYears.concat([opt.year]), duesCadetYears) - duesPrice(duesPaidYears, duesCadetYears);
+              var label = document.createElement('label');
+              var cb = document.createElement('input');
+              cb.type = 'checkbox';
+              cb.value = opt.year;
+              cb.className = 'dues-year-checkbox';
+              cb.addEventListener('change', updateDuesTotal);
+              label.appendChild(cb);
+              label.appendChild(document.createTextNode(' ' + opt.year + ' — $' + solo));
+              list.appendChild(label);
+            });
+            updateDuesTotal();
+            renderPaypalButtonsIfReady();
+          }
+        } catch (err) {
+          // Silent — see comment above.
+        }
+      };
+
+      function selectedYears() {
+        return Array.prototype.slice.call(document.querySelectorAll('.dues-year-checkbox:checked')).map(function(cb) { return cb.value; });
+      }
+
+      function updateDuesTotal() {
+        var years = selectedYears();
+        var total = duesPrice(duesPaidYears.concat(years), duesCadetYears) - duesPrice(duesPaidYears, duesCadetYears);
+        document.getElementById('duesYearsTotal').textContent = years.length
+          ? 'Total: $' + total + ' (multi-year discounts are applied automatically)'
+          : '';
+      }
+
+      function renderPaypalButtonsIfReady() {
+        if (!sdkReady || buttonsRendered || !duesOptions.length || typeof paypal === 'undefined') return;
+        buttonsRendered = true;
+        document.getElementById('duesPaypalLoadStatus').style.display = 'none';
+        paypal.Buttons({
+          createOrder: function() {
+            var statusEl = document.getElementById('duesPayStatus');
+            statusEl.style.display = 'none';
+            statusEl.className = '';
+            var years = selectedYears();
+            if (!years.length) {
+              statusEl.textContent = 'Please select at least one year to pay for.';
+              statusEl.className = 'error';
+              statusEl.style.display = 'block';
+              return Promise.reject(new Error('No years selected'));
+            }
+            return fetch('dues-pay-create-order.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ verifyToken: duesVerifyToken, years: years })
+            }).then(function(r) { return r.json(); }).then(function(result) {
+              if (!result.success) {
+                statusEl.textContent = result.error || 'Could not start checkout. Please try again.';
+                statusEl.className = 'error';
+                statusEl.style.display = 'block';
+                throw new Error(result.error || 'create order failed');
+              }
+              return result.orderId;
+            });
+          },
+          onApprove: function(data) {
+            var statusEl = document.getElementById('duesPayStatus');
+            statusEl.textContent = 'Finishing up — please don’t close this window…';
+            statusEl.className = '';
+            statusEl.style.display = 'block';
+            return fetch('dues-pay-capture-order.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ verifyToken: duesVerifyToken, orderId: data.orderID })
+            }).then(function(r) { return r.json(); }).then(function(result) {
+              if (result.success) {
+                document.getElementById('duesYearsBody').innerHTML =
+                  '<p style="color:#2e7d32;font-weight:600">Payment received — thank you! Your membership has been updated for ' + (result.years || []).join(', ') + '.</p>' +
+                  (result.captureId ? '<p style="color:var(--gray);font-size:.78rem;margin-top:.35rem">PayPal reference: ' + result.captureId + '</p>' : '');
+              } else if (result.manualReview) {
+                document.getElementById('duesYearsBody').innerHTML =
+                  '<p style="color:#8a6d1f;font-weight:600;background:#fff8e1;border-left:4px solid #f9a825;padding:.85rem 1rem;border-radius:4px">' + (result.error || "Your payment was received but couldn't be applied automatically. The treasurer has been notified and will follow up shortly — please don't submit payment again.") + '</p>';
+              } else {
+                statusEl.textContent = result.error || 'Payment could not be completed. Please try again.';
+                statusEl.className = 'error';
+                statusEl.style.display = 'block';
+              }
+            });
+          },
+          onCancel: function() {
+            var statusEl = document.getElementById('duesPayStatus');
+            statusEl.textContent = 'Checkout cancelled — you can select your year(s) and try again anytime.';
+            statusEl.className = '';
+            statusEl.style.display = 'block';
+          },
+          onError: function(err) {
+            console.error('PayPal onError (dues):', err);
+            var statusEl = document.getElementById('duesPayStatus');
+            statusEl.textContent = 'Something went wrong with PayPal. Please try again or visit payment.html.';
+            statusEl.className = 'error';
+            statusEl.style.display = 'block';
+          }
+        }).render('#duesPaypalButtons');
+      }
+    })();
+
     // ── Find Your Record ──────────────────────────────────────────────────
     function populateForm(m) {
       var fields = ['cadetFirstName','cadetMiddleName','cadetLastName','cadetSuffix','graduationYear','nickname','poBox',
@@ -546,6 +765,7 @@
           document.getElementById('lookupSection').style.display = 'none';
           document.getElementById('formBody').style.display = 'block';
           window.scrollTo({ top: document.getElementById('formBody').offsetTop - 100, behavior: 'smooth' });
+          window.loadDuesStatus(last, birthday, email);
         } else {
           statusEl.textContent = result.error || "We couldn't find a matching record.";
           statusEl.className = 'error';
