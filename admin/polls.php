@@ -154,7 +154,7 @@ echo show_flash();
     </div>
 
     <?php if ($is_open && !$poll_eligible && !$already): ?>
-      <div class="alert alert-error" style="margin:.5rem 0 0"><?= $audience === 'board' ? 'Only board members (President, VP, Secretary, Treasurer) can vote on this.' : 'Only paid members can vote on this.' ?> You can still see results below.</div>
+      <div class="alert alert-error" style="margin:.5rem 0 0"><?= $audience === 'board' ? 'Only board members (President, VP, Member at Large, Secretary, Treasurer, Admin) can vote on this.' : 'Only paid members can vote on this.' ?> You can still see results below.</div>
     <?php endif; ?>
 
     <?php if ($show_ballot): ?>

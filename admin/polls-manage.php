@@ -3,9 +3,9 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/mailer.php';
 require_login();
 
-// Any of the 4 board roles (President/VP via 'officer', Secretary,
-// Treasurer — see is_board_role()) can create a poll. Admin kept as an
-// override, matching every other manage-page in this codebase.
+// Any board role (see is_board_role() — now includes Admin directly) can
+// create a poll. The redundant `|| is_admin()` here predates that and is
+// harmless to leave in place.
 if (!is_board_role() && !is_admin()) { header('Location: dashboard.php?denied=1'); exit; }
 $pdo = get_pdo();
 
@@ -118,10 +118,11 @@ if (!empty($polls)) {
 }
 
 // Eligible-voter counts for the "X of Y voted" gauge — depends on each
-// poll's audience (all paid members, or just the 4 board roles).
+// poll's audience (all paid members, or just the board roles — see
+// is_board_role() in auth.php for exactly who that covers).
 $eligible_counts = [
     'all_paid' => (int)$pdo->query("SELECT COUNT(*) FROM members WHERE archived=0 AND membership_paid=1")->fetchColumn(),
-    'board'    => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE active=1 AND role IN ('officer','secretary','treasurer')")->fetchColumn(),
+    'board'    => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE active=1 AND role IN ('officer','secretary','treasurer','admin')")->fetchColumn(),
 ];
 
 admin_header('Manage Polls');
@@ -166,7 +167,7 @@ echo show_flash();
       <label>Who Can Vote?</label>
       <select name="audience">
         <option value="all_paid">All Paid Members</option>
-        <option value="board">Board Members Only (President, VP, Secretary, Treasurer)</option>
+        <option value="board">Board Members Only (President, VP, Member at Large, Secretary, Treasurer, Admin)</option>
       </select>
     </div>
     <div class="form-group" style="display:flex;align-items:center;gap:.5rem">

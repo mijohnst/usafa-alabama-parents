@@ -1024,7 +1024,7 @@ function send_poll_notifications(PDO $pdo, array $poll, string $audience = 'all_
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
 
     if ($audience === 'board') {
-        $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> '' AND role IN ('officer','secretary','treasurer')")->fetchAll(PDO::FETCH_COLUMN);
+        $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> '' AND role IN ('officer','secretary','treasurer','admin')")->fetchAll(PDO::FETCH_COLUMN);
     } else {
         $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> ''")->fetchAll(PDO::FETCH_COLUMN);
     }
