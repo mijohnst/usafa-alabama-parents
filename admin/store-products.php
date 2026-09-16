@@ -50,12 +50,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $base_price  = round((float)str_replace(',', '', $_POST['base_price'] ?? '0'), 2);
         $cost_raw    = trim($_POST['unit_cost'] ?? '');
         $unit_cost   = $cost_raw !== '' ? round((float)str_replace(',', '', $cost_raw), 2) : null;
+        $sale_ends_at = trim($_POST['sale_ends_at'] ?? '') ?: null;
         $is_active   = !empty($_POST['is_active']) ? 1 : 0;
 
         $errors = [];
         if ($name === '') $errors[] = 'Product name is required.';
         if ($base_price <= 0 || $base_price > 99999.99) $errors[] = 'Price must be a positive amount.';
         if ($unit_cost !== null && ($unit_cost < 0 || $unit_cost > 99999.99)) $errors[] = 'Cost to make must be zero or a positive amount.';
+        if ($sale_ends_at !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $sale_ends_at)) $errors[] = 'Sale end date is invalid.';
         if (!in_array($category, STORE_CATEGORIES, true)) $category = '';
 
         if ($errors) {
@@ -65,11 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($id) {
-            $pdo->prepare('UPDATE store_products SET name=?, description=?, category=?, base_price=?, unit_cost=?, is_active=? WHERE id=?')
-                ->execute([$name, $description, $category, $base_price, $unit_cost, $is_active, $id]);
+            $pdo->prepare('UPDATE store_products SET name=?, description=?, category=?, base_price=?, unit_cost=?, sale_ends_at=?, is_active=? WHERE id=?')
+                ->execute([$name, $description, $category, $base_price, $unit_cost, $sale_ends_at, $is_active, $id]);
         } else {
-            $pdo->prepare('INSERT INTO store_products (name, description, category, base_price, unit_cost, is_active, created_by) VALUES (?,?,?,?,?,?,?)')
-                ->execute([$name, $description, $category, $base_price, $unit_cost, $is_active, $_SESSION['user_id'] ?? null]);
+            $pdo->prepare('INSERT INTO store_products (name, description, category, base_price, unit_cost, sale_ends_at, is_active, created_by) VALUES (?,?,?,?,?,?,?,?)')
+                ->execute([$name, $description, $category, $base_price, $unit_cost, $sale_ends_at, $is_active, $_SESSION['user_id'] ?? null]);
             $id = (int)$pdo->lastInsertId();
         }
 
@@ -311,7 +313,7 @@ echo show_flash();
       <label>Description</label>
       <textarea name="description" rows="3"><?= h(store_field($old_input, $editing, 'description')) ?></textarea>
     </div>
-    <div class="form-row col-3">
+    <div class="form-row col-4">
       <div class="form-group">
         <label>Base Price ($) <span style="color:#A6192E">*</span></label>
         <input type="number" name="base_price" step="0.01" min="0.01" required value="<?= h(store_field($old_input, $editing, 'base_price')) ?>">
@@ -321,6 +323,11 @@ echo show_flash();
         <label>Cost to Make ($)</label>
         <input type="number" name="unit_cost" step="0.01" min="0" value="<?= h(store_field($old_input, $editing, 'unit_cost')) ?>">
         <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">What this costs the club, for margin reporting only — never shown to shoppers.</p>
+      </div>
+      <div class="form-group">
+        <label>Sale Ends On (optional)</label>
+        <input type="date" name="sale_ends_at" value="<?= h(store_field($old_input, $editing, 'sale_ends_at')) ?>">
+        <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">Item disappears from the store the day after this date. Leave blank for an ongoing item.</p>
       </div>
       <div class="form-group" style="display:flex;align-items:flex-end;gap:.5rem">
         <label style="display:flex;align-items:center;gap:.5rem;font-weight:400;text-transform:none;letter-spacing:0">
@@ -440,7 +447,17 @@ echo show_flash();
       <td style="color:#5a6a7a"><?= $p['unit_cost'] !== null ? '$' . number_format((float)$p['unit_cost'], 2) : '—' ?></td>
       <td style="<?= $p['unit_cost'] !== null ? 'color:#1b5e20;font-weight:600' : 'color:#9aa5b4' ?>"><?= $p['unit_cost'] !== null ? '$' . number_format((float)$p['base_price'] - (float)$p['unit_cost'], 2) : '—' ?></td>
       <td style="color:#5a6a7a"><?= $vcount ?: '—' ?></td>
-      <td><span class="type-pill" style="background:<?= $p['is_active'] ? '#1b5e2022' : '#5a6a7a22' ?>;color:<?= $p['is_active'] ? '#1b5e20' : '#5a6a7a' ?>"><?= $p['is_active'] ? 'Active' : 'Hidden' ?></span></td>
+      <?php $sale_closed = !empty($p['sale_ends_at']) && $p['sale_ends_at'] < date('Y-m-d'); ?>
+      <td>
+        <?php if ($sale_closed): ?>
+        <span class="type-pill" style="background:#c6282822;color:#c62828">Sale Closed</span>
+        <?php else: ?>
+        <span class="type-pill" style="background:<?= $p['is_active'] ? '#1b5e2022' : '#5a6a7a22' ?>;color:<?= $p['is_active'] ? '#1b5e20' : '#5a6a7a' ?>"><?= $p['is_active'] ? 'Active' : 'Hidden' ?></span>
+        <?php endif; ?>
+        <?php if (!empty($p['sale_ends_at']) && !$sale_closed): ?>
+        <div style="font-size:.68rem;color:#9aa5b4;margin-top:.2rem">Closes <?= h(date('M j', strtotime($p['sale_ends_at']))) ?></div>
+        <?php endif; ?>
+      </td>
       <td>
         <div class="btn-group">
           <a href="store-products.php?edit=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm">Edit</a>

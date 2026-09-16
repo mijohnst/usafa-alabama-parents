@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $pdo = get_pdo();
 
-$products = $pdo->query("SELECT id, name, description, category, base_price FROM store_products WHERE is_active = 1 ORDER BY category ASC, name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$products = $pdo->query("SELECT id, name, description, category, base_price, sale_ends_at FROM store_products WHERE is_active = 1 AND (sale_ends_at IS NULL OR sale_ends_at >= CURDATE()) ORDER BY category ASC, name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $photo_stmt  = $pdo->prepare('SELECT filename FROM store_product_photos WHERE product_id = ? ORDER BY is_primary DESC, sort_order ASC');
 $variant_stmt = $pdo->prepare('SELECT id, size, color, sku, price_override, is_active FROM store_product_variants WHERE product_id = ? AND is_active = 1 ORDER BY id ASC');
@@ -48,6 +48,7 @@ foreach ($products as $p) {
         'description' => $p['description'],
         'category'    => $p['category'],
         'basePrice'   => round((float)$p['base_price'], 2),
+        'saleEndsAt'  => $p['sale_ends_at'],
         'photos'      => $photo_stmt->fetchAll(PDO::FETCH_COLUMN),
         'variants'    => $variants,
     ];

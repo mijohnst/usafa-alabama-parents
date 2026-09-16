@@ -104,6 +104,14 @@ function store_price_cart(PDO $pdo, array $items): array {
             $line['reason'] = 'No longer available.';
             $lines[] = $line; $hasInvalid = true; continue;
         }
+        // Re-checked here (not just filtered out of store-catalog.php's
+        // listing) so an item already sitting in someone's cart from before
+        // the deadline can't still be checked out afterward — the same
+        // "never trust what the client already has" discipline as price.
+        if (!empty($product['sale_ends_at']) && $product['sale_ends_at'] < date('Y-m-d')) {
+            $line['reason'] = 'This item\'s sale has closed.';
+            $lines[] = $line; $hasInvalid = true; continue;
+        }
         $line['name'] = $product['name'];
 
         $active_variant_count_stmt->execute([$product_id]);

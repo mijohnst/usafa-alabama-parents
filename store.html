@@ -343,6 +343,14 @@
           body.appendChild(descEl);
         }
 
+        if (p.saleEndsAt) {
+          var deadlineEl = document.createElement('div');
+          deadlineEl.style.cssText = 'font-size:.78rem;font-weight:600;color:#A6192E';
+          var deadlineDate = new Date(p.saleEndsAt + 'T23:59:59');
+          deadlineEl.textContent = 'Sale ends ' + deadlineDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          body.appendChild(deadlineEl);
+        }
+
         var priceEl = document.createElement('div');
         priceEl.className = 'product-price';
         priceEl.textContent = '$' + p.basePrice.toFixed(2);
