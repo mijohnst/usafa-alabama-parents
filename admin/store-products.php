@@ -332,7 +332,7 @@ echo show_flash();
         <input type="number" step="0.01" name="variant_price[]" placeholder="Price override" value="<?= h($v['price_override'] ?? '') ?>">
         <input type="number" step="0.01" name="variant_cost[]" placeholder="Cost override" value="<?= h($v['unit_cost_override'] ?? '') ?>">
         <input type="number" name="variant_inv[]" placeholder="Inventory" value="<?= h($v['inventory_qty'] ?? '') ?>">
-        <label style="font-size:.72rem;white-space:nowrap"><input type="checkbox" name="variant_active[]" style="width:auto" <?= $v['is_active'] ? 'checked' : '' ?>> Active</label>
+        <label style="font-size:.72rem;white-space:nowrap"><input type="hidden" name="variant_active[]" value="<?= $v['is_active'] ? '1' : '0' ?>" class="variant-active-hidden"><input type="checkbox" class="variant-active-checkbox" style="width:auto" <?= $v['is_active'] ? 'checked' : '' ?> onchange="this.previousElementSibling.value = this.checked ? '1' : '0'"> Active</label>
         <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.variant-row').remove()">✕</button>
       </div>
       <?php endforeach; ?>
@@ -347,7 +347,7 @@ echo show_flash();
         <input type="number" step="0.01" name="variant_price[]" placeholder="Price override">
         <input type="number" step="0.01" name="variant_cost[]" placeholder="Cost override">
         <input type="number" name="variant_inv[]" placeholder="Inventory">
-        <label style="font-size:.72rem;white-space:nowrap"><input type="checkbox" name="variant_active[]" style="width:auto" checked> Active</label>
+        <label style="font-size:.72rem;white-space:nowrap"><input type="hidden" name="variant_active[]" value="1" class="variant-active-hidden"><input type="checkbox" class="variant-active-checkbox" style="width:auto" checked onchange="this.previousElementSibling.value = this.checked ? '1' : '0'"> Active</label>
         <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.variant-row').remove()">✕</button>
       </div>
     </template>

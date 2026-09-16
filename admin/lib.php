@@ -470,14 +470,28 @@ function generate_photo_thumbnail(string $source_path, string $dest_path, int $m
 // authoritative "how many sabers are we funding" figure for a Saber Fund
 // campaign, computed fresh every time rather than a manually-typed number
 // that would otherwise drift out of date as more families pay dues over
-// the course of the year. Same eligibility rule (archived=0,
-// membership_paid=1, matching class_year) as fundraiser-honorees.php's "in
-// honor of" cadet list, so the two always agree on who counts.
-function campaign_paid_cadet_count(PDO $pdo, string $classYear): int {
-    if ($classYear === '') return 0;
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM members WHERE archived = 0 AND membership_paid = 1 AND class_year = ?');
+// the course of the year.
+//
+// The single source of truth for "which cadets count" — [member_id =>
+// cadet_last_name] for every paid member's cadet in a given graduating
+// class year. campaign_paid_cadet_count() below, fundraiser-honorees.php's
+// "in honor of" dropdown, and donate-create-order.php's server-side
+// revalidation of a submitted honoree id all call this one function
+// instead of each keeping their own copy of the same WHERE clause, so none
+// of the three can silently drift out of agreement on who's eligible.
+function campaign_eligible_cadets(PDO $pdo, string $classYear): array {
+    if ($classYear === '') return [];
+    $stmt = $pdo->prepare('SELECT id, cadet_last_name FROM members WHERE archived = 0 AND membership_paid = 1 AND class_year = ? ORDER BY cadet_last_name ASC');
     $stmt->execute([$classYear]);
-    return (int)$stmt->fetchColumn();
+    $out = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $out[(int)$row['id']] = (string)$row['cadet_last_name'];
+    }
+    return $out;
+}
+
+function campaign_paid_cadet_count(PDO $pdo, string $classYear): int {
+    return count(campaign_eligible_cadets($pdo, $classYear));
 }
 
 function saber_fund_label(PDO $pdo, string $slug, string $fallback): string {
@@ -536,10 +550,59 @@ function create_donation_campaign(PDO $pdo, string $slug, string $label, string 
     activate_donation_campaign($pdo, $slug);
 }
 
+// Cadet count / goal for a campaign — live (always current) while it's the
+// active drive, so it tracks paid membership in real time; frozen (read
+// back from the snapshot activate_donation_campaign() takes when a newer
+// campaign takes over) once it's history. Without the frozen half, a past
+// campaign's goal would silently drop to $0/0-cadets the moment that
+// class's members get archived after graduation — corrupting historical
+// reports with no way to recover the true original number. Falls back to a
+// live recomputation if no snapshot exists yet (a campaign that predates
+// this mechanism, or is still active but hasn't been handed off) — the
+// best available answer in that case, not a bug.
+// Returns [cadetCount, goal].
+function campaign_cadet_count_and_goal(PDO $pdo, string $slug, string $year, bool $isActive): array {
+    if (!$isActive) {
+        $keys = ["fundraiser_{$slug}_cadet_count", "fundraiser_{$slug}_goal"];
+        $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?)');
+        $stmt->execute($keys);
+        $vals = [];
+        foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
+        if (isset($vals["fundraiser_{$slug}_cadet_count"]) && isset($vals["fundraiser_{$slug}_goal"])) {
+            return [(int)$vals["fundraiser_{$slug}_cadet_count"], (float)$vals["fundraiser_{$slug}_goal"]];
+        }
+    }
+    $count = campaign_paid_cadet_count($pdo, $year);
+    return [$count, $count * SABER_PRICE];
+}
+
 // Switches which campaign fundraiser.html shows, without creating a new
 // one — lets a treasurer flip back to an earlier campaign if a new one was
-// started by mistake, or re-run a paused drive.
+// started by mistake, or re-run a paused drive. Snapshots the OUTGOING
+// campaign's live cadet count/goal into site_settings first — see
+// campaign_cadet_count_and_goal() above for why that snapshot has to exist
+// before this campaign stops being the live one.
 function activate_donation_campaign(PDO $pdo, string $slug): void {
+    $previous = $pdo->query('SELECT slug FROM donation_campaigns WHERE is_active = 1 LIMIT 1')->fetchColumn();
+    if ($previous && $previous !== $slug) {
+        $year_stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+        $year_stmt->execute(["fundraiser_{$previous}_year"]);
+        $prev_year  = trim((string)$year_stmt->fetchColumn());
+        $prev_count = campaign_paid_cadet_count($pdo, $prev_year);
+        $freeze = [
+            "fundraiser_{$previous}_cadet_count" => (string)$prev_count,
+            "fundraiser_{$previous}_goal"        => number_format($prev_count * SABER_PRICE, 2, '.', ''),
+        ];
+        foreach ($freeze as $key => $val) {
+            $exists = $pdo->prepare('SELECT COUNT(*) FROM site_settings WHERE setting_key = ?');
+            $exists->execute([$key]);
+            if ((int)$exists->fetchColumn() > 0) {
+                $pdo->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?')->execute([$val, $key]);
+            } else {
+                $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)')->execute([$key, $val]);
+            }
+        }
+    }
     $pdo->prepare('UPDATE donation_campaigns SET is_active = (slug = ?)')->execute([$slug]);
 }
 

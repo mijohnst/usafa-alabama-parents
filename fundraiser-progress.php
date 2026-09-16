@@ -33,8 +33,9 @@ $pdo = get_pdo();
 // the response below) so the page can tag the donation it creates with it.
 $campaign = trim((string)($_GET['campaign'] ?? ''));
 $campaigns = donation_campaigns($pdo);
+$active_slug = active_campaign_slug($pdo);
 if ($campaign === '') {
-    $campaign = active_campaign_slug($pdo) ?? '';
+    $campaign = $active_slug ?? '';
 }
 if ($campaign === '' || !isset($campaigns[$campaign])) {
     http_response_code(400);
@@ -64,12 +65,14 @@ foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value']
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
 $deadline = $vals[$deadline_key] ?? '';
-// Goal is never stored — it's always live paid-cadet-count × per-saber
-// price (see campaign_paid_cadet_count() in admin/lib.php), so it can never
-// go stale as more families pay dues through the year. fundraiser.html
-// itself derives its displayed cadet count back out of this same goal
-// (goal / SABER_PRICE), so nothing else needs to change there.
-$goal = campaign_paid_cadet_count($pdo, $year) * SABER_PRICE;
+// Live paid-cadet-count × per-saber price while this is the active
+// campaign, so it can never go stale as more families pay dues through the
+// year; frozen once a newer campaign has taken over (see
+// campaign_cadet_count_and_goal() in admin/lib.php) so a past campaign's
+// goal can't retroactively collapse to $0 after that class's members are
+// archived. fundraiser.html derives its displayed cadet count back out of
+// this same goal (goal / SABER_PRICE), so nothing else needs to change there.
+[, $goal] = campaign_cadet_count_and_goal($pdo, $campaign, $year, $campaign === $active_slug);
 
 $raised_total = $raised_online + $offline;
 

@@ -95,12 +95,13 @@ $comment = $comment !== '' ? $comment : null;
 $show_name = (array_key_exists('showName', $payload) && !$payload['showName']) ? 0 : 1;
 
 // Optional "in honor of" cadet tag — re-derived from the id server-side
-// (never trusted as free text) and re-validated against this campaign's
-// actual target class year + paid-member list, the same list
-// fundraiser-honorees.php offered, so a stale/tampered id can't attach an
-// arbitrary name to a donation. Snapshotted as plain text (not a member_id
-// FK) so this row is self-contained even if that member record is later
-// edited, renamed, or archived.
+// (never trusted as free text) and re-validated against
+// campaign_eligible_cadets() (admin/lib.php) — the same function
+// fundraiser-honorees.php builds its dropdown from — so a stale/tampered
+// id can't attach an arbitrary name to a donation, and the two can never
+// silently disagree on who's eligible. Snapshotted as plain text (not a
+// member_id FK) so this row is self-contained even if that member record
+// is later edited, renamed, or archived.
 $honoree_last_name = null;
 $honoree_id = (int)($payload['honoreeMemberId'] ?? 0);
 if ($honoree_id > 0 && $campaign !== null) {
@@ -108,10 +109,10 @@ if ($honoree_id > 0 && $campaign !== null) {
     $year_stmt->execute(["fundraiser_{$campaign}_year"]);
     $target_year = trim((string)$year_stmt->fetchColumn());
     if ($target_year !== '') {
-        $hstmt = $pdo->prepare('SELECT cadet_last_name FROM members WHERE id = ? AND archived = 0 AND membership_paid = 1 AND class_year = ?');
-        $hstmt->execute([$honoree_id, $target_year]);
-        $found = $hstmt->fetchColumn();
-        if ($found !== false && trim((string)$found) !== '') $honoree_last_name = trim((string)$found);
+        $eligible = campaign_eligible_cadets($pdo, $target_year);
+        if (isset($eligible[$honoree_id]) && trim($eligible[$honoree_id]) !== '') {
+            $honoree_last_name = trim($eligible[$honoree_id]);
+        }
     }
 }
 

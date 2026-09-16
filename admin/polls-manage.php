@@ -118,11 +118,15 @@ if (!empty($polls)) {
 }
 
 // Eligible-voter counts for the "X of Y voted" gauge — depends on each
-// poll's audience (all paid members, or just the board roles — see
-// is_board_role() in auth.php for exactly who that covers).
+// poll's audience (all paid members, or just the board roles — built from
+// BOARD_ROLES in auth.php, the same list is_board_role() checks, rather
+// than a second hardcoded copy that could drift out of sync with it).
+$board_role_placeholders = implode(',', array_fill(0, count(BOARD_ROLES), '?'));
+$board_count_stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE active=1 AND role IN ($board_role_placeholders)");
+$board_count_stmt->execute(BOARD_ROLES);
 $eligible_counts = [
     'all_paid' => (int)$pdo->query("SELECT COUNT(*) FROM members WHERE archived=0 AND membership_paid=1")->fetchColumn(),
-    'board'    => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE active=1 AND role IN ('officer','secretary','treasurer','admin')")->fetchColumn(),
+    'board'    => (int)$board_count_stmt->fetchColumn(),
 ];
 
 admin_header('Manage Polls');

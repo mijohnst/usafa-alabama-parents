@@ -313,7 +313,7 @@ if (can_manage_store()) {
         $store_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM store_orders WHERE status='captured' AND fulfillment_status='pending'")->fetchColumn();
     } catch (Exception $e) { $store_pending = 0; }
     $sections['Site Management'][] = ['icon'=>'🛍️','label'=>'Manage Products','sub'=>'Club Store catalog & photos','href'=>'store-products.php','color'=>'#00695c'];
-    $sections['Site Management'][] = ['icon'=>'📦','label'=>'Order Ledger','sub'=>$store_pending>0?"$store_pending awaiting pickup":'All orders fulfilled','href'=>'store-orders.php','color'=>$store_pending>0?'#f57c00':'#1b5e20','badge'=>$store_pending>0?$store_pending:0];
+    $sections['Site Management'][] = ['icon'=>'📦','label'=>'Order Ledger','sub'=>$store_pending>0?"$store_pending awaiting fulfillment":'All orders fulfilled','href'=>'store-orders.php','color'=>$store_pending>0?'#f57c00':'#1b5e20','badge'=>$store_pending>0?$store_pending:0];
     $sections['Site Management'][] = ['icon'=>'🏭','label'=>'Vendor Export','sub'=>'Quantities to order by product','href'=>'store-orders.php?mode=vendor','color'=>'#1565c0'];
 }
 $sections['For You'][] = ['icon'=>'👤','label'=>'My Profile','sub'=>'Photo & password','href'=>'change-password.php','color'=>'#546e7a'];

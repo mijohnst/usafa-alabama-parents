@@ -40,18 +40,14 @@ $year_stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE settin
 $year_stmt->execute(["fundraiser_{$campaign}_year"]);
 $year = trim((string)$year_stmt->fetchColumn());
 
+// campaign_eligible_cadets() (admin/lib.php) is the one place "who counts"
+// lives — also used by campaign_paid_cadet_count() and re-checked again in
+// donate-create-order.php when a donor actually submits an honoree id, so
+// this list and that validation can never silently disagree.
 $options = [];
-if ($year !== '') {
-    $stmt = $pdo->prepare(
-        'SELECT id, cadet_last_name FROM members
-         WHERE archived = 0 AND membership_paid = 1 AND class_year = ?
-         ORDER BY cadet_last_name ASC'
-    );
-    $stmt->execute([$year]);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        if (trim((string)$row['cadet_last_name']) === '') continue;
-        $options[] = ['id' => (int)$row['id'], 'lastName' => $row['cadet_last_name']];
-    }
+foreach (campaign_eligible_cadets($pdo, $year) as $id => $lastName) {
+    if (trim((string)$lastName) === '') continue;
+    $options[] = ['id' => (int)$id, 'lastName' => $lastName];
 }
 
 echo json_encode(['success' => true, 'options' => $options]);

@@ -77,12 +77,26 @@ function store_price_cart(PDO $pdo, array $items): array {
 
     $count = 0;
     foreach ($items as $item) {
-        if ($count >= STORE_MAX_CART_LINES) break;
         $count++;
 
         $product_id = (int)($item['productId'] ?? 0);
         $variant_id = isset($item['variantId']) && $item['variantId'] !== null ? (int)$item['variantId'] : null;
         $qty        = (int)($item['qty'] ?? 0);
+
+        // Past the cap, still return a line (with valid=false) rather than
+        // just stopping — a bare `break` here would silently drop items
+        // from the total with no indication anything was omitted, exactly
+        // the outcome the comment above this function promises callers
+        // never happens.
+        if ($count > STORE_MAX_CART_LINES) {
+            $lines[] = [
+                'productId' => $product_id, 'variantId' => $variant_id, 'name' => null,
+                'variantLabel' => null, 'unitPrice' => 0.0, 'shippingCost' => 0.0, 'qty' => $qty,
+                'lineTotal' => 0.0, 'valid' => false, 'reason' => 'Cart is full (max ' . STORE_MAX_CART_LINES . ' items) — remove another item to add this one.',
+            ];
+            $hasInvalid = true;
+            continue;
+        }
 
         $line = [
             'productId'    => $product_id,

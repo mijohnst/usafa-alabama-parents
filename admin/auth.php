@@ -131,8 +131,18 @@ function is_officer(): bool {
 // send_poll_notifications()). Deliberately excludes Tech — that's a
 // technical/webmaster login, not a board seat, even though it shares
 // is_super_admin() with Admin elsewhere in this file.
+//
+// The single source of truth for "who is a board member" by role — both
+// is_board_role() below and any raw SQL that needs the same list (the
+// eligible-voter COUNT in polls-manage.php, the notification recipient
+// list in mailer.php's send_poll_notifications()) build off this constant
+// instead of each keeping their own hardcoded copy, so a future board-seat
+// change can't update the role check but miss the eligibility count or the
+// notification list.
+const BOARD_ROLES = ['officer', 'secretary', 'treasurer', 'admin'];
+
 function is_board_role(): bool {
-    return in_array($_SESSION['role'] ?? '', ['officer', 'secretary', 'treasurer', 'admin'], true);
+    return in_array($_SESSION['role'] ?? '', BOARD_ROLES, true);
 }
 
 // Admin or Tech have full super-admin access (users mgmt + helpdesk mgmt)

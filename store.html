@@ -373,7 +373,18 @@
             opt.textContent = label + ' — $' + v.price.toFixed(2);
             variantSelect.appendChild(opt);
           });
+          // Keeps the headline price in sync with a variant's price_override
+          // (e.g. an XXL that costs more) — without this it kept showing
+          // basePrice no matter which size/color was picked, even though
+          // checkout always charged the correct variant price server-side.
+          variantSelect.addEventListener('change', function() {
+            var selected = p.variants.find(function(v) { return String(v.id) === variantSelect.value; });
+            if (selected) priceEl.textContent = '$' + selected.price.toFixed(2);
+          });
           controls.appendChild(variantSelect);
+          // The <select> defaults to its first option on render — match the
+          // headline price to that instead of leaving it on basePrice.
+          priceEl.textContent = '$' + p.variants[0].price.toFixed(2);
         }
 
         var qtyInput = document.createElement('input');

@@ -1024,7 +1024,12 @@ function send_poll_notifications(PDO $pdo, array $poll, string $audience = 'all_
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
 
     if ($audience === 'board') {
-        $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> '' AND role IN ('officer','secretary','treasurer','admin')")->fetchAll(PDO::FETCH_COLUMN);
+        // BOARD_ROLES (auth.php) is the one place this role list lives —
+        // see its comment for why this can't just be its own hardcoded copy.
+        $placeholders = implode(',', array_fill(0, count(BOARD_ROLES), '?'));
+        $stmt = $pdo->prepare("SELECT email FROM users WHERE active = 1 AND email <> '' AND role IN ($placeholders)");
+        $stmt->execute(BOARD_ROLES);
+        $emails = $stmt->fetchAll(PDO::FETCH_COLUMN);
     } else {
         $emails = $pdo->query("SELECT email FROM users WHERE active = 1 AND email <> ''")->fetchAll(PDO::FETCH_COLUMN);
     }

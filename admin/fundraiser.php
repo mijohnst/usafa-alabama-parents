@@ -128,12 +128,11 @@ if ($all_keys) {
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
 $deadline = $vals[$deadline_key] ?? '';
-// The one place this number comes from now — see campaign_paid_cadet_count()
-// in admin/lib.php. Not a stored setting, so it can never go stale: it's
-// exactly how many paid members' cadets are in this campaign's class year
-// right now, and the goal is always this times the per-saber price.
-$cadet_count = campaign_paid_cadet_count($pdo, $year);
-$goal = $cadet_count * SABER_PRICE;
+// Live while this is the active campaign; frozen once it's history — see
+// campaign_cadet_count_and_goal() in admin/lib.php for why a past
+// campaign's numbers must not just recompute to 0 after that class's
+// members eventually get archived.
+[$cadet_count, $goal] = campaign_cadet_count_and_goal($pdo, $campaign, $year, $campaign === $active_slug);
 $settings_missing = $campaign !== '' && count($vals) < count($all_keys);
 $campaign_label = $campaign !== '' ? saber_fund_label($pdo, $campaign, $campaigns[$campaign]) : '';
 
@@ -262,7 +261,7 @@ echo show_flash();
   </div>
   <div style="background:#f7f9fc;border-radius:6px;padding:.85rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:#5a6a7a">
     <strong style="color:#003594"><?= $cadet_count ?> paid cadet<?= $cadet_count === 1 ? '' : 's' ?></strong> in the Class of <?= h($year ?: '—') ?> &times; $<?= number_format(SABER_PRICE, 0) ?>/saber = <strong style="color:#003594">$<?= number_format($goal, 2) ?> goal</strong>
-    <br>Counted automatically from paid members — no manual entry, updates as families pay dues.
+    <br><?= $campaign === $active_slug ? 'Counted automatically from paid members — no manual entry, updates live as families pay dues.' : 'This campaign is no longer active — the count above is frozen from when it was handed off, so it stays accurate even after this class graduates.' ?>
   </div>
 
   <?php if ($can_edit): ?>
