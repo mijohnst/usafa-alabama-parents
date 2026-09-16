@@ -27,11 +27,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
         if (!$uname) $errors[] = 'Username is required.';
         if (!in_array($role, ['admin','tech','officer','secretary','treasurer','member'])) $errors[] = 'Invalid role.';
-        // Officer Title distinguishes President from VP within the shared
-        // 'officer' role — required so purchase approval can enforce
-        // President <-> VP cross-approval (see purchase-action.php).
+        // Officer Title distinguishes which seat this shared 'officer' role
+        // account actually holds. President/VP additionally drives purchase
+        // approval's cross-approval rule (see purchase-action.php) and Job
+        // Drop Night's approval gate (job-drop-submissions.php) — Member at
+        // Large deliberately falls outside both of those `in_array` checks
+        // and is treated as a plain officer there, which is intentional,
+        // not an oversight.
         if ($role === 'officer') {
-            if (!in_array($officer_title, ['President', 'VP'], true)) $errors[] = 'Select whether this Officer is the President or VP.';
+            if (!in_array($officer_title, ['President', 'VP', 'Member at Large'], true)) $errors[] = 'Select an Officer title.';
         } else {
             $officer_title = '';
         }
@@ -252,6 +256,7 @@ echo show_flash();
         <option value="">— Select —</option>
         <option value="President" <?= ($edit_user['officer_title'] ?? '')==='President'?'selected':''?>>President</option>
         <option value="VP" <?= ($edit_user['officer_title'] ?? '')==='VP'?'selected':''?>>VP</option>
+        <option value="Member at Large" <?= ($edit_user['officer_title'] ?? '')==='Member at Large'?'selected':''?>>Member at Large</option>
       </select>
     </div>
     <div class="form-group">
