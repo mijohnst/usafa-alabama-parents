@@ -13,6 +13,7 @@
  * for the treasurer until a later phase adds real enforcement.
  */
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/lib/store.php';
 require_store_admin();
 $pdo = get_pdo();
 
@@ -30,17 +31,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'save') {
+    if ($action === 'save_shipping_rate') {
+        $rate = round((float)str_replace(',', '', $_POST['shipping_rate'] ?? '0'), 2);
+        if ($rate < 0 || $rate > 999.99) {
+            flash('error', 'Shipping rate must be zero or a positive amount.');
+        } else {
+            $pdo->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?')
+                ->execute([number_format($rate, 2, '.', ''), 'store_shipping_flat_rate']);
+            flash('success', 'Shipping rate updated.');
+        }
+        header('Location: store-products.php'); exit;
+
+    } elseif ($action === 'save') {
         $id          = (int)($_POST['id'] ?? 0);
         $name        = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $category    = $_POST['category'] ?? '';
         $base_price  = round((float)str_replace(',', '', $_POST['base_price'] ?? '0'), 2);
+        $cost_raw    = trim($_POST['unit_cost'] ?? '');
+        $unit_cost   = $cost_raw !== '' ? round((float)str_replace(',', '', $cost_raw), 2) : null;
         $is_active   = !empty($_POST['is_active']) ? 1 : 0;
 
         $errors = [];
         if ($name === '') $errors[] = 'Product name is required.';
         if ($base_price <= 0 || $base_price > 99999.99) $errors[] = 'Price must be a positive amount.';
+        if ($unit_cost !== null && ($unit_cost < 0 || $unit_cost > 99999.99)) $errors[] = 'Cost to make must be zero or a positive amount.';
         if (!in_array($category, STORE_CATEGORIES, true)) $category = '';
 
         if ($errors) {
@@ -50,11 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($id) {
-            $pdo->prepare('UPDATE store_products SET name=?, description=?, category=?, base_price=?, is_active=? WHERE id=?')
-                ->execute([$name, $description, $category, $base_price, $is_active, $id]);
+            $pdo->prepare('UPDATE store_products SET name=?, description=?, category=?, base_price=?, unit_cost=?, is_active=? WHERE id=?')
+                ->execute([$name, $description, $category, $base_price, $unit_cost, $is_active, $id]);
         } else {
-            $pdo->prepare('INSERT INTO store_products (name, description, category, base_price, is_active, created_by) VALUES (?,?,?,?,?,?)')
-                ->execute([$name, $description, $category, $base_price, $is_active, $_SESSION['user_id'] ?? null]);
+            $pdo->prepare('INSERT INTO store_products (name, description, category, base_price, unit_cost, is_active, created_by) VALUES (?,?,?,?,?,?,?)')
+                ->execute([$name, $description, $category, $base_price, $unit_cost, $is_active, $_SESSION['user_id'] ?? null]);
             $id = (int)$pdo->lastInsertId();
         }
 
@@ -69,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $v_colors  = $_POST['variant_color']   ?? [];
         $v_skus    = $_POST['variant_sku']     ?? [];
         $v_prices  = $_POST['variant_price']   ?? [];
+        $v_costs   = $_POST['variant_cost']    ?? [];
         $v_invs    = $_POST['variant_inv']     ?? [];
         $v_actives = $_POST['variant_active']  ?? [];
         $kept_ids  = [];
@@ -80,18 +96,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sku       = trim($v_skus[$i] ?? '') ?: null;
             $price_raw = trim($v_prices[$i] ?? '');
             $price     = $price_raw !== '' ? round((float)$price_raw, 2) : null;
+            $cost_raw  = trim($v_costs[$i] ?? '');
+            $cost      = $cost_raw !== '' ? round((float)$cost_raw, 2) : null;
             $inv_raw   = trim($v_invs[$i] ?? '');
             $inv       = $inv_raw !== '' ? (int)$inv_raw : null;
             $active    = !empty($v_actives[$i]) ? 1 : 0;
             $vid       = (int)($v_ids[$i] ?? 0);
 
             if ($vid) {
-                $pdo->prepare('UPDATE store_product_variants SET size=?, color=?, sku=?, price_override=?, inventory_qty=?, is_active=? WHERE id=? AND product_id=?')
-                    ->execute([$size ?: null, $color ?: null, $sku, $price, $inv, $active, $vid, $id]);
+                $pdo->prepare('UPDATE store_product_variants SET size=?, color=?, sku=?, price_override=?, unit_cost_override=?, inventory_qty=?, is_active=? WHERE id=? AND product_id=?')
+                    ->execute([$size ?: null, $color ?: null, $sku, $price, $cost, $inv, $active, $vid, $id]);
                 $kept_ids[] = $vid;
             } else {
-                $pdo->prepare('INSERT INTO store_product_variants (product_id, size, color, sku, price_override, inventory_qty, is_active) VALUES (?,?,?,?,?,?,?)')
-                    ->execute([$id, $size ?: null, $color ?: null, $sku, $price, $inv, $active]);
+                $pdo->prepare('INSERT INTO store_product_variants (product_id, size, color, sku, price_override, unit_cost_override, inventory_qty, is_active) VALUES (?,?,?,?,?,?,?,?)')
+                    ->execute([$id, $size ?: null, $color ?: null, $sku, $price, $cost, $inv, $active]);
                 $kept_ids[] = (int)$pdo->lastInsertId();
             }
         }
@@ -225,6 +243,8 @@ function store_field(?array $old, ?array $editing, string $key, string $default 
     return (string)($editing[$key] ?? $default);
 }
 
+$shipping_rate = store_shipping_flat_rate($pdo);
+
 admin_header('Club Store — Products');
 echo show_flash();
 ?>
@@ -233,7 +253,7 @@ echo show_flash();
 .sp-table th{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a7a;background:#f7f9fc;white-space:nowrap}
 .sp-table td{border-top:1px solid #f0f2f5;font-size:.84rem;vertical-align:middle}
 .sp-thumb{width:44px;height:44px;object-fit:cover;border-radius:4px;background:#f0f2f5}
-.variant-row{display:grid;grid-template-columns:1fr 1fr 1fr .8fr .7fr auto auto;gap:.5rem;align-items:center;margin-bottom:.5rem}
+.variant-row{display:grid;grid-template-columns:1fr 1fr 1fr .8fr .8fr .7fr auto auto;gap:.5rem;align-items:center;margin-bottom:.5rem}
 .variant-row input[type=text],.variant-row input[type=number]{padding:.45rem .6rem;border:1px solid #d0d5dd;border-radius:4px;font-size:.85rem;width:100%}
 .photo-grid{display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem}
 .photo-card{position:relative;width:110px}
@@ -249,6 +269,20 @@ echo show_flash();
     <a href="store-orders.php" class="btn btn-secondary">📦 Order Ledger</a>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
+</div>
+
+<div class="card" style="max-width:420px">
+  <h2 style="margin-bottom:.75rem;font-size:1rem">🚚 Shipping</h2>
+  <p style="font-size:.78rem;color:#9aa5b4;margin-bottom:.75rem">Flat rate added to an order when a customer chooses "Ship to me" at checkout instead of pickup. Pickup stays free.</p>
+  <form method="POST" style="display:flex;gap:.6rem;align-items:flex-end">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="save_shipping_rate">
+    <div class="form-group" style="margin:0">
+      <label style="font-size:.72rem">Flat Rate ($)</label>
+      <input type="number" name="shipping_rate" step="0.01" min="0" value="<?= h(number_format($shipping_rate, 2, '.', '')) ?>" style="width:110px">
+    </div>
+    <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+  </form>
 </div>
 
 <?php if ($editing || $adding_new): ?>
@@ -277,11 +311,16 @@ echo show_flash();
       <label>Description</label>
       <textarea name="description" rows="3"><?= h(store_field($old_input, $editing, 'description')) ?></textarea>
     </div>
-    <div class="form-row col-2">
+    <div class="form-row col-3">
       <div class="form-group">
         <label>Base Price ($) <span style="color:#A6192E">*</span></label>
         <input type="number" name="base_price" step="0.01" min="0.01" required value="<?= h(store_field($old_input, $editing, 'base_price')) ?>">
         <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">Used for any variant that doesn't have its own price override below.</p>
+      </div>
+      <div class="form-group">
+        <label>Cost to Make ($)</label>
+        <input type="number" name="unit_cost" step="0.01" min="0" value="<?= h(store_field($old_input, $editing, 'unit_cost')) ?>">
+        <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">What this costs the club, for margin reporting only — never shown to shoppers.</p>
       </div>
       <div class="form-group" style="display:flex;align-items:flex-end;gap:.5rem">
         <label style="display:flex;align-items:center;gap:.5rem;font-weight:400;text-transform:none;letter-spacing:0">
@@ -293,7 +332,7 @@ echo show_flash();
 
     <hr style="margin:1.25rem 0;border:none;border-top:1px solid #f0f2f5">
     <h3 style="font-size:.9rem;margin-bottom:.5rem">Sizes / Colors (optional)</h3>
-    <p style="font-size:.78rem;color:#9aa5b4;margin-bottom:.75rem">Leave this section empty for a product with no size/color choice (e.g. an ornament) — it'll sell as a single item. Add a row per size/color combination for something like a shirt. Price and inventory are optional per row; blank price falls back to the base price above, blank inventory means unlimited.</p>
+    <p style="font-size:.78rem;color:#9aa5b4;margin-bottom:.75rem">Leave this section empty for a product with no size/color choice (e.g. an ornament) — it'll sell as a single item. Add a row per size/color combination for something like a shirt. Price, cost, and inventory are optional per row; blank price/cost fall back to the base price/cost above, blank inventory means unlimited.</p>
     <div id="variantRows">
       <?php foreach ($variants as $v): ?>
       <div class="variant-row">
@@ -302,6 +341,7 @@ echo show_flash();
         <input type="text" name="variant_color[]" placeholder="Color (e.g. Navy)" value="<?= h($v['color'] ?? '') ?>">
         <input type="text" name="variant_sku[]" placeholder="SKU (optional)" value="<?= h($v['sku'] ?? '') ?>">
         <input type="number" step="0.01" name="variant_price[]" placeholder="Price override" value="<?= h($v['price_override'] ?? '') ?>">
+        <input type="number" step="0.01" name="variant_cost[]" placeholder="Cost override" value="<?= h($v['unit_cost_override'] ?? '') ?>">
         <input type="number" name="variant_inv[]" placeholder="Inventory" value="<?= h($v['inventory_qty'] ?? '') ?>">
         <label style="font-size:.72rem;white-space:nowrap"><input type="checkbox" name="variant_active[]" style="width:auto" <?= $v['is_active'] ? 'checked' : '' ?>> Active</label>
         <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.variant-row').remove()">✕</button>
@@ -316,6 +356,7 @@ echo show_flash();
         <input type="text" name="variant_color[]" placeholder="Color (e.g. Navy)">
         <input type="text" name="variant_sku[]" placeholder="SKU (optional)">
         <input type="number" step="0.01" name="variant_price[]" placeholder="Price override">
+        <input type="number" step="0.01" name="variant_cost[]" placeholder="Cost override">
         <input type="number" name="variant_inv[]" placeholder="Inventory">
         <label style="font-size:.72rem;white-space:nowrap"><input type="checkbox" name="variant_active[]" style="width:auto" checked> Active</label>
         <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.variant-row').remove()">✕</button>
@@ -379,7 +420,7 @@ echo show_flash();
 <div class="card" style="padding:0;overflow-x:auto">
 <table class="sp-table" style="width:100%;border-collapse:collapse">
   <thead>
-    <tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Variants</th><th>Status</th><th>Actions</th></tr>
+    <tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Cost</th><th>Margin</th><th>Variants</th><th>Status</th><th>Actions</th></tr>
   </thead>
   <tbody>
     <?php foreach ($products as $p): ?>
@@ -396,6 +437,8 @@ echo show_flash();
       <td style="font-weight:600"><?= h($p['name']) ?></td>
       <td style="color:#5a6a7a"><?= h($p['category'] ?: '—') ?></td>
       <td>$<?= number_format((float)$p['base_price'], 2) ?></td>
+      <td style="color:#5a6a7a"><?= $p['unit_cost'] !== null ? '$' . number_format((float)$p['unit_cost'], 2) : '—' ?></td>
+      <td style="<?= $p['unit_cost'] !== null ? 'color:#1b5e20;font-weight:600' : 'color:#9aa5b4' ?>"><?= $p['unit_cost'] !== null ? '$' . number_format((float)$p['base_price'] - (float)$p['unit_cost'], 2) : '—' ?></td>
       <td style="color:#5a6a7a"><?= $vcount ?: '—' ?></td>
       <td><span class="type-pill" style="background:<?= $p['is_active'] ? '#1b5e2022' : '#5a6a7a22' ?>;color:<?= $p['is_active'] ? '#1b5e20' : '#5a6a7a' ?>"><?= $p['is_active'] ? 'Active' : 'Hidden' ?></span></td>
       <td>
@@ -412,7 +455,7 @@ echo show_flash();
     </tr>
     <?php endforeach; ?>
     <?php if (empty($products)): ?>
-    <tr><td colspan="7" style="text-align:center;color:#9aa5b4;padding:1.5rem">No products yet — add one above.</td></tr>
+    <tr><td colspan="9" style="text-align:center;color:#9aa5b4;padding:1.5rem">No products yet — add one above.</td></tr>
     <?php endif; ?>
   </tbody>
 </table>

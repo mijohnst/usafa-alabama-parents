@@ -229,14 +229,25 @@ function paypal_refresh_pending_purchase_payouts(PDO $pdo, array &$purchases, in
 //
 // $items is optional — the Club Store's only caller. Each entry:
 // ['name'=>string, 'quantity'=>int, 'unit_amount'=>float]. PayPal requires
-// amount.breakdown.item_total to equal the sum of (unit_amount*quantity)
-// across all items, AND requires the top-level amount.value to equal that
-// same breakdown total (no tax/shipping/discount here) — a mismatch of
-// even a cent gets the whole order creation rejected with a 422. The
-// caller is responsible for computing $amount from the exact same
-// item/quantity data passed here (see store_price_cart() in
-// admin/lib/store.php), not as an independently-rounded number.
-function paypal_create_order(float $amount, string $referenceId, string $requestId, ?string $description = null, ?string $customId = null, ?array $items = null): array {
+// amount.breakdown.item_total (plus shipping, below) to equal the sum of
+// (unit_amount*quantity) across all items, AND requires the top-level
+// amount.value to equal that same breakdown total — a mismatch of even a
+// cent gets the whole order creation rejected with a 422. The caller is
+// responsible for computing $amount from the exact same item/quantity data
+// passed here (see store_price_cart() in admin/lib/store.php), not as an
+// independently-rounded number.
+//
+// $shippingAmount/$shippingAddress are store-only too (both ignored unless
+// $items is also set, so this stays a no-op for donate/dues callers).
+// $shippingAddress, when non-null, is
+// ['name'=>string,'address1'=>string,'address2'=>?string,'city'=>string,
+// 'state'=>string,'zip'=>string,'country'=>string] — attached to the order
+// so it shows up in PayPal's own transaction details, not just this site's
+// ledger. shipping_preference is set explicitly (SET_PROVIDED_ADDRESS when
+// we already collected one, NO_SHIPPING for pickup orders) so PayPal's
+// checkout never prompts a buyer for an address we don't need, or silently
+// substitutes one from their PayPal profile instead of what they typed here.
+function paypal_create_order(float $amount, string $referenceId, string $requestId, ?string $description = null, ?string $customId = null, ?array $items = null, float $shippingAmount = 0.0, ?array $shippingAddress = null): array {
     $auth = paypal_get_access_token();
     if (!$auth['token']) return ['success' => false, 'error' => $auth['error']];
     $token = $auth['token'];
@@ -257,24 +268,47 @@ function paypal_create_order(float $amount, string $referenceId, string $request
                 'unit_amount' => ['currency_code' => 'USD', 'value' => number_format((float)$item['unit_amount'], 2, '.', '')],
             ];
         }, $items);
-        // Must equal amount.value exactly (no tax/shipping/discount) —
-        // recomputed here from the same rounded unit_amount strings just
-        // built above, rather than trusting the caller's $amount to
-        // already agree with them to the cent.
+        // amount.value must equal item_total + shipping exactly (no
+        // tax/discount here) — recomputed here from the same rounded
+        // unit_amount strings just built above, rather than trusting the
+        // caller's $amount to already agree with them to the cent.
         $item_total = 0.0;
         foreach ($purchase_unit['items'] as $it) {
             $item_total += (float)$it['unit_amount']['value'] * (int)$it['quantity'];
         }
-        $purchase_unit['amount']['value'] = number_format($item_total, 2, '.', '');
+        $shipping_str = number_format(max(0.0, $shippingAmount), 2, '.', '');
+        $purchase_unit['amount']['value'] = number_format($item_total + (float)$shipping_str, 2, '.', '');
         $purchase_unit['amount']['breakdown'] = [
             'item_total' => ['currency_code' => 'USD', 'value' => number_format($item_total, 2, '.', '')],
         ];
+        if ((float)$shipping_str > 0) {
+            $purchase_unit['amount']['breakdown']['shipping'] = ['currency_code' => 'USD', 'value' => $shipping_str];
+        }
+
+        if ($shippingAddress !== null) {
+            $purchase_unit['shipping'] = [
+                'name'    => ['full_name' => mb_substr((string)($shippingAddress['name'] ?? ''), 0, 300)],
+                'address' => [
+                    'address_line_1' => mb_substr((string)($shippingAddress['address1'] ?? ''), 0, 300),
+                    'address_line_2' => mb_substr((string)($shippingAddress['address2'] ?? ''), 0, 300),
+                    'admin_area_2'   => mb_substr((string)($shippingAddress['city'] ?? ''), 0, 120),
+                    'admin_area_1'   => mb_substr((string)($shippingAddress['state'] ?? ''), 0, 60),
+                    'postal_code'    => mb_substr((string)($shippingAddress['zip'] ?? ''), 0, 20),
+                    'country_code'   => mb_substr((string)($shippingAddress['country'] ?? 'US'), 0, 2),
+                ],
+            ];
+        }
     }
 
     $payload = [
         'intent' => 'CAPTURE',
         'purchase_units' => [$purchase_unit],
     ];
+    if ($items !== null) {
+        $payload['application_context'] = [
+            'shipping_preference' => $shippingAddress !== null ? 'SET_PROVIDED_ADDRESS' : 'NO_SHIPPING',
+        ];
+    }
 
     $ch = curl_init(paypal_api_base() . '/v2/checkout/orders');
     curl_setopt_array($ch, [

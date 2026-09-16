@@ -1149,9 +1149,16 @@ function notify_treasurer_of_donation(string $donorName, string $donorEmail, flo
 // order confirmation with pickup instructions, not a tax receipt.
 // $items: array of rows from store_order_items (product_name_snapshot,
 // variant_label_snapshot, unit_price, quantity, line_total).
-function send_store_receipt(string $customerEmail, string $customerName, array $items, float $total, string $captureId, string $subjectPrefix = ''): bool {
+// $order is the store_orders row (needs at minimum subtotal/total/
+// shipping_amount/fulfillment_method/shipping_* — i.e. $track as built by
+// store-create-order.php and read back in store-capture-order.php) rather
+// than a bare $total, so this can describe pickup vs. shipping and show a
+// subtotal/shipping breakdown without the signature growing a new scalar
+// parameter every time an order gains another attribute.
+function send_store_receipt(string $customerEmail, string $customerName, array $items, array $order, string $captureId, string $subjectPrefix = ''): bool {
     $name = $customerName !== '' ? $customerName : 'there';
     $date = date('F j, Y');
+    $total = (float)$order['total'];
 
     $lines = '';
     foreach ($items as $item) {
@@ -1163,6 +1170,22 @@ function send_store_receipt(string $customerEmail, string $customerName, array $
             (int)$item['quantity'],
             number_format((float)$item['line_total'], 2)
         );
+    }
+
+    $totals = "Subtotal:      $" . number_format((float)$order['subtotal'], 2) . "\n";
+    if ((float)($order['shipping_amount'] ?? 0) > 0) {
+        $totals .= "Shipping:      $" . number_format((float)$order['shipping_amount'], 2) . "\n";
+    }
+    $totals .= "Total:         $" . number_format($total, 2) . "\n\n";
+
+    if (($order['fulfillment_method'] ?? 'pickup') === 'ship') {
+        $fulfillment_note = "We'll ship your order to:\n"
+            . "  " . $order['shipping_name'] . "\n"
+            . "  " . $order['shipping_address1'] . ($order['shipping_address2'] ? "\n  " . $order['shipping_address2'] : '') . "\n"
+            . "  " . $order['shipping_city'] . ', ' . $order['shipping_state'] . ' ' . $order['shipping_zip'] . "\n\n"
+            . "We'll email you again once it's on its way. ";
+    } else {
+        $fulfillment_note = "This order is for pickup — we'll be in touch about when and where to pick it up. ";
     }
 
     $subject = "{$subjectPrefix}Your Club Store Order — $" . number_format($total, 2);
@@ -1175,15 +1198,16 @@ function send_store_receipt(string $customerEmail, string $customerName, array $
              . "PayPal Ref:    $captureId\n\n"
              . "Items:\n"
              . $lines . "\n"
-             . "Total:         $" . number_format($total, 2) . "\n\n"
-             . "This order is for pickup — we'll be in touch about when and where to pick it up. "
+             . $totals
+             . $fulfillment_note
              . "If you have any questions, please contact treasurer@alabamafalcons.org.\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
     return send_notification($customerEmail, $subject, $body);
 }
 
-function notify_treasurer_of_store_order(string $customerName, string $customerEmail, array $items, float $total, string $orderId, string $captureId, string $subjectPrefix = ''): bool {
+function notify_treasurer_of_store_order(string $customerName, string $customerEmail, array $items, array $order, string $orderId, string $captureId, string $subjectPrefix = ''): bool {
     $date = date('F j, Y g:ia');
+    $total = (float)$order['total'];
 
     $lines = '';
     foreach ($items as $item) {
@@ -1197,6 +1221,22 @@ function notify_treasurer_of_store_order(string $customerName, string $customerE
         );
     }
 
+    $totals = "Subtotal:       $" . number_format((float)$order['subtotal'], 2) . "\n";
+    if ((float)($order['shipping_amount'] ?? 0) > 0) {
+        $totals .= "Shipping:       $" . number_format((float)$order['shipping_amount'], 2) . "\n";
+    }
+    $totals .= "Total:          $" . number_format($total, 2) . "\n\n";
+
+    if (($order['fulfillment_method'] ?? 'pickup') === 'ship') {
+        $fulfillment_note = "Fulfillment:    Ship to —\n"
+            . "  " . $order['shipping_name'] . "\n"
+            . "  " . $order['shipping_address1'] . ($order['shipping_address2'] ? "\n  " . $order['shipping_address2'] : '') . "\n"
+            . "  " . $order['shipping_city'] . ', ' . $order['shipping_state'] . ' ' . $order['shipping_zip'] . "\n\n"
+            . "Mark it shipped once it's on its way in the Club Store order ledger.\n\n";
+    } else {
+        $fulfillment_note = "Fulfillment:    Pickup\n\nMark it ready for pickup once fulfilled in the Club Store order ledger.\n\n";
+    }
+
     $subject = "{$subjectPrefix}New Club Store Order — $" . number_format($total, 2);
     $body    = CLUB_NAME . "\n"
              . "New Club Store Order (needs fulfillment)\n"
@@ -1206,11 +1246,11 @@ function notify_treasurer_of_store_order(string $customerName, string $customerE
              . "Date:           $date\n\n"
              . "Items:\n"
              . $lines . "\n"
-             . "Total:          $" . number_format($total, 2) . "\n\n"
+             . $totals
              . "PayPal Order:   $orderId\n"
              . "PayPal Capture: $captureId\n\n"
-             . "This has been logged in the Income Ledger automatically (source: Store Sales). "
-             . "Mark it ready for pickup once fulfilled in the Club Store order ledger.\n\n"
+             . $fulfillment_note
+             . "This has been logged in the Income Ledger automatically (source: Store Sales).\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
     return send_notification('treasurer@alabamafalcons.org', $subject, $body);
 }

@@ -13,6 +13,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 require_once __DIR__ . '/admin/auth.php';
+require_once __DIR__ . '/admin/lib/store.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header('Access-Control-Allow-Methods: GET, OPTIONS');
@@ -52,4 +53,4 @@ foreach ($products as $p) {
     ];
 }
 
-echo json_encode(['success' => true, 'products' => $out]);
+echo json_encode(['success' => true, 'products' => $out, 'shippingFlatRate' => store_shipping_flat_rate($pdo)]);

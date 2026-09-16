@@ -161,23 +161,46 @@ $fulfillment_colors = ['pending' => '#f57c00', 'ready_for_pickup' => '#1565c0', 
     <div><strong>Placed:</strong> <?= h(date('M j, Y g:ia', strtotime($viewing['created_at']))) ?></div>
     <div><strong>Payment:</strong> <span class="status-pill" style="background:<?= $status_colors[$viewing['status']] ?? '#5a6a7a' ?>"><?= h(STORE_ORDER_STATUSES[$viewing['status']] ?? $viewing['status']) ?></span></div>
     <div><strong>Funding:</strong> <?= h($viewing['funding_source'] ?: '—') ?></div>
+    <div><strong>Fulfillment method:</strong> <?= $viewing['fulfillment_method'] === 'ship' ? '🚚 Ship' : '🏬 Pickup' ?></div>
   </div>
+
+  <?php if ($viewing['fulfillment_method'] === 'ship'): ?>
+  <div class="card" style="background:#f7f9fc;margin-bottom:1.25rem;font-size:.85rem">
+    <strong>Ship to:</strong><br>
+    <?= h($viewing['shipping_name']) ?><br>
+    <?= h($viewing['shipping_address1']) ?><?php if ($viewing['shipping_address2']): ?><br><?= h($viewing['shipping_address2']) ?><?php endif; ?><br>
+    <?= h($viewing['shipping_city']) ?>, <?= h($viewing['shipping_state']) ?> <?= h($viewing['shipping_zip']) ?>
+  </div>
+  <?php endif; ?>
 
   <h3 style="font-size:.85rem;margin-bottom:.5rem">Items</h3>
   <table style="width:100%;border-collapse:collapse;margin-bottom:1.25rem">
-    <thead><tr><th style="text-align:left;font-size:.72rem;color:#5a6a7a">Item</th><th style="text-align:right;font-size:.72rem;color:#5a6a7a">Qty</th><th style="text-align:right;font-size:.72rem;color:#5a6a7a">Unit</th><th style="text-align:right;font-size:.72rem;color:#5a6a7a">Total</th></tr></thead>
+    <thead><tr><th style="text-align:left;font-size:.72rem;color:#5a6a7a">Item</th><th style="text-align:right;font-size:.72rem;color:#5a6a7a">Qty</th><th style="text-align:right;font-size:.72rem;color:#5a6a7a">Unit</th><th style="text-align:right;font-size:.72rem;color:#5a6a7a">Total</th><th style="text-align:right;font-size:.72rem;color:#5a6a7a">Cost</th><th style="text-align:right;font-size:.72rem;color:#5a6a7a">To Club</th></tr></thead>
     <tbody>
-      <?php foreach ($view_items as $it): ?>
+      <?php $cost_total = 0.0; $cost_known = true; foreach ($view_items as $it): ?>
+      <?php $line_cost = $it['unit_cost'] !== null ? (float)$it['unit_cost'] * (int)$it['quantity'] : null; if ($line_cost === null) $cost_known = false; else $cost_total += $line_cost; ?>
       <tr>
         <td style="padding:.4rem 0;border-top:1px solid #f0f2f5"><?= h($it['product_name_snapshot']) ?><?php if ($it['variant_label_snapshot']): ?><div style="font-size:.75rem;color:#5a6a7a"><?= h($it['variant_label_snapshot']) ?></div><?php endif; ?></td>
         <td style="padding:.4rem 0;border-top:1px solid #f0f2f5;text-align:right"><?= (int)$it['quantity'] ?></td>
         <td style="padding:.4rem 0;border-top:1px solid #f0f2f5;text-align:right">$<?= number_format($it['unit_price'], 2) ?></td>
         <td style="padding:.4rem 0;border-top:1px solid #f0f2f5;text-align:right;font-weight:700">$<?= number_format($it['line_total'], 2) ?></td>
+        <td style="padding:.4rem 0;border-top:1px solid #f0f2f5;text-align:right;color:#5a6a7a"><?= $line_cost !== null ? '$' . number_format($line_cost, 2) : '—' ?></td>
+        <td style="padding:.4rem 0;border-top:1px solid #f0f2f5;text-align:right;color:#1b5e20"><?= $line_cost !== null ? '$' . number_format($it['line_total'] - $line_cost, 2) : '—' ?></td>
       </tr>
       <?php endforeach; ?>
     </tbody>
     <tfoot>
-      <tr><td colspan="3" style="text-align:right;padding-top:.5rem;font-weight:700">Total</td><td style="text-align:right;padding-top:.5rem;font-weight:700">$<?= number_format($viewing['total'], 2) ?></td></tr>
+      <tr><td colspan="3" style="text-align:right;padding-top:.5rem">Subtotal</td><td colspan="3" style="text-align:right;padding-top:.5rem">$<?= number_format($viewing['subtotal'], 2) ?></td></tr>
+      <?php if ((float)$viewing['shipping_amount'] > 0): ?>
+      <tr><td colspan="3" style="text-align:right">Shipping</td><td colspan="3" style="text-align:right">$<?= number_format($viewing['shipping_amount'], 2) ?></td></tr>
+      <?php endif; ?>
+      <tr><td colspan="3" style="text-align:right;font-weight:700">Total</td><td colspan="3" style="text-align:right;font-weight:700">$<?= number_format($viewing['total'], 2) ?></td></tr>
+      <?php if ($cost_known): ?>
+      <tr><td colspan="3" style="text-align:right;color:#5a6a7a">Merchandise cost</td><td colspan="3" style="text-align:right;color:#5a6a7a">$<?= number_format($cost_total, 2) ?></td></tr>
+      <tr><td colspan="3" style="text-align:right;font-weight:700;color:#1b5e20">Net to club</td><td colspan="3" style="text-align:right;font-weight:700;color:#1b5e20">$<?= number_format($viewing['total'] - $cost_total, 2) ?></td></tr>
+      <?php else: ?>
+      <tr><td colspan="6" style="text-align:right;color:#9aa5b4;font-size:.78rem">Add a "Cost to Make" on every item in Manage Products to see net-to-club here.</td></tr>
+      <?php endif; ?>
     </tfoot>
   </table>
 
@@ -218,7 +241,7 @@ $fulfillment_colors = ['pending' => '#f57c00', 'ready_for_pickup' => '#1565c0', 
       <td><?= (int)($counts[$o['id']] ?? 0) ?></td>
       <td style="text-align:right;font-weight:700">$<?= number_format($o['total'], 2) ?></td>
       <td><span class="status-pill" style="background:<?= $status_colors[$o['status']] ?? '#5a6a7a' ?>"><?= h(STORE_ORDER_STATUSES[$o['status']] ?? $o['status']) ?></span></td>
-      <td><span class="status-pill" style="background:<?= $fulfillment_colors[$o['fulfillment_status']] ?? '#5a6a7a' ?>"><?= h(STORE_FULFILLMENT_STATUSES[$o['fulfillment_status']] ?? $o['fulfillment_status']) ?></span></td>
+      <td><?= $o['fulfillment_method'] === 'ship' ? '🚚' : '🏬' ?> <span class="status-pill" style="background:<?= $fulfillment_colors[$o['fulfillment_status']] ?? '#5a6a7a' ?>"><?= h(STORE_FULFILLMENT_STATUSES[$o['fulfillment_status']] ?? $o['fulfillment_status']) ?></span></td>
       <td><a href="store-orders.php?view=<?= (int)$o['id'] ?>" class="btn btn-secondary btn-sm">View</a></td>
     </tr>
     <?php endforeach; ?>

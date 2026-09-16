@@ -207,12 +207,12 @@ try {
 // Receipt/treasurer emails fire regardless of whether our own ledger
 // bookkeeping succeeded — PayPal genuinely captured this money either way.
 try {
-    send_store_receipt($track['customer_email'], $track['customer_name'], $order_items, (float)$track['total'], $capture_id, $capture_note_prefix);
+    send_store_receipt($track['customer_email'], $track['customer_name'], $order_items, $track, $capture_id, $capture_note_prefix);
 } catch (\Throwable $e) {
     error_log('store-capture-order: receipt email failed for order ' . $order_id . ': ' . $e->getMessage());
 }
 try {
-    notify_treasurer_of_store_order($track['customer_name'], $track['customer_email'], $order_items, (float)$track['total'], $order_id, (string)$capture_id, $capture_note_prefix);
+    notify_treasurer_of_store_order($track['customer_name'], $track['customer_email'], $order_items, $track, $order_id, (string)$capture_id, $capture_note_prefix);
 } catch (\Throwable $e) {
     error_log('store-capture-order: treasurer notification email failed for order ' . $order_id . ': ' . $e->getMessage());
 }
