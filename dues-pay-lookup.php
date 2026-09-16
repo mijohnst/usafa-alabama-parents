@@ -118,4 +118,8 @@ echo json_encode([
     'options'     => $options,
     'cadetYears'  => $cadet_years,
     'paidYears'   => $paid_years,
+    // Lets a caller show "currently paid" (this specific club year is
+    // covered) rather than just "has ever paid any year" — same definition
+    // membership_paid on the members table itself uses (see admin/lib.php).
+    'currentYear' => membership_year(),
 ]);

@@ -56,6 +56,11 @@
     #formStatus.success, #lookupStatus.success, #duesPayStatus.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
     #formStatus.error, #lookupStatus.error, #duesPayStatus.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
 
+    /* MEMBERSHIP STATUS BANNER */
+    .dues-status-banner { padding: 1rem 1.25rem; border-radius: 4px; font-weight: 700; font-size: 1.05rem; margin-bottom: 1.5rem; border-left: 5px solid; }
+    .dues-status-banner.paid { background: #e8f5e9; color: #2e7d32; border-color: #4caf50; }
+    .dues-status-banner.unpaid { background: #ffebee; color: #c62828; border-color: #f44336; }
+
     /* DUES / MEMBERSHIP STATUS */
     .dues-years-list { text-align: left; margin: 1rem 0; }
     .dues-years-list label { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; border: 1px solid var(--silver2); border-radius: 4px; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.95rem; color: var(--navy); }
@@ -211,24 +216,8 @@
         <input type="hidden" id="verifiedEmail" name="verifiedEmail" />
         <input type="hidden" id="verifyToken" name="verifyToken" />
 
-        <!-- MEMBERSHIP & DUES STATUS -->
-        <div id="duesSection" style="display:none">
-          <div class="form-divider-label">Membership &amp; Dues Status</div>
-          <div id="duesStatusSummary" style="margin-bottom:1rem;color:var(--navy);font-weight:600"></div>
-          <div id="duesNothingDue" style="display:none">
-            <div class="info-box"><p>This cadet's membership dues are fully paid up through the years shown above. Thank you!</p></div>
-          </div>
-          <div id="duesYearsBody" style="display:none">
-            <p style="color:var(--gray)">Select the year(s) you'd like to pay for:</p>
-            <div class="dues-years-list" id="duesYearsList"></div>
-            <div class="dues-years-total" id="duesYearsTotal"></div>
-            <div id="duesPayStatus" role="status" aria-live="polite"></div>
-            <div id="duesPaypalLoadStatus" style="font-size:.85rem;color:var(--gray);text-align:center;padding:.5rem 0">Loading payment options&hellip;</div>
-            <div id="duesPaypalButtons"></div>
-            <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem;text-align:center">Prefer another way to pay? Visit <a href="payment.html" style="color:var(--blue)">our payment page</a> for Zelle and check options.</p>
-          </div>
-          <hr class="form-divider" style="margin-top:1.5rem" />
-        </div>
+        <!-- MEMBERSHIP STATUS BANNER -->
+        <div id="duesStatusBanner" class="dues-status-banner" style="display:none"></div>
 
         <div id="formBody" style="display:none">
         <!-- CADET INFORMATION -->
@@ -435,6 +424,25 @@
         <div id="formStatus"></div>
         <button type="submit" class="cta-button" style="margin-top:1.5rem">Update My Information</button>
         </div>
+
+        <!-- MEMBERSHIP & DUES PAYMENT -->
+        <div id="duesSection" style="display:none">
+          <hr class="form-divider" />
+          <div class="form-divider-label">Membership &amp; Dues Payment</div>
+          <div id="duesStatusSummary" style="margin-bottom:1rem;color:var(--navy);font-weight:600"></div>
+          <div id="duesNothingDue" style="display:none">
+            <div class="info-box"><p>This cadet's membership dues are fully paid up through the years shown above. Thank you!</p></div>
+          </div>
+          <div id="duesYearsBody" style="display:none">
+            <p style="color:var(--gray)">Select the year(s) you'd like to pay for:</p>
+            <div class="dues-years-list" id="duesYearsList"></div>
+            <div class="dues-years-total" id="duesYearsTotal"></div>
+            <div id="duesPayStatus" role="status" aria-live="polite"></div>
+            <div id="duesPaypalLoadStatus" style="font-size:.85rem;color:var(--gray);text-align:center;padding:.5rem 0">Loading payment options&hellip;</div>
+            <div id="duesPaypalButtons"></div>
+            <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem;text-align:center">Prefer another way to pay? Visit <a href="payment.html" style="color:var(--blue)">our payment page</a> for Zelle and check options.</p>
+          </div>
+        </div>
       </form>
     </div>
   </section>
@@ -502,8 +510,19 @@
       var duesOptions = [];
       var duesCadetYears = [];
       var duesPaidYears = [];
+      var duesCurrentYear = '';
       var sdkReady = false;
       var buttonsRendered = false;
+
+      function updateDuesBanner(paidYears) {
+        var isCurrentlyPaid = duesCurrentYear && paidYears.indexOf(duesCurrentYear) !== -1;
+        var banner = document.getElementById('duesStatusBanner');
+        banner.className = 'dues-status-banner ' + (isCurrentlyPaid ? 'paid' : 'unpaid');
+        banner.textContent = isCurrentlyPaid
+          ? '✅ Membership Paid — current for ' + duesCurrentYear
+          : '❌ Membership Not Paid — dues are due for ' + (duesCurrentYear || 'the current year');
+        banner.style.display = 'block';
+      }
 
       // Mirrors dues_years_price() in admin/lib.php — see payment.html for
       // the identical copy of this function and why it exists (display-only
@@ -566,6 +585,9 @@
           duesOptions = result.options || [];
           duesCadetYears = result.cadetYears || [];
           duesPaidYears = result.paidYears || [];
+          duesCurrentYear = result.currentYear || '';
+
+          updateDuesBanner(duesPaidYears);
 
           document.getElementById('duesSection').style.display = 'block';
           document.getElementById('duesStatusSummary').textContent = duesPaidYears.length
@@ -654,6 +676,9 @@
                 document.getElementById('duesYearsBody').innerHTML =
                   '<p style="color:#2e7d32;font-weight:600">Payment received — thank you! Your membership has been updated for ' + (result.years || []).join(', ') + '.</p>' +
                   (result.captureId ? '<p style="color:var(--gray);font-size:.78rem;margin-top:.35rem">PayPal reference: ' + result.captureId + '</p>' : '');
+                duesPaidYears = duesPaidYears.concat(result.years || []);
+                updateDuesBanner(duesPaidYears);
+                document.getElementById('duesStatusSummary').textContent = 'Membership dues paid for: ' + duesPaidYears.slice().sort().join(', ');
               } else if (result.manualReview) {
                 document.getElementById('duesYearsBody').innerHTML =
                   '<p style="color:#8a6d1f;font-weight:600;background:#fff8e1;border-left:4px solid #f9a825;padding:.85rem 1rem;border-radius:4px">' + (result.error || "Your payment was received but couldn't be applied automatically. The treasurer has been notified and will follow up shortly — please don't submit payment again.") + '</p>';
