@@ -151,7 +151,7 @@
   <div class="hero">
     <div class="hero-content">
       <h1>Membership Application</h1>
-      <p>New to the club? Join us! Already a member? Use this form to renew and keep your information current. Connect with families across Alabama who share the pride and journey of having a cadet at the Air Force Academy.</p>
+      <p>New to the club? Join us! Already a member? We'll check first and take you straight to updating your info and paying dues instead of a brand-new application. Connect with families across Alabama who share the pride and journey of having a cadet at the Air Force Academy.</p>
     </div>
   </div>
 
@@ -160,13 +160,34 @@
     <h2>Membership Application</h2>
     <p>Membership in the USAFA Parents Club of Alabama provides access to our community of cadet families, mentorship programs, care package drives, event invitations, and a network of parents who understand the unique USAFA experience.</p>
 
-    <div style="background: #e3f2fd; border: 2px solid #1976d2; border-radius: 6px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;">
-      <p style="color: #0d47a1; font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: flex-start; gap: 0.75rem;">
-        <span style="font-size: 1.25rem;">🔄</span>
-        <span><strong>Current members:</strong> Please complete this form each year to keep your contact information up to date and ensure you receive all club communications.</span>
-      </p>
+    <!-- ALREADY-A-MEMBER CHECK -->
+    <div class="form-section" id="lookupSection">
+      <h3>Already a Member?</h3>
+      <p>Enter your cadet's last name, birthday, and a parent email already on file — if we find a match, we'll take you straight to updating your information and paying dues instead of a brand-new application.</p>
+      <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+        <label for="lookupWebsite">Leave this field empty</label>
+        <input type="text" id="lookupWebsite" tabindex="-1" autocomplete="off">
+      </div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label for="lookupLastName">Cadet Last Name *</label>
+          <input type="text" id="lookupLastName" />
+        </div>
+        <div class="form-group">
+          <label for="lookupBirthday">Cadet Birthday *</label>
+          <input type="date" id="lookupBirthday" />
+        </div>
+        <div class="form-group">
+          <label for="lookupEmail">Either Parent's Email on File *</label>
+          <input type="email" id="lookupEmail" />
+        </div>
+      </div>
+      <div id="lookupStatus"></div>
+      <button type="button" id="lookupBtn" class="cta-button">Check My Status</button>
+      <p style="font-size:.85rem;color:var(--gray);margin-top:1rem">New to the club and don't have a record on file yet? <a href="#" id="skipLookupLink" style="color:var(--blue)">Skip this and fill out the full application</a>.</p>
     </div>
 
+    <div id="applicationWrap" style="display:none">
     <div class="form-section">
       <h3>Member Information</h3>
       <p>Please fill in the information below to complete your membership application.</p>
@@ -398,6 +419,7 @@
         <button type="submit" class="cta-button">Proceed to Payment Options</button>
       </form>
     </div>
+    </div>
   </section>
 
   <!-- FOOTER -->
@@ -427,6 +449,80 @@
       // Must be at least 3 characters
       return squadron.trim().length >= 3;
     }
+
+    // ── Already-a-Member Check ────────────────────────────────────────────
+    // Reuses update-lookup.php as-is (same cadet last name + birthday +
+    // parent email identity check used on update.html/payment.html/etc.) —
+    // read-only for our purposes here, so this adds no new backend risk.
+    // A match means this cadet already has a record: send them to
+    // update.html to edit it and pay dues there instead of resubmitting the
+    // whole application. No match (or any error) falls through to showing
+    // the full application below — never a dead end either way.
+    function lookupEnterKey(e) {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lookupBtn').click(); }
+    }
+    document.getElementById('lookupLastName').addEventListener('keydown', lookupEnterKey);
+    document.getElementById('lookupBirthday').addEventListener('keydown', lookupEnterKey);
+    document.getElementById('lookupEmail').addEventListener('keydown', lookupEnterKey);
+
+    function showApplication() {
+      document.getElementById('lookupSection').style.display = 'none';
+      document.getElementById('applicationWrap').style.display = 'block';
+      window.scrollTo({ top: document.getElementById('applicationWrap').offsetTop - 100, behavior: 'smooth' });
+    }
+    document.getElementById('skipLookupLink').addEventListener('click', function(e) {
+      e.preventDefault();
+      showApplication();
+    });
+
+    document.getElementById('lookupBtn').addEventListener('click', async function() {
+      var btn = this;
+      var statusEl = document.getElementById('lookupStatus');
+      var last     = document.getElementById('lookupLastName').value.trim();
+      var birthday = document.getElementById('lookupBirthday').value;
+      var email    = document.getElementById('lookupEmail').value.trim();
+
+      statusEl.style.display = 'none';
+      statusEl.className = '';
+
+      if (!last || !birthday || !email) {
+        statusEl.textContent = "Please enter the cadet's last name, birthday, and the email on file.";
+        statusEl.className = 'error';
+        statusEl.style.display = 'block';
+        return;
+      }
+
+      btn.textContent = 'Checking…';
+      btn.disabled = true;
+
+      try {
+        var resp = await fetch('update-lookup.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cadetLastName: last,
+            cadetBirthday: birthday,
+            email: email,
+            website: document.getElementById('lookupWebsite').value
+          })
+        });
+        var result = await resp.json();
+
+        if (result.success) {
+          var name = (result.member && result.member.cadetFirstName) ? result.member.cadetFirstName : 'this cadet';
+          statusEl.textContent = 'Good news — ' + name + ' is already in our system! Taking you to update your information and pay dues…';
+          statusEl.className = 'success';
+          statusEl.style.display = 'block';
+          btn.textContent = 'Redirecting…';
+          setTimeout(function() { window.location.href = 'update.html'; }, 2000);
+        } else {
+          showApplication();
+        }
+      } catch (err) {
+        // Network hiccup — don't trap a new applicant behind a broken check.
+        showApplication();
+      }
+    });
 
     // Progress indicator — highlight active step on scroll
     (function() {
