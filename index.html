@@ -469,6 +469,7 @@
     <div class="membership-grid">
       <div class="membership-card">
         <h3>Annual Membership</h3>
+        <span id="open-enrollment-badge" style="display:none;background:#e8f5e9;color:#2e7d32;font-size:.75rem;font-weight:700;letter-spacing:.03em;padding:.25rem .65rem;border-radius:99px;margin-bottom:.5rem">🟢 Now Enrolling New Members</span>
         <div class="price-tag" id="membership-dues">$75 <span>/ year</span></div>
         <div id="membership-description">
         <p>Membership dues cover cadet support activities, club operations, and care packages for Alabama cadets throughout their Academy journey.</p>
@@ -1084,6 +1085,8 @@ fetch('settings-feed.php').then(function(r){return r.json();}).then(function(dat
   if (s.open_enrollment === '1') {
     var payBtn = document.getElementById('membership-pay-btn');
     if (payBtn) payBtn.href = 'membership.html';
+    var enrollBadge = document.getElementById('open-enrollment-badge');
+    if (enrollBadge) enrollBadge.style.display = 'inline-block';
   }
   // Facebook
   if (s.facebook_url) {
