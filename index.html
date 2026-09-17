@@ -478,7 +478,7 @@
         <p style="margin-top:.75rem;">🎖️ <strong>Paid members will receive a club identification badge</strong></p>
         <div class="payment-portal" style="margin-top:auto;">
           <p>Secure online payment.</p>
-          <a href="membership.html" class="btn btn-pay">PAY ANNUAL DUES</a>
+          <a href="update.html" id="membership-pay-btn" class="btn btn-pay">PAY ANNUAL DUES</a>
         </div>
       </div>
       <div class="membership-card">
@@ -1076,6 +1076,14 @@ fetch('settings-feed.php').then(function(r){return r.json();}).then(function(dat
   if (s.membership_description) {
     var md = document.getElementById('membership-description');
     if (md) md.innerHTML = s.membership_description.split(/\r?\n\s*\r?\n/).map(function(p){ return '<p>' + escHtml(p.trim()) + '</p>'; }).join('');
+  }
+  // Open Enrollment (admin/settings.php, "Membership" section) — the markup
+  // defaults to update.html (existing members: look yourself up and pay/renew)
+  // since that's the safe year-round state; only switch to the full
+  // new-member application when enrollment is explicitly open.
+  if (s.open_enrollment === '1') {
+    var payBtn = document.getElementById('membership-pay-btn');
+    if (payBtn) payBtn.href = 'membership.html';
   }
   // Facebook
   if (s.facebook_url) {

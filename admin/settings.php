@@ -30,6 +30,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($key === 'spotlight_photo') {
             // Keep the existing photo unless a new one was actually uploaded.
             $val = save_spotlight_photo('spotlight_photo_file') ?? $row['setting_value'];
+        } elseif ($key === 'open_enrollment') {
+            // Checkboxes submit nothing at all when unchecked, unlike every
+            // other setting here — special-cased so "off" reliably stores
+            // '0' rather than falling through to the generic branch below
+            // and storing an empty string.
+            $val = !empty($_POST[$key]) ? '1' : '0';
         } elseif ($key === 'president_letter') {
             // The only setting rendered back as raw HTML (Quill editor here,
             // and unescaped on the public president-letter.html page) — cut
@@ -60,7 +66,7 @@ $sections = [
     'Homepage Hero'       => ['hero_subtitle','hero_cta_text','hero_cta_url'],
     'Homepage Stats'      => ['stat_current_cadets','stat_annual_events','stat_years_active'],
     'Parent of the Month' => ['spotlight_name','spotlight_photo','spotlight_description'],
-    'Membership'          => ['membership_dues','membership_description'],
+    'Membership'          => ['membership_dues','membership_description','open_enrollment'],
     'President\'s Letter' => ['president_letter','president_name','president_title'],
     'Social & Links'      => ['facebook_url'],
     'Footer Resources'    => ['footer_resources'],
@@ -116,6 +122,12 @@ echo show_flash();
         <?php endif; ?>
         <input type="file" name="spotlight_photo_file" accept="image/*" style="padding:.5rem;font-size:.9rem">
         <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">Upload to replace<?= $val ? ' — leave blank to keep the current photo' : '' ?>. Square photos work best.</p>
+      <?php elseif ($type === 'checkbox'): ?>
+        <label style="display:flex;align-items:center;gap:.5rem;font-weight:400;text-transform:none;letter-spacing:0">
+          <input type="checkbox" name="<?= h($key) ?>" value="1" style="width:auto" <?= $val === '1' ? 'checked' : '' ?>>
+          Currently accepting new member applications
+        </label>
+        <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">When checked, the homepage's "Pay Annual Dues" button sends people to the full new-member application. When unchecked, it sends existing members straight to <code>update.html</code> to look themselves up and pay/renew — no re-entering their whole application.</p>
       <?php elseif ($type === 'textarea'): ?>
         <textarea name="<?= h($key) ?>" rows="<?= $key==='membership_description' ? 6 : 4 ?>"><?= h($val) ?></textarea>
       <?php else: ?>

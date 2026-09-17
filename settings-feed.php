@@ -12,7 +12,7 @@ try {
                     'president_title','facebook_url','footer_resources',
                     'spotlight_name','spotlight_photo','spotlight_description',
                     'stat_current_cadets','stat_annual_events','stat_years_active',
-                    'parent_letters_open'];
+                    'parent_letters_open','open_enrollment'];
     $ph   = implode(',', array_fill(0, count($public_keys), '?'));
     $stmt = $pdo->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ($ph)");
     $stmt->execute($public_keys);
