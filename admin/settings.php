@@ -122,7 +122,7 @@ echo show_flash();
         <?php endif; ?>
         <input type="file" name="spotlight_photo_file" accept="image/*" style="padding:.5rem;font-size:.9rem">
         <p style="font-size:.72rem;color:#9aa5b4;margin-top:.35rem">Upload to replace<?= $val ? ' — leave blank to keep the current photo' : '' ?>. Square photos work best.</p>
-      <?php elseif ($type === 'checkbox'): ?>
+      <?php elseif ($key === 'open_enrollment'): ?>
         <label style="display:flex;align-items:center;gap:.5rem;font-weight:400;text-transform:none;letter-spacing:0">
           <input type="checkbox" name="<?= h($key) ?>" value="1" style="width:auto" <?= $val === '1' ? 'checked' : '' ?>>
           Currently accepting new member applications
