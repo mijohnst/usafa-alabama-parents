@@ -1,0 +1,19 @@
+# Site-wide response security headers — deliberately narrow. These are the
+# headers that carry essentially no risk of breaking existing behavior:
+# none of them restrict which scripts/styles/images a page can load.
+#
+# Content-Security-Policy (beyond the narrow frame-ancestors line below) is
+# intentionally NOT set here. This site has substantial inline <script> and
+# <style> on nearly every page, plus external resources (Google Fonts, the
+# PayPal SDK, the Quill editor CDN, YouTube embeds) — a real CSP needs
+# careful per-page auditing and testing before being turned on, not a
+# blanket policy bolted on here that could silently break checkout or the
+# rich-text editor.
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Content-Security-Policy "frame-ancestors 'self'"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  Header always set Strict-Transport-Security "max-age=2592000"
+</IfModule>

@@ -132,9 +132,12 @@ try {
     // so a plain COALESCE against the bound (possibly-null) value works directly.
     // Graduation year is a <select> of known values — whitelist it so a
     // tampered/garbage value falls back to COALESCE-preserving the existing
-    // year instead of being written as-is.
+    // year instead of being written as-is. Built from current_class_years()
+    // (admin/lib.php), same as membership-handler.php, rather than a second
+    // hardcoded literal list that could drift out of sync with it (this one
+    // still accepted '2026' after that class had already graduated).
     $grad_year = s($payload, 'graduationYear');
-    if (!in_array($grad_year, ['2026', '2027', '2028', '2029', '2030', 'Prep School'], true)) {
+    if (!in_array($grad_year, array_merge(current_class_years(), ['Prep School']), true)) {
         $grad_year = '';
     }
     // Same whitelist treatment for Gender — a tampered value falls back to

@@ -37,6 +37,8 @@ finfo_close($finfo);
 $allowed_inline = ['application/pdf','image/jpeg','image/png','image/gif','image/webp'];
 if (!in_array($mime, $allowed_inline)) $mime = 'application/octet-stream';
 header('Content-Type: ' . $mime);
+header('X-Content-Type-Options: nosniff');
+header('Cache-Control: private, no-store');
 header('Content-Length: ' . filesize($file));
 
 $safe_name = str_replace(["\r","\n",'"'], ['','',''], basename($doc['filename']));

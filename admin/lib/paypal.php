@@ -357,7 +357,14 @@ function paypal_capture_order(string $orderId, string $requestId): array {
 
     $data = json_decode((string)$resp, true);
     $capture = $data['purchase_units'][0]['payments']['captures'][0] ?? null;
-    if ($code >= 200 && $code < 300 && $capture && ($capture['status'] ?? '') === 'COMPLETED') {
+    // Every order this codebase creates specifies currency_code USD (see
+    // paypal_create_order() above) — this should never actually differ in
+    // practice, but callers only ever check the numeric amount, so an
+    // unexpected non-USD capture would otherwise be silently treated as
+    // that many US dollars. Requiring it explicitly costs nothing on the
+    // normal path and closes that gap.
+    $capture_currency = $capture['amount']['currency_code'] ?? null;
+    if ($code >= 200 && $code < 300 && $capture && ($capture['status'] ?? '') === 'COMPLETED' && $capture_currency === 'USD') {
         return [
             'success'         => true,
             'status'          => $capture['status'],
@@ -365,6 +372,9 @@ function paypal_capture_order(string $orderId, string $requestId): array {
             'captured_amount' => (float)($capture['amount']['value'] ?? 0),
             'funding_source'  => paypal_funding_source_label($data),
         ];
+    }
+    if ($capture && ($capture['status'] ?? '') === 'COMPLETED' && $capture_currency !== 'USD') {
+        error_log('paypal_capture_order: unexpected currency "' . $capture_currency . '" for order ' . $orderId);
     }
     error_log('paypal_capture_order failed: HTTP ' . $code . ' ' . $resp);
     $is_duplicate = $code === 422 && (($data['details'][0]['issue'] ?? '') === 'ORDER_ALREADY_CAPTURED');
@@ -401,7 +411,10 @@ function paypal_get_order(string $orderId): array {
     // a crash/retry, so treating any non-empty capture as success would
     // let a declined or still-pending payment get reported to the browser
     // (and recorded in the ledger) as a completed one.
-    if ($code >= 200 && $code < 300 && $capture && ($capture['status'] ?? '') === 'COMPLETED') {
+    // Same USD requirement as paypal_capture_order() above — belt-and-suspenders
+    // since every order here is created in USD; see that function's comment.
+    $capture_currency = $capture['amount']['currency_code'] ?? null;
+    if ($code >= 200 && $code < 300 && $capture && ($capture['status'] ?? '') === 'COMPLETED' && $capture_currency === 'USD') {
         return [
             'success'         => true,
             'status'          => $capture['status'],
@@ -409,6 +422,9 @@ function paypal_get_order(string $orderId): array {
             'captured_amount' => (float)($capture['amount']['value'] ?? 0),
             'funding_source'  => paypal_funding_source_label($data),
         ];
+    }
+    if ($capture && ($capture['status'] ?? '') === 'COMPLETED' && $capture_currency !== 'USD') {
+        error_log('paypal_get_order: unexpected currency "' . $capture_currency . '" for order ' . $orderId);
     }
     $actual_status = $capture['status'] ?? null;
     error_log('paypal_get_order failed: HTTP ' . $code . ' status=' . ($actual_status ?? 'none') . ' ' . $resp);

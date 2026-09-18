@@ -17,6 +17,7 @@ $days           = in_array($days_raw, [30,60,90,365]) ? $days_raw : 30;
 $results = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     $where  = [$type === 'archived_members' ? 'archived = 1' : 'archived = 0'];
     $params = [];
 
@@ -266,6 +267,7 @@ admin_header('Lists');
 
 <div class="card">
   <form method="POST" id="listform">
+    <?= csrf_field() ?>
     <div class="form-row" style="align-items:flex-end;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto">
 
       <!-- Year multi-select dropdown -->

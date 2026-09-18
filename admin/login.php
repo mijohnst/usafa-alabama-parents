@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/form-guard.php';
 start_session();
 
 // Only a fixed allowlist of destinations can be requested via ?next= — never
@@ -36,6 +37,17 @@ if ($bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['bootst
 if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootstrap'])) {
     csrf_verify();
     $username_input = trim($_POST['username'] ?? '');
+
+    // Per-account lockout below only ever engages once a submitted username
+    // matches a real account — an attacker spraying nonexistent usernames
+    // never trips it at all. This IP-based check (same rate_limited() every
+    // public form on the site already uses) closes that gap by throttling
+    // every attempt regardless of whether the username is real, without
+    // being a second permanent lock a legitimate user could get stuck
+    // behind — it only ever delays, and always clears itself after the window.
+    if (rate_limited($pdo, 'admin_login')) {
+        $error = 'Too many login attempts from your network. Please try again in a few minutes.';
+    } else {
     $status = login_attempt_status($pdo, $username_input);
 
     if ($status && !empty($status['locked_until']) && strtotime($status['locked_until']) > time()) {
@@ -58,6 +70,7 @@ if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootst
         }
         if ($status) register_login_failure($pdo, (int)$status['id'], (int)$status['failed_attempts']);
         $error = 'Invalid username or password.';
+    }
     }
 }
 ?>
