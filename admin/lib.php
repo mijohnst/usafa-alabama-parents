@@ -553,27 +553,64 @@ function create_donation_campaign(PDO $pdo, string $slug, string $label, string 
 // Cadet count / goal for a campaign — live (always current) while it's the
 // active drive, so it tracks paid membership in real time; frozen (read
 // back from the snapshot activate_donation_campaign() takes when a newer
-// campaign takes over) once it's history. Without the frozen half, a past
-// campaign's goal would silently drop to $0/0-cadets the moment that
-// class's members get archived after graduation — corrupting historical
-// reports with no way to recover the true original number. Falls back to a
-// live recomputation if no snapshot exists yet (a campaign that predates
-// this mechanism, or is still active but hasn't been handed off) — the
+// campaign takes over, or from a manual campaign_set_locked_count() call —
+// see below) once it's history or explicitly locked. Without the frozen
+// half, a past campaign's goal would silently drop to $0/0-cadets the
+// moment that class's members get archived after graduation — corrupting
+// historical reports with no way to recover the true original number.
+// Falls back to a live recomputation if no snapshot exists yet (a campaign
+// that predates this mechanism, or is still active and never locked) — the
 // best available answer in that case, not a bug.
 // Returns [cadetCount, goal].
 function campaign_cadet_count_and_goal(PDO $pdo, string $slug, string $year, bool $isActive): array {
-    if (!$isActive) {
-        $keys = ["fundraiser_{$slug}_cadet_count", "fundraiser_{$slug}_goal"];
-        $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?)');
-        $stmt->execute($keys);
-        $vals = [];
-        foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
-        if (isset($vals["fundraiser_{$slug}_cadet_count"]) && isset($vals["fundraiser_{$slug}_goal"])) {
-            return [(int)$vals["fundraiser_{$slug}_cadet_count"], (float)$vals["fundraiser_{$slug}_goal"]];
-        }
+    $count_key  = "fundraiser_{$slug}_cadet_count";
+    $goal_key   = "fundraiser_{$slug}_goal";
+    $locked_key = "fundraiser_{$slug}_locked";
+    $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?, ?)');
+    $stmt->execute([$count_key, $goal_key, $locked_key]);
+    $vals = [];
+    foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
+
+    $frozen = !$isActive || !empty($vals[$locked_key]);
+    if ($frozen && isset($vals[$count_key]) && isset($vals[$goal_key])) {
+        return [(int)$vals[$count_key], (float)$vals[$goal_key]];
     }
     $count = campaign_paid_cadet_count($pdo, $year);
     return [$count, $count * SABER_PRICE];
+}
+
+function site_setting_upsert(PDO $pdo, string $key, string $val): void {
+    $exists = $pdo->prepare('SELECT COUNT(*) FROM site_settings WHERE setting_key = ?');
+    $exists->execute([$key]);
+    if ((int)$exists->fetchColumn() > 0) {
+        $pdo->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?')->execute([$val, $key]);
+    } else {
+        $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)')->execute([$key, $val]);
+    }
+}
+
+function campaign_is_locked(PDO $pdo, string $slug): bool {
+    $stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    $stmt->execute(["fundraiser_{$slug}_locked"]);
+    return !empty($stmt->fetchColumn());
+}
+
+// Manually freezes a still-active campaign's cadet count/goal at a specific
+// number so it stops moving on the public page as families pay or renew
+// dues mid-drive — e.g. once the Treasurer has a final, confirmed eligible
+// list and the live paid-dues count temporarily disagrees with it. This is
+// a deliberate, reversible Treasurer action, distinct from the automatic
+// freeze activate_donation_campaign() applies on handoff to a new campaign.
+function campaign_set_locked_count(PDO $pdo, string $slug, int $count): void {
+    site_setting_upsert($pdo, "fundraiser_{$slug}_cadet_count", (string)$count);
+    site_setting_upsert($pdo, "fundraiser_{$slug}_goal", number_format($count * SABER_PRICE, 2, '.', ''));
+    site_setting_upsert($pdo, "fundraiser_{$slug}_locked", '1');
+}
+
+// Resumes live tracking for a still-active campaign that was previously
+// locked via campaign_set_locked_count().
+function campaign_unlock_count(PDO $pdo, string $slug): void {
+    site_setting_upsert($pdo, "fundraiser_{$slug}_locked", '0');
 }
 
 // Switches which campaign fundraiser.html shows, without creating a new
@@ -581,27 +618,21 @@ function campaign_cadet_count_and_goal(PDO $pdo, string $slug, string $year, boo
 // started by mistake, or re-run a paused drive. Snapshots the OUTGOING
 // campaign's live cadet count/goal into site_settings first — see
 // campaign_cadet_count_and_goal() above for why that snapshot has to exist
-// before this campaign stops being the live one.
+// before this campaign stops being the live one. Skipped if the outgoing
+// campaign was already manually locked (campaign_set_locked_count()) —
+// re-snapshotting from live data here would silently overwrite the
+// Treasurer's chosen number with whatever the live paid-dues count happens
+// to be at handoff time, undoing the lock at the exact moment it matters
+// most for permanent history.
 function activate_donation_campaign(PDO $pdo, string $slug): void {
     $previous = $pdo->query('SELECT slug FROM donation_campaigns WHERE is_active = 1 LIMIT 1')->fetchColumn();
-    if ($previous && $previous !== $slug) {
+    if ($previous && $previous !== $slug && !campaign_is_locked($pdo, $previous)) {
         $year_stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
         $year_stmt->execute(["fundraiser_{$previous}_year"]);
         $prev_year  = trim((string)$year_stmt->fetchColumn());
         $prev_count = campaign_paid_cadet_count($pdo, $prev_year);
-        $freeze = [
-            "fundraiser_{$previous}_cadet_count" => (string)$prev_count,
-            "fundraiser_{$previous}_goal"        => number_format($prev_count * SABER_PRICE, 2, '.', ''),
-        ];
-        foreach ($freeze as $key => $val) {
-            $exists = $pdo->prepare('SELECT COUNT(*) FROM site_settings WHERE setting_key = ?');
-            $exists->execute([$key]);
-            if ((int)$exists->fetchColumn() > 0) {
-                $pdo->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?')->execute([$val, $key]);
-            } else {
-                $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)')->execute([$key, $val]);
-            }
-        }
+        site_setting_upsert($pdo, "fundraiser_{$previous}_cadet_count", (string)$prev_count);
+        site_setting_upsert($pdo, "fundraiser_{$previous}_goal", number_format($prev_count * SABER_PRICE, 2, '.', ''));
     }
     $pdo->prepare('UPDATE donation_campaigns SET is_active = (slug = ?)')->execute([$slug]);
 }

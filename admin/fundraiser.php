@@ -76,6 +76,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'crea
     header('Location: fundraiser.php?campaign=' . urlencode($new_slug_raw)); exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'lock') {
+    csrf_verify();
+    $lock_campaign = trim($_POST['campaign'] ?? '');
+    $lock_count_raw = trim($_POST['lock_count'] ?? '');
+    if (!isset($campaigns[$lock_campaign]) || $lock_campaign !== $active_slug) {
+        flash('error', 'Only the currently active campaign can be locked.');
+    } elseif (!ctype_digit($lock_count_raw)) {
+        flash('error', 'Cadet count to lock must be a whole number.');
+    } else {
+        campaign_set_locked_count($pdo, $lock_campaign, (int)$lock_count_raw);
+        flash('success', "Cadet count locked at $lock_count_raw — the public page will stop moving until you unlock it.");
+    }
+    header('Location: fundraiser.php?campaign=' . urlencode($lock_campaign)); exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'unlock') {
+    csrf_verify();
+    $unlock_campaign = trim($_POST['campaign'] ?? '');
+    if (!isset($campaigns[$unlock_campaign]) || $unlock_campaign !== $active_slug) {
+        flash('error', 'Only the currently active campaign can be unlocked.');
+    } else {
+        campaign_unlock_count($pdo, $unlock_campaign);
+        flash('success', 'Cadet count unlocked — it will resume tracking paid members live.');
+    }
+    header('Location: fundraiser.php?campaign=' . urlencode($unlock_campaign)); exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'save') {
     csrf_verify();
     $offline_raw  = trim($_POST['offline_raised'] ?? '');
@@ -133,6 +160,8 @@ $deadline = $vals[$deadline_key] ?? '';
 // campaign's numbers must not just recompute to 0 after that class's
 // members eventually get archived.
 [$cadet_count, $goal] = campaign_cadet_count_and_goal($pdo, $campaign, $year, $campaign === $active_slug);
+$is_locked = $campaign !== '' && campaign_is_locked($pdo, $campaign);
+$live_cadet_count = $campaign !== '' ? campaign_paid_cadet_count($pdo, $year) : 0;
 $settings_missing = $campaign !== '' && count($vals) < count($all_keys);
 $campaign_label = $campaign !== '' ? saber_fund_label($pdo, $campaign, $campaigns[$campaign]) : '';
 
@@ -260,9 +289,41 @@ echo show_flash();
     <div><strong style="color:#003594;font-size:1.1rem;display:block"><?= $pct ?>%</strong>Funded</div>
   </div>
   <div style="background:#f7f9fc;border-radius:6px;padding:.85rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:#5a6a7a">
-    <strong style="color:#003594"><?= $cadet_count ?> paid cadet<?= $cadet_count === 1 ? '' : 's' ?></strong> in the Class of <?= h($year ?: '—') ?> &times; $<?= number_format(SABER_PRICE, 0) ?>/saber = <strong style="color:#003594">$<?= number_format($goal, 2) ?> goal</strong>
-    <br><?= $campaign === $active_slug ? 'Counted automatically from paid members — no manual entry, updates live as families pay dues.' : 'This campaign is no longer active — the count above is frozen from when it was handed off, so it stays accurate even after this class graduates.' ?>
+    <strong style="color:#003594"><?= $cadet_count ?> paid cadet<?= $cadet_count === 1 ? '' : 's' ?></strong><?= $campaign === $active_slug && $is_locked ? ' 🔒' : '' ?> in the Class of <?= h($year ?: '—') ?> &times; $<?= number_format(SABER_PRICE, 0) ?>/saber = <strong style="color:#003594">$<?= number_format($goal, 2) ?> goal</strong>
+    <?php if ($campaign !== $active_slug): ?>
+    <br>This campaign is no longer active — the count above is frozen from when it was handed off, so it stays accurate even after this class graduates.
+    <?php elseif ($is_locked): ?>
+    <br>Locked by a Treasurer/admin — this number will not change until unlocked, even as families pay or renew dues. Live paid-cadet count right now: <strong><?= $live_cadet_count ?></strong>.
+    <?php else: ?>
+    <br>Counted automatically from paid members — no manual entry, updates live as families pay dues.
+    <?php endif; ?>
   </div>
+
+  <?php if ($can_edit && $campaign === $active_slug): ?>
+  <div style="background:#fff8e6;border:1px solid #ffe6a3;border-radius:6px;padding:.85rem 1rem;margin-bottom:1.5rem">
+    <?php if ($is_locked): ?>
+    <p style="font-size:.85rem;color:#5a6a7a;margin-bottom:.65rem">The cadet count/goal above is locked and won't move on the public page.</p>
+    <form method="POST" style="margin:0">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="unlock">
+      <input type="hidden" name="campaign" value="<?= h($campaign) ?>">
+      <button type="submit" class="btn btn-secondary btn-sm">Unlock (resume live tracking)</button>
+    </form>
+    <?php else: ?>
+    <p style="font-size:.85rem;color:#5a6a7a;margin-bottom:.65rem">Want to stop this number from moving (e.g. dues just reset for the new year and renewals haven't caught up yet)? Lock it at a specific cadet count — the goal is recalculated from that number and stays fixed until you unlock it.</p>
+    <form method="POST" style="margin:0;display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="lock">
+      <input type="hidden" name="campaign" value="<?= h($campaign) ?>">
+      <div class="form-group" style="margin:0">
+        <label style="font-size:.72rem">Cadets to lock at</label>
+        <input type="number" min="0" step="1" name="lock_count" value="<?= h((string)$live_cadet_count) ?>" style="width:8rem">
+      </div>
+      <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Lock the cadet count/goal at this number? The public page will stop updating it until you unlock.')">Lock Count</button>
+    </form>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 
   <?php if ($can_edit): ?>
   <form method="POST">
