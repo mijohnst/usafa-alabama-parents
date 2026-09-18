@@ -14,22 +14,31 @@ require_once __DIR__ . '/auth.php';
 require_member_admin();
 $pdo = get_pdo();
 
-$month = (int)($_GET['month'] ?? date('n'));
-if ($month < 1 || $month > 12) $month = (int)date('n');
+// "month" is either 1-12 or the literal string "all" (full-year list).
+$view      = trim((string)($_GET['month'] ?? date('n')));
+$show_all  = ($view === 'all');
+$month     = $show_all ? 0 : (int)$view;
+if (!$show_all && ($month < 1 || $month > 12)) $month = (int)date('n');
 $card_year = (int)date('Y');
-$month_name = date('F', mktime(0, 0, 0, $month, 1));
+$month_name = $show_all ? '' : date('F', mktime(0, 0, 0, $month, 1));
 
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
-    $posted_month = (int)($_POST['month'] ?? $month);
+    $posted_view  = trim((string)($_POST['month'] ?? $view));
+    $posted_all   = ($posted_view === 'all');
+    $posted_month = $posted_all ? 0 : (int)$posted_view;
 
-    // Validate against exactly the cadets shown for the posted month, not
+    // Validate against exactly the cadets shown for the posted view, not
     // whatever's in $_POST — a submission can only affect rows the form
     // actually rendered.
-    $stmt = $pdo->prepare('SELECT id FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL AND MONTH(cadet_birthday) = ?');
-    $stmt->execute([$posted_month]);
+    if ($posted_all) {
+        $stmt = $pdo->query('SELECT id FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL');
+    } else {
+        $stmt = $pdo->prepare('SELECT id FROM members WHERE archived = 0 AND cadet_birthday IS NOT NULL AND MONTH(cadet_birthday) = ?');
+        $stmt->execute([$posted_month]);
+    }
     $shown_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     $posted = [];
@@ -67,20 +76,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($posted as $r) $up->execute($r);
         $pdo->commit();
         flash('success', 'Birthday card tracker saved — ' . count($posted) . ' cadet' . (count($posted) != 1 ? 's' : '') . ' updated.');
-        header('Location: birthdays.php?month=' . $posted_month);
+        header('Location: birthdays.php?month=' . ($posted_all ? 'all' : $posted_month));
         exit;
     }
 }
 
-$stmt = $pdo->prepare(
-    "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, cadet_birthday,
-            cadet_po_box, class_year, membership_paid
-     FROM members
-     WHERE archived = 0 AND cadet_birthday IS NOT NULL AND MONTH(cadet_birthday) = ?
-     ORDER BY DAY(cadet_birthday), cadet_last_name"
-);
-$stmt->execute([$month]);
+if ($show_all) {
+    $stmt = $pdo->query(
+        "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, cadet_birthday,
+                cadet_po_box, class_year, membership_paid
+         FROM members
+         WHERE archived = 0 AND cadet_birthday IS NOT NULL
+         ORDER BY MONTH(cadet_birthday), DAY(cadet_birthday), cadet_last_name"
+    );
+} else {
+    $stmt = $pdo->prepare(
+        "SELECT id, cadet_first_name, cadet_middle_name, cadet_last_name, cadet_suffix, cadet_birthday,
+                cadet_po_box, class_year, membership_paid
+         FROM members
+         WHERE archived = 0 AND cadet_birthday IS NOT NULL AND MONTH(cadet_birthday) = ?
+         ORDER BY DAY(cadet_birthday), cadet_last_name"
+    );
+    $stmt->execute([$month]);
+}
 $cadets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Grouped by month so the full-year view can render one table per month
+// (with page-break-friendly headings for printing); the single-month view
+// is just one group.
+$groups = [];
+if ($show_all) {
+    foreach ($cadets as $c) $groups[(int)date('n', strtotime($c['cadet_birthday']))][] = $c;
+} else {
+    $groups[$month] = $cadets;
+}
 
 $existing = [];
 if ($cadets) {
@@ -121,21 +150,33 @@ admin_header('Cadet Birthday Cards');
 .bday-paid{display:inline-block;padding:.15rem .5rem;border-radius:99px;font-size:.7rem;font-weight:700;background:#e8f5e9;color:#1b5e20}
 .bday-unpaid{display:inline-block;padding:.15rem .5rem;border-radius:99px;font-size:.7rem;font-weight:700;background:#f7f9fc;color:#9aa5b4}
 .bday-noaddr{color:#A6192E;font-size:.78rem}
+/* Declaration order matters here: paid-row is the base highlight, and
+   sent/gift are declared after so they win over it (same selector
+   specificity) on a row that's both paid and sent/gift-included. */
+.bday-paid-row td{background:#f1f8f2}
+.bday-table tr.bday-paid-row:hover td{background:#e6f3e7}
 .bday-row-sent td{background:#fff8e1}
-.bday-row-gift td{background:#e8f5e9}
 .bday-table tr.bday-row-sent:hover td{background:#fbeecb}
-.bday-table tr.bday-row-gift:hover td{background:#d7ecda}
+.bday-row-gift td{background:#c8e6c9}
+.bday-table tr.bday-row-gift:hover td{background:#b6dbb7}
+@media print {
+  .no-print{display:none!important}
+  .card{page-break-inside:avoid}
+}
 </style>
 
 <div class="page-head">
   <h1>🎂 Cadet Birthday Cards</h1>
-  <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  <div class="no-print" style="display:flex;gap:.5rem">
+    <button type="button" class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
+    <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
+  </div>
 </div>
 
 <?= show_flash() ?>
 
 <?php if ($errors): ?>
-  <div class="alert alert-danger" style="margin-bottom:1rem">
+  <div class="alert alert-danger no-print" style="margin-bottom:1rem">
     Nothing was saved — fix the following and resubmit:
     <ul style="margin:.5rem 0 0 1.25rem">
       <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
@@ -143,30 +184,39 @@ admin_header('Cadet Birthday Cards');
   </div>
 <?php endif; ?>
 
-<form method="GET" style="margin-bottom:1rem">
+<form method="GET" class="no-print" style="margin-bottom:1rem">
   <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
     <label style="font-size:.75rem;font-weight:700;color:#5a6a7a;text-transform:none;letter-spacing:normal;margin:0">Month:</label>
     <select name="month" onchange="this.form.submit()" style="padding:.35rem .6rem;font-size:.85rem;border:1px solid #d0d5dd;border-radius:4px">
+      <option value="all" <?= $show_all ? 'selected' : '' ?>>All Months — Full-Year List</option>
       <?php for ($m = 1; $m <= 12; $m++): ?>
-        <option value="<?= $m ?>" <?= $m === $month ? 'selected' : '' ?>><?= h(date('F', mktime(0, 0, 0, $m, 1))) ?></option>
+        <option value="<?= $m ?>" <?= (!$show_all && $m === $month) ? 'selected' : '' ?>><?= h(date('F', mktime(0, 0, 0, $m, 1))) ?></option>
       <?php endfor; ?>
     </select>
   </div>
 </form>
 
 <p style="font-size:.85rem;color:#5a6a7a;margin-bottom:1.25rem">
-  <strong style="color:#003594"><?= count($cadets) ?></strong> cadet<?= count($cadets) === 1 ? '' : 's' ?> with a birthday in <?= h($month_name) ?>,
-  <strong style="color:#1b5e20"><?= $paid_count ?></strong> from a currently paid member family — those are the ones who should also get a gift card in their card.
+  <?php if ($show_all): ?>
+    <strong style="color:#003594"><?= count($cadets) ?></strong> cadet<?= count($cadets) === 1 ? '' : 's' ?> total across the year,
+  <?php else: ?>
+    <strong style="color:#003594"><?= count($cadets) ?></strong> cadet<?= count($cadets) === 1 ? '' : 's' ?> with a birthday in <?= h($month_name) ?>,
+  <?php endif; ?>
+  <strong style="color:#1b5e20"><?= $paid_count ?></strong> from a currently paid member family (highlighted below) — those are the ones who should also get a gift card in their card.
 </p>
 
 <?php if (empty($cadets)): ?>
-  <p style="color:#9aa5b4">No cadets have birthdays in <?= h($month_name) ?>.</p>
+  <p style="color:#9aa5b4">No cadets have birthdays <?= $show_all ? 'on file' : 'in ' . h($month_name) ?>.</p>
 <?php else: ?>
 
 <form method="POST">
   <?= csrf_field() ?>
-  <input type="hidden" name="month" value="<?= $month ?>">
-  <div class="card" style="padding:0;overflow-x:auto">
+  <input type="hidden" name="month" value="<?= h($show_all ? 'all' : (string)$month) ?>">
+  <?php foreach ($groups as $gmonth => $gcadets): ?>
+  <?php if ($show_all): ?>
+    <h3 style="margin:1.5rem 0 .5rem;color:#002554"><?= h(date('F', mktime(0, 0, 0, $gmonth, 1))) ?></h3>
+  <?php endif; ?>
+  <div class="card" style="padding:0;overflow-x:auto<?= $show_all ? ';margin-bottom:1rem' : '' ?>">
   <table class="bday-table">
     <thead>
       <tr>
@@ -180,7 +230,7 @@ admin_header('Cadet Birthday Cards');
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($cadets as $c):
+      <?php foreach ($gcadets as $c):
           $mid = $c['id'];
           $st  = $existing[$mid] ?? null;
           $rp  = $repost[$mid] ?? null;
@@ -189,7 +239,7 @@ admin_header('Cadet Birthday Cards');
           $gift      = $rp ? $rp['gift']      : (bool)($st['gift_card_included'] ?? false);
           $gift_date = $rp ? $rp['gift_date'] : ($st['gift_card_date'] ?? '');
           $comment   = $rp ? $rp['comment']   : ($st['comment'] ?? '');
-          $row_class = $gift ? 'bday-row-gift' : ($sent ? 'bday-row-sent' : '');
+          $row_class = trim(($c['membership_paid'] ? 'bday-paid-row ' : '') . ($gift ? 'bday-row-gift' : ($sent ? 'bday-row-sent' : '')));
       ?>
       <tr class="<?= $row_class ?>">
         <td><?= h(date('M j', strtotime($c['cadet_birthday']))) ?></td>
@@ -220,8 +270,9 @@ admin_header('Cadet Birthday Cards');
     </tbody>
   </table>
   </div>
+  <?php endforeach; ?>
 
-  <div style="margin-top:1.25rem">
+  <div class="no-print" style="margin-top:1.25rem">
     <button type="submit" class="btn btn-primary">Save Birthday Card Tracker</button>
   </div>
 </form>
