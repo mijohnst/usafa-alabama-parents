@@ -225,6 +225,7 @@ if (can_manage_members()) {
         ")->fetchColumn();
     } catch (Exception $e) { $badge_pending = 0; }
     $sections['Member Management'][] = ['icon'=>'🏅','label'=>'Badges','sub'=>$badge_pending>0?"$badge_pending pending":'Track parent badge orders','href'=>'badges.php','color'=>'#8A8D8F','badge'=>$badge_pending];
+    $sections['Member Management'][] = ['icon'=>'🎂','label'=>'Birthday Cards','sub'=>'Track cards & gift cards by month','href'=>'birthdays.php','color'=>'#6a1b9a'];
     $sections['Site Management'][] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
     $sections['Site Management'][] = ['icon'=>'🖼️','label'=>'Homepage Gallery','sub'=>'Direct-upload homepage photos','href'=>'gallery.php','color'=>'#1b5e20'];
     $sections['Site Management'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Photos for a specific club event','href'=>'event-albums.php','color'=>'#1565c0'];
