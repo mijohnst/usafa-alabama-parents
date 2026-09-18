@@ -479,7 +479,14 @@
           renderRecentDonations(d.recent || []);
           if (d.year) campaignYear = d.year;
           if (d.deadline) campaignDeadlineIso = d.deadline;
-          if (d.goal) campaignGoal = d.goal;
+          // Unlike year/deadline above (where a blank string means "setting
+          // not populated yet, keep the hardcoded default"), 0 is a real,
+          // meaningful value for goal — it means the active campaign
+          // currently has zero paid-member-eligible cadets. A truthy check
+          // here (`if (d.goal)`) was treating that real zero as "missing"
+          // and leaving the stale default cadet count/goal on screen
+          // instead of the live one.
+          if (typeof d.goal === 'number') campaignGoal = d.goal;
           applyCampaignText();
 
           // Each SABER_PRICE raised "funds" one saber — a literal, countable
