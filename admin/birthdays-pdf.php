@@ -47,9 +47,10 @@ if ($show_all) {
 // Columns sum to 6.5in — Letter width minus 0.75in margins each side.
 $col_w = ['date' => 0.9, 'cadet' => 2.5, 'class' => 0.8, 'addr' => 2.3];
 $header_row_h = 0.32;
-$line_h  = 0.24;  // one line of Kalam body text
-$data_row_h = $line_h * 2; // every data row is 2 lines tall, to fit a 2-line mailing address without overflow
-$bottom_y = 10.25; // Letter (11in) minus the 0.75in bottom margin set below — kept in sync with SetAutoPageBreak
+$line_h   = 0.24;  // one line of Kalam body text
+$addr_pad = 0.05;  // top/bottom padding around the 2-line address text within its cell
+$data_row_h = $line_h * 2 + $addr_pad * 2; // tall enough for a 2-line address plus padding, with margin to spare
+$bottom_y = 10.25; // Letter (11in) minus the 0.75in bottom margin — page breaks are handled manually below (see SetAutoPageBreak(false) note)
 
 function birthday_pdf_table_header(tFPDF $pdf, array $col_w, float $row_h): void {
     $pdf->SetFont('Kalam', 'B', 10);
@@ -68,7 +69,7 @@ function birthday_pdf_table_header(tFPDF $pdf, array $col_w, float $row_h): void
 // divider between the two address lines instead of one unified cell), so
 // the bordered/filled box is drawn first via an empty Cell() and the text
 // is placed inside it afterward with border off.
-function birthday_pdf_row(tFPDF $pdf, array $col_w, float $data_row_h, float $line_h, array $c): void {
+function birthday_pdf_row(tFPDF $pdf, array $col_w, float $data_row_h, float $line_h, float $addr_pad, array $c): void {
     $paid = (bool)$c['membership_paid'];
     [$addr1, $addr2] = cadet_mailing_address($c['cadet_po_box']);
     $fill = $paid;
@@ -83,9 +84,17 @@ function birthday_pdf_row(tFPDF $pdf, array $col_w, float $data_row_h, float $li
     $pdf->Cell($col_w['cadet'], $data_row_h, cadet_full_name($c) . ($paid ? ' (Paid)' : ''), 1, 0, 'L', $fill);
     $pdf->Cell($col_w['class'], $data_row_h, $c['class_year'], 1, 0, 'L', $fill);
 
+    // MultiCell respects the global auto-page-break setting on its own,
+    // independently of the row-level page-break check the caller already
+    // did — with it left on, MultiCell could decide mid-way through writing
+    // these two lines to jump to a new page by itself, splitting the text
+    // and leaving orphaned fragments floating outside any cell. Auto page
+    // break is disabled globally for this whole PDF (see the main script)
+    // specifically so this can never happen; every page break here is this
+    // script's own explicit AddPage() call, made before a row is started.
     $addr_x = $pdf->GetX();
     $pdf->Cell($col_w['addr'], $data_row_h, '', 1, 1, 'L', $fill);
-    $pdf->SetXY($addr_x + 0.05, $y0 + 0.04);
+    $pdf->SetXY($addr_x + 0.05, $y0 + $addr_pad);
     $pdf->MultiCell($col_w['addr'] - 0.1, $line_h, $addr1 . ($addr2 !== '' ? "\n" . $addr2 : ''), 0, 'L');
 
     $pdf->SetXY($x0, $y0 + $data_row_h);
@@ -101,7 +110,14 @@ $pdf->AddFont('Kalam', '', 'Kalam-Regular.ttf', true);
 $pdf->AddFont('Kalam', 'B', 'Kalam-Bold.ttf', true);
 $pdf->AddFont('Cinzel', '', 'Cinzel-Regular.ttf', true);
 $pdf->SetMargins(0.75, 0.75, 0.75);
-$pdf->SetAutoPageBreak(true, 0.75);
+// Disabled deliberately: this script builds hand-bordered table rows out of
+// Cell()/MultiCell() calls with its own manual page-break checks below
+// (comparing GetY() against $bottom_y before starting each row/month
+// block). Left on, tFPDF's automatic page break can fire on its own from
+// inside a MultiCell() call — independently of, and uncoordinated with,
+// those manual checks — splitting a cell's text across two pages with the
+// remainder floating outside any table structure on the new page.
+$pdf->SetAutoPageBreak(false);
 
 if (!empty($cadets)) {
     $pdf->AddPage();
@@ -137,7 +153,7 @@ if (!empty($cadets)) {
                 $pdf->AddPage();
                 birthday_pdf_table_header($pdf, $col_w, $header_row_h);
             }
-            birthday_pdf_row($pdf, $col_w, $data_row_h, $line_h, $c);
+            birthday_pdf_row($pdf, $col_w, $data_row_h, $line_h, $addr_pad, $c);
         }
     }
 } else {
