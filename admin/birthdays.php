@@ -126,10 +126,11 @@ admin_header('Cadet Birthday Cards');
       </td>
       <td><?= h($c['class_year']) ?></td>
       <td>
-        <?php if ($c['cadet_po_box']): ?>
-          P.O. Box <?= h($c['cadet_po_box']) ?><br>USAF Academy, CO 80841-<?= h($c['cadet_po_box']) ?>
+        <?php [$addr1, $addr2] = cadet_mailing_address($c['cadet_po_box']);
+              if ($addr2 === ''): ?>
+          <span class="bday-noaddr"><?= h($addr1) ?></span>
         <?php else: ?>
-          <span class="bday-noaddr">No PO Box on file</span>
+          <?= h($addr1) ?><br><?= h($addr2) ?>
         <?php endif; ?>
       </td>
     </tr>

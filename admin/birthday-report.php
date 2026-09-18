@@ -60,16 +60,16 @@ if (empty($cadets)) {
     foreach ($cadets as $c) {
         $name = cadet_full_name($c);
         $day  = $c['cadet_birthday'] ? date('F j', strtotime($c['cadet_birthday'])) : '—';
-        $box  = $c['cadet_po_box'] ?: 'No PO Box on file';
+        [$addr1, $addr2] = cadet_mailing_address($c['cadet_po_box']);
         $body .= "$day\n";
         $body .= "  $name (Class of {$c['class_year']})\n";
         $body .= "  Mailing address:\n";
         $body .= "    Cadet $name\n";
-        if ($c['cadet_po_box']) {
-            $body .= "    P.O. Box {$c['cadet_po_box']}\n";
-            $body .= "    USAF Academy, CO 80841-{$c['cadet_po_box']}\n";
+        if ($addr2 !== '') {
+            $body .= "    $addr1\n";
+            $body .= "    $addr2\n";
         } else {
-            $body .= "    (No PO Box on file — check member record)\n";
+            $body .= "    ($addr1 — check member record)\n";
         }
         $body .= "\n";
     }

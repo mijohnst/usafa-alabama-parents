@@ -53,6 +53,17 @@ function cadet_full_name(array $m): string {
     ));
 }
 
+// Composes a cadet's two-line USAFA mailing address from the raw PO Box
+// field, defensively stripping any "PO Box"/"P.O. Box" someone already
+// typed into that field — some records have it, which without stripping
+// produces a doubled "P.O. Box PO Box 1234". Returns [line1, line2];
+// line2 is '' when there's no PO Box on file.
+function cadet_mailing_address(?string $poBox): array {
+    $box = trim(preg_replace('/^p\.?\s*o\.?\s*box\.?\s*/i', '', trim((string)$poBox)));
+    if ($box === '') return ['No PO Box on file', ''];
+    return ['P.O. Box ' . $box, 'USAF Academy, CO 80841-' . $box];
+}
+
 // "Last Suffix" — the leading half of the "Last, First Middle" display
 // convention used in tables, headings, and dropdowns throughout admin/.
 function cadet_last_name_suffixed(array $m): string {
