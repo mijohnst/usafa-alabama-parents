@@ -10,6 +10,7 @@ require_once __DIR__ . '/auth.php';
 require_member_admin();
 $pdo = get_pdo();
 require_once __DIR__ . '/lib/tfpdf/tfpdf.php';
+require_once __DIR__ . '/lib/tfpdf/font/unifont/ttfonts.php';
 
 $view     = trim((string)($_GET['month'] ?? date('n')));
 $show_all = ($view === 'all');
@@ -45,10 +46,10 @@ if ($show_all) {
 
 // Columns sum to 6.5in — Letter width minus 0.75in margins each side.
 $col_w = ['date' => 0.9, 'cadet' => 2.5, 'class' => 0.8, 'addr' => 2.3];
-$row_h = 0.28;
+$row_h = 0.32; // Kalam (the only body font vendored here) runs taller than a core font at the same point size
 
 function birthday_pdf_table_header(tFPDF $pdf, array $col_w, float $row_h): void {
-    $pdf->SetFont('Helvetica', 'B', 9);
+    $pdf->SetFont('Kalam', 'B', 10);
     $pdf->SetFillColor(0, 37, 84);
     $pdf->SetTextColor(255, 255, 255);
     $pdf->Cell($col_w['date'], $row_h, 'Date', 1, 0, 'L', true);
@@ -59,6 +60,14 @@ function birthday_pdf_table_header(tFPDF $pdf, array $col_w, float $row_h): void
 }
 
 $pdf = new tFPDF('P', 'in', 'Letter');
+// Only Kalam/Cinzel are actually vendored under admin/lib/tfpdf/font/ (this
+// copy never shipped the standard core-font metrics files) — SetFont() with
+// a core font name like 'Helvetica' fatals at runtime since there's no
+// metrics file for it to load, so every font used here must be one of these
+// two, registered exactly like setup_parent_letter_pdf() already does.
+$pdf->AddFont('Kalam', '', 'Kalam-Regular.ttf', true);
+$pdf->AddFont('Kalam', 'B', 'Kalam-Bold.ttf', true);
+$pdf->AddFont('Cinzel', '', 'Cinzel-Regular.ttf', true);
 $pdf->SetMargins(0.75, 0.75, 0.75);
 $pdf->SetAutoPageBreak(true, 0.75);
 
@@ -66,10 +75,10 @@ foreach ($groups as $gmonth => $gcadets) {
     if (empty($gcadets)) continue;
     $pdf->AddPage();
 
-    $pdf->SetFont('Helvetica', 'B', 16);
+    $pdf->SetFont('Cinzel', '', 18);
     $pdf->SetTextColor(0, 37, 84);
     $pdf->Cell(0, 0.32, date('F', mktime(0, 0, 0, $gmonth, 1)) . ' Birthdays', 0, 1, 'L');
-    $pdf->SetFont('Helvetica', '', 9);
+    $pdf->SetFont('Kalam', '', 10);
     $pdf->SetTextColor(90, 106, 122);
     $pdf->Cell(0, 0.2, 'USAFA Parents Club of Alabama', 0, 1, 'L');
     $pdf->Ln(0.15);
@@ -82,7 +91,7 @@ foreach ($groups as $gmonth => $gcadets) {
             ? 'P.O. Box ' . $c['cadet_po_box'] . ', USAF Academy, CO 80841-' . $c['cadet_po_box']
             : 'No PO Box on file';
 
-        $pdf->SetFont('Helvetica', '', 9);
+        $pdf->SetFont('Kalam', '', 10);
         $pdf->SetTextColor(0, 0, 0);
         if ($paid) $pdf->SetFillColor(232, 245, 233); else $pdf->SetFillColor(255, 255, 255);
         $pdf->Cell($col_w['date'], $row_h, date('M j', strtotime($c['cadet_birthday'])), 1, 0, 'L', true);
@@ -94,7 +103,7 @@ foreach ($groups as $gmonth => $gcadets) {
 
 if (empty($cadets)) {
     $pdf->AddPage();
-    $pdf->SetFont('Helvetica', '', 12);
+    $pdf->SetFont('Kalam', '', 13);
     $pdf->Cell(0, 0.3, 'No cadets have birthdays on file.', 0, 1, 'L');
 }
 
