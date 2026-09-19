@@ -13,7 +13,7 @@ $note           = trim($_POST['note']            ?? '');
 $payment_method = trim($_POST['payment_method']  ?? '');
 $pdo    = get_pdo();
 
-if (!$id || !in_array($action, ['approve','submit','paid','send_paypal','check_paypal_status'])) {
+if (!$id || !in_array($action, ['approve','submit','paid','send_paypal','check_paypal_status','archive','unarchive'])) {
     flash('error', 'Invalid request.');
     header('Location: purchases.php'); exit;
 }
@@ -213,6 +213,28 @@ if ($action === 'approve') {
         }
     } else {
         flash('error', 'Could not check PayPal status: ' . $result['error']);
+    }
+
+} elseif ($action === 'archive' || $action === 'unarchive') {
+    // Treasurer only, same gate as the other payment-lifecycle actions above.
+    if (!is_treasurer()) {
+        flash('error', 'Only the treasurer can archive purchases.');
+        header('Location: purchases.php'); exit;
+    }
+    if ($action === 'archive' && $p['status'] !== 'paid') {
+        flash('error', 'Only fully paid purchases can be archived.');
+        header('Location: purchases.php'); exit;
+    }
+    // archived is a newer column (migrate_purchase_archive.sql) — degrade to
+    // a clear error rather than a raw SQL failure if it hasn't been run yet.
+    try {
+        $pdo->prepare('UPDATE purchases SET archived = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$action === 'archive' ? 1 : 0, $id]);
+        flash('success', $action === 'archive'
+            ? 'Purchase archived — check "Show Archived" to find it again.'
+            : 'Purchase unarchived.');
+    } catch (\PDOException $e) {
+        flash('error', 'Archiving isn\'t set up yet — run migrate_purchase_archive.sql first.');
     }
 }
 

@@ -11,6 +11,15 @@ $filter_event    = $_GET['event']    ?? '';
 $filter_from     = $_GET['from']     ?? '';
 $filter_to       = $_GET['to']       ?? '';
 $filter_search   = trim($_GET['q']   ?? '');
+$filter_show_archived = isset($_GET['show_archived']);
+
+// archived is a newer column (migrate_purchase_archive.sql) — check for it
+// rather than assuming the migration has been run, same discipline as every
+// other new-column read on this site. Checked once and reused everywhere
+// below that needs to know (the default WHERE filter and the Archive
+// button), so this page and its actions never hard-error against a
+// database that hasn't been migrated yet.
+$has_archived_column = (bool)$pdo->query("SHOW COLUMNS FROM purchases LIKE 'archived'")->fetch();
 
 $where  = ['1=1'];
 $params = [];
@@ -23,6 +32,10 @@ if ($filter_search   !== '') {
     $where[] = '(p.vendor LIKE :q OR p.description LIKE :q OR p.order_number LIKE :q OR p.notes LIKE :q)';
     $params[':q'] = '%' . $filter_search . '%';
 }
+// Archived purchases (fully paid, reviewed, tucked away) are hidden by
+// default — never excluded from any totals/reports, just this list view —
+// unless "Show Archived" is checked.
+if ($has_archived_column && !$filter_show_archived) { $where[] = 'p.archived = 0'; }
 // A plain member only ever sees their own purchases; leadership sees everyone's.
 if (is_member()) { $where[] = 'p.submitted_by = :me'; $params[':me'] = $_SESSION['user_id'] ?? 0; }
 
@@ -207,6 +220,14 @@ admin_header('Finance');
       <label>To Date</label>
       <input type="date" name="to" value="<?= h($filter_to) ?>">
     </div>
+    <?php if ($has_archived_column): ?>
+    <div class="form-group" style="flex:0;justify-content:flex-end">
+      <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;text-transform:none;letter-spacing:0;white-space:nowrap">
+        <input type="checkbox" name="show_archived" value="1" <?= $filter_show_archived ? 'checked' : '' ?> style="width:auto">
+        Show Archived
+      </label>
+    </div>
+    <?php endif; ?>
     <div class="form-group" style="flex:0">
       <label>&nbsp;</label>
       <div style="display:flex;gap:.5rem">
@@ -257,6 +278,9 @@ admin_header('Finance');
         </span>
         <?php if ($mismatch): ?>
         <div style="font-size:.68rem;color:#9a7b1f;margin-top:.2rem;white-space:nowrap" title="Marked Paid, but PayPal's payout status is still &quot;<?= h($p['paypal_payout_status'] ?? 'unknown') ?>&quot; — not yet confirmed SUCCESS.">payout <?= h(strtolower($p['paypal_payout_status'] ?? 'unknown')) ?></div>
+        <?php endif; ?>
+        <?php if ($has_archived_column && !empty($p['archived'])): ?>
+        <div style="font-size:.68rem;color:#9aa5b4;margin-top:.2rem;white-space:nowrap">🗄 Archived</div>
         <?php endif; ?>
       </td>
       <td style="font-size:.78rem;color:#5a6a7a;white-space:nowrap"><?= h($p['submitted_by_name'] ?? '—') ?></td>
@@ -314,6 +338,23 @@ admin_header('Finance');
           <?php endif; ?>
           <?php if (is_treasurer()): ?>
           <a href="check-request.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm" title="Print check/reimbursement request">🖨️</a>
+          <?php endif; ?>
+          <?php if ($has_archived_column && is_treasurer()): ?>
+            <?php if ($p['status'] === 'paid' && empty($p['archived'])): ?>
+          <form method="POST" action="purchase-action.php" style="margin:0">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="archive">
+            <button type="submit" class="btn btn-secondary btn-sm" title="Hide from the default list — still searchable and counted in totals">🗄 Archive</button>
+          </form>
+            <?php elseif (!empty($p['archived'])): ?>
+          <form method="POST" action="purchase-action.php" style="margin:0">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="unarchive">
+            <button type="submit" class="btn btn-secondary btn-sm">↩ Unarchive</button>
+          </form>
+            <?php endif; ?>
           <?php endif; ?>
           <?php
             $own_purchase = (int)($p['submitted_by']??-1)===(int)($_SESSION['user_id']??0);
