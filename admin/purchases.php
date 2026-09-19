@@ -26,11 +26,36 @@ if ($filter_search   !== '') {
 // A plain member only ever sees their own purchases; leadership sees everyone's.
 if (is_member()) { $where[] = 'p.submitted_by = :me'; $params[':me'] = $_SESSION['user_id'] ?? 0; }
 
+// Sortable column headers — whitelisted key => actual SQL column, so the
+// GET value can only ever select one of these, never arbitrary SQL.
+$sortable_columns = [
+    'date' => 'p.purchase_date', 'vendor' => 'p.vendor', 'description' => 'p.description',
+    'event' => 'p.event', 'category' => 'p.category', 'pretax' => 'p.amount_pretax',
+    'tax' => 'p.amount_tax', 'ship' => 'p.amount_shipping', 'total' => 'p.amount_total',
+    'status' => 'p.status', 'by' => 'u.name',
+];
+$sort_key = $_GET['sort'] ?? 'date';
+if (!isset($sortable_columns[$sort_key])) $sort_key = 'date';
+$sort_dir = (strtolower($_GET['dir'] ?? 'desc') === 'asc') ? 'ASC' : 'DESC';
+
+// Renders a clickable column header that toggles sort direction, keeping
+// every other current filter/query-string param intact (e.g. sorting must
+// not reset the status/category/date-range filters above).
+function purchase_sort_th(string $label, string $key, string $sort_key, string $sort_dir, string $align = 'left'): string {
+    $params = $_GET;
+    $params['sort'] = $key;
+    $params['dir'] = ($sort_key === $key && $sort_dir === 'ASC') ? 'desc' : 'asc';
+    unset($params['export']);
+    $url = 'purchases.php?' . http_build_query($params);
+    $arrow = $sort_key === $key ? ($sort_dir === 'ASC' ? ' &#9650;' : ' &#9660;') : '';
+    return '<a href="' . h($url) . '" style="color:inherit;text-decoration:none;white-space:nowrap">' . h($label) . $arrow . '</a>';
+}
+
 $sql = 'SELECT p.*, u.name as submitted_by_name
         FROM purchases p
         LEFT JOIN users u ON p.submitted_by = u.id
         WHERE ' . implode(' AND ', $where) . '
-        ORDER BY p.purchase_date DESC, p.id DESC';
+        ORDER BY ' . $sortable_columns[$sort_key] . ' ' . $sort_dir . ', p.id ' . $sort_dir;
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -196,17 +221,17 @@ admin_header('Finance');
 <table>
   <thead>
     <tr>
-      <th>Date</th>
-      <th>Vendor</th>
-      <th>Description</th>
-      <th>Event</th>
-      <th>Category</th>
-      <th style="text-align:right">Pre-Tax</th>
-      <th style="text-align:right">Tax</th>
-      <th style="text-align:right">Ship</th>
-      <th style="text-align:right">Total</th>
-      <th>Status</th>
-      <th>By</th>
+      <th><?= purchase_sort_th('Date', 'date', $sort_key, $sort_dir) ?></th>
+      <th><?= purchase_sort_th('Vendor', 'vendor', $sort_key, $sort_dir) ?></th>
+      <th><?= purchase_sort_th('Description', 'description', $sort_key, $sort_dir) ?></th>
+      <th><?= purchase_sort_th('Event', 'event', $sort_key, $sort_dir) ?></th>
+      <th><?= purchase_sort_th('Category', 'category', $sort_key, $sort_dir) ?></th>
+      <th style="text-align:right"><?= purchase_sort_th('Pre-Tax', 'pretax', $sort_key, $sort_dir) ?></th>
+      <th style="text-align:right"><?= purchase_sort_th('Tax', 'tax', $sort_key, $sort_dir) ?></th>
+      <th style="text-align:right"><?= purchase_sort_th('Ship', 'ship', $sort_key, $sort_dir) ?></th>
+      <th style="text-align:right"><?= purchase_sort_th('Total', 'total', $sort_key, $sort_dir) ?></th>
+      <th><?= purchase_sort_th('Status', 'status', $sort_key, $sort_dir) ?></th>
+      <th><?= purchase_sort_th('By', 'by', $sort_key, $sort_dir) ?></th>
       <th class="actions-head">Actions</th>
     </tr>
   </thead>
@@ -239,7 +264,7 @@ admin_header('Finance');
         <div class="btn-group">
           <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm"><?= can_edit_purchase($p) ? 'Edit' : 'View' ?></a>
           <?php if (!empty($p['receipt_filename'])): ?>
-          <a href="receipt-view.php?id=<?= (int)$p['id'] ?>" target="_blank" class="btn btn-secondary btn-sm">📎 Receipt</a>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openReceiptModal(<?= (int)$p['id'] ?>)">📎 Receipt</button>
           <?php endif; ?>
           <?php if ($p['status']==='pending' && is_club_officer()): ?>
           <form id="af-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
@@ -363,6 +388,17 @@ admin_header('Finance');
   </div>
 </div>
 
+<!-- Receipt modal -->
+<div id="receipt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);width:90vw;max-width:900px;height:88vh;margin:1rem;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 1rem;border-bottom:1px solid #e1e5eb;flex-shrink:0">
+      <h2 style="font-size:.95rem;color:#002554;margin:0">Receipt</h2>
+      <button type="button" onclick="closeReceiptModal()" aria-label="Close" style="background:none;border:none;font-size:1.6rem;line-height:1;cursor:pointer;color:#5a6a7a;padding:0 .25rem">&times;</button>
+    </div>
+    <iframe id="receipt-modal-frame" src="" style="flex:1;border:0;width:100%"></iframe>
+  </div>
+</div>
+
 <script>
 var _reimburseId = null;
 
@@ -431,6 +467,21 @@ function confirmReimburse() {
 // Close on backdrop click
 document.getElementById('reimburse-modal').addEventListener('click', function(e) {
   if (e.target === this) closeReimburseModal();
+});
+
+function openReceiptModal(id) {
+  document.getElementById('receipt-modal-frame').src = 'receipt-view.php?id=' + id;
+  document.getElementById('receipt-modal').style.display = 'flex';
+}
+function closeReceiptModal() {
+  document.getElementById('receipt-modal').style.display = 'none';
+  document.getElementById('receipt-modal-frame').src = ''; // stop a PDF/image still loading once closed
+}
+document.getElementById('receipt-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeReceiptModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeReceiptModal();
 });
 
 function doAction(formId, noteId, notePrompt, confirmMsg, notePrefix) {

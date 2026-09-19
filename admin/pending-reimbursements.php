@@ -104,7 +104,7 @@ echo show_flash();
     <div class="reimb-actions" style="margin-top:.6rem">
       <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm">View</a>
       <?php if (!empty($p['receipt_filename'])): ?>
-      <a href="receipt-view.php?id=<?= (int)$p['id'] ?>" target="_blank" class="btn btn-secondary btn-sm">📎 Receipt</a>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="openReceiptModal(<?= (int)$p['id'] ?>)">📎 Receipt</button>
       <?php endif; ?>
       <?php if (is_treasurer() && $p['status'] === 'approved'): ?>
       <form id="rf-pr-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
@@ -150,6 +150,17 @@ echo show_flash();
   </div>
 </div>
 <?php endforeach; ?>
+
+<!-- Receipt modal -->
+<div id="receipt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);width:90vw;max-width:900px;height:88vh;margin:1rem;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 1rem;border-bottom:1px solid #e1e5eb;flex-shrink:0">
+      <h2 style="font-size:.95rem;color:#002554;margin:0">Receipt</h2>
+      <button type="button" onclick="closeReceiptModal()" aria-label="Close" style="background:none;border:none;font-size:1.6rem;line-height:1;cursor:pointer;color:#5a6a7a;padding:0 .25rem">&times;</button>
+    </div>
+    <iframe id="receipt-modal-frame" src="" style="flex:1;border:0;width:100%"></iframe>
+  </div>
+</div>
 
 <!-- Reimburse modal (reused from purchases.php) -->
 <div id="pr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
@@ -247,6 +258,21 @@ function confirmPrReimburse() {
   document.getElementById('rf-pr-' + submitId).submit();
 }
 document.getElementById('pr-modal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+
+function openReceiptModal(id) {
+  document.getElementById('receipt-modal-frame').src = 'receipt-view.php?id=' + id;
+  document.getElementById('receipt-modal').style.display = 'flex';
+}
+function closeReceiptModal() {
+  document.getElementById('receipt-modal').style.display = 'none';
+  document.getElementById('receipt-modal-frame').src = ''; // stop a PDF/image still loading once closed
+}
+document.getElementById('receipt-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeReceiptModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeReceiptModal();
+});
 </script>
 <?php endif; ?>
 
