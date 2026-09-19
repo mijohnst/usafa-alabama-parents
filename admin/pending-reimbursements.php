@@ -103,6 +103,9 @@ echo show_flash();
     </div>
     <div class="reimb-actions" style="margin-top:.6rem">
       <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm">View</a>
+      <?php if (!empty($p['receipt_filename'])): ?>
+      <a href="receipt-view.php?id=<?= (int)$p['id'] ?>" target="_blank" class="btn btn-secondary btn-sm">📎 Receipt</a>
+      <?php endif; ?>
       <?php if (is_treasurer() && $p['status'] === 'approved'): ?>
       <form id="rf-pr-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
         <?= csrf_field() ?>
