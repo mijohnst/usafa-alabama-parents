@@ -50,7 +50,6 @@ arsort($by_income_type); arsort($by_payment_method);
 // against the goal), all-time rather than scoped to $year since a
 // campaign's deadline rarely lines up with a calendar year.
 $campaigns = [];
-$fundraiser_active_slug = active_campaign_slug($pdo);
 foreach (donation_campaigns($pdo) as $slug => $fallback_label) {
     $cstmt = $pdo->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?, ?)");
     $cstmt->execute(["fundraiser_{$slug}_year", "fundraiser_{$slug}_offline_raised", "fundraiser_{$slug}_deadline"]);
@@ -71,11 +70,9 @@ foreach (donation_campaigns($pdo) as $slug => $fallback_label) {
         // funding_source column not migrated yet — breakdown just stays empty.
     }
 
-    // Live while active, frozen once history — same as admin/fundraiser.php
-    // and fundraiser-progress.php (see campaign_cadet_count_and_goal() in
-    // admin/lib.php) — so a past campaign's goal here can't collapse to $0
-    // once that class's members are archived after graduation.
-    [, $goal] = campaign_cadet_count_and_goal($pdo, $slug, $vals["fundraiser_{$slug}_year"], $slug === $fundraiser_active_slug);
+    // A plain Treasurer-set target, not a live paid-membership count — see
+    // campaign_cadet_count_and_goal() in admin/lib.php.
+    [, $goal] = campaign_cadet_count_and_goal($pdo, $slug);
     $offline = (float)($vals["fundraiser_{$slug}_offline_raised"] ?? 0);
     $campaigns[] = [
         'label'    => saber_fund_label($pdo, $slug, $fallback_label),

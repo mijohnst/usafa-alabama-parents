@@ -65,14 +65,12 @@ foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value']
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
 $deadline = $vals[$deadline_key] ?? '';
-// Live paid-cadet-count × per-saber price while this is the active
-// campaign, so it can never go stale as more families pay dues through the
-// year; frozen once a newer campaign has taken over (see
-// campaign_cadet_count_and_goal() in admin/lib.php) so a past campaign's
-// goal can't retroactively collapse to $0 after that class's members are
-// archived. fundraiser.html derives its displayed cadet count back out of
-// this same goal (goal / SABER_PRICE), so nothing else needs to change there.
-[, $goal] = campaign_cadet_count_and_goal($pdo, $campaign, $year, $campaign === $active_slug);
+// A plain Treasurer-set target (see campaign_cadet_count_and_goal() in
+// admin/lib.php) — the whole graduating class this fund covers, not a count
+// of paid members. fundraiser.html derives its displayed cadet count back
+// out of this same goal (goal / SABER_PRICE), so nothing else needs to
+// change there.
+[, $goal] = campaign_cadet_count_and_goal($pdo, $campaign);
 
 $raised_total = $raised_online + $offline;
 

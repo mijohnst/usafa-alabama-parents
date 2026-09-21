@@ -33,10 +33,11 @@ if (!isset($campaigns[$campaign])) {
     $campaign = $active_slug ?? array_key_first($campaigns) ?? '';
 }
 
-$offline_key  = "fundraiser_{$campaign}_offline_raised";
-$year_key     = "fundraiser_{$campaign}_year";
-$deadline_key = "fundraiser_{$campaign}_deadline";
-$all_keys     = $campaign !== '' ? [$offline_key, $year_key, $deadline_key] : [];
+$offline_key     = "fundraiser_{$campaign}_offline_raised";
+$year_key        = "fundraiser_{$campaign}_year";
+$deadline_key    = "fundraiser_{$campaign}_deadline";
+$cadet_count_key = "fundraiser_{$campaign}_cadet_count";
+$all_keys        = $campaign !== '' ? [$offline_key, $year_key, $deadline_key, $cadet_count_key] : [];
 
 $post_action = trim($_POST['action'] ?? 'save');
 
@@ -58,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'crea
     $new_label_raw = trim($_POST['new_label'] ?? '');
     $new_year_raw  = trim($_POST['new_year'] ?? '');
     $new_deadline_raw = trim($_POST['new_deadline'] ?? '');
+    $new_cadet_count_raw = trim($_POST['new_cadet_count'] ?? '');
 
     $errors = [];
     if (!preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $new_slug_raw)) $errors[] = 'Campaign ID must be lowercase letters, numbers, and hyphens only (e.g. saber-fund-2028).';
@@ -65,54 +67,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'crea
     if ($new_label_raw === '')                                     $errors[] = 'Campaign name cannot be blank.';
     if ($new_year_raw === '')                                      $errors[] = 'Target class year cannot be blank.';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $new_deadline_raw))   $errors[] = 'Deadline must be a valid date.';
+    if (!ctype_digit($new_cadet_count_raw) || (int)$new_cadet_count_raw < 1) $errors[] = 'Number of cadets must be a whole number of at least 1.';
 
     if ($errors) {
         flash('error', implode(' ', $errors));
         header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
     }
 
-    create_donation_campaign($pdo, $new_slug_raw, $new_label_raw, $new_year_raw, $new_deadline_raw);
+    create_donation_campaign($pdo, $new_slug_raw, $new_label_raw, $new_year_raw, $new_deadline_raw, (int)$new_cadet_count_raw);
     flash('success', 'Started "' . h($new_label_raw) . '" and made it active — fundraiser.html now shows this campaign.');
     header('Location: fundraiser.php?campaign=' . urlencode($new_slug_raw)); exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'lock') {
-    csrf_verify();
-    $lock_campaign = trim($_POST['campaign'] ?? '');
-    $lock_count_raw = trim($_POST['lock_count'] ?? '');
-    if (!isset($campaigns[$lock_campaign]) || $lock_campaign !== $active_slug) {
-        flash('error', 'Only the currently active campaign can be locked.');
-    } elseif (!ctype_digit($lock_count_raw)) {
-        flash('error', 'Cadet count to lock must be a whole number.');
-    } else {
-        campaign_set_locked_count($pdo, $lock_campaign, (int)$lock_count_raw);
-        flash('success', "Cadet count locked at $lock_count_raw — the public page will stop moving until you unlock it.");
-    }
-    header('Location: fundraiser.php?campaign=' . urlencode($lock_campaign)); exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'unlock') {
-    csrf_verify();
-    $unlock_campaign = trim($_POST['campaign'] ?? '');
-    if (!isset($campaigns[$unlock_campaign]) || $unlock_campaign !== $active_slug) {
-        flash('error', 'Only the currently active campaign can be unlocked.');
-    } else {
-        campaign_unlock_count($pdo, $unlock_campaign);
-        flash('success', 'Cadet count unlocked — it will resume tracking paid members live.');
-    }
-    header('Location: fundraiser.php?campaign=' . urlencode($unlock_campaign)); exit;
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'save') {
     csrf_verify();
-    $offline_raw  = trim($_POST['offline_raised'] ?? '');
-    $year_raw     = trim($_POST['year'] ?? '');
-    $deadline_raw = trim($_POST['deadline'] ?? '');
+    $offline_raw     = trim($_POST['offline_raised'] ?? '');
+    $year_raw        = trim($_POST['year'] ?? '');
+    $deadline_raw    = trim($_POST['deadline'] ?? '');
+    $cadet_count_raw = trim($_POST['cadet_count'] ?? '');
 
     $errors = [];
     if (!is_numeric($offline_raw) || (float)$offline_raw < 0)     $errors[] = 'Offline total must be a number of $0 or more.';
     if ($year_raw === '')                                          $errors[] = 'Target class year cannot be blank.';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $deadline_raw))       $errors[] = 'Deadline must be a valid date.';
+    if (!ctype_digit($cadet_count_raw) || (int)$cadet_count_raw < 1) $errors[] = 'Number of cadets must be a whole number of at least 1.';
 
     if ($errors) {
         flash('error', implode(' ', $errors));
@@ -120,9 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'save
     }
 
     $updates = [
-        $offline_key  => number_format((float)$offline_raw, 2, '.', ''),
-        $year_key     => mb_substr($year_raw, 0, 20),
-        $deadline_key => $deadline_raw,
+        $offline_key     => number_format((float)$offline_raw, 2, '.', ''),
+        $year_key        => mb_substr($year_raw, 0, 20),
+        $deadline_key    => $deadline_raw,
+        $cadet_count_key => $cadet_count_raw,
     ];
 
     // Check which rows actually exist via SELECT first, rather than
@@ -155,13 +134,11 @@ if ($all_keys) {
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
 $deadline = $vals[$deadline_key] ?? '';
-// Live while this is the active campaign; frozen once it's history — see
-// campaign_cadet_count_and_goal() in admin/lib.php for why a past
-// campaign's numbers must not just recompute to 0 after that class's
-// members eventually get archived.
-[$cadet_count, $goal] = campaign_cadet_count_and_goal($pdo, $campaign, $year, $campaign === $active_slug);
-$is_locked = $campaign !== '' && campaign_is_locked($pdo, $campaign);
-$live_cadet_count = $campaign !== '' ? campaign_paid_cadet_count($pdo, $year) : 0;
+[$cadet_count, $goal] = $campaign !== '' ? campaign_cadet_count_and_goal($pdo, $campaign) : [0, 0.0];
+// FYI only — no longer drives the goal (see campaign_cadet_count_and_goal()
+// in admin/lib.php): the fund now targets the whole class, with paid
+// members just prioritized, so this is shown purely for reference.
+$live_paid_cadet_count = $campaign !== '' ? campaign_paid_cadet_count($pdo, $year) : 0;
 $settings_missing = $campaign !== '' && count($vals) < count($all_keys);
 $campaign_label = $campaign !== '' ? saber_fund_label($pdo, $campaign, $campaigns[$campaign]) : '';
 
@@ -289,41 +266,9 @@ echo show_flash();
     <div><strong style="color:#003594;font-size:1.1rem;display:block"><?= $pct ?>%</strong>Funded</div>
   </div>
   <div style="background:#f7f9fc;border-radius:6px;padding:.85rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:#5a6a7a">
-    <strong style="color:#003594"><?= $cadet_count ?> paid cadet<?= $cadet_count === 1 ? '' : 's' ?></strong><?= $campaign === $active_slug && $is_locked ? ' 🔒' : '' ?> in the Class of <?= h($year ?: '—') ?> &times; $<?= number_format(SABER_PRICE, 0) ?>/saber = <strong style="color:#003594">$<?= number_format($goal, 2) ?> goal</strong>
-    <?php if ($campaign !== $active_slug): ?>
-    <br>This campaign is no longer active — the count above is frozen from when it was handed off, so it stays accurate even after this class graduates.
-    <?php elseif ($is_locked): ?>
-    <br>Locked by a Treasurer/admin — this number will not change until unlocked, even as families pay or renew dues. Live paid-cadet count right now: <strong><?= $live_cadet_count ?></strong>.
-    <?php else: ?>
-    <br>Counted automatically from paid members — no manual entry, updates live as families pay dues.
-    <?php endif; ?>
+    <strong style="color:#003594"><?= $cadet_count ?> cadet<?= $cadet_count === 1 ? '' : 's' ?></strong> in the Class of <?= h($year ?: '—') ?> &times; $<?= number_format(SABER_PRICE, 0) ?>/saber = <strong style="color:#003594">$<?= number_format($goal, 2) ?> goal</strong>
+    <br>Set below — the whole class, not just paid members. FYI: <strong><?= $live_paid_cadet_count ?></strong> paid member<?= $live_paid_cadet_count === 1 ? '' : 's' ?> currently ha<?= $live_paid_cadet_count === 1 ? 's' : 've' ?> a cadet in this class year.
   </div>
-
-  <?php if ($can_edit && $campaign === $active_slug): ?>
-  <div style="background:#fff8e6;border:1px solid #ffe6a3;border-radius:6px;padding:.85rem 1rem;margin-bottom:1.5rem">
-    <?php if ($is_locked): ?>
-    <p style="font-size:.85rem;color:#5a6a7a;margin-bottom:.65rem">The cadet count/goal above is locked and won't move on the public page.</p>
-    <form method="POST" style="margin:0">
-      <?= csrf_field() ?>
-      <input type="hidden" name="action" value="unlock">
-      <input type="hidden" name="campaign" value="<?= h($campaign) ?>">
-      <button type="submit" class="btn btn-secondary btn-sm">Unlock (resume live tracking)</button>
-    </form>
-    <?php else: ?>
-    <p style="font-size:.85rem;color:#5a6a7a;margin-bottom:.65rem">Want to stop this number from moving (e.g. dues just reset for the new year and renewals haven't caught up yet)? Lock it at a specific cadet count — the goal is recalculated from that number and stays fixed until you unlock it.</p>
-    <form method="POST" style="margin:0;display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap">
-      <?= csrf_field() ?>
-      <input type="hidden" name="action" value="lock">
-      <input type="hidden" name="campaign" value="<?= h($campaign) ?>">
-      <div class="form-group" style="margin:0">
-        <label style="font-size:.72rem">Cadets to lock at</label>
-        <input type="number" min="0" step="1" name="lock_count" value="<?= h((string)$live_cadet_count) ?>" style="width:8rem">
-      </div>
-      <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Lock the cadet count/goal at this number? The public page will stop updating it until you unlock.')">Lock Count</button>
-    </form>
-    <?php endif; ?>
-  </div>
-  <?php endif; ?>
 
   <?php if ($can_edit): ?>
   <form method="POST">
@@ -337,10 +282,15 @@ echo show_flash();
       <div class="form-group">
         <label>Target Class Year</label>
         <input type="text" name="year" value="<?= h($year) ?>" placeholder="2027">
-        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Must match cadets' Graduation Year on file exactly — this is what the paid-cadet count above is based on.</p>
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Must match cadets' Graduation Year on file exactly — used for the "in honor of a specific cadet" donor list, which is still limited to paid members.</p>
       </div>
     </div>
     <div class="form-row col-2">
+      <div class="form-group">
+        <label>Number of Cadets</label>
+        <input type="number" min="1" step="1" name="cadet_count" value="<?= h((string)$cadet_count) ?>">
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">The whole graduating class this fund is trying to cover — not just paid members. Goal is recalculated from this number.</p>
+      </div>
       <div class="form-group">
         <label>Deadline</label>
         <input type="date" name="deadline" value="<?= h($deadline) ?>">
@@ -427,8 +377,15 @@ echo show_flash();
       <div class="form-group">
         <label>Target Class Year</label>
         <input type="text" name="new_year" value="<?= h($suggest_year) ?>" placeholder="2028">
-        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Must match cadets' Graduation Year on file exactly. Number of cadets/goal are counted automatically from paid members in this year — no need to enter them.</p>
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">Must match cadets' Graduation Year on file exactly.</p>
       </div>
+      <div class="form-group">
+        <label>Number of Cadets</label>
+        <input type="number" min="1" step="1" name="new_cadet_count" placeholder="20">
+        <p style="font-size:.72rem;color:#9aa5b4;margin:.35rem 0 0">The whole graduating class this fund is trying to cover — not just paid members.</p>
+      </div>
+    </div>
+    <div class="form-row col-2">
       <div class="form-group">
         <label>Deadline</label>
         <input type="date" name="new_deadline">

@@ -477,11 +477,11 @@ function generate_photo_thumbnail(string $source_path, string $dest_path, int $m
 // stale the moment someone updates the year for next year's cadets.
 // Falls back to $fallback if the setting is missing (migration not run
 // yet) or the row can't be read.
-// Live count of paid members' cadets in a given graduating class year — the
-// authoritative "how many sabers are we funding" figure for a Saber Fund
-// campaign, computed fresh every time rather than a manually-typed number
-// that would otherwise drift out of date as more families pay dues over
-// the course of the year.
+// Live count of paid members' cadets in a given graduating class year. Not
+// used for the campaign's overall goal (see campaign_cadet_count_and_goal()
+// below) — that's a plain Treasurer-set target for the whole class. This is
+// purely for the "in honor of a specific cadet" donation feature, where
+// eligibility to be named genuinely is tied to paid membership.
 //
 // The single source of truth for "which cadets count" — [member_id =>
 // cadet_last_name] for every paid member's cadet in a given graduating
@@ -544,49 +544,35 @@ function active_campaign_slug(PDO $pdo): ?string {
 // and marks it active (atomically deactivating whatever was active before)
 // — this is what lets a treasurer start next year's Saber Fund drive
 // entirely from admin/fundraiser.php, with no code deploy or manual
-// migration the way the very first campaign needed. No cadet count/goal is
-// stored here — both are computed live from campaign_paid_cadet_count()
-// wherever they're needed (admin/fundraiser.php, fundraiser-progress.php,
-// admin/report.php), so the goal always tracks real paid membership
-// instead of a number typed in once and left to go stale.
-function create_donation_campaign(PDO $pdo, string $slug, string $label, string $year, string $deadline): void {
+// migration the way the very first campaign needed. $cadetCount is the
+// Treasurer's own target headcount for the graduating class (all cadets,
+// not just paid members' — see campaign_cadet_count_and_goal() below for
+// why this stopped tracking paid membership).
+function create_donation_campaign(PDO $pdo, string $slug, string $label, string $year, string $deadline, int $cadetCount): void {
     $pdo->prepare('INSERT INTO donation_campaigns (slug, label, is_active) VALUES (?, ?, 0)')->execute([$slug, $label]);
     $settings = [
         "fundraiser_{$slug}_offline_raised" => '0.00',
         "fundraiser_{$slug}_year"           => mb_substr($year, 0, 20),
         "fundraiser_{$slug}_deadline"       => $deadline,
+        "fundraiser_{$slug}_cadet_count"    => (string)$cadetCount,
     ];
     $stmt = $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)');
     foreach ($settings as $key => $val) $stmt->execute([$key, $val]);
     activate_donation_campaign($pdo, $slug);
 }
 
-// Cadet count / goal for a campaign — live (always current) while it's the
-// active drive, so it tracks paid membership in real time; frozen (read
-// back from the snapshot activate_donation_campaign() takes when a newer
-// campaign takes over, or from a manual campaign_set_locked_count() call —
-// see below) once it's history or explicitly locked. Without the frozen
-// half, a past campaign's goal would silently drop to $0/0-cadets the
-// moment that class's members get archived after graduation — corrupting
-// historical reports with no way to recover the true original number.
-// Falls back to a live recomputation if no snapshot exists yet (a campaign
-// that predates this mechanism, or is still active and never locked) — the
-// best available answer in that case, not a bug.
-// Returns [cadetCount, goal].
-function campaign_cadet_count_and_goal(PDO $pdo, string $slug, string $year, bool $isActive): array {
-    $count_key  = "fundraiser_{$slug}_cadet_count";
-    $goal_key   = "fundraiser_{$slug}_goal";
-    $locked_key = "fundraiser_{$slug}_locked";
-    $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?, ?)');
-    $stmt->execute([$count_key, $goal_key, $locked_key]);
-    $vals = [];
-    foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
-
-    $frozen = !$isActive || !empty($vals[$locked_key]);
-    if ($frozen && isset($vals[$count_key]) && isset($vals[$goal_key])) {
-        return [(int)$vals[$count_key], (float)$vals[$goal_key]];
-    }
-    $count = campaign_paid_cadet_count($pdo, $year);
+// Cadet count / goal for a campaign. This is a plain Treasurer-set target —
+// the size of the whole graduating class the fund is trying to cover, not a
+// count of paid members. It used to be auto-computed from paid membership
+// (campaign_paid_cadet_count()), on the assumption only paid members'
+// cadets would receive a saber; that's no longer the policy — the fund now
+// aims to cover the entire class, with paid members simply prioritized if
+// the goal isn't fully met — so this reads back a manually-entered number
+// instead. Returns [cadetCount, goal].
+function campaign_cadet_count_and_goal(PDO $pdo, string $slug): array {
+    $stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    $stmt->execute(["fundraiser_{$slug}_cadet_count"]);
+    $count = (int)$stmt->fetchColumn();
     return [$count, $count * SABER_PRICE];
 }
 
@@ -600,51 +586,13 @@ function site_setting_upsert(PDO $pdo, string $key, string $val): void {
     }
 }
 
-function campaign_is_locked(PDO $pdo, string $slug): bool {
-    $stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
-    $stmt->execute(["fundraiser_{$slug}_locked"]);
-    return !empty($stmt->fetchColumn());
-}
-
-// Manually freezes a still-active campaign's cadet count/goal at a specific
-// number so it stops moving on the public page as families pay or renew
-// dues mid-drive — e.g. once the Treasurer has a final, confirmed eligible
-// list and the live paid-dues count temporarily disagrees with it. This is
-// a deliberate, reversible Treasurer action, distinct from the automatic
-// freeze activate_donation_campaign() applies on handoff to a new campaign.
-function campaign_set_locked_count(PDO $pdo, string $slug, int $count): void {
-    site_setting_upsert($pdo, "fundraiser_{$slug}_cadet_count", (string)$count);
-    site_setting_upsert($pdo, "fundraiser_{$slug}_goal", number_format($count * SABER_PRICE, 2, '.', ''));
-    site_setting_upsert($pdo, "fundraiser_{$slug}_locked", '1');
-}
-
-// Resumes live tracking for a still-active campaign that was previously
-// locked via campaign_set_locked_count().
-function campaign_unlock_count(PDO $pdo, string $slug): void {
-    site_setting_upsert($pdo, "fundraiser_{$slug}_locked", '0');
-}
-
 // Switches which campaign fundraiser.html shows, without creating a new
 // one — lets a treasurer flip back to an earlier campaign if a new one was
-// started by mistake, or re-run a paused drive. Snapshots the OUTGOING
-// campaign's live cadet count/goal into site_settings first — see
-// campaign_cadet_count_and_goal() above for why that snapshot has to exist
-// before this campaign stops being the live one. Skipped if the outgoing
-// campaign was already manually locked (campaign_set_locked_count()) —
-// re-snapshotting from live data here would silently overwrite the
-// Treasurer's chosen number with whatever the live paid-dues count happens
-// to be at handoff time, undoing the lock at the exact moment it matters
-// most for permanent history.
+// started by mistake, or re-run a paused drive. Cadet count/goal no longer
+// need snapshotting on handoff — campaign_cadet_count_and_goal() now reads
+// a plain Treasurer-set number regardless of active status, so it stays
+// accurate on its own even after this class graduates.
 function activate_donation_campaign(PDO $pdo, string $slug): void {
-    $previous = $pdo->query('SELECT slug FROM donation_campaigns WHERE is_active = 1 LIMIT 1')->fetchColumn();
-    if ($previous && $previous !== $slug && !campaign_is_locked($pdo, $previous)) {
-        $year_stmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
-        $year_stmt->execute(["fundraiser_{$previous}_year"]);
-        $prev_year  = trim((string)$year_stmt->fetchColumn());
-        $prev_count = campaign_paid_cadet_count($pdo, $prev_year);
-        site_setting_upsert($pdo, "fundraiser_{$previous}_cadet_count", (string)$prev_count);
-        site_setting_upsert($pdo, "fundraiser_{$previous}_goal", number_format($prev_count * SABER_PRICE, 2, '.', ''));
-    }
     $pdo->prepare('UPDATE donation_campaigns SET is_active = (slug = ?)')->execute([$slug]);
 }
 
