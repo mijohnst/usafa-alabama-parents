@@ -548,13 +548,14 @@ function active_campaign_slug(PDO $pdo): ?string {
 // Treasurer's own target headcount for the graduating class (all cadets,
 // not just paid members' — see campaign_cadet_count_and_goal() below for
 // why this stopped tracking paid membership).
-function create_donation_campaign(PDO $pdo, string $slug, string $label, string $year, string $deadline, int $cadetCount): void {
+function create_donation_campaign(PDO $pdo, string $slug, string $label, string $year, string $deadline, int $cadetCount, bool $showHomepage = true): void {
     $pdo->prepare('INSERT INTO donation_campaigns (slug, label, is_active) VALUES (?, ?, 0)')->execute([$slug, $label]);
     $settings = [
         "fundraiser_{$slug}_offline_raised" => '0.00',
         "fundraiser_{$slug}_year"           => mb_substr($year, 0, 20),
         "fundraiser_{$slug}_deadline"       => $deadline,
         "fundraiser_{$slug}_cadet_count"    => (string)$cadetCount,
+        "fundraiser_{$slug}_show_homepage"  => $showHomepage ? '1' : '0',
     ];
     $stmt = $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)');
     foreach ($settings as $key => $val) $stmt->execute([$key, $val]);

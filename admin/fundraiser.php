@@ -33,11 +33,12 @@ if (!isset($campaigns[$campaign])) {
     $campaign = $active_slug ?? array_key_first($campaigns) ?? '';
 }
 
-$offline_key     = "fundraiser_{$campaign}_offline_raised";
-$year_key        = "fundraiser_{$campaign}_year";
-$deadline_key    = "fundraiser_{$campaign}_deadline";
-$cadet_count_key = "fundraiser_{$campaign}_cadet_count";
-$all_keys        = $campaign !== '' ? [$offline_key, $year_key, $deadline_key, $cadet_count_key] : [];
+$offline_key       = "fundraiser_{$campaign}_offline_raised";
+$year_key          = "fundraiser_{$campaign}_year";
+$deadline_key      = "fundraiser_{$campaign}_deadline";
+$cadet_count_key   = "fundraiser_{$campaign}_cadet_count";
+$show_homepage_key = "fundraiser_{$campaign}_show_homepage";
+$all_keys          = $campaign !== '' ? [$offline_key, $year_key, $deadline_key, $cadet_count_key, $show_homepage_key] : [];
 
 $post_action = trim($_POST['action'] ?? 'save');
 
@@ -60,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'crea
     $new_year_raw  = trim($_POST['new_year'] ?? '');
     $new_deadline_raw = trim($_POST['new_deadline'] ?? '');
     $new_cadet_count_raw = trim($_POST['new_cadet_count'] ?? '');
+    $new_show_homepage   = isset($_POST['new_show_homepage']);
 
     $errors = [];
     if (!preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $new_slug_raw)) $errors[] = 'Campaign ID must be lowercase letters, numbers, and hyphens only (e.g. saber-fund-2028).';
@@ -74,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'crea
         header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
     }
 
-    create_donation_campaign($pdo, $new_slug_raw, $new_label_raw, $new_year_raw, $new_deadline_raw, (int)$new_cadet_count_raw);
+    create_donation_campaign($pdo, $new_slug_raw, $new_label_raw, $new_year_raw, $new_deadline_raw, (int)$new_cadet_count_raw, $new_show_homepage);
     flash('success', 'Started "' . h($new_label_raw) . '" and made it active — fundraiser.html now shows this campaign.');
     header('Location: fundraiser.php?campaign=' . urlencode($new_slug_raw)); exit;
 }
@@ -85,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'save
     $year_raw        = trim($_POST['year'] ?? '');
     $deadline_raw    = trim($_POST['deadline'] ?? '');
     $cadet_count_raw = trim($_POST['cadet_count'] ?? '');
+    $show_homepage   = isset($_POST['show_homepage']);
 
     $errors = [];
     if (!is_numeric($offline_raw) || (float)$offline_raw < 0)     $errors[] = 'Offline total must be a number of $0 or more.';
@@ -98,10 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'save
     }
 
     $updates = [
-        $offline_key     => number_format((float)$offline_raw, 2, '.', ''),
-        $year_key        => mb_substr($year_raw, 0, 20),
-        $deadline_key    => $deadline_raw,
-        $cadet_count_key => $cadet_count_raw,
+        $offline_key       => number_format((float)$offline_raw, 2, '.', ''),
+        $year_key          => mb_substr($year_raw, 0, 20),
+        $deadline_key      => $deadline_raw,
+        $cadet_count_key   => $cadet_count_raw,
+        $show_homepage_key => $show_homepage ? '1' : '0',
     ];
 
     // Check which rows actually exist via SELECT first, rather than
@@ -131,9 +135,10 @@ if ($all_keys) {
     $stmt->execute($all_keys);
     foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value'];
 }
-$offline  = (float)($vals[$offline_key] ?? 0);
-$year     = $vals[$year_key] ?? '';
-$deadline = $vals[$deadline_key] ?? '';
+$offline       = (float)($vals[$offline_key] ?? 0);
+$year          = $vals[$year_key] ?? '';
+$deadline      = $vals[$deadline_key] ?? '';
+$show_homepage = ($vals[$show_homepage_key] ?? '1') !== '0';
 [$cadet_count, $goal] = $campaign !== '' ? campaign_cadet_count_and_goal($pdo, $campaign) : [0, 0.0];
 // FYI only — no longer drives the goal (see campaign_cadet_count_and_goal()
 // in admin/lib.php): the fund now targets the whole class, with paid
@@ -297,6 +302,10 @@ echo show_flash();
       </div>
     </div>
     <p style="font-size:.72rem;color:#9aa5b4;margin:-.5rem 0 1rem">Update "Offline Total Raised" whenever a check, Zelle, or cash gift comes in — enter the new running total, not just the latest gift. These feed the public fundraiser page's headline, story text, and countdown automatically. The browser-tab title and social-share preview text are separate and still static — those would need a one-off edit to fully match.</p>
+    <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="show_homepage" id="fr_show_homepage" value="1" style="width:auto" <?= $show_homepage?'checked':'' ?>>
+      <label for="fr_show_homepage" style="font-weight:400;text-transform:none;cursor:pointer;margin:0;font-size:.9rem">Show progress on the homepage (index.html hero)</label>
+    </div>
     <button type="submit" class="btn btn-primary">Save Campaign Settings</button>
   </form>
   <?php else: ?>
@@ -390,6 +399,10 @@ echo show_flash();
         <label>Deadline</label>
         <input type="date" name="new_deadline">
       </div>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="new_show_homepage" id="fr_new_show_homepage" value="1" style="width:auto" checked>
+      <label for="fr_new_show_homepage" style="font-weight:400;text-transform:none;cursor:pointer;margin:0;font-size:.9rem">Show progress on the homepage (index.html hero)</label>
     </div>
     <button type="submit" class="btn btn-primary" onclick="return confirm('Start this new campaign and make it the one fundraiser.html shows publicly?')">Start Campaign &amp; Make It Active</button>
   </form>

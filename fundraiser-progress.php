@@ -49,10 +49,11 @@ list($raised_online, $donor_count) = $stmt->fetch(PDO::FETCH_NUM);
 $raised_online = (float)$raised_online;
 $donor_count   = (int)$donor_count;
 
-$offline_key  = "fundraiser_{$campaign}_offline_raised";
-$year_key     = "fundraiser_{$campaign}_year";
-$deadline_key = "fundraiser_{$campaign}_deadline";
-$all_keys     = [$offline_key, $year_key, $deadline_key];
+$offline_key       = "fundraiser_{$campaign}_offline_raised";
+$year_key          = "fundraiser_{$campaign}_year";
+$deadline_key      = "fundraiser_{$campaign}_deadline";
+$show_homepage_key = "fundraiser_{$campaign}_show_homepage";
+$all_keys          = [$offline_key, $year_key, $deadline_key, $show_homepage_key];
 $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (' . implode(',', array_fill(0, count($all_keys), '?')) . ')');
 $stmt->execute($all_keys);
 $vals = [];
@@ -65,6 +66,12 @@ foreach ($stmt->fetchAll() as $r) $vals[$r['setting_key']] = $r['setting_value']
 $offline  = (float)($vals[$offline_key] ?? 0);
 $year     = $vals[$year_key] ?? '';
 $deadline = $vals[$deadline_key] ?? '';
+// Defaults to true (shown) when the setting doesn't exist yet — a campaign
+// predating this toggle, or one the Treasurer hasn't touched — so opting
+// out is a deliberate action, not something that silently drops the promo
+// the moment this key happens to be missing. Compared against the literal
+// string '0' rather than cast with (bool), since (bool)'0' is true in PHP.
+$show_on_homepage = ($vals[$show_homepage_key] ?? '1') !== '0';
 // A plain Treasurer-set target (see campaign_cadet_count_and_goal() in
 // admin/lib.php) — the whole graduating class this fund covers, not a count
 // of paid members. fundraiser.html derives its displayed cadet count back
@@ -119,4 +126,5 @@ echo json_encode([
     'recent'        => $recent,
     'year'          => $year,
     'deadline'      => $deadline,
+    'showOnHomepage'=> $show_on_homepage,
 ]);
