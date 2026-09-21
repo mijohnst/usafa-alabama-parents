@@ -217,15 +217,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Re-populate from POST on error
-    $p = array_merge($p, compact('vendor','description','event','category','date','pretax','tax','total','status','notes','submitted_by','payment_method'));
+    $p = array_merge($p, compact('vendor','description','event','category','date','pretax','tax','shipping','total','status','notes','submitted_by','payment_method'));
     $p['purchase_date']  = $date;
     // Surfaced in the template as a hidden field so a receipt uploaded this
     // attempt (but blocked from saving by some other error) survives the
     // next resubmit — see the carry-forward check above.
     $carried_receipt = $new_receipt;
-    $p['amount_pretax']  = $pretax;
-    $p['amount_tax']     = $tax;
-    $p['amount_total']   = $total;
+    $p['amount_pretax']   = $pretax;
+    $p['amount_tax']      = $tax;
+    $p['amount_shipping'] = $shipping;
+    $p['amount_total']    = $total;
 }
 
 $v = fn(string $k) => h((string)($p[$k] ?? ''));
