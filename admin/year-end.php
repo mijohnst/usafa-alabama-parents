@@ -21,8 +21,6 @@ $all = $stmt->fetchAll();
 
 $reimbursed  = array_filter($all, fn($p) => $p['status'] === 'paid');
 $total_spent = array_sum(array_column($reimbursed, 'amount_total'));
-$total_tax   = array_sum(array_column($reimbursed, 'amount_tax'));
-$total_ship  = array_sum(array_column($reimbursed, 'amount_shipping'));
 
 $by_cat = []; $by_event = []; $by_month = [];
 foreach ($reimbursed as $p) {
@@ -109,14 +107,6 @@ admin_header('Year-End Summary');
     <div style="font-size:1.5rem;font-weight:700;color:#A6192E">$<?= number_format($total_spent,2) ?></div>
     <div style="font-size:.72rem;color:#5a6a7a;text-transform:uppercase">Total Expenses</div>
   </div>
-  <div class="card" style="padding:1rem;text-align:center;margin:0">
-    <div style="font-size:1.5rem;font-weight:700;color:#5a6a7a">$<?= number_format($total_tax,2) ?></div>
-    <div style="font-size:.72rem;color:#5a6a7a;text-transform:uppercase">Tax Paid</div>
-  </div>
-  <div class="card" style="padding:1rem;text-align:center;margin:0">
-    <div style="font-size:1.5rem;font-weight:700;color:#5a6a7a">$<?= number_format($total_ship,2) ?></div>
-    <div style="font-size:.72rem;color:#5a6a7a;text-transform:uppercase">Shipping</div>
-  </div>
 </div>
 
 <div class="ye-grid">
@@ -178,7 +168,7 @@ admin_header('Year-End Summary');
     <thead>
       <tr>
         <th>Date</th><th>Vendor</th><th>Description</th><th>Event</th><th>Category</th>
-        <th>Payment</th><th style="text-align:right">Pre-Tax</th><th style="text-align:right">Tax</th><th style="text-align:right">Total</th>
+        <th>Payment</th><th style="text-align:right">Amount</th>
       </tr>
     </thead>
     <tbody>
@@ -190,8 +180,6 @@ admin_header('Year-End Summary');
         <td style="font-size:.78rem;color:#5a6a7a"><?= h($p['event']) ?></td>
         <td style="font-size:.78rem;color:#5a6a7a"><?= h($p['category']) ?></td>
         <td style="font-size:.78rem;color:#5a6a7a"><?= h($p['payment_method']) ?></td>
-        <td style="text-align:right">$<?= number_format($p['amount_pretax'],2) ?></td>
-        <td style="text-align:right;color:#5a6a7a">$<?= number_format($p['amount_tax'],2) ?></td>
         <td style="text-align:right;font-weight:700">$<?= number_format($p['amount_total'],2) ?></td>
       </tr>
     <?php endforeach; ?>
@@ -199,8 +187,6 @@ admin_header('Year-End Summary');
     <tfoot>
       <tr style="background:#f5f7fa;font-weight:700">
         <td colspan="6" style="text-align:right;font-size:.8rem;color:#5a6a7a">TOTALS</td>
-        <td style="text-align:right">$<?= number_format(array_sum(array_column($reimbursed,'amount_pretax')),2) ?></td>
-        <td style="text-align:right;color:#5a6a7a">$<?= number_format($total_tax,2) ?></td>
         <td style="text-align:right;color:#A6192E">$<?= number_format($total_spent,2) ?></td>
       </tr>
     </tfoot>

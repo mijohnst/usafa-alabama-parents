@@ -97,10 +97,6 @@ echo show_flash();
   </div>
   <div style="text-align:right">
     <div class="reimb-amount">$<?= number_format($p['amount_total'], 2) ?></div>
-    <div style="font-size:.72rem;color:#5a6a7a">
-      $<?= number_format($p['amount_pretax'],2) ?> + $<?= number_format($p['amount_tax'],2) ?> tax
-      <?php if ($p['amount_shipping'] > 0): ?> + $<?= number_format($p['amount_shipping'],2) ?> ship<?php endif; ?>
-    </div>
     <div class="reimb-actions" style="margin-top:.6rem">
       <a href="purchase-form.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm">View</a>
       <?php if (!empty($p['receipt_filename'])): ?>

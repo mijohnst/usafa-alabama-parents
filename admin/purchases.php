@@ -43,8 +43,7 @@ if (is_member()) { $where[] = 'p.submitted_by = :me'; $params[':me'] = $_SESSION
 // GET value can only ever select one of these, never arbitrary SQL.
 $sortable_columns = [
     'date' => 'p.purchase_date', 'vendor' => 'p.vendor', 'description' => 'p.description',
-    'event' => 'p.event', 'category' => 'p.category', 'pretax' => 'p.amount_pretax',
-    'tax' => 'p.amount_tax', 'ship' => 'p.amount_shipping', 'total' => 'p.amount_total',
+    'event' => 'p.event', 'category' => 'p.category', 'total' => 'p.amount_total',
     'status' => 'p.status', 'by' => 'u.name',
 ];
 $sort_key = $_GET['sort'] ?? 'date';
@@ -88,20 +87,17 @@ if (is_treasurer() || is_super_admin()) {
 $pending_count = (int)$pdo->query("SELECT COUNT(*) FROM purchases WHERE status IN ('approved','submitted')")->fetchColumn();
 
 // Totals
-$total_pretax  = array_sum(array_column($purchases, 'amount_pretax'));
-$total_tax     = array_sum(array_column($purchases, 'amount_tax'));
-$total_shipping= array_sum(array_column($purchases, 'amount_shipping'));
-$total_all     = array_sum(array_column($purchases, 'amount_total'));
+$total_all = array_sum(array_column($purchases, 'amount_total'));
 
 // CSV export
 if (isset($_GET['export'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="purchases-' . date('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['Date','Vendor','Description','Event','Category','Pre-Tax','Tax','Total','Status','Submitted By','Notes']);
+    fputcsv($out, ['Date','Vendor','Description','Event','Category','Amount','Status','Submitted By','Notes']);
     foreach ($purchases as $p) {
         fputcsv($out, [$p['purchase_date'],$p['vendor'],$p['description'],$p['event'],
-                       $p['category'],$p['amount_pretax'],$p['amount_tax'],$p['amount_total'],
+                       $p['category'],$p['amount_total'],
                        $p['status'],$p['submitted_by_name'],$p['notes']]);
     }
     fclose($out); exit;
@@ -161,18 +157,6 @@ admin_header('Finance');
   <div class="fin-card">
     <div class="fin-amount"><?= count($purchases) ?></div>
     <div class="fin-label">Purchases</div>
-  </div>
-  <div class="fin-card">
-    <div class="fin-amount">$<?= number_format($total_pretax, 2) ?></div>
-    <div class="fin-label">Pre-Tax Total</div>
-  </div>
-  <div class="fin-card">
-    <div class="fin-amount">$<?= number_format($total_tax, 2) ?></div>
-    <div class="fin-label">Tax Paid</div>
-  </div>
-  <div class="fin-card">
-    <div class="fin-amount">$<?= number_format($total_shipping, 2) ?></div>
-    <div class="fin-label">Shipping</div>
   </div>
   <div class="fin-card" style="border:2px solid #003594">
     <div class="fin-amount" style="color:#A6192E">$<?= number_format($total_all, 2) ?></div>
@@ -247,10 +231,7 @@ admin_header('Finance');
       <th><?= purchase_sort_th('Description', 'description', $sort_key, $sort_dir) ?></th>
       <th><?= purchase_sort_th('Event', 'event', $sort_key, $sort_dir) ?></th>
       <th><?= purchase_sort_th('Category', 'category', $sort_key, $sort_dir) ?></th>
-      <th style="text-align:right"><?= purchase_sort_th('Pre-Tax', 'pretax', $sort_key, $sort_dir) ?></th>
-      <th style="text-align:right"><?= purchase_sort_th('Tax', 'tax', $sort_key, $sort_dir) ?></th>
-      <th style="text-align:right"><?= purchase_sort_th('Ship', 'ship', $sort_key, $sort_dir) ?></th>
-      <th style="text-align:right"><?= purchase_sort_th('Total', 'total', $sort_key, $sort_dir) ?></th>
+      <th style="text-align:right"><?= purchase_sort_th('Amount', 'total', $sort_key, $sort_dir) ?></th>
       <th><?= purchase_sort_th('Status', 'status', $sort_key, $sort_dir) ?></th>
       <th><?= purchase_sort_th('By', 'by', $sort_key, $sort_dir) ?></th>
       <th class="actions-head">Actions</th>
@@ -258,7 +239,7 @@ admin_header('Finance');
   </thead>
   <tbody>
   <?php if (empty($purchases)): ?>
-    <tr><td colspan="11" style="text-align:center;padding:2rem;color:#5a6a7a">No purchases found.</td></tr>
+    <tr><td colspan="10" style="text-align:center;padding:2rem;color:#5a6a7a">No purchases found.</td></tr>
   <?php endif; ?>
   <?php foreach ($purchases as $p): ?>
     <tr>
@@ -267,9 +248,6 @@ admin_header('Finance');
       <td style="max-width:200px"><?= h($p['description']) ?></td>
       <td style="font-size:.8rem;color:#5a6a7a"><?= h($p['event']) ?></td>
       <td style="font-size:.8rem;color:#5a6a7a"><?= h($p['category']) ?></td>
-      <td style="text-align:right;white-space:nowrap">$<?= number_format($p['amount_pretax'],2) ?></td>
-      <td style="text-align:right;white-space:nowrap;color:#5a6a7a">$<?= number_format($p['amount_tax'],2) ?></td>
-      <td style="text-align:right;white-space:nowrap;color:#5a6a7a">$<?= number_format($p['amount_shipping'],2) ?></td>
       <td style="text-align:right;white-space:nowrap;font-weight:700">$<?= number_format($p['amount_total'],2) ?></td>
       <td>
         <?php $sc = $status_colors[$p['status']] ?? '#5a6a7a'; $mismatch = purchase_payout_mismatch($p); ?>
@@ -382,9 +360,6 @@ admin_header('Finance');
   <tfoot>
     <tr style="background:#f5f7fa;font-weight:700">
       <td colspan="5" style="text-align:right;font-size:.8rem;color:#5a6a7a;padding:.75rem">TOTALS</td>
-      <td style="text-align:right">$<?= number_format($total_pretax,2) ?></td>
-      <td style="text-align:right;color:#5a6a7a">$<?= number_format($total_tax,2) ?></td>
-      <td style="text-align:right;color:#5a6a7a">$<?= number_format($total_shipping,2) ?></td>
       <td style="text-align:right;color:#A6192E">$<?= number_format($total_all,2) ?></td>
       <td colspan="3"></td>
     </tr>

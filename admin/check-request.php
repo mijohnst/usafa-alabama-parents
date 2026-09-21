@@ -65,10 +65,15 @@ admin_header('Check Request #' . $id);
 <?php
 $status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','submitted'=>'#6a1b9a','paid'=>'#003594'];
 $sc = $status_colors[$p['status']] ?? '#5a6a7a';
+// Tax/shipping breakdown was removed from the purchase form going forward,
+// so only show a multi-line breakdown for older purchases that actually
+// have those amounts recorded — otherwise just the single Total line below.
 $line_items = [];
-if ($p['amount_pretax']  > 0) $line_items[] = ['Subtotal (pre-tax)', $p['amount_pretax']];
-if ($p['amount_tax']     > 0) $line_items[] = ['Sales Tax',          $p['amount_tax']];
-if ($p['amount_shipping']> 0) $line_items[] = ['Shipping',           $p['amount_shipping']];
+if ($p['amount_tax'] > 0 || $p['amount_shipping'] > 0) {
+    if ($p['amount_pretax']   > 0) $line_items[] = ['Subtotal (pre-tax)', $p['amount_pretax']];
+    if ($p['amount_tax']      > 0) $line_items[] = ['Sales Tax',          $p['amount_tax']];
+    if ($p['amount_shipping'] > 0) $line_items[] = ['Shipping',           $p['amount_shipping']];
+}
 ?>
 
 <div class="cr-wrapper">
@@ -128,7 +133,9 @@ if ($p['amount_shipping']> 0) $line_items[] = ['Shipping',           $p['amount_
 
   <!-- Amount breakdown -->
   <div class="cr-amount-box">
+    <?php if ($line_items): ?>
     <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9aa5b4;margin-bottom:.5rem">Amount Breakdown</div>
+    <?php endif; ?>
     <?php foreach ($line_items as [$label, $amt]): ?>
     <div class="cr-amount-row">
       <span style="color:#5a6a7a"><?= h($label) ?></span>

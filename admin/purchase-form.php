@@ -59,8 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category      = trim($_POST['category']      ?? '');
     $date          = trim($_POST['purchase_date'] ?? '');
     $pretax        = (float)str_replace(',','', $_POST['amount_pretax']    ?? '0');
-    $tax           = (float)str_replace(',','', $_POST['amount_tax']       ?? '0');
-    $shipping      = (float)str_replace(',','', $_POST['amount_shipping']  ?? '0');
+    // Tax/shipping breakdown was removed from the form and reports. The
+    // amount_tax/amount_shipping columns stay in the schema so a purchase
+    // that already had real values there keeps them untouched on edits
+    // (e.g. fixing a typo in the vendor shouldn't silently wipe out shipping
+    // that was already recorded); a brand-new purchase just starts at 0.
+    $tax           = $is_edit ? (float)($p['amount_tax']      ?? 0) : 0.0;
+    $shipping      = $is_edit ? (float)($p['amount_shipping'] ?? 0) : 0.0;
     $total         = round($pretax + $tax + $shipping, 2);
     // ?: not ?? — an empty string (e.g. a disabled placeholder option
     // submitting with no value) must also fall back to 'pending', not
@@ -240,8 +245,7 @@ admin_header($title);
 ?>
 <style>
 .receipt-preview{margin-top:.5rem;max-width:100%;border-radius:4px;border:1px solid #e1e5eb}
-.amount-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.9rem}
-@media(max-width:500px){.amount-row{grid-template-columns:1fr}}
+.amount-row{display:grid;grid-template-columns:1fr;gap:.9rem;max-width:220px}
 .total-display{background:#f0f4ff;border:2px solid #003594;border-radius:4px;padding:.6rem .9rem;font-size:1.2rem;font-weight:700;color:#002554;text-align:center}
 </style>
 
@@ -321,19 +325,9 @@ if (!empty($real_errors)): ?>
     <fieldset><legend>Amounts</legend>
       <div class="amount-row">
         <div class="form-group">
-          <label>Pre-Tax Amount *</label>
+          <label>Amount *</label>
           <input type="number" name="amount_pretax" id="pretax" value="<?= $v('amount_pretax') ?>"
                  step="0.01" min="0" required placeholder="0.00" oninput="calcTotal()">
-        </div>
-        <div class="form-group">
-          <label>Tax <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
-          <input type="number" name="amount_tax" id="tax_amt" value="<?= $v('amount_tax') ?>"
-                 step="0.01" min="0" placeholder="0.00" oninput="calcTotal()">
-        </div>
-        <div class="form-group">
-          <label>Shipping <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.72rem;color:#9aa5b4">optional</span></label>
-          <input type="number" name="amount_shipping" id="shipping_amt" value="<?= $v('amount_shipping') ?>"
-                 step="0.01" min="0" placeholder="0.00" oninput="calcTotal()">
         </div>
       </div>
       <div class="form-group" style="margin-top:.25rem">
@@ -541,10 +535,8 @@ if (!empty($real_errors)): ?>
 
 <script>
 function calcTotal() {
-  var pre  = parseFloat(document.getElementById('pretax').value)       || 0;
-  var tax  = parseFloat(document.getElementById('tax_amt').value)      || 0;
-  var ship = parseFloat(document.getElementById('shipping_amt').value) || 0;
-  document.getElementById('total-display').textContent = '$' + (pre + tax + ship).toFixed(2);
+  var pre = parseFloat(document.getElementById('pretax').value) || 0;
+  document.getElementById('total-display').textContent = '$' + pre.toFixed(2);
 }
 function previewReceipt(input) {
   var wrap = document.getElementById('receipt-preview-wrap');

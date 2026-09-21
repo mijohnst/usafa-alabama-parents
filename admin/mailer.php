@@ -577,12 +577,7 @@ function notify_new_purchase(PDO $pdo, array $purchase, string $submitter_name):
         $body .= "Event:        {$purchase['event']}\n";
     if (!empty($purchase['category']))
         $body .= "Category:     {$purchase['category']}\n";
-    $body   .= "\nAmounts:\n"
-             . "  Pre-Tax:  \${$purchase['amount_pretax']}\n"
-             . "  Tax:      \${$purchase['amount_tax']}\n";
-    if (!empty($purchase['amount_shipping']) && $purchase['amount_shipping'] > 0)
-        $body .= "  Shipping: \${$purchase['amount_shipping']}\n";
-    $body   .= "  Total:    $amt\n\n"
+    $body   .= "\nAmount:       $amt\n\n"
              . "View / Approve:  $url\n\n"
              . str_repeat('─', 48) . "\n"
              . CLUB_NAME . "\n" . ADMIN_URL;
@@ -622,12 +617,7 @@ function notify_approved(PDO $pdo, array $purchase, string $approved_by): void {
     $body   .= "Description:  {$purchase['description']}\n";
     if (!empty($purchase['event']))    $body .= "Event:        {$purchase['event']}\n";
     if (!empty($purchase['category'])) $body .= "Category:     {$purchase['category']}\n";
-    $body   .= "\nAmounts:\n"
-             . "  Pre-Tax:  \${$purchase['amount_pretax']}\n"
-             . "  Tax:      \${$purchase['amount_tax']}\n";
-    if (!empty($purchase['amount_shipping']) && $purchase['amount_shipping'] > 0)
-        $body .= "  Shipping: \${$purchase['amount_shipping']}\n";
-    $body   .= "  Total:    $amt\n\n"
+    $body   .= "\nAmount:       $amt\n\n"
              . "Please submit payment and mark as Submitted:\n$url\n\n"
              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . ADMIN_URL;
 

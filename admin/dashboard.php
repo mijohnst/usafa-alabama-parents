@@ -59,7 +59,6 @@ if (is_treasurer()) {
         SUM(CASE WHEN status='pending'                  THEN amount_total ELSE 0 END) as pending_amt,
         SUM(CASE WHEN status IN ('approved','submitted') THEN amount_total ELSE 0 END) as approved_amt,
         SUM(CASE WHEN status='paid' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as reimbursed_ytd,
-        SUM(CASE WHEN status='paid' AND YEAR(purchase_date)=YEAR(NOW()) THEN amount_tax    ELSE 0 END) as tax_ytd,
         SUM(CASE WHEN YEAR(purchase_date)=YEAR(NOW()) THEN amount_total ELSE 0 END) as all_ytd,
         COUNT(CASE WHEN status='paid' AND YEAR(purchase_date)=YEAR(NOW()) THEN 1 END) as reimbursed_count
         FROM purchases")->fetch();
@@ -476,10 +475,6 @@ if ($stats['my_open_tickets'] > 0 && !can_manage_tickets())
   <div class="mini-stat" style="border-left:3px solid #f57c00">
     <div class="mini-stat-val" style="color:#f57c00">$<?= number_format($tf['pending_amt']??0,2) ?></div>
     <div class="mini-stat-lbl">Pending Approval</div>
-  </div>
-  <div class="mini-stat" style="border-left:3px solid #5a6a7a">
-    <div class="mini-stat-val" style="color:#5a6a7a">$<?= number_format($tf['tax_ytd']??0,2) ?></div>
-    <div class="mini-stat-lbl">Tax Paid YTD</div>
   </div>
   <?php if (!empty($stats['budgets']) && $stats['budgets']['total_budget'] > 0):
     $bu = $stats['budgets'];
