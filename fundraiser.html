@@ -384,7 +384,7 @@
     // campaign is actually active the same way everything else on this page
     // does. Last-name-only options, per club policy — see
     // fundraiser-honorees.php for why. Every cadet in the class year is
-    // listed; paid members' cadets get a ★ and their own group at the top
+    // listed; paid members' cadets get a ★ and a labeled group at the top
     // (optgroups + a text marker, since mobile browsers ignore styling on
     // <option>). The group stays hidden entirely if there are no cadets in
     // this campaign's class year yet, rather than showing an empty,
@@ -400,20 +400,22 @@
           var select = document.getElementById('donateHonoree');
           var paid = d.options.filter(function(o) { return o.paid; });
           var other = d.options.filter(function(o) { return !o.paid; });
-          function addGroup(label, opts, star) {
-            if (!opts.length) return;
-            var group = document.createElement('optgroup');
-            group.label = label;
+          function addOptions(parent, opts, star) {
             opts.forEach(function(opt) {
               var el = document.createElement('option');
               el.value = opt.id;
               el.textContent = (star ? '★ ' : '') + opt.lastName;
-              group.appendChild(el);
+              parent.appendChild(el);
             });
+          }
+          if (paid.length) {
+            var group = document.createElement('optgroup');
+            group.label = '★ Parents Club Member Families';
+            addOptions(group, paid, true);
             select.appendChild(group);
           }
-          addGroup('★ Parents Club Member Families', paid, true);
-          addGroup(paid.length ? 'All Other Cadets' : 'Cadets', other, false);
+          // Unlabeled on purpose — a "the rest" heading read as divisive.
+          addOptions(select, other, false);
           if (paid.length) document.getElementById('donateHonoreeStarNote').style.display = 'block';
           document.getElementById('donateHonoreeGroup').style.display = 'block';
         })
