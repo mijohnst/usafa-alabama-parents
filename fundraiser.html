@@ -311,6 +311,7 @@
                   <option value="">General Fund — no specific cadet</option>
                 </select>
                 <p style="font-size:.72rem;color:var(--gray);margin-top:.35rem">We keep a list of gifts given in each cadet's honor to share with them.</p>
+                <p id="donateHonoreeStarNote" style="display:none;font-size:.72rem;color:var(--gray);margin-top:.2rem">★ = family is a member of the Parents Club</p>
               </div>
               <div class="form-group" style="display:flex;align-items:center;gap:.5rem;text-align:left">
                 <input type="checkbox" id="donateAnonymous" style="width:auto">
@@ -382,9 +383,12 @@
     // handler) rather than on a hardcoded slug, so this follows whichever
     // campaign is actually active the same way everything else on this page
     // does. Last-name-only options, per club policy — see
-    // fundraiser-honorees.php for why. The group stays hidden entirely if
-    // there are no paid members in this campaign's class year yet, rather
-    // than showing an empty, confusing dropdown.
+    // fundraiser-honorees.php for why. Every cadet in the class year is
+    // listed; paid members' cadets get a ★ and their own group at the top
+    // (optgroups + a text marker, since mobile browsers ignore styling on
+    // <option>). The group stays hidden entirely if there are no cadets in
+    // this campaign's class year yet, rather than showing an empty,
+    // confusing dropdown.
     var honoreesLoaded = false;
     function loadHonorees() {
       if (honoreesLoaded || !CAMPAIGN) return;
@@ -394,12 +398,23 @@
         .then(function(d) {
           if (!d.success || !d.options || !d.options.length) return;
           var select = document.getElementById('donateHonoree');
-          d.options.forEach(function(opt) {
-            var el = document.createElement('option');
-            el.value = opt.id;
-            el.textContent = opt.lastName;
-            select.appendChild(el);
-          });
+          var paid = d.options.filter(function(o) { return o.paid; });
+          var other = d.options.filter(function(o) { return !o.paid; });
+          function addGroup(label, opts, star) {
+            if (!opts.length) return;
+            var group = document.createElement('optgroup');
+            group.label = label;
+            opts.forEach(function(opt) {
+              var el = document.createElement('option');
+              el.value = opt.id;
+              el.textContent = (star ? '★ ' : '') + opt.lastName;
+              group.appendChild(el);
+            });
+            select.appendChild(group);
+          }
+          addGroup('★ Parents Club Member Families', paid, true);
+          addGroup(paid.length ? 'All Other Cadets' : 'Cadets', other, false);
+          if (paid.length) document.getElementById('donateHonoreeStarNote').style.display = 'block';
           document.getElementById('donateHonoreeGroup').style.display = 'block';
         })
         .catch(function() { /* optional feature — fail silently */ });

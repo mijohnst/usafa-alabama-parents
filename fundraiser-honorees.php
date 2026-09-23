@@ -1,9 +1,10 @@
 <?php
 /**
  * Public Fundraiser — In-Honor-Of Cadet List
- * Read-only, no side effects. Returns the last names of paid members'
- * cadets in the campaign's target class year, for the optional "in honor
- * of" dropdown on the donation form. Last name only, by design — this
+ * Read-only, no side effects. Returns the last names of every cadet in the
+ * campaign's target class year (flagging paid members' cadets so the page
+ * can highlight them), for the optional "in honor of" dropdown on the
+ * donation form. Last name only, by design — this
  * powers a per-cadet donor list handed out with each saber, not a public
  * display, so it never needs (and shouldn't expose) anything more than that.
  */
@@ -45,9 +46,9 @@ $year = trim((string)$year_stmt->fetchColumn());
 // donate-create-order.php when a donor actually submits an honoree id, so
 // this list and that validation can never silently disagree.
 $options = [];
-foreach (campaign_eligible_cadets($pdo, $year) as $id => $lastName) {
-    if (trim((string)$lastName) === '') continue;
-    $options[] = ['id' => (int)$id, 'lastName' => $lastName];
+foreach (campaign_eligible_cadets($pdo, $year) as $id => $cadet) {
+    if (trim($cadet['lastName']) === '') continue;
+    $options[] = ['id' => (int)$id, 'lastName' => $cadet['lastName'], 'paid' => $cadet['paid']];
 }
 
 echo json_encode(['success' => true, 'options' => $options]);

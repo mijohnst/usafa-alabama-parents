@@ -110,8 +110,8 @@ if ($honoree_id > 0 && $campaign !== null) {
     $target_year = trim((string)$year_stmt->fetchColumn());
     if ($target_year !== '') {
         $eligible = campaign_eligible_cadets($pdo, $target_year);
-        if (isset($eligible[$honoree_id]) && trim($eligible[$honoree_id]) !== '') {
-            $honoree_last_name = trim($eligible[$honoree_id]);
+        if (isset($eligible[$honoree_id]) && trim($eligible[$honoree_id]['lastName']) !== '') {
+            $honoree_last_name = trim($eligible[$honoree_id]['lastName']);
         }
     }
 }

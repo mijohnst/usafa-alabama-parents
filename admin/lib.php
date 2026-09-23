@@ -477,32 +477,35 @@ function generate_photo_thumbnail(string $source_path, string $dest_path, int $m
 // stale the moment someone updates the year for next year's cadets.
 // Falls back to $fallback if the setting is missing (migration not run
 // yet) or the row can't be read.
-// Live count of paid members' cadets in a given graduating class year. Not
-// used for the campaign's overall goal (see campaign_cadet_count_and_goal()
-// below) — that's a plain Treasurer-set target for the whole class. This is
-// purely for the "in honor of a specific cadet" donation feature, where
-// eligibility to be named genuinely is tied to paid membership.
-//
-// The single source of truth for "which cadets count" — [member_id =>
-// cadet_last_name] for every paid member's cadet in a given graduating
-// class year. campaign_paid_cadet_count() below, fundraiser-honorees.php's
-// "in honor of" dropdown, and donate-create-order.php's server-side
-// revalidation of a submitted honoree id all call this one function
-// instead of each keeping their own copy of the same WHERE clause, so none
-// of the three can silently drift out of agreement on who's eligible.
+// The single source of truth for "which cadets can be honored" — [member_id
+// => ['lastName' => ..., 'paid' => bool]] for every active (non-archived)
+// member's cadet in a given graduating class year, paid or not. The Saber
+// Fund covers the whole class (see campaign_cadet_count_and_goal() below),
+// so any classmate can be named; 'paid' just lets the public dropdown
+// highlight paid members' cadets. fundraiser-honorees.php's "in honor of"
+// dropdown, donate-create-order.php's server-side revalidation of a
+// submitted honoree id, and campaign_paid_cadet_count() all call this one
+// function instead of each keeping their own copy of the same WHERE clause,
+// so none of them can silently drift out of agreement on who's eligible.
 function campaign_eligible_cadets(PDO $pdo, string $classYear): array {
     if ($classYear === '') return [];
-    $stmt = $pdo->prepare('SELECT id, cadet_last_name FROM members WHERE archived = 0 AND membership_paid = 1 AND class_year = ? ORDER BY cadet_last_name ASC');
+    $stmt = $pdo->prepare('SELECT id, cadet_last_name, membership_paid FROM members WHERE archived = 0 AND class_year = ? ORDER BY cadet_last_name ASC');
     $stmt->execute([$classYear]);
     $out = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $out[(int)$row['id']] = (string)$row['cadet_last_name'];
+        $out[(int)$row['id']] = [
+            'lastName' => (string)$row['cadet_last_name'],
+            'paid'     => (int)$row['membership_paid'] === 1,
+        ];
     }
     return $out;
 }
 
+// Live count of paid members' cadets in a class year — FYI only on
+// admin/fundraiser.php, not the campaign goal (that's a plain
+// Treasurer-set target, see campaign_cadet_count_and_goal() below).
 function campaign_paid_cadet_count(PDO $pdo, string $classYear): int {
-    return count(campaign_eligible_cadets($pdo, $classYear));
+    return count(array_filter(campaign_eligible_cadets($pdo, $classYear), fn($c) => $c['paid']));
 }
 
 function saber_fund_label(PDO $pdo, string $slug, string $fallback): string {
