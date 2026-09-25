@@ -277,6 +277,14 @@ try {
 $_SESSION['dues_verified'][$token]['pending_order'] = null;
 
 if ($applied_ok) {
+    // Confirmation to the parent(s) — also creates/refreshes their portal
+    // invite, or reminds them they already have access. Only after the
+    // dues are actually applied; never allowed to affect this response.
+    try {
+        send_dues_payment_confirmation($pdo, $row, (float)$track['amount'], $order_years, (string)$capture_id, $capture_note_prefix);
+    } catch (\Throwable $e) {
+        error_log('dues-pay-capture-order: confirmation email failed for order ' . $order_id . ': ' . $e->getMessage());
+    }
     echo json_encode(['success' => true, 'years' => $order_years, 'captureId' => $capture_id]);
 } else {
     // The old response claimed success (and listed years as paid) even

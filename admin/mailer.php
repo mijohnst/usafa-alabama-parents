@@ -1046,6 +1046,87 @@ function send_portal_invite(string $to, string $name, string $token): bool {
     return send_notification($to, $subject, $body);
 }
 
+// ── Portal paragraph for a just-paid parent ──────────────────────────────
+// Makes sure this email has a way into the portal and returns the text
+// describing it, for the dues confirmation below:
+//  - no account yet        → creates a Member account linked to this
+//                            family (same shape as bulk-action.php's
+//                            portal_invite) and returns the sign-up link
+//  - invite never finished → refreshes the token/expiry, returns the link
+//  - active, set-up account → a "you already have access" reminder
+//  - deactivated account   → '' (an officer turned it off on purpose)
+// Never throws — a portal hiccup must not cost the parent their receipt.
+function dues_portal_access_note(PDO $pdo, string $email, string $name, int $memberId): string {
+    try {
+        $stmt = $pdo->prepare('SELECT id, active, invite_token FROM users WHERE LOWER(email) = ? OR LOWER(username) = ? LIMIT 1');
+        $stmt->execute([$email, $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($user && !$user['active']) return '';
+
+        if ($user && empty($user['invite_token'])) {
+            return "PORTAL ACCESS\n"
+                 . "You already have a Parents Club portal account — log in anytime at "
+                 . ADMIN_URL . "login.php to RSVP to events, sign up to volunteer, and check "
+                 . "your membership status.\n"
+                 . "Forgot your password? Email info@alabamafalcons.org and we'll help you get back in.\n\n";
+        }
+
+        $token = bin2hex(random_bytes(24));
+        if ($user) {
+            $pdo->prepare('UPDATE users SET invite_token = ?, invite_expires = DATE_ADD(NOW(), INTERVAL 14 DAY) WHERE id = ?')
+                ->execute([$token, $user['id']]);
+        } else {
+            $pdo->prepare(
+                "INSERT INTO users (name,email,username,password_hash,role,active,invite_token,invite_expires,member_id)
+                 VALUES (?,?,?,?,'member',1,?,DATE_ADD(NOW(), INTERVAL 14 DAY),?)"
+            )->execute([$name, $email, $email, password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT), $token, $memberId]);
+        }
+        return "SET UP YOUR PORTAL ACCOUNT\n"
+             . "As a paid member, you now have access to the Parents Club portal — RSVP to events, "
+             . "sign up to volunteer, share event photos, and flag which committees you'd like to help with.\n"
+             . "Create your login here (link expires in 14 days):\n"
+             . SITE_URL . 'portal-signup.php?token=' . $token . "\n\n";
+    } catch (\Throwable $e) {
+        error_log("dues_portal_access_note: failed for '$email' — " . $e->getMessage());
+        return '';
+    }
+}
+
+// ── Online dues payment confirmation, sent right after PayPal capture ────
+// One email per parent address on file (Parent 1 and Parent 2), each with
+// their own portal paragraph from dues_portal_access_note() above.
+// $member is the members row; $years the dues years this payment covered.
+function send_dues_payment_confirmation(PDO $pdo, array $member, float $amount, array $years, string $captureId, string $subjectPrefix = ''): void {
+    $amt   = '$' . number_format($amount, 2);
+    $date  = date('F j, Y');
+    $cadet = cadet_full_name($member) ?: 'your cadet';
+    $sent  = [];
+    foreach ([1, 2] as $slot) {
+        $email = strtolower(trim($member["parent{$slot}_email"] ?? ''));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || isset($sent[$email])) continue;
+        $sent[$email] = true;
+        $first = trim($member["parent{$slot}_first_name"] ?? '');
+        $full  = trim($first . ' ' . ($member["parent{$slot}_last_name"] ?? '')) ?: $email;
+
+        $subject = "{$subjectPrefix}Membership Dues Received — Thank You!";
+        $body    = CLUB_NAME . "\n"
+                 . "Membership Dues Confirmation\n"
+                 . str_repeat('─', 48) . "\n\n"
+                 . 'Hi ' . ($first ?: 'there') . ",\n\n"
+                 . "Thank you! We've received your membership dues for $cadet, and your "
+                 . "membership has been updated automatically.\n\n"
+                 . "  Date:          $date\n"
+                 . "  Amount:        $amt\n"
+                 . '  Year(s):       ' . implode(', ', $years) . "\n"
+                 . "  PayPal Ref:    $captureId\n\n"
+                 . dues_portal_access_note($pdo, $email, $full, (int)$member['id'])
+                 . "Questions about your dues? Contact our treasurer at treasurer@alabamafalcons.org.\n\n"
+                 . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+        send_notification($email, $subject, $body);
+    }
+}
+
 // ── Donation receipt to the donor, sent right after PayPal capture ───────
 // $subjectPrefix lets the caller flag a sandbox-mode test capture (donate-
 // capture-order.php) so a donor never mistakes a fake test transaction for

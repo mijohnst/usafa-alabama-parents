@@ -674,7 +674,7 @@
             }).then(function(r) { return r.json(); }).then(function(result) {
               if (result.success) {
                 document.getElementById('duesYearsBody').innerHTML =
-                  '<p style="color:#2e7d32;font-weight:600">Payment received — thank you! Your membership has been updated for ' + (result.years || []).join(', ') + '.</p>' +
+                  '<p style="color:#2e7d32;font-weight:600">Payment received — thank you! Your membership has been updated for ' + (result.years || []).join(', ') + '. A confirmation (with your Member Portal login info) has been emailed to the parent email(s) on file.</p>' +
                   (result.captureId ? '<p style="color:var(--gray);font-size:.78rem;margin-top:.35rem">PayPal reference: ' + result.captureId + '</p>' : '');
                 duesPaidYears = duesPaidYears.concat(result.years || []);
                 updateDuesBanner(duesPaidYears);
