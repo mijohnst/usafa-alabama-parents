@@ -23,25 +23,23 @@ function extract_emails(string $raw): array {
 }
 
 // ── Query DB to build recipient list ──────────────────────────────────────
-function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, string $missing = '', string $roster = '', ?array &$stats = null): string {
-    // $roster: '' = active roster (default), 'archived' = archived only,
-    // 'all' = both. Archived cadets often carry a class year that's no
-    // longer in CLASS_YEAR_LIST (graduated classes are set to 'Graduate',
-    // but ones archived by hand keep their old year), so when archived
-    // records are included, leaving every year unchecked means "any year"
-    // rather than "no recipients".
-    $where  = ['1=1'];
+function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, string $missing = '', ?array &$stats = null): string {
+    // 'archived' list type = both parent emails of archived cadets.
+    // Archived cadets often carry a class year that's no longer in
+    // CLASS_YEAR_LIST (graduated classes are set to 'Graduate', but ones
+    // archived by hand keep their old year), so for that list, leaving
+    // every year unchecked means "any year" rather than "no recipients".
+    $archived = $list_type === 'archived';
+    $where  = [$archived ? 'archived = 1' : 'archived = 0'];
     $params = [];
-    if ($roster === 'archived')  $where[] = 'archived = 1';
-    elseif ($roster !== 'all') $where[] = 'archived = 0';
 
     $safe_years = array_intersect($years, CLASS_YEAR_LIST);
     if (!empty($safe_years)) {
         $ph = [];
         foreach (array_values($safe_years) as $i => $y) { $ph[] = ":yr$i"; $params[":yr$i"] = $y; }
         $where[] = 'class_year IN (' . implode(',', $ph) . ')';
-    } elseif ($roster === '') {
-        return ''; // active roster, nothing selected → no recipients
+    } elseif (!$archived) {
+        return ''; // nothing selected → no recipients
     }
     if ($region !== '') { $where[] = 'al_region = :region'; $params[':region'] = $region; }
     if ($paid   === '1') $where[] = 'membership_paid = 1';
@@ -49,13 +47,12 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     $missing_sql = missing_data_sql($missing);
     if ($missing_sql) $where[] = $missing_sql;
 
-    $sql  = 'SELECT parent1_email, parent2_email, cadet_email, parent1_is_board_member, parent2_is_board_member, archived
+    $sql  = 'SELECT parent1_email, parent2_email, cadet_email, parent1_is_board_member, parent2_is_board_member
              FROM members WHERE ' . implode(' AND ', $where);
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll();
-    $stats = ['active' => 0, 'archived' => 0];
-    foreach ($rows as $r) $stats[$r['archived'] ? 'archived' : 'active']++;
+    $stats = ['records' => count($rows)];
 
     $lines = [];
     foreach ($rows as $r) {
@@ -65,6 +62,7 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
                 if ($r['parent2_email']) $lines[] = $r['parent2_email'];
                 if ($r['cadet_email'])   $lines[] = $r['cadet_email'];
                 break;
+            case 'archived':
             case 'parent_both':
                 if ($r['parent1_email']) $lines[] = $r['parent1_email'];
                 if ($r['parent2_email']) $lines[] = $r['parent2_email'];
@@ -200,12 +198,11 @@ $f_region  = $_POST['f_region']  ?? '';
 $f_paid    = $_POST['f_paid']    ?? '';
 $f_type    = $_POST['f_type']    ?? 'parent_both';
 $f_missing = $_POST['f_missing'] ?? '';
-$f_roster  = in_array($_POST['f_roster'] ?? '', ['archived', 'all'], true) ? $_POST['f_roster'] : '';
 $load_stats = null;
 
 // ── Handle load recipients ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['load'])) {
-    $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type, $f_missing, $f_roster, $load_stats);
+    $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type, $f_missing, $load_stats);
 }
 
 // ── Handle send ───────────────────────────────────────────────────────────
@@ -346,7 +343,7 @@ admin_header('Compose Email');
     <input type="hidden" name="recipients" value="<?= h($recipients) ?>">
     <input type="hidden" name="from_email" value="<?= h($from_email) ?>">
 
-    <div class="form-row" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));align-items:flex-end;gap:.75rem">
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;align-items:flex-end;gap:.75rem">
 
       <div class="form-group" style="margin:0">
         <label>Class Year</label>
@@ -407,6 +404,7 @@ admin_header('Compose Email');
           <option value="parent2"     <?= $f_type==='parent2'    ?'selected':''?>>Parent 2 Only</option>
           <option value="cadet"       <?= $f_type==='cadet'      ?'selected':''?>>Cadet Emails</option>
           <option value="board"       <?= $f_type==='board'      ?'selected':''?>>Board Members Only</option>
+          <option value="archived"    <?= $f_type==='archived'   ?'selected':''?>>Archived Cadets' Parents</option>
         </select>
       </div>
 
@@ -416,15 +414,6 @@ admin_header('Compose Email');
           <?php foreach (MISSING_DATA_OPTIONS as $val => $label): ?>
             <option value="<?= h($val) ?>" <?= $f_missing===$val?'selected':''?>><?= h($label) ?></option>
           <?php endforeach; ?>
-        </select>
-      </div>
-
-      <div class="form-group" style="margin:0">
-        <label>Roster</label>
-        <select name="f_roster" title="With Archived selected, leave Class Year on No Years to include every archived cadet regardless of year">
-          <option value=""         <?= $f_roster===''        ?'selected':''?>>Active Only</option>
-          <option value="archived" <?= $f_roster==='archived'?'selected':''?>>Archived Only</option>
-          <option value="all"      <?= $f_roster==='all'     ?'selected':''?>>Active + Archived</option>
         </select>
       </div>
 
@@ -440,7 +429,7 @@ admin_header('Compose Email');
   </form>
   <?php if ($load_stats !== null): ?>
   <p style="margin:.75rem 0 0;font-size:.82rem;color:#5a6a7a">
-    Loaded from <?= (int)$load_stats['active'] ?> active and <?= (int)$load_stats['archived'] ?> archived cadet record<?= $load_stats['active'] + $load_stats['archived'] === 1 ? '' : 's' ?>.
+    Loaded from <?= (int)$load_stats['records'] ?> cadet record<?= $load_stats['records'] === 1 ? '' : 's' ?>.
   </p>
   <?php endif; ?>
 </div>
@@ -454,7 +443,6 @@ admin_header('Compose Email');
     <input type="hidden" name="f_paid"    value="<?= h($f_paid) ?>">
     <input type="hidden" name="f_type"    value="<?= h($f_type) ?>">
     <input type="hidden" name="f_missing" value="<?= h($f_missing) ?>">
-    <input type="hidden" name="f_roster"  value="<?= h($f_roster) ?>">
 
     <div class="form-group" style="max-width:360px">
       <label>From</label>
@@ -528,7 +516,7 @@ function updateYrLabel() {
   var checked     = Array.from(yrCbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
   var currentVals = Array.from(yrCbs).filter(function(c){ return c.dataset.current; }).map(function(c){ return c.value; });
   var isCurrent   = checked.length === currentVals.length && currentVals.every(function(v){ return checked.indexOf(v) !== -1; });
-  var anyYear     = document.querySelector('select[name=f_roster]').value !== '';
+  var anyYear     = document.querySelector('select[name=f_type]').value === 'archived';
   yrBtn.childNodes[0].textContent = checked.length === 0           ? (anyYear ? 'Any Year' : 'No Years') :
                                     checked.length === yrCbs.length ? 'All Years'     :
                                     isCurrent                       ? 'Current Years' :
@@ -538,7 +526,7 @@ yrBtn.addEventListener('click', function(e){ e.stopPropagation(); yrCd.classList
 document.addEventListener('click', function(){ yrCd.classList.remove('open'); });
 yrCd.querySelector('.cd-panel').addEventListener('click', function(e){ e.stopPropagation(); });
 yrCbs.forEach(function(cb){ cb.addEventListener('change', updateYrLabel); });
-document.querySelector('select[name=f_roster]').addEventListener('change', updateYrLabel);
+document.querySelector('select[name=f_type]').addEventListener('change', updateYrLabel);
 updateYrLabel();
 
 function setYrs(state) {
@@ -555,7 +543,6 @@ function resetFilter() {
   document.querySelector('select[name=f_paid]').value   = '';
   document.querySelector('select[name=f_type]').value   = 'parent_both';
   document.querySelector('select[name=f_missing]').value = '';
-  document.querySelector('select[name=f_roster]').value  = '';
   document.getElementById('recipients').value = '';
   updateCount();
   document.querySelector('input[name=subject]').value = '';
