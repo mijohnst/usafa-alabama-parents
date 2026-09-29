@@ -23,15 +23,26 @@ function extract_emails(string $raw): array {
 }
 
 // ── Query DB to build recipient list ──────────────────────────────────────
-function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, string $missing = ''): string {
-    $where  = ['archived = 0'];
+function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, string $missing = '', string $roster = ''): string {
+    // $roster: '' = active roster (default), 'archived' = archived only,
+    // 'all' = both. Archived cadets often carry a class year that's no
+    // longer in CLASS_YEAR_LIST (graduated classes are set to 'Graduate',
+    // but ones archived by hand keep their old year), so when archived
+    // records are included, leaving every year unchecked means "any year"
+    // rather than "no recipients".
+    $where  = ['1=1'];
     $params = [];
+    if ($roster === 'archived')  $where[] = 'archived = 1';
+    elseif ($roster !== 'all') $where[] = 'archived = 0';
 
     $safe_years = array_intersect($years, CLASS_YEAR_LIST);
-    if (empty($safe_years)) return ''; // nothing selected → no recipients
-    $ph = [];
-    foreach (array_values($safe_years) as $i => $y) { $ph[] = ":yr$i"; $params[":yr$i"] = $y; }
-    $where[] = 'class_year IN (' . implode(',', $ph) . ')';
+    if (!empty($safe_years)) {
+        $ph = [];
+        foreach (array_values($safe_years) as $i => $y) { $ph[] = ":yr$i"; $params[":yr$i"] = $y; }
+        $where[] = 'class_year IN (' . implode(',', $ph) . ')';
+    } elseif ($roster === '') {
+        return ''; // active roster, nothing selected → no recipients
+    }
     if ($region !== '') { $where[] = 'al_region = :region'; $params[':region'] = $region; }
     if ($paid   === '1') $where[] = 'membership_paid = 1';
     if ($paid   === '0') $where[] = 'membership_paid = 0';
@@ -187,10 +198,11 @@ $f_region  = $_POST['f_region']  ?? '';
 $f_paid    = $_POST['f_paid']    ?? '';
 $f_type    = $_POST['f_type']    ?? 'parent_both';
 $f_missing = $_POST['f_missing'] ?? '';
+$f_roster  = in_array($_POST['f_roster'] ?? '', ['archived', 'all'], true) ? $_POST['f_roster'] : '';
 
 // ── Handle load recipients ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['load'])) {
-    $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type, $f_missing);
+    $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type, $f_missing, $f_roster);
 }
 
 // ── Handle send ───────────────────────────────────────────────────────────
@@ -331,7 +343,7 @@ admin_header('Compose Email');
     <input type="hidden" name="recipients" value="<?= h($recipients) ?>">
     <input type="hidden" name="from_email" value="<?= h($from_email) ?>">
 
-    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;align-items:flex-end;gap:.75rem">
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;align-items:flex-end;gap:.75rem">
 
       <div class="form-group" style="margin:0">
         <label>Class Year</label>
@@ -405,6 +417,15 @@ admin_header('Compose Email');
       </div>
 
       <div class="form-group" style="margin:0">
+        <label>Roster</label>
+        <select name="f_roster" title="With Archived selected, leave Class Year on No Years to include every archived cadet regardless of year">
+          <option value=""         <?= $f_roster===''        ?'selected':''?>>Active Only</option>
+          <option value="archived" <?= $f_roster==='archived'?'selected':''?>>Archived Only</option>
+          <option value="all"      <?= $f_roster==='all'     ?'selected':''?>>Active + Archived</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin:0">
         <label>&nbsp;</label>
         <div style="display:flex;gap:.5rem">
           <button type="submit" name="load" value="1" class="btn btn-primary">Load →</button>
@@ -425,6 +446,7 @@ admin_header('Compose Email');
     <input type="hidden" name="f_paid"    value="<?= h($f_paid) ?>">
     <input type="hidden" name="f_type"    value="<?= h($f_type) ?>">
     <input type="hidden" name="f_missing" value="<?= h($f_missing) ?>">
+    <input type="hidden" name="f_roster"  value="<?= h($f_roster) ?>">
 
     <div class="form-group" style="max-width:360px">
       <label>From</label>
@@ -498,7 +520,8 @@ function updateYrLabel() {
   var checked     = Array.from(yrCbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
   var currentVals = Array.from(yrCbs).filter(function(c){ return c.dataset.current; }).map(function(c){ return c.value; });
   var isCurrent   = checked.length === currentVals.length && currentVals.every(function(v){ return checked.indexOf(v) !== -1; });
-  yrBtn.childNodes[0].textContent = checked.length === 0           ? 'No Years'      :
+  var anyYear     = document.querySelector('select[name=f_roster]').value !== '';
+  yrBtn.childNodes[0].textContent = checked.length === 0           ? (anyYear ? 'Any Year' : 'No Years') :
                                     checked.length === yrCbs.length ? 'All Years'     :
                                     isCurrent                       ? 'Current Years' :
                                     checked.join(', ');
@@ -507,6 +530,7 @@ yrBtn.addEventListener('click', function(e){ e.stopPropagation(); yrCd.classList
 document.addEventListener('click', function(){ yrCd.classList.remove('open'); });
 yrCd.querySelector('.cd-panel').addEventListener('click', function(e){ e.stopPropagation(); });
 yrCbs.forEach(function(cb){ cb.addEventListener('change', updateYrLabel); });
+document.querySelector('select[name=f_roster]').addEventListener('change', updateYrLabel);
 updateYrLabel();
 
 function setYrs(state) {
@@ -523,6 +547,7 @@ function resetFilter() {
   document.querySelector('select[name=f_paid]').value   = '';
   document.querySelector('select[name=f_type]').value   = 'parent_both';
   document.querySelector('select[name=f_missing]').value = '';
+  document.querySelector('select[name=f_roster]').value  = '';
   document.getElementById('recipients').value = '';
   updateCount();
   document.querySelector('input[name=subject]').value = '';
