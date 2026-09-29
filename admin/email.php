@@ -24,12 +24,15 @@ function extract_emails(string $raw): array {
 
 // ── Query DB to build recipient list ──────────────────────────────────────
 function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, string $missing = '', ?array &$stats = null): string {
-    // 'archived' list type = both parent emails of archived cadets.
+    // The 'archived*' list types pull from archived cadets only (every
+    // other type is the current, non-archived roster only):
+    // 'archived' = both parents, 'archived_cadet' = cadets,
+    // 'archived_everyone' = both parents + cadet.
     // Archived cadets often carry a class year that's no longer in
     // CLASS_YEAR_LIST (graduated classes are set to 'Graduate', but ones
     // archived by hand keep their old year), so for that list, leaving
     // every year unchecked means "any year" rather than "no recipients".
-    $archived = $list_type === 'archived';
+    $archived = in_array($list_type, ['archived', 'archived_cadet', 'archived_everyone'], true);
     $where  = [$archived ? 'archived = 1' : 'archived = 0'];
     $params = [];
 
@@ -58,6 +61,7 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     foreach ($rows as $r) {
         switch ($list_type) {
             case 'everyone':
+            case 'archived_everyone':
                 if ($r['parent1_email']) $lines[] = $r['parent1_email'];
                 if ($r['parent2_email']) $lines[] = $r['parent2_email'];
                 if ($r['cadet_email'])   $lines[] = $r['cadet_email'];
@@ -74,6 +78,7 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
                 if ($r['parent2_email']) $lines[] = $r['parent2_email'];
                 break;
             case 'cadet':
+            case 'archived_cadet':
                 if ($r['cadet_email']) $lines[] = $r['cadet_email'];
                 break;
             case 'board':
@@ -398,13 +403,19 @@ admin_header('Compose Email');
       <div class="form-group" style="margin:0">
         <label>Email List</label>
         <select name="f_type">
+          <optgroup label="Current Members">
           <option value="everyone"    <?= $f_type==='everyone'   ?'selected':''?>>Everyone (Both Parents + Cadet)</option>
           <option value="parent_both" <?= $f_type==='parent_both'?'selected':''?>>Both Parent Emails</option>
           <option value="parent1"     <?= $f_type==='parent1'    ?'selected':''?>>Parent 1 Only</option>
           <option value="parent2"     <?= $f_type==='parent2'    ?'selected':''?>>Parent 2 Only</option>
           <option value="cadet"       <?= $f_type==='cadet'      ?'selected':''?>>Cadet Emails</option>
           <option value="board"       <?= $f_type==='board'      ?'selected':''?>>Board Members Only</option>
-          <option value="archived"    <?= $f_type==='archived'   ?'selected':''?>>Archived Cadets' Parents</option>
+          </optgroup>
+          <optgroup label="Archived Cadets">
+          <option value="archived_everyone" <?= $f_type==='archived_everyone'?'selected':''?>>Archived — Everyone (Parents + Cadet)</option>
+          <option value="archived"          <?= $f_type==='archived'         ?'selected':''?>>Archived — Parent Emails</option>
+          <option value="archived_cadet"    <?= $f_type==='archived_cadet'   ?'selected':''?>>Archived — Cadet Emails</option>
+          </optgroup>
         </select>
       </div>
 
@@ -516,7 +527,7 @@ function updateYrLabel() {
   var checked     = Array.from(yrCbs).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
   var currentVals = Array.from(yrCbs).filter(function(c){ return c.dataset.current; }).map(function(c){ return c.value; });
   var isCurrent   = checked.length === currentVals.length && currentVals.every(function(v){ return checked.indexOf(v) !== -1; });
-  var anyYear     = document.querySelector('select[name=f_type]').value === 'archived';
+  var anyYear     = document.querySelector('select[name=f_type]').value.indexOf('archived') === 0;
   yrBtn.childNodes[0].textContent = checked.length === 0           ? (anyYear ? 'Any Year' : 'No Years') :
                                     checked.length === yrCbs.length ? 'All Years'     :
                                     isCurrent                       ? 'Current Years' :
