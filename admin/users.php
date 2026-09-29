@@ -205,6 +205,9 @@ echo show_flash();
 .user-actions{display:flex;gap:.4rem;flex-wrap:wrap}
 .form-card{background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:1.5rem;max-width:520px;margin-bottom:1.5rem}
 .form-card h2{font-size:1rem;color:#002554;margin-bottom:1.25rem}
+.user-search{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap}
+.user-search input{flex:1;min-width:220px;max-width:480px;padding:.55rem .8rem;border:1px solid #cfd6df;border-radius:5px;font-size:.92rem}
+.user-search span{font-size:.8rem;color:#5a6a7a}
 @media(max-width:500px){.user-grid{grid-template-columns:1fr}}
 </style>
 
@@ -295,10 +298,26 @@ echo show_flash();
 </div>
 <?php endif; ?>
 
+<!-- Search -->
+<div class="user-search">
+  <input type="search" id="user-search" placeholder="Search by name, username, email, role, or linked cadet…" autocomplete="off" aria-label="Search users">
+  <span id="user-search-count"></span>
+</div>
+
 <!-- User cards -->
-<div class="user-grid">
-<?php foreach ($users as $u): ?>
-  <div class="user-card <?= $u['active'] ? '' : 'inactive' ?>">
+<div class="user-grid" id="user-grid">
+<?php foreach ($users as $u):
+  // Everything the search box can match on, lowercased once here so the
+  // filter below is a plain substring check per card.
+  $search_text = implode(' ', [
+      $u['name'], $u['username'], $u['email'],
+      $role_labels[$u['role']] ?? $u['role'], $u['officer_title'] ?? '',
+      $member_names[$u['member_id'] ?? 0] ?? '',
+      $u['active'] ? '' : 'inactive',
+      !empty($u['invite_token']) ? (strtotime($u['invite_expires']) < time() ? 'invite expired' : 'invite pending') : '',
+  ]);
+?>
+  <div class="user-card <?= $u['active'] ? '' : 'inactive' ?>" data-search="<?= h(mb_strtolower($search_text)) ?>">
     <div class="user-top">
       <?php if (!empty($u['avatar_filename'])): ?>
         <img class="user-avatar" src="/avatar-serve.php?id=<?= (int)$u['id'] ?>" alt="">
@@ -358,5 +377,30 @@ echo show_flash();
   </div>
 <?php endforeach; ?>
 </div>
+<p id="user-search-empty" style="display:none;color:#5a6a7a;font-size:.9rem">No users match your search.</p>
+
+<script>
+(function() {
+  var input = document.getElementById('user-search');
+  var count = document.getElementById('user-search-count');
+  var empty = document.getElementById('user-search-empty');
+  var cards = document.querySelectorAll('#user-grid .user-card');
+  function filter() {
+    // Every word must match somewhere, in any order ("officer smith").
+    var words = input.value.toLowerCase().trim().split(/s+/).filter(Boolean);
+    var shown = 0;
+    cards.forEach(function(card) {
+      var text = card.dataset.search;
+      var match = words.every(function(w) { return text.indexOf(w) !== -1; });
+      card.style.display = match ? '' : 'none';
+      if (match) shown++;
+    });
+    count.textContent = words.length ? shown + ' of ' + cards.length + ' users' : cards.length + ' users';
+    empty.style.display = shown ? 'none' : 'block';
+  }
+  input.addEventListener('input', filter);
+  filter();
+})();
+</script>
 
 <?php admin_footer(); ?>
