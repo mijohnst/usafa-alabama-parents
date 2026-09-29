@@ -23,7 +23,7 @@ function extract_emails(string $raw): array {
 }
 
 // ── Query DB to build recipient list ──────────────────────────────────────
-function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, string $missing = '', string $roster = ''): string {
+function load_recipients(PDO $pdo, array $years, string $region, string $paid, string $list_type, string $missing = '', string $roster = '', ?array &$stats = null): string {
     // $roster: '' = active roster (default), 'archived' = archived only,
     // 'all' = both. Archived cadets often carry a class year that's no
     // longer in CLASS_YEAR_LIST (graduated classes are set to 'Graduate',
@@ -49,11 +49,13 @@ function load_recipients(PDO $pdo, array $years, string $region, string $paid, s
     $missing_sql = missing_data_sql($missing);
     if ($missing_sql) $where[] = $missing_sql;
 
-    $sql  = 'SELECT parent1_email, parent2_email, cadet_email, parent1_is_board_member, parent2_is_board_member
+    $sql  = 'SELECT parent1_email, parent2_email, cadet_email, parent1_is_board_member, parent2_is_board_member, archived
              FROM members WHERE ' . implode(' AND ', $where);
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll();
+    $stats = ['active' => 0, 'archived' => 0];
+    foreach ($rows as $r) $stats[$r['archived'] ? 'archived' : 'active']++;
 
     $lines = [];
     foreach ($rows as $r) {
@@ -199,10 +201,11 @@ $f_paid    = $_POST['f_paid']    ?? '';
 $f_type    = $_POST['f_type']    ?? 'parent_both';
 $f_missing = $_POST['f_missing'] ?? '';
 $f_roster  = in_array($_POST['f_roster'] ?? '', ['archived', 'all'], true) ? $_POST['f_roster'] : '';
+$load_stats = null;
 
 // ── Handle load recipients ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['load'])) {
-    $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type, $f_missing, $f_roster);
+    $recipients = load_recipients($pdo, (array)$f_years, $f_region, $f_paid, $f_type, $f_missing, $f_roster, $load_stats);
 }
 
 // ── Handle send ───────────────────────────────────────────────────────────
@@ -343,7 +346,7 @@ admin_header('Compose Email');
     <input type="hidden" name="recipients" value="<?= h($recipients) ?>">
     <input type="hidden" name="from_email" value="<?= h($from_email) ?>">
 
-    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;align-items:flex-end;gap:.75rem">
+    <div class="form-row" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));align-items:flex-end;gap:.75rem">
 
       <div class="form-group" style="margin:0">
         <label>Class Year</label>
@@ -435,6 +438,11 @@ admin_header('Compose Email');
 
     </div>
   </form>
+  <?php if ($load_stats !== null): ?>
+  <p style="margin:.75rem 0 0;font-size:.82rem;color:#5a6a7a">
+    Loaded from <?= (int)$load_stats['active'] ?> active and <?= (int)$load_stats['archived'] ?> archived cadet record<?= $load_stats['active'] + $load_stats['archived'] === 1 ? '' : 's' ?>.
+  </p>
+  <?php endif; ?>
 </div>
 
 <!-- Compose Form -->
