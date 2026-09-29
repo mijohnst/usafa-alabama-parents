@@ -387,7 +387,7 @@ echo show_flash();
   var cards = document.querySelectorAll('#user-grid .user-card');
   function filter() {
     // Every word must match somewhere, in any order ("officer smith").
-    var words = input.value.toLowerCase().trim().split(/s+/).filter(Boolean);
+    var words = input.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
     var shown = 0;
     cards.forEach(function(card) {
       var text = card.dataset.search;
