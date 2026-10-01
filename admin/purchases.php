@@ -94,11 +94,11 @@ if (isset($_GET['export'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="purchases-' . date('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['Date','Vendor','Description','Event','Category','Amount','Status','Submitted By','Notes']);
+    fputcsv($out, ['Date','Vendor','Description','Event','Category','Amount','Status','Archived','Submitted By','Notes']);
     foreach ($purchases as $p) {
         fputcsv($out, [$p['purchase_date'],$p['vendor'],$p['description'],$p['event'],
                        $p['category'],$p['amount_total'],
-                       $p['status'],$p['submitted_by_name'],$p['notes']]);
+                       $p['status'],!empty($p['archived']) ? 'Yes' : 'No',$p['submitted_by_name'],$p['notes']]);
     }
     fclose($out); exit;
 }
@@ -134,7 +134,7 @@ admin_header('Finance');
 <div class="page-head">
   <h1>Finance</h1>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-    <?php $ep = array_merge(array_filter(['status'=>$filter_status,'category'=>$filter_category,'event'=>$filter_event,'from'=>$filter_from,'to'=>$filter_to]),['export'=>1]); ?>
+    <?php $ep = array_merge(array_filter(['status'=>$filter_status,'category'=>$filter_category,'event'=>$filter_event,'from'=>$filter_from,'to'=>$filter_to,'q'=>$filter_search,'show_archived'=>$filter_show_archived ? 1 : '']),['export'=>1]); ?>
     <a href="purchases.php?<?= http_build_query($ep) ?>" class="btn btn-secondary">Export CSV</a>
     <a href="report.php" class="btn btn-secondary">📊 Report</a>
     <a href="year-end.php" class="btn btn-secondary">📋 Year-End</a>
