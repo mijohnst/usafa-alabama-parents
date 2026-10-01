@@ -89,7 +89,14 @@ if ($amount <= 0) {
 $reference_id = 'dues-' . $member_id . '-' . substr(hash('sha256', implode(',', $requested)), 0, 12);
 $request_id   = 'create-' . hash('sha256', $token . implode(',', $requested));
 
-$order = paypal_create_order((float)$amount, $reference_id, $request_id);
+// Tag the order the same way donate-create-order.php tags donations, so
+// dues are identifiable in PayPal's own dashboard/receipts too:
+// custom_id (searchable in PayPal's Activity/CSV export, not shown to the
+// payer) is a fixed 'membership-dues' tag; description (shown to the payer
+// and in PayPal's transaction details) says which years and which cadet.
+$cadet_last = cadet_last_name_suffixed($row);
+$paypal_description = 'Membership Dues ' . implode(', ', $requested) . ($cadet_last !== '' ? " — Cadet $cadet_last" : '');
+$order = paypal_create_order((float)$amount, $reference_id, $request_id, $paypal_description, 'membership-dues');
 if (!$order['success']) {
     error_log('dues-pay-create-order: ' . $order['error']);
     http_response_code(502);
