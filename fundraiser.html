@@ -41,6 +41,9 @@
     .math-box .equation { font-family: var(--font-display); font-size: 1.3rem; color: var(--navy); font-weight: 700; letter-spacing: .02em; }
     .math-box .equation span { color: var(--accent); }
     .math-box .equation span.campaign-cadet-count, .math-box .equation span.campaign-goal { color: var(--navy); }
+    .saber-photo { margin: 1.25rem auto .5rem; max-width: 560px; }
+    .saber-photo img { display: block; width: 100%; height: auto; border-radius: 6px; background: var(--white); box-shadow: 0 4px 14px rgba(0,53,148,.12); }
+    .saber-photo figcaption { font-size: .72rem; color: var(--gray); margin-top: .5rem; }
     .saber-link { display: inline-block; margin-top: .5rem; color: var(--blue); font-weight: 600; text-decoration: underline; }
     .priority-box { background: var(--light); border-left: 4px solid var(--navy); border-radius: 4px; padding: 1.5rem 1.75rem; margin: 1.75rem 0; text-align: left; }
     .priority-box h3 { font-family: var(--font-display); font-size: 1.05rem; color: var(--navy); margin: 0 0 .6rem; }
@@ -222,6 +225,11 @@
     <p>This year, the Parents Club is launching its first Saber Fundraiser with the goal of providing a personalized saber to every one of the <span class="campaign-cadet-count">20</span> Alabama cadets graduating in the Class of <span class="campaign-year">2027</span>. We hope this is just the beginning of a new annual tradition, with the club holding a Saber Fundraiser each year to recognize and celebrate our Alabama cadets as they prepare to graduate.</p>
     <div class="math-box">
       <div class="equation">$500 <span>&times;</span> <span class="campaign-cadet-count">20</span> cadets <span>=</span> $<span class="campaign-goal">10,000</span> goal</div>
+      <!-- Hides itself until saber.jpg is actually uploaded to the site root. -->
+      <figure class="saber-photo">
+        <img src="saber.jpg" alt="The official USAFA cadet saber each cadet will receive" loading="lazy" onerror="this.parentNode.style.display='none'">
+        <figcaption>The official USAFA cadet saber — photo courtesy of the USAFA Association of Graduates</figcaption>
+      </figure>
       <a class="saber-link" href="https://shop.usafa.org/products/air-force-academy-cadet-saber-usafa" target="_blank" rel="noopener">See the saber on USAFA's official shop &rarr;</a>
     </div>
     <div class="priority-box">
