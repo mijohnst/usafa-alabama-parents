@@ -2,9 +2,10 @@
 /**
  * Update-Your-Information Lookup
  * Same identity check as job-drop-lookup.php and parent-letters-lookup.php
- * (cadet last name + birthday + a parent email already on file) — kept
- * identical across all three public lookup forms so families see one
- * consistent standard. Verifies before returning that family's current
+ * (cadet last name + birthday + an email already on file), except this one
+ * (and dues-pay-lookup.php, which shares the update.html lookup) also
+ * accepts the cadet's own email, not just a parent's. Verifies before
+ * returning that family's current
  * record, so the Update form can be pre-filled. Never creates or modifies
  * anything.
  */
@@ -76,7 +77,7 @@ if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) 
 $stmt = $pdo->prepare(
     'SELECT * FROM members
      WHERE archived = 0 AND cadet_birthday = :birthday
-       AND (parent1_email = :email OR parent2_email = :email)'
+       AND (parent1_email = :email OR parent2_email = :email OR cadet_email = :email)'
 );
 $stmt->execute(['birthday' => $birthday, 'email' => $email]);
 $target_norm = strip_name_suffix(normalize_name($last));

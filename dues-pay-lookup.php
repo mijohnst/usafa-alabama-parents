@@ -2,7 +2,8 @@
 /**
  * Pay Dues Online — Lookup
  * Same 3-factor identity check as job-drop-lookup.php (cadet last name +
- * birthday + a parent email already on file), but unlike Job Drop this
+ * birthday + an email already on file — either parent's or, unlike Job
+ * Drop, the cadet's own), and also unlike Job Drop this
  * isn't restricted to one class_year — any cadet with an unpaid year can
  * pay. Issues its own token in its own session pool (dues_verified) so it
  * doesn't interact with any other verification flow.
@@ -66,7 +67,7 @@ if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) 
 $stmt = $pdo->prepare(
     'SELECT * FROM members
      WHERE archived = 0 AND cadet_birthday = :birthday
-       AND (parent1_email = :email OR parent2_email = :email)'
+       AND (parent1_email = :email OR parent2_email = :email OR cadet_email = :email)'
 );
 $stmt->execute(['birthday' => $birthday, 'email' => $email]);
 $target_norm = strip_name_suffix(normalize_name($last));
