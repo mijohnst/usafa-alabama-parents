@@ -124,8 +124,12 @@ $request_id   = 'create-' . bin2hex(random_bytes(16));
 // custom_id (searchable in PayPal's Activity/CSV export, not shown to the
 // donor) gets the stable slug, description (shown to the donor and in
 // PayPal's transaction details) gets the current human-readable label.
-$paypal_description = $campaign ? saber_fund_label($pdo, $campaign, $campaigns[$campaign]) : null;
-$order = paypal_create_order($amount, $reference_id, $request_id, $paypal_description, $campaign);
+// A general (non-campaign) donation gets its own fixed tag rather than
+// none, so it's just as filterable as dues ('membership-dues') and
+// campaign gifts. PayPal-side only — the paypal_donations row below still
+// stores campaign = NULL for these, as it always has.
+$paypal_description = $campaign ? saber_fund_label($pdo, $campaign, $campaigns[$campaign]) : 'General Donation — USAFA Parents Club of Alabama';
+$order = paypal_create_order($amount, $reference_id, $request_id, $paypal_description, $campaign ?? 'general-donation');
 if (!$order['success']) {
     error_log('donate-create-order: ' . $order['error']);
     http_response_code(502);
