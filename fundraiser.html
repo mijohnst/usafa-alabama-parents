@@ -80,9 +80,14 @@
 
     /* DONATE + RECENT DONATIONS (side by side) */
     .donate-recent-section { max-width: 1100px; }
-    .donate-recent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: start; }
+    .donate-recent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: stretch; }
     @media (max-width: 860px) { .donate-recent-grid { grid-template-columns: 1fr; } }
-    .recent-card { max-height: 640px; overflow-y: auto; }
+    /* Side by side, the donations list stretches to the gift form's height
+       (flex-basis 0 so the list itself never makes the row taller) and
+       scrolls inside that; stacked on mobile it falls back to a fixed cap. */
+    .recent-col { display: flex; flex-direction: column; }
+    .recent-card { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+    @media (max-width: 860px) { .recent-card { flex: none; max-height: 640px; } }
     .recent-empty { text-align: center; color: var(--gray); font-size: .9rem; padding: 1.5rem; background: var(--light); border-radius: 8px; }
     .recent-list { display: flex; flex-direction: column; gap: .75rem; }
     .recent-item { background: var(--white); border-left: 4px solid var(--accent); border-radius: 4px; box-shadow: 0 1px 6px rgba(0,53,148,.08); padding: 1rem 1.25rem; }
