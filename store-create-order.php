@@ -131,7 +131,10 @@ $paypal_items = array_map(function ($line) {
 $reference_id = 'store-order-' . bin2hex(random_bytes(6));
 $request_id   = 'create-' . bin2hex(random_bytes(16));
 
-$order = paypal_create_order($total, $reference_id, $request_id, 'Club Store order', null, $paypal_items, $shipping_amount, $ship_address);
+// 'club-store' custom_id matches how dues ('membership-dues'), general
+// donations ('general-donation') and campaigns are tagged, so store sales
+// are filterable in PayPal's Activity/CSV export alongside them.
+$order = paypal_create_order($total, $reference_id, $request_id, 'Club Store order — USAFA Parents Club of Alabama', 'club-store', $paypal_items, $shipping_amount, $ship_address);
 if (!$order['success']) {
     error_log('store-create-order: ' . $order['error']);
     http_response_code(502);
