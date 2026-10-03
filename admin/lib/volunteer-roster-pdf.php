@@ -77,7 +77,10 @@ function build_volunteer_roster_pdf(array $opp, array $rows): tFPDF {
     $when  = !empty($opp['event_date']) ? date('l, F j, Y', strtotime($opp['event_date'])) : 'Date TBD';
     if (!empty($opp['event_time'])) $when .= ', ' . $opp['event_time'];
     $where = trim((string)($opp['location'] ?? ''));
-    $pdf->Cell(0, 0.22, vr_fit($pdf, $when . ($where !== '' ? '  ·  ' . $where : ''), 7.0), 0, 1, 'L');
+    // Date/time and location on separate lines — together they overflow
+    // the 7in width (a full street address alone nearly fills it).
+    $pdf->Cell(0, 0.22, vr_fit($pdf, $when, 7.0), 0, 1, 'L');
+    if ($where !== '') $pdf->Cell(0, 0.22, vr_fit($pdf, $where, 7.0), 0, 1, 'L');
     $filled = count($rows);
     $spots  = (int)($opp['spots_needed'] ?? 0);
     $pdf->Cell(0, 0.22, 'Volunteers: ' . $filled . ($spots ? ' of ' . $spots . ' spots filled' : '') . '   ·   Printed ' . date('M j, Y g:i a'), 0, 1, 'L');
