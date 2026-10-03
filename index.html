@@ -1623,8 +1623,7 @@ if (document.readyState === 'loading') {
 
 <!-- ── HALLOWEEN SPLASH ───────────────────────────────────────────────────
      Seasonal overlay: only shows Oct 1–31 (auto-retires, nothing to remove
-     in November), once per visitor per day (localStorage, wrapped in
-     try/catch so a blocked storage just means it shows), auto-closes after
+     in November), on every visit to the homepage, auto-closes after
      ~8s, and closes on Enter Site / × / backdrop click / Esc. All art is
      inline SVG + CSS animation; motion stops under prefers-reduced-motion.
      To retire it early or for good, delete this block. -->
@@ -1714,9 +1713,6 @@ if (document.readyState === 'loading') {
   var now = new Date();
   if (now.getMonth() !== 9) return; // October only (months are 0-based)
 
-  var KEY = 'hwSplashSeen';
-  var today = now.toISOString().slice(0, 10);
-  try { if (localStorage.getItem(KEY) === today) return; } catch (e) {}
 
   var el = document.getElementById('hwSplash');
   if (!el) return;
@@ -1740,7 +1736,6 @@ if (document.readyState === 'loading') {
     document.body.style.overflow = '';
     document.removeEventListener('keydown', onKey);
     setTimeout(function() { el.classList.remove('show'); }, 450);
-    try { localStorage.setItem(KEY, today); } catch (e) {}
   }
   function onKey(e) { if (e.key === 'Escape') close(); }
 
