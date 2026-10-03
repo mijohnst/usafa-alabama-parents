@@ -211,6 +211,8 @@
     /* OPEN VOLUNTEER OPPORTUNITIES — specific dated needs, claimable without a portal login */
     .vol-opp-card{background:var(--light);border-radius:8px;padding:1.25rem 1.5rem;border-left:4px solid var(--navy);}
     .vol-opp-card.linked{box-shadow:0 0 0 3px #FFC72C;transition:box-shadow .4s ease;}
+    .btn-spinner{display:inline-block;width:.9em;height:.9em;margin-right:.5em;vertical-align:-.1em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:btnspin .7s linear infinite;}
+    @keyframes btnspin{to{transform:rotate(360deg)}}
     .vol-opp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;}
     .vol-opp-head h4{color:var(--navy);font-family:var(--font-display);font-size:1.05rem;margin:0;}
     .vol-opp-spots{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:var(--navy);padding:.25rem .7rem;border-radius:99px;white-space:nowrap;}
@@ -825,7 +827,7 @@ if (volForm) {
     }
 
     var originalText = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Submitting…';
+    btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>Please wait…';
 
     // Never leave the button stuck on "Submitting…" if the server stalls —
     // give up after 25s and fall through to the error message below.

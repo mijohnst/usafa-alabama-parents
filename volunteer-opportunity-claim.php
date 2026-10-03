@@ -132,6 +132,10 @@ try {
 
 $title = $opp['title'];
 
+// Answer the visitor now — the claim is already committed — then send the
+// confirmation + officer emails (each a separate SMTP round-trip) after.
+send_json_and_continue(['success' => true, 'message' => "You're signed up — thank you!"]);
+
 send_notification(
     $email,
     'You\'re Signed Up — ' . $title,
@@ -149,6 +153,3 @@ foreach (['secretary@alabamafalcons.org', 'president@alabamafalcons.org'] as $no
         . ADMIN_URL . 'volunteer-opportunities.php'
     );
 }
-
-http_response_code(200);
-echo json_encode(['success' => true, 'message' => "You're signed up — thank you!"]);

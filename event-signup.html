@@ -41,6 +41,8 @@
     .cta-button { display: inline-block; background: linear-gradient(180deg, #1a5cbf 0%, #002554 100%); color: var(--white); padding: 0.9rem 2rem; border-radius: 4px; font-family: var(--font-body); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.85rem; border: none; cursor: pointer; width: 100%; box-shadow: 0 4px 0 #001535, 0 6px 12px rgba(0,0,0,.25); position: relative; top: 0; transition: all 0.15s ease; }
     .cta-button:hover { background: linear-gradient(180deg, #2166cc 0%, #003080 100%); box-shadow: 0 2px 0 #001535, 0 4px 8px rgba(0,0,0,.2); top: 2px; }
     .cta-button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-spinner { display: inline-block; width: .9em; height: .9em; margin-right: .5em; vertical-align: -.1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: btnspin .7s linear infinite; }
+    @keyframes btnspin { to { transform: rotate(360deg); } }
     .link-button { background: none; border: none; color: var(--accent); font-family: var(--font-body); font-size: .9rem; text-decoration: underline; cursor: pointer; padding: 0; margin-top: 1rem; }
 
     .family-banner { background: var(--white); border-left: 4px solid var(--blue); border-radius: 4px; padding: .85rem 1.1rem; margin-bottom: 1.25rem; color: var(--navy); font-weight: 600; }
@@ -276,7 +278,7 @@
         showStatus('lookupStatus', "Please enter the cadet's last name, birthday, and the email on file.", 'error');
         return;
       }
-      btn.disabled = true; btn.textContent = 'Searching…';
+      btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>Please wait…';
       try {
         var d = await post({ action: 'lookup', eventId: eventId, cadetLastName: last, cadetBirthday: birthday, email: email, website: $('website').value });
         if (!d.success) { showStatus('lookupStatus', d.error || "We couldn't find a matching record.", 'error'); return; }
@@ -311,7 +313,7 @@
         return;
       }
       var label = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Saving…';
+      btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>Please wait…';
       try {
         var d = await post({ action: 'save', token: token, count: count, note: $('signupNote').value });
         if (!d.success) { showStatus('signupStatus', d.error || 'Could not save your sign-up.', 'error'); btn.textContent = label; return; }

@@ -39,6 +39,33 @@ function start_verification_session(): void {
     }
 }
 
+// Send a JSON response to the browser now and keep running afterward —
+// for public forms whose slow part (SMTP notification emails, ~1–2s each)
+// happens after the real work is already saved. The visitor gets their
+// answer immediately instead of staring at a busy button. Uses the
+// SAPI-specific "finish request" call when available (PHP-FPM, LiteSpeed —
+// the usual cPanel setups); elsewhere it falls back to flushing with
+// Content-Length + Connection: close, which most servers honor. Either way
+// the script keeps going (ignore_user_abort) so the emails still send.
+function send_json_and_continue(array $payload, int $status = 200): void {
+    ignore_user_abort(true);
+    $body = json_encode($payload);
+    http_response_code($status);
+    header('Content-Type: application/json');
+    header('Content-Length: ' . strlen($body));
+    header('Connection: close');
+    echo $body;
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    } elseif (function_exists('litespeed_finish_request')) {
+        litespeed_finish_request();
+    } else {
+        while (ob_get_level() > 0) ob_end_flush();
+        flush();
+    }
+}
+
 // The public-form identity check — cadet last name + birthday + an email
 // on file (either parent's or the cadet's own) — returning the matching
 // active members row, or null. Same rules as update-lookup.php: the last

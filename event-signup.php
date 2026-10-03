@@ -194,6 +194,11 @@ if ($action === 'save' || $action === 'cancel') {
         exit();
     }
 
+    // Answer the visitor now — the sign-up is saved — then send the
+    // confirmation email after, so the button doesn't sit on "Saving…"
+    // for the SMTP round-trip.
+    send_json_and_continue(['success' => true, 'count' => $count]);
+
     // Confirmation to the address they verified with. Best-effort only —
     // the sign-up is already saved either way.
     try {
@@ -216,8 +221,6 @@ if ($action === 'save' || $action === 'cancel') {
     } catch (\Throwable $e) {
         error_log('event-signup: confirmation email failed — ' . $e->getMessage());
     }
-
-    echo json_encode(['success' => true, 'count' => $count]);
     exit();
 }
 
