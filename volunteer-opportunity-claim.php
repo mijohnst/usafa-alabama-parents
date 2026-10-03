@@ -38,15 +38,33 @@ if (rate_limited($pdo, 'volunteer_claim')) {
 }
 
 $opportunity_id = (int)($data['opportunity_id'] ?? 0);
-$name  = trim((string)($data['name']  ?? ''));
-$email = trim((string)($data['email'] ?? ''));
+$last     = trim((string)($data['cadetLastName'] ?? ''));
+$birthday = trim((string)($data['cadetBirthday'] ?? ''));
+$email    = trim((string)($data['email'] ?? ''));
 
-if (!$opportunity_id || !$name || !$email) {
-    http_response_code(400); echo json_encode(['success' => false, 'error' => 'Name and email are required.']); exit();
+if (!$opportunity_id || $last === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
+    http_response_code(400); echo json_encode(['success' => false, 'error' => "Please enter your cadet's last name, birthday, and the email address on file."]); exit();
 }
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    http_response_code(400); echo json_encode(['success' => false, 'error' => 'Invalid email address.']); exit();
+
+// Verified against the roster the same way as update.html and
+// event-signup.html (find_member_by_identity() in admin/lib.php), so a
+// claim is tied to a real member family instead of a typed-in "guest"
+// name. The name recorded is whoever on that record owns the email used.
+$member = find_member_by_identity($pdo, $last, $birthday, $email);
+if (!$member) {
+    echo json_encode(['success' => false, 'error' => "We couldn't find a matching record. Please double-check your cadet's last name, birthday, and the email on file, or contact secretary@alabamafalcons.org."]);
+    exit();
 }
+$member_id = (int)$member['id'];
+$lc = strtolower($email);
+if ($lc === strtolower((string)$member['parent1_email'])) {
+    $name = trim($member['parent1_first_name'] . ' ' . $member['parent1_last_name']);
+} elseif ($lc === strtolower((string)($member['parent2_email'] ?? ''))) {
+    $name = trim(($member['parent2_first_name'] ?? '') . ' ' . ($member['parent2_last_name'] ?? ''));
+} else {
+    $name = cadet_full_name($member);
+}
+if ($name === '') $name = cadet_full_name($member) ?: $email;
 
 try {
     $pdo->beginTransaction();
@@ -73,8 +91,25 @@ try {
         http_response_code(409); echo json_encode(['success' => false, 'error' => 'That opportunity is already full.']); exit();
     }
 
-    $pdo->prepare('INSERT INTO volunteer_signups (opportunity_id, guest_name, guest_email) VALUES (?, ?, ?)')
-        ->execute([$opportunity_id, $name, strtolower($email)]);
+    // One claim per family per opportunity, whichever of their emails they
+    // use (the table's own unique key is only per email). Guarded: the
+    // member_id column only exists once migrate_volunteer_member_link.sql
+    // has run — before that, claims save exactly as they used to.
+    $has_member_col = (bool)$pdo->query("SHOW COLUMNS FROM volunteer_signups LIKE 'member_id'")->fetch();
+    if ($has_member_col) {
+        $dup = $pdo->prepare('SELECT 1 FROM volunteer_signups WHERE opportunity_id = ? AND member_id = ?');
+        $dup->execute([$opportunity_id, $member_id]);
+        if ($dup->fetchColumn()) {
+            $pdo->rollBack();
+            echo json_encode(['success' => true, 'message' => "Your family is already signed up for that one — thank you!"]);
+            exit;
+        }
+        $pdo->prepare('INSERT INTO volunteer_signups (opportunity_id, guest_name, guest_email, member_id) VALUES (?, ?, ?, ?)')
+            ->execute([$opportunity_id, $name, $lc, $member_id]);
+    } else {
+        $pdo->prepare('INSERT INTO volunteer_signups (opportunity_id, guest_name, guest_email) VALUES (?, ?, ?)')
+            ->execute([$opportunity_id, $name, $lc]);
+    }
 
     $pdo->commit();
 } catch (PDOException $e) {
@@ -106,7 +141,7 @@ foreach (['secretary@alabamafalcons.org', 'president@alabamafalcons.org'] as $no
     send_notification(
         $notify_to,
         'New Volunteer Sign-Up: ' . $title,
-        "$name <$email> just claimed a spot for \"$title\" from the website (no portal account).\n\n"
+        "$name <$email> just claimed a spot for \"$title\" from the website (verified member family: " . member_family_label($member) . ").\n\n"
         . ADMIN_URL . 'volunteer-opportunities.php'
     );
 }

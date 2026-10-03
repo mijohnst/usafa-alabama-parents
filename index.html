@@ -788,8 +788,10 @@ if (volForm) {
           '<div class="vol-opp-actions"><button type="button" class="btn btn-dark vol-opp-claim-btn">Claim a Spot</button></div>'
           + '<div class="vol-opp-claim-form" style="display:none">'
           + '<div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true"><label>Leave this field empty</label><input type="text" class="vol-opp-website" tabindex="-1" autocomplete="off"></div>'
-          + '<div class="form-row"><div class="form-group"><label>Your Name *</label><input type="text" class="vol-opp-name"></div>'
-          + '<div class="form-group"><label>Email *</label><input type="email" class="vol-opp-email"></div></div>'
+          + '<p class="vol-opp-desc" style="margin:0 0 .75rem">Verify your family with your cadet\'s last name, birthday, and a parent\'s or the cadet\'s email on file — no login needed.</p>'
+          + '<div class="form-row"><div class="form-group"><label>Cadet Last Name *</label><input type="text" class="vol-opp-last"></div>'
+          + '<div class="form-group"><label>Cadet Birthday *</label><input type="date" class="vol-opp-birthday"></div></div>'
+          + '<div class="form-group"><label>Parent\'s or Cadet\'s Email on File *</label><input type="email" class="vol-opp-email"></div>'
           + '<button type="button" class="btn btn-dark vol-opp-submit-btn">Confirm Sign-Up</button>'
           + '<div class="vol-opp-status"></div></div>'
         )
@@ -810,13 +812,14 @@ if (volForm) {
     var card     = btn.closest('.vol-opp-card');
     var form     = btn.closest('.vol-opp-claim-form');
     var statusEl = form.querySelector('.vol-opp-status');
-    var name     = form.querySelector('.vol-opp-name').value.trim();
+    var last     = form.querySelector('.vol-opp-last').value.trim();
+    var birthday = form.querySelector('.vol-opp-birthday').value;
     var email    = form.querySelector('.vol-opp-email').value.trim();
     var website  = form.querySelector('.vol-opp-website').value;
 
     statusEl.className = 'vol-opp-status'; statusEl.style.display = 'none';
-    if (!name || !email) {
-      statusEl.textContent = 'Please enter your name and email.';
+    if (!last || !birthday || !email) {
+      statusEl.textContent = "Please enter your cadet's last name, birthday, and the email on file.";
       statusEl.className = 'vol-opp-status error';
       return;
     }
@@ -827,7 +830,7 @@ if (volForm) {
     fetch('volunteer-opportunity-claim.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ opportunity_id: card.getAttribute('data-id'), name: name, email: email, website: website })
+      body: JSON.stringify({ opportunity_id: card.getAttribute('data-id'), cadetLastName: last, cadetBirthday: birthday, email: email, website: website })
     }).then(function(r) { return r.json(); }).then(function(data) {
       if (data.success) {
         form.innerHTML = '<p class="vol-opp-status success" style="display:block">' + escHtml(data.message || "You're signed up — thank you!") + '</p>';

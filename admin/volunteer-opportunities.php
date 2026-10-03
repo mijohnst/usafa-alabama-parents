@@ -60,13 +60,31 @@ $rosters = [];
 if (!empty($opportunities)) {
     $ids = array_column($opportunities, 'id');
     $ph  = implode(',', array_fill(0, count($ids), '?'));
-    $rows = $pdo->prepare(
-        "SELECT s.opportunity_id, COALESCE(u.name, s.guest_name) AS name,
-                COALESCE(u.email, s.guest_email) AS email, s.user_id IS NULL AS is_guest
-         FROM volunteer_signups s
-         LEFT JOIN users u ON s.user_id = u.id
-         WHERE s.opportunity_id IN ($ph) ORDER BY s.signed_up_at ASC"
-    );
+    // Public claims verified against the roster carry member_id (once
+    // migrate_volunteer_member_link.sql has run) — those show the family
+    // they belong to instead of "(Guest)". Only a claim with neither a
+    // portal user nor a member link is a true unverified guest.
+    $has_member_col = (bool)$pdo->query("SHOW COLUMNS FROM volunteer_signups LIKE 'member_id'")->fetch();
+    if ($has_member_col) {
+        $rows = $pdo->prepare(
+            "SELECT s.opportunity_id, COALESCE(u.name, s.guest_name) AS name,
+                    COALESCE(u.email, s.guest_email) AS email,
+                    (s.user_id IS NULL AND s.member_id IS NULL) AS is_guest,
+                    m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix, m.class_year AS cadet_class
+             FROM volunteer_signups s
+             LEFT JOIN users u ON s.user_id = u.id
+             LEFT JOIN members m ON s.member_id = m.id
+             WHERE s.opportunity_id IN ($ph) ORDER BY s.signed_up_at ASC"
+        );
+    } else {
+        $rows = $pdo->prepare(
+            "SELECT s.opportunity_id, COALESCE(u.name, s.guest_name) AS name,
+                    COALESCE(u.email, s.guest_email) AS email, s.user_id IS NULL AS is_guest
+             FROM volunteer_signups s
+             LEFT JOIN users u ON s.user_id = u.id
+             WHERE s.opportunity_id IN ($ph) ORDER BY s.signed_up_at ASC"
+        );
+    }
     $rows->execute($ids);
     foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $rosters[$r['opportunity_id']][] = $r;
@@ -158,7 +176,12 @@ echo show_flash();
         <?php if (!empty($rosters[$o['id']])): ?>
         <div class="vo-roster">
           <strong>Signed up:</strong>
-          <?= implode(', ', array_map(fn($r) => h($r['name']) . ($r['is_guest'] ? ' (Guest)' : ''), $rosters[$o['id']])) ?>
+          <?= implode(', ', array_map(function ($r) {
+              $cadet = !empty($r['cadet_last_name']) ? cadet_full_name($r) : '';
+              $tag = $r['is_guest'] ? ' (Guest)'
+                   : ($cadet !== '' ? ' (Cadet ' . $cadet . (!empty($r['cadet_class']) ? ', ' . $r['cadet_class'] : '') . ')' : '');
+              return h($r['name']) . h($tag);
+          }, $rosters[$o['id']])) ?>
         </div>
         <?php endif; ?>
       </div>
