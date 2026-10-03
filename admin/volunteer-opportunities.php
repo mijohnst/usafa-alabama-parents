@@ -41,6 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('DELETE FROM volunteer_opportunities WHERE id=?')->execute([$id]);
         flash('success', 'Opportunity deleted.');
         header('Location: volunteer-opportunities.php'); exit;
+
+    } elseif ($action === 'remove_signup') {
+        // One person off one opportunity's roster. Identified the same way
+        // the table keys them: a portal sign-up by user_id, a public/guest
+        // sign-up by its email (unique per opportunity) — so this never
+        // depends on volunteer_signups having its own id column.
+        $opp_id  = (int)($_POST['opportunity_id'] ?? 0);
+        $uid     = (int)($_POST['user_id'] ?? 0);
+        $g_email = strtolower(trim($_POST['guest_email'] ?? ''));
+        if ($opp_id && $uid) {
+            $pdo->prepare('DELETE FROM volunteer_signups WHERE opportunity_id=? AND user_id=?')->execute([$opp_id, $uid]);
+            flash('success', 'Removed from the sign-up list.');
+        } elseif ($opp_id && $g_email !== '') {
+            $pdo->prepare('DELETE FROM volunteer_signups WHERE opportunity_id=? AND user_id IS NULL AND LOWER(guest_email)=?')->execute([$opp_id, $g_email]);
+            flash('success', 'Removed from the sign-up list.');
+        }
+        header('Location: volunteer-opportunities.php'); exit;
     }
 }
 
@@ -67,7 +84,7 @@ if (!empty($opportunities)) {
     $has_member_col = (bool)$pdo->query("SHOW COLUMNS FROM volunteer_signups LIKE 'member_id'")->fetch();
     if ($has_member_col) {
         $rows = $pdo->prepare(
-            "SELECT s.opportunity_id, COALESCE(u.name, s.guest_name) AS name,
+            "SELECT s.opportunity_id, s.user_id AS signup_user_id, s.guest_email AS signup_guest_email, COALESCE(u.name, s.guest_name) AS name,
                     COALESCE(u.email, s.guest_email) AS email,
                     (s.user_id IS NULL AND s.member_id IS NULL) AS is_guest,
                     m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix, m.class_year AS cadet_class
@@ -78,7 +95,7 @@ if (!empty($opportunities)) {
         );
     } else {
         $rows = $pdo->prepare(
-            "SELECT s.opportunity_id, COALESCE(u.name, s.guest_name) AS name,
+            "SELECT s.opportunity_id, s.user_id AS signup_user_id, s.guest_email AS signup_guest_email, COALESCE(u.name, s.guest_name) AS name,
                     COALESCE(u.email, s.guest_email) AS email, s.user_id IS NULL AS is_guest
              FROM volunteer_signups s
              LEFT JOIN users u ON s.user_id = u.id
@@ -99,6 +116,9 @@ echo show_flash();
 .vo-row.inactive{opacity:.5;border-left-color:#9aa5b4}
 .vo-meta{font-size:.78rem;color:#5a6a7a;margin-top:.2rem}
 .vo-roster{font-size:.78rem;color:#5a6a7a;margin-top:.5rem;border-top:1px solid #f0f2f5;padding-top:.5rem}
+.vo-chip{display:inline-flex;align-items:center;gap:.25rem;background:#f0f4ff;border:1px solid #d6dff2;border-radius:99px;padding:.1rem .2rem .1rem .6rem;margin:.2rem .25rem 0 0;color:#33414f}
+.vo-chip-x{background:none;border:none;color:#9aa5b4;font-size:1rem;line-height:1;cursor:pointer;padding:0 .3rem;border-radius:99px}
+.vo-chip-x:hover{color:#fff;background:#A6192E}
 .spots-badge{display:inline-block;padding:.1rem .5rem;border-radius:99px;font-size:.7rem;font-weight:700}
 </style>
 
@@ -176,12 +196,23 @@ echo show_flash();
         <?php if (!empty($rosters[$o['id']])): ?>
         <div class="vo-roster">
           <strong>Signed up:</strong>
-          <?= implode(', ', array_map(function ($r) {
+          <?php foreach ($rosters[$o['id']] as $r):
               $cadet = !empty($r['cadet_last_name']) ? cadet_full_name($r) : '';
               $tag = $r['is_guest'] ? ' (Guest)'
                    : ($cadet !== '' ? ' (Cadet ' . $cadet . (!empty($r['cadet_class']) ? ', ' . $r['cadet_class'] : '') . ')' : '');
-              return h($r['name']) . h($tag);
-          }, $rosters[$o['id']])) ?>
+              $label = $r['name'] . $tag;
+          ?>
+          <span class="vo-chip"><?= h($label) ?>
+            <form method="POST" style="display:inline;margin:0" onsubmit="return confirm(<?= h(json_encode('Remove ' . $label . ' from this sign-up list?')) ?>)">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="remove_signup">
+              <input type="hidden" name="opportunity_id" value="<?= (int)$o['id'] ?>">
+              <input type="hidden" name="user_id" value="<?= (int)($r['signup_user_id'] ?? 0) ?>">
+              <input type="hidden" name="guest_email" value="<?= h((string)($r['signup_guest_email'] ?? '')) ?>">
+              <button type="submit" class="vo-chip-x" title="Remove from this list" aria-label="Remove <?= h($label) ?>">&times;</button>
+            </form>
+          </span>
+          <?php endforeach; ?>
         </div>
         <?php endif; ?>
       </div>
