@@ -38,7 +38,7 @@ function vr_fit(tFPDF $pdf, string $text, float $w): string {
 
 function build_volunteer_roster_pdf(array $opp, array $rows): tFPDF {
     // Columns sum to 7.0in — Letter width (8.5in) minus 0.75in margins.
-    $col = ['n' => 0.4, 'name' => 1.7, 'cadet' => 1.6, 'email' => 1.9, 'phone' => 1.0, 'chk' => 0.4];
+    $col = ['n' => 0.35, 'name' => 1.7, 'cadet' => 1.85, 'email' => 1.75, 'phone' => 1.0, 'chk' => 0.35];
     $head_h   = 0.32;
     $row_h    = 0.3;
     $bottom_y = 10.25; // 11in page minus 0.75in bottom margin
