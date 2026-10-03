@@ -132,6 +132,12 @@ echo show_flash();
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">
   Post specific volunteer needs here — members claim them from their own dashboard instead of you manually matching up general interest submissions.
 </p>
+<?php if (!(bool)$pdo->query("SHOW COLUMNS FROM volunteer_signups LIKE 'member_id'")->fetch()): ?>
+  <div class="alert alert-error">
+    Homepage sign-ups are verified against the member roster, but they can't be <strong>linked</strong> to the family yet (so they show as "Guest") —
+    the <code>member_id</code> column is missing. Run in phpMyAdmin: <code>ALTER TABLE volunteer_signups ADD COLUMN member_id INT NULL;</code>
+  </div>
+<?php endif; ?>
 
 <?php if ($edit !== null || isset($_GET['edit'])): ?>
 <div class="card" style="max-width:640px;margin-bottom:1.5rem">
