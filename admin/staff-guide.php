@@ -809,6 +809,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Members RSVP to upcoming events and note a guest count</li>
         <li>Re-submitting updates their existing RSVP instead of creating a duplicate</li>
         <li>Officers view RSVP counts and a full roster (with guest counts) per event</li>
+        <li><strong>Email sign-up link (no login):</strong> on <strong>Event RSVPs</strong>, every open event (visible, Upcoming/Planning, not yet past) has a <strong>Copy Sign-Up Link</strong> button — paste it into an email. Families verify with their cadet's last name, birthday, and a parent's or the cadet's email on file, then enter how many are coming. They get a confirmation email and can change or cancel with the same link. Those sign-ups appear on the same roster (marked "email link") and in the per-event <strong>Export CSV</strong>.</li>
       </ul>
     </div>
     <div class="card">

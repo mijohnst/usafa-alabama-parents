@@ -39,6 +39,56 @@ function start_verification_session(): void {
     }
 }
 
+// The public-form identity check — cadet last name + birthday + an email
+// on file (either parent's or the cadet's own) — returning the matching
+// active members row, or null. Same rules as update-lookup.php: the last
+// name is compared normalized and suffix-stripped in PHP rather than with
+// a strict SQL `=`, so a legacy "Jimmerson Jr" record still matches a
+// lookup for "Jimmerson". Callers validate input format and rate-limit
+// before calling this.
+function find_member_by_identity(PDO $pdo, string $lastName, string $birthday, string $email): ?array {
+    $stmt = $pdo->prepare(
+        'SELECT * FROM members
+         WHERE archived = 0 AND cadet_birthday = :birthday
+           AND (parent1_email = :email OR parent2_email = :email OR cadet_email = :email)'
+    );
+    $stmt->execute(['birthday' => $birthday, 'email' => $email]);
+    $target = strip_name_suffix(normalize_name($lastName));
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target) return $row;
+    }
+    return null;
+}
+
+// An event that can currently take public sign-ups (event-signup.html):
+// visible, in the upcoming/planning group, and not already over. Null
+// otherwise, so a stale emailed link for a past or hidden event just shows
+// "sign-ups are closed" instead of collecting RSVPs nobody will read.
+function signup_open_event(PDO $pdo, int $eventId): ?array {
+    if ($eventId <= 0) return null;
+    $stmt = $pdo->prepare(
+        "SELECT id, title, event_date, event_date_end, event_time, location, description
+         FROM events
+         WHERE id = ? AND visible = 1 AND group_label IN ('upcoming','planning')
+           AND (event_date IS NULL OR COALESCE(event_date_end, event_date) >= CURDATE())"
+    );
+    $stmt->execute([$eventId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+// Family label for lists and greetings — "Smith Family (Cadet John Smith,
+// 2027)" style pieces, built from a members row.
+function member_family_label(array $m): string {
+    $parents = array_filter([
+        trim(($m['parent1_first_name'] ?? '') . ' ' . ($m['parent1_last_name'] ?? '')),
+        trim(($m['parent2_first_name'] ?? '') . ' ' . ($m['parent2_last_name'] ?? '')),
+    ]);
+    $label = $parents ? implode(' & ', $parents) : (cadet_full_name($m) ?: 'Member family');
+    $cadet = cadet_full_name($m);
+    if ($cadet !== '') $label .= ' — Cadet ' . $cadet . (!empty($m['class_year']) ? ' (' . $m['class_year'] . ')' : '');
+    return $label;
+}
+
 // Cadet's full name — "First Middle Last Suffix", whitespace-collapsed.
 // Built in one place so a display site (or an automated email — this file
 // is required directly by the cron entry point, which never loads
