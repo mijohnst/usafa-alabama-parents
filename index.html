@@ -210,6 +210,7 @@
 
     /* OPEN VOLUNTEER OPPORTUNITIES — specific dated needs, claimable without a portal login */
     .vol-opp-card{background:var(--light);border-radius:8px;padding:1.25rem 1.5rem;border-left:4px solid var(--navy);}
+    .vol-opp-card.linked{box-shadow:0 0 0 3px #FFC72C;transition:box-shadow .4s ease;}
     .vol-opp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;}
     .vol-opp-head h4{color:var(--navy);font-family:var(--font-display);font-size:1.05rem;margin:0;}
     .vol-opp-spots{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:var(--navy);padding:.25rem .7rem;border-radius:99px;white-space:nowrap;}
@@ -733,7 +734,15 @@ if (volForm) {
   if (!wrap || !list) return;
 
   fetch('volunteer-opportunities-public.php').then(function(r) { return r.json(); }).then(function(d) {
-    if (!d.success || !d.opportunities || !d.opportunities.length) return;
+    // A #opp-ID link whose opportunity is gone (filled/closed/deleted)
+    // still lands on the Volunteer section rather than the top of the page.
+    function oppLinkFallback() {
+      if (/^#opp-\d+$/.test(location.hash)) {
+        var sec = document.getElementById('volunteer');
+        if (sec) { sec.scrollIntoView(); setTimeout(function() { sec.scrollIntoView(); }, 1200); }
+      }
+    }
+    if (!d.success || !d.opportunities || !d.opportunities.length) { oppLinkFallback(); return; }
     wrap.style.display = 'block';
     list.innerHTML = d.opportunities.map(renderOppCard).join('');
     list.querySelectorAll('.vol-opp-claim-btn').forEach(function(btn) {
@@ -745,12 +754,32 @@ if (volForm) {
     list.querySelectorAll('.vol-opp-submit-btn').forEach(function(btn) {
       btn.addEventListener('click', function() { submitOppClaim(btn); });
     });
+    // Shared links from admin/volunteer-opportunities.php ("Copy Link") are
+    // https://alabamafalcons.org/#opp-ID. These cards only exist after this
+    // fetch, so the browser's own jump-to-anchor (and the generic re-scroll
+    // at the bottom of this page) has nothing to land on — do it here once
+    // the card is real: scroll to it, open its claim form, and highlight it.
+    var m = /^#opp-(\d+)$/.exec(location.hash);
+    var linked = m && document.getElementById('opp-' + m[1]);
+    if (linked) {
+      var claimForm = linked.querySelector('.vol-opp-claim-form');
+      if (claimForm) claimForm.style.display = 'block';
+      linked.classList.add('linked');
+      var go = function() { linked.scrollIntoView({ block: 'center' }); };
+      go();
+      // Other sections above keep growing as their own fetches finish.
+      setTimeout(go, 600);
+      setTimeout(go, 1500);
+      setTimeout(function() { linked.classList.remove('linked'); }, 4000);
+    } else {
+      oppLinkFallback();
+    }
   }).catch(function() { /* fail silently — the general interest form below still works */ });
 
   function renderOppCard(o) {
     var full = o.filled >= o.spots_needed;
     var meta = [o.event_date ? formatOppDate(o.event_date) : '', o.location].filter(Boolean).join(' · ');
-    return '<div class="vol-opp-card" data-id="' + o.id + '">'
+    return '<div class="vol-opp-card" id="opp-' + o.id + '" data-id="' + o.id + '">'
       + '<div class="vol-opp-head"><h4>' + escHtml(o.title) + '</h4>'
       + '<span class="vol-opp-spots' + (full ? ' full' : '') + '">' + (full ? 'Full' : (o.filled + ' of ' + o.spots_needed + ' filled')) + '</span></div>'
       + (meta ? '<p class="vol-opp-meta">' + escHtml(meta) + '</p>' : '')
