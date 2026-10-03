@@ -3,6 +3,12 @@ require_once __DIR__ . '/auth.php';
 require_member_admin();
 $pdo = get_pdo();
 
+// Per-opportunity "send the morning-of reminder" flag — only once
+// migrate_event_reminders.sql has added the column (table_has_column() is
+// in mailer.php, which owns the reminder itself).
+require_once __DIR__ . '/mailer.php';
+$has_reminder_col = table_has_column($pdo, 'volunteer_opportunities', 'send_reminder');
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
@@ -25,7 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $pdo->prepare('INSERT INTO volunteer_opportunities (title,description,event_date,location,spots_needed,active,created_by) VALUES (?,?,?,?,?,?,?)')
                 ->execute([$title, $description, $event_date, $location, $spots_needed, $active, $_SESSION['user_id'] ?? null]);
+            $id = (int)$pdo->lastInsertId();
             flash('success', 'Opportunity added.');
+        }
+        if ($title !== '' && $id && $has_reminder_col) {
+            $pdo->prepare('UPDATE volunteer_opportunities SET send_reminder=? WHERE id=?')
+                ->execute([isset($_POST['send_reminder']) ? 1 : 0, $id]);
         }
         header('Location: volunteer-opportunities.php'); exit;
 
@@ -172,6 +183,12 @@ echo show_flash();
       <input type="checkbox" name="active" id="vo_active" value="1" style="width:auto" <?= ($edit['active'] ?? 1) ? 'checked' : '' ?>>
       <label for="vo_active" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.9rem;cursor:pointer;margin:0">Open for sign-ups</label>
     </div>
+    <?php if ($has_reminder_col): ?>
+    <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="send_reminder" id="vo_reminder" value="1" style="width:auto" <?= ($edit['send_reminder'] ?? 1) ? 'checked' : '' ?>>
+      <label for="vo_reminder" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.9rem;cursor:pointer;margin:0">Email everyone signed up a reminder the morning of (needs a date; wording is on <a href="automated-emails.php">Automated Emails</a>)</label>
+    </div>
+    <?php endif; ?>
     <div style="display:flex;gap:.75rem">
       <button type="submit" class="btn btn-primary"><?= $edit ? 'Save Changes' : 'Add Opportunity' ?></button>
       <a href="volunteer-opportunities.php" class="btn btn-secondary">Cancel</a>

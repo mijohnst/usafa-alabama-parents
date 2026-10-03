@@ -3,7 +3,8 @@
  * Daily Automated Emails
  * Runs every enabled automated email check in one pass: cadet birthdays,
  * dues renewal reminders, meeting reminders, new-member welcome follow-ups,
- * and lapsed-member re-engagement. Each is individually toggled on/off from
+ * lapsed-member re-engagement, and morning-of reminders for volunteer
+ * opportunities and event sign-ups. Each is individually toggled on/off from
  * admin/automated-emails.php — this script always runs all of them and lets
  * the enabled flag in the database decide what actually sends.
  *
@@ -44,6 +45,7 @@ $results = [
     'New member welcomes'          => send_new_member_welcome($pdo),
     'Lapsed re-engagements'        => send_lapsed_reengagement($pdo),
     'Volunteer opportunity reminders' => send_volunteer_opportunity_reminders($pdo),
+    'Event sign-up reminders'      => send_event_signup_reminders($pdo),
 ];
 
 echo date('Y-m-d H:i:s') . " — Automated emails:\n";

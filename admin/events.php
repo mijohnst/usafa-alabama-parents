@@ -5,6 +5,11 @@ $pdo    = get_pdo();
 $errors = [];
 $edit   = null;
 
+// Per-event "send the morning-of RSVP reminder" flag — only once
+// migrate_event_reminders.sql has added the column.
+require_once __DIR__ . '/mailer.php';
+$has_reminder_col = table_has_column($pdo, 'events', 'signup_reminder');
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
@@ -40,7 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $pdo->prepare('INSERT INTO events (title,event_date,event_date_end,event_time,location,description,tag,group_label,cta_text,cta_url,cta_note,sort_order,visible,cta_deadline,countdown_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
                     ->execute($fields);
+                $id = (int)$pdo->lastInsertId();
                 flash('success','Event added.');
+            }
+            if ($id && $has_reminder_col) {
+                $pdo->prepare('UPDATE events SET signup_reminder=? WHERE id=?')
+                    ->execute([isset($_POST['signup_reminder']) ? 1 : 0, $id]);
             }
             header('Location: events.php'); exit;
         }
@@ -184,6 +194,12 @@ echo show_flash();
       <input type="checkbox" name="visible" id="ev_visible" value="1" style="width:auto" <?= ($edit['visible']??1)?'checked':'' ?>>
       <label for="ev_visible" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.9rem;cursor:pointer;margin:0">Show on website</label>
     </div>
+    <?php if ($has_reminder_col): ?>
+    <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" name="signup_reminder" id="ev_reminder" value="1" style="width:auto" <?= ($edit['signup_reminder']??1)?'checked':'' ?>>
+      <label for="ev_reminder" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.9rem;cursor:pointer;margin:0">Email everyone who RSVPed a reminder the morning of (needs a date; wording is on <a href="automated-emails.php">Automated Emails</a>)</label>
+    </div>
+    <?php endif; ?>
     <div style="display:flex;gap:.75rem">
       <button type="submit" class="btn btn-primary"><?= $edit?'Save Changes':'Add Event' ?></button>
       <a href="events.php" class="btn btn-secondary">Cancel</a>

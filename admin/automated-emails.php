@@ -85,7 +85,8 @@ echo show_flash();
   <code>{name}</code>, <code>{cadet_name}</code>, <code>{parent_name}</code>, <code>{expire_date}</code>,
   <code>{dues_amount}</code>, <code>{meeting_title}</code>, <code>{meeting_date}</code>,
   <code>{meeting_location}</code>, <code>{meeting_link}</code>, <code>{opportunity_title}</code>,
-  <code>{event_date}</code>, <code>{event_location}</code>, <code>{opportunity_description}</code>.
+  <code>{event_date}</code>, <code>{event_location}</code>, <code>{opportunity_description}</code>,
+  <code>{event_title}</code>, <code>{event_time}</code>, <code>{attendee_count}</code>, <code>{event_link}</code>.
   The birthday emails also support
   <code>{he_she}</code>, <code>{him_her}</code>, <code>{his_her}</code> (drawn from the cadet's Gender field,
   falling back to "they/them/their" if it's blank).

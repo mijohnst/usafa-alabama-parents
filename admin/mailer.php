@@ -407,26 +407,40 @@ function send_meeting_reminders(PDO $pdo): int {
     return $count;
 }
 
-// ── Volunteer opportunity reminder — day before the event, to everyone
+// True if $table has $column — for optional per-item columns added by a
+// migration that may not have been run yet on this install.
+function table_has_column(PDO $pdo, string $table, string $column): bool {
+    try {
+        return (bool)$pdo->query("SHOW COLUMNS FROM `$table` LIKE " . $pdo->quote($column))->fetch();
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// ── Volunteer opportunity reminder — morning OF the event, to everyone
 // signed up (member or guest) plus whoever created the opportunity ────────
-// event_date has no time-of-day, and this runs once daily via cron, so
-// "24 hours before" in practice means "the morning before the day it's on."
+// event_date has no time-of-day and this runs once daily (same cron as the
+// birthday emails, ~8am), so it lands the morning of the day it's on.
+// Each opportunity can opt out via volunteer_opportunities.send_reminder
+// (checkbox on admin/volunteer-opportunities.php); before that column
+// exists, every opportunity is treated as opted in, as it always was.
 function send_volunteer_opportunity_reminders(PDO $pdo): int {
     $cfg = load_automated_email($pdo, 'volunteer_opportunity_reminder');
     if (!$cfg || !$cfg['enabled']) return 0;
 
     try {
-        // Bind PHP's own "tomorrow" rather than trusting MySQL's CURDATE()+1
+        // Bind PHP's own "today" rather than trusting MySQL's CURDATE()
         // — same reasoning as send_birthday_emails().
-        $tomorrow = date('Y-m-d', strtotime('+1 day'));
+        $today = date('Y-m-d');
+        $opt_in = table_has_column($pdo, 'volunteer_opportunities', 'send_reminder') ? ' AND o.send_reminder = 1' : '';
         $stmt = $pdo->prepare(
             "SELECT o.id, o.title, o.description, o.event_date, o.location,
                     u.name AS creator_name, u.email AS creator_email
              FROM volunteer_opportunities o
              LEFT JOIN users u ON u.id = o.created_by
-             WHERE o.active = 1 AND o.event_date = ?"
+             WHERE o.active = 1 AND o.event_date = ?$opt_in"
         );
-        $stmt->execute([$tomorrow]);
+        $stmt->execute([$today]);
         $opportunities = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('mailer: send_volunteer_opportunity_reminders query failed — ' . $e->getMessage());
@@ -479,6 +493,84 @@ function send_volunteer_opportunity_reminders(PDO $pdo): int {
     return $count;
 }
 
+// ── Event sign-up reminder — morning OF the event, to everyone on its RSVP
+// list: families who signed up from the emailed link (event_signups, see
+// event-signup.php) and portal users who RSVPed (event_rsvps). Toggled and
+// worded on Automated Emails ('event_signup_reminder'); each event can opt
+// out via events.signup_reminder (checkbox on admin/events.php), treated
+// as opted in until that column exists. Same once-a-day cron as birthdays.
+function send_event_signup_reminders(PDO $pdo): int {
+    $cfg = load_automated_email($pdo, 'event_signup_reminder');
+    if (!$cfg || !$cfg['enabled']) return 0;
+
+    try {
+        $today  = date('Y-m-d');
+        $opt_in = table_has_column($pdo, 'events', 'signup_reminder') ? ' AND signup_reminder = 1' : '';
+        $stmt = $pdo->prepare(
+            "SELECT id, title, event_date, event_time, location FROM events
+             WHERE visible = 1 AND event_date = ?$opt_in"
+        );
+        $stmt->execute([$today]);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('mailer: send_event_signup_reminders query failed — ' . $e->getMessage());
+        return 0;
+    }
+
+    $count = 0;
+    foreach ($events as $ev) {
+        // recipients: email => [name, attendee count]
+        $recipients = [];
+        try {
+            $s = $pdo->prepare(
+                "SELECT s.signup_email, s.attendee_count, m.parent1_first_name, m.parent1_email, m.parent2_first_name, m.parent2_email
+                 FROM event_signups s JOIN members m ON m.id = s.member_id
+                 WHERE s.event_id = ?"
+            );
+            $s->execute([$ev['id']]);
+            foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $email = strtolower(trim((string)$r['signup_email']));
+                if ($email === '') continue;
+                $name = $email === strtolower((string)$r['parent2_email']) && $r['parent2_first_name'] ? $r['parent2_first_name']
+                      : ($r['parent1_first_name'] ?: 'there');
+                $recipients[$email] = [$name, (int)$r['attendee_count']];
+            }
+        } catch (PDOException $e) {
+            // event_signups doesn't exist yet — portal RSVPs below still get reminded.
+        }
+        try {
+            $p = $pdo->prepare(
+                "SELECT u.name, u.email, r.guest_count FROM event_rsvps r JOIN users u ON u.id = r.user_id
+                 WHERE r.event_id = ?"
+            );
+            $p->execute([$ev['id']]);
+            foreach ($p->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $email = strtolower(trim((string)$r['email']));
+                if ($email === '' || isset($recipients[$email])) continue;
+                $recipients[$email] = [trim(explode(' ', (string)$r['name'])[0]) ?: 'there', 1 + (int)$r['guest_count']];
+            }
+        } catch (PDOException $e) {}
+
+        if (!$recipients) continue;
+        if (!mark_automated_sent($pdo, 'event_signup_reminder', (int)$ev['id'], (string)$ev['event_date'])) continue;
+        $count++;
+
+        $base = [
+            '{event_title}'    => $ev['title'],
+            '{event_date}'     => date('l, F j, Y', strtotime($ev['event_date'])),
+            '{event_time}'     => $ev['event_time'] ?: 'See event details',
+            '{event_location}' => $ev['location'] ?: 'No location listed',
+            '{event_link}'     => SITE_URL . 'event-signup.html?event=' . (int)$ev['id'],
+        ];
+        foreach ($recipients as $email => [$name, $attending]) {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+            $r = $base + ['{name}' => $name, '{attendee_count}' => (string)$attending];
+            send_notification($email, strtr($cfg['subject'], $r), strtr($cfg['body'], $r));
+        }
+    }
+    return $count;
+}
+
 // ── Send a preview of any automated email to a test address ──────────────
 // Uses sample placeholder data — does not touch automated_email_log or query members.
 // $gender ('', 'Male', 'Female') only matters for the two birthday templates,
@@ -494,7 +586,8 @@ function send_automated_test_email(PDO $pdo, string $email_key, string $to, stri
         'meeting_reminder'    => ['{meeting_title}' => 'Monthly General Meeting', '{meeting_date}' => date('l, F j, Y'), '{meeting_location}' => 'Zoom', '{meeting_link}' => 'https://zoom.us/j/example'],
         'new_member_welcome'  => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example'],
         'lapsed_reengagement' => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example', '{expire_date}' => date('F j, Y', strtotime('-60 days'))],
-        'volunteer_opportunity_reminder' => ['{name}' => 'Alex', '{opportunity_title}' => 'Cadet Care Package Assembly Night', '{event_date}' => date('l, F j, Y', strtotime('+1 day')), '{event_location}' => 'Brick & Tin, Huntsville', '{opportunity_description}' => 'Join fellow club members as we come together to assemble care packages for our Alabama cadets.'],
+        'volunteer_opportunity_reminder' => ['{name}' => 'Alex', '{opportunity_title}' => 'Cadet Care Package Assembly Night', '{event_date}' => date('l, F j, Y'), '{event_location}' => 'Brick & Tin, Huntsville', '{opportunity_description}' => 'Join fellow club members as we come together to assemble care packages for our Alabama cadets.'],
+        'event_signup_reminder' => ['{name}' => 'Alex', '{event_title}' => 'Boodle Boxing Party', '{event_date}' => date('l, F j, Y'), '{event_time}' => '6:00 PM', '{event_location}' => 'Montgomery, AL', '{attendee_count}' => '3', '{event_link}' => SITE_URL . 'event-signup.html?event=1'],
     ];
     $cfg = load_automated_email($pdo, $email_key);
     if (!$cfg) return false;
