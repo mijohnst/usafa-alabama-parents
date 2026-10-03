@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 try {
     $pdo = get_pdo();
     $rows = $pdo->query(
-        "SELECT id, title, description, event_date, location, spots_needed,
+        "SELECT o.*,
                 (SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id = o.id) AS filled
          FROM volunteer_opportunities o
          WHERE active = 1
@@ -41,6 +41,7 @@ $out = array_map(function ($r) {
         'description'  => $r['description'],
         'event_date'   => $r['event_date'],
         'location'     => $r['location'],
+        'event_time'   => (string)($r['event_time'] ?? ''), // column may not exist yet
         'spots_needed' => (int)$r['spots_needed'],
         'filled'       => (int)$r['filled'],
     ];

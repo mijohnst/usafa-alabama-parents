@@ -4,7 +4,7 @@
  * Kept free of DB/auth so it can be rendered standalone (e.g. with fake
  * rows) to check page breaks.
  *
- * $opp:  ['title', 'event_date' (Y-m-d|null), 'location', 'spots_needed']
+ * $opp:  ['title', 'event_date' (Y-m-d|null), 'event_time' (optional), 'location', 'spots_needed']
  * $rows: list of ['name', 'cadet', 'email', 'phone'] in sign-up order.
  *
  * Every row is a single fixed-height line (long text is trimmed to fit,
@@ -75,6 +75,7 @@ function build_volunteer_roster_pdf(array $opp, array $rows): tFPDF {
     $pdf->SetFont('Kalam', '', 10.5);
     $pdf->SetTextColor(60, 74, 87);
     $when  = !empty($opp['event_date']) ? date('l, F j, Y', strtotime($opp['event_date'])) : 'Date TBD';
+    if (!empty($opp['event_time'])) $when .= ', ' . $opp['event_time'];
     $where = trim((string)($opp['location'] ?? ''));
     $pdf->Cell(0, 0.22, vr_fit($pdf, $when . ($where !== '' ? '  ·  ' . $where : ''), 7.0), 0, 1, 'L');
     $filled = count($rows);

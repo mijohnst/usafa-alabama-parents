@@ -80,7 +80,7 @@ try {
     // transaction, so a second concurrent claim has to wait until this one
     // commits (and sees the up-to-date fill count) rather than both reading
     // "not yet full" at the same time and overbooking past spots_needed.
-    $stmt = $pdo->prepare('SELECT id, title, spots_needed, active FROM volunteer_opportunities WHERE id = ? FOR UPDATE');
+    $stmt = $pdo->prepare('SELECT * FROM volunteer_opportunities WHERE id = ? FOR UPDATE');
     $stmt->execute([$opportunity_id]);
     $opp = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -134,11 +134,19 @@ $title = $opp['title'];
 // confirmation + officer emails (each a separate SMTP round-trip) after.
 send_json_and_continue(['success' => true, 'message' => "You're signed up — thank you!"]);
 
+// When / time / where block — event_time only exists once its migration
+// has run, so read it defensively; any line with no value is left out.
+$when_lines = '';
+if (!empty($opp['event_date']))  $when_lines .= '  Date:      ' . date('l, F j, Y', strtotime($opp['event_date'])) . "\n";
+if (!empty($opp['event_time']))  $when_lines .= '  Time:      ' . $opp['event_time'] . "\n";
+if (!empty($opp['location']))    $when_lines .= '  Location:  ' . $opp['location'] . "\n";
+
 send_notification(
     $email,
     'You\'re Signed Up — ' . $title,
     "Thanks for volunteering with the USAFA Parents Club of Alabama!\n\n"
     . "You're signed up for: $title\n\n"
+    . ($when_lines !== '' ? $when_lines . "\n" : '')
     . "A club officer may follow up with details beforehand. If your plans change, just reply to this email and let us know.\n\n"
     . "Aim High \xC2\xB7 Fly \xC2\xB7 Fight \xC2\xB7 Win\nUSAFA Parents Club of Alabama\nalabamafalcons.org"
 );

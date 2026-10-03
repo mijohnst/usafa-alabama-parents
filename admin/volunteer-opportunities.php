@@ -8,6 +8,7 @@ $pdo = get_pdo();
 // in mailer.php, which owns the reminder itself).
 require_once __DIR__ . '/mailer.php';
 $has_reminder_col = table_has_column($pdo, 'volunteer_opportunities', 'send_reminder');
+$has_time_col     = table_has_column($pdo, 'volunteer_opportunities', 'event_time');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -37,6 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($title !== '' && $id && $has_reminder_col) {
             $pdo->prepare('UPDATE volunteer_opportunities SET send_reminder=? WHERE id=?')
                 ->execute([isset($_POST['send_reminder']) ? 1 : 0, $id]);
+        }
+        if ($title !== '' && $id && $has_time_col) {
+            $time = mb_substr(trim($_POST['event_time'] ?? ''), 0, 50);
+            $pdo->prepare('UPDATE volunteer_opportunities SET event_time=? WHERE id=?')
+                ->execute([$time !== '' ? $time : null, $id]);
         }
         header('Location: volunteer-opportunities.php'); exit;
 
@@ -179,6 +185,12 @@ echo show_flash();
         <input type="number" name="spots_needed" min="1" value="<?= h((string)($edit['spots_needed'] ?? 1)) ?>">
       </div>
     </div>
+    <?php if ($has_time_col): ?>
+    <div class="form-group" style="max-width:320px">
+      <label>Time <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">optional — shown on the site and in emails</span></label>
+      <input name="event_time" maxlength="50" value="<?= h($edit['event_time'] ?? '') ?>" placeholder="e.g. 6:00 – 8:00 PM">
+    </div>
+    <?php endif; ?>
     <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
       <input type="checkbox" name="active" id="vo_active" value="1" style="width:auto" <?= ($edit['active'] ?? 1) ? 'checked' : '' ?>>
       <label for="vo_active" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.9rem;cursor:pointer;margin:0">Open for sign-ups</label>
@@ -213,7 +225,8 @@ echo show_flash();
         <?php if (!$o['active']): ?><span style="color:#9aa5b4;font-size:.75rem"> · Closed</span><?php endif; ?>
         <div class="vo-meta">
           <?php if ($o['event_date']): ?><?= date('M j, Y', strtotime($o['event_date'])) ?><?php endif; ?>
-          <?php if ($o['location']): ?><?= $o['event_date'] ? ' &bull; ' : '' ?><?= h($o['location']) ?><?php endif; ?>
+          <?php if (!empty($o['event_time'])): ?><?= $o['event_date'] ? ' &bull; ' : '' ?><?= h($o['event_time']) ?><?php endif; ?>
+          <?php if ($o['location']): ?><?= ($o['event_date'] || !empty($o['event_time'])) ? ' &bull; ' : '' ?><?= h($o['location']) ?><?php endif; ?>
         </div>
         <?php if ($o['description']): ?><div class="vo-meta"><?= h($o['description']) ?></div><?php endif; ?>
         <?php if (!empty($rosters[$o['id']])): ?>

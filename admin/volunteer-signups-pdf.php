@@ -12,7 +12,7 @@ $pdo = get_pdo();
 require_once __DIR__ . '/lib/volunteer-roster-pdf.php';
 
 $id = (int)($_GET['id'] ?? 0);
-$s = $pdo->prepare('SELECT id, title, event_date, location, spots_needed FROM volunteer_opportunities WHERE id = ?');
+$s = $pdo->prepare('SELECT * FROM volunteer_opportunities WHERE id = ?'); // * so event_time comes along once it exists
 $s->execute([$id]);
 $opp = $s->fetch(PDO::FETCH_ASSOC);
 if (!$opp) {

@@ -790,7 +790,7 @@ if (volForm) {
 
   function renderOppCard(o) {
     var full = o.filled >= o.spots_needed;
-    var meta = [o.event_date ? formatOppDate(o.event_date) : '', o.location].filter(Boolean).join(' · ');
+    var meta = [o.event_date ? formatOppDate(o.event_date) : '', o.event_time, o.location].filter(Boolean).join(' · ');
     return '<div class="vol-opp-card" id="opp-' + o.id + '" data-id="' + o.id + '">'
       + '<div class="vol-opp-head"><h4>' + escHtml(o.title) + '</h4>'
       + '<span class="vol-opp-spots' + (full ? ' full' : '') + '">' + (full ? 'Full' : (o.filled + ' of ' + o.spots_needed + ' filled')) + '</span></div>'

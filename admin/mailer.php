@@ -434,7 +434,7 @@ function send_volunteer_opportunity_reminders(PDO $pdo): int {
         $today = date('Y-m-d');
         $opt_in = table_has_column($pdo, 'volunteer_opportunities', 'send_reminder') ? ' AND o.send_reminder = 1' : '';
         $stmt = $pdo->prepare(
-            "SELECT o.id, o.title, o.description, o.event_date, o.location,
+            "SELECT o.*,
                     u.name AS creator_name, u.email AS creator_email
              FROM volunteer_opportunities o
              LEFT JOIN users u ON u.id = o.created_by
@@ -460,6 +460,7 @@ function send_volunteer_opportunity_reminders(PDO $pdo): int {
             '{opportunity_title}'       => $opp['title'],
             '{event_date}'              => date('l, F j, Y', strtotime($opp['event_date'])),
             '{event_location}'          => $opp['location'] ?: 'No location listed',
+            '{event_time}'              => !empty($opp['event_time']) ? $opp['event_time'] : 'See event details',
             '{opportunity_description}' => $opp['description'] ?: '',
         ];
 
@@ -586,7 +587,7 @@ function send_automated_test_email(PDO $pdo, string $email_key, string $to, stri
         'meeting_reminder'    => ['{meeting_title}' => 'Monthly General Meeting', '{meeting_date}' => date('l, F j, Y'), '{meeting_location}' => 'Zoom', '{meeting_link}' => 'https://zoom.us/j/example'],
         'new_member_welcome'  => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example'],
         'lapsed_reengagement' => ['{parent_name}' => 'Alex', '{cadet_name}' => 'Jamie Example', '{expire_date}' => date('F j, Y', strtotime('-60 days'))],
-        'volunteer_opportunity_reminder' => ['{name}' => 'Alex', '{opportunity_title}' => 'Cadet Care Package Assembly Night', '{event_date}' => date('l, F j, Y'), '{event_location}' => 'Brick & Tin, Huntsville', '{opportunity_description}' => 'Join fellow club members as we come together to assemble care packages for our Alabama cadets.'],
+        'volunteer_opportunity_reminder' => ['{name}' => 'Alex', '{opportunity_title}' => 'Cadet Care Package Assembly Night', '{event_date}' => date('l, F j, Y'), '{event_time}' => '6:00 - 8:00 PM', '{event_location}' => 'Brick & Tin, Huntsville', '{opportunity_description}' => 'Join fellow club members as we come together to assemble care packages for our Alabama cadets.'],
         'event_signup_reminder' => ['{name}' => 'Alex', '{event_title}' => 'Boodle Boxing Party', '{event_date}' => date('l, F j, Y'), '{event_time}' => '6:00 PM', '{event_location}' => 'Montgomery, AL', '{attendee_count}' => '3', '{event_link}' => SITE_URL . 'event-signup.html?event=1'],
     ];
     $cfg = load_automated_email($pdo, $email_key);
