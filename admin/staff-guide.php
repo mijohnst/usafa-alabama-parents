@@ -792,7 +792,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
 <!-- 19: Member Support Tools -->
 <div class="slide s-content" id="s19">
   <p class="label">Section · Member Support</p>
-  <h2>Volunteer Sign-Ups · Event RSVP · Photo Submissions · Committees</h2>
+  <h2>Volunteers · Event Sign-Ups · Photo Submissions · Committees</h2>
   <div class="rule"></div>
   <div class="three-col">
     <div class="card">
@@ -801,6 +801,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Officers post opportunities with a date, location, and number of spots needed</li>
         <li>Members sign up right from their dashboard — no double sign-ups thanks to a duplicate check</li>
         <li>Officers see a live roster of who's signed up for each opportunity, and can toggle an opportunity inactive or delete it</li>
+        <li><strong>Where to find it:</strong> officers use the <strong>Volunteers</strong> tile — tabs for <strong>Opportunities</strong> (post needs, see/remove who claimed them, Print PDF roster) and <strong>General Interest</strong> (the homepage "Volunteer with Us" inbox). Members use the <strong>Volunteer</strong> tile — tabs for <strong>Opportunities</strong> (claim a spot) and <strong>My Committees</strong>.</li>
       </ul>
     </div>
     <div class="card">
@@ -809,7 +810,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
         <li>Members RSVP to upcoming events and note a guest count</li>
         <li>Re-submitting updates their existing RSVP instead of creating a duplicate</li>
         <li>Officers view RSVP counts and a full roster (with guest counts) per event</li>
-        <li><strong>Email sign-up link (no login):</strong> on <strong>Event RSVPs</strong>, every open event (visible, Upcoming/Planning, not yet past) has a <strong>Copy Sign-Up Link</strong> button — paste it into an email. Families verify with their cadet's last name, birthday, and a parent's or the cadet's email on file, then enter how many are coming. They get a confirmation email and can change or cancel with the same link. Those sign-ups appear on the same roster (marked "email link") and in the per-event <strong>Export CSV</strong>.</li>
+        <li><strong>Email sign-up link (no login):</strong> on <strong>Event Sign-Ups</strong>, every open event (visible, Upcoming/Planning, not yet past) has a <strong>Copy Sign-Up Link</strong> button — paste it into an email. Families verify with their cadet's last name, birthday, and a parent's or the cadet's email on file, then enter how many are coming. They get a confirmation email and can change or cancel with the same link. Those sign-ups appear on the same roster (marked "email link") and in the per-event <strong>Export CSV</strong>.</li>
       </ul>
     </div>
     <div class="card">
@@ -868,8 +869,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:var(--d
       <tr><td>Member Letters</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Document Vault</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td></tr>
       <tr><td>Directory (opted-out members hidden)</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
-      <tr><td>Volunteer Sign-Ups / RSVP / Photos / Committees — Submit</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
-      <tr><td>Volunteer Sign-Ups / RSVP / Photos / Committees — Manage &amp; Review</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Volunteer / My Events / Photos / Committees — Submit</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td>Volunteers / Event Sign-Ups / Photos / Committees — Manage &amp; Review</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Site Settings</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>User Management</td><td class="y">Tech only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
     </tbody>

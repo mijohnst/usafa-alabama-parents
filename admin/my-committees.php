@@ -20,13 +20,14 @@ $mine = $pdo->prepare('SELECT committee FROM committee_interest WHERE user_id = 
 $mine->execute([$user_id]);
 $my_committees = $mine->fetchAll(PDO::FETCH_COLUMN);
 
-admin_header('Committee Interest');
+admin_header('Volunteer — My Committees');
 echo show_flash();
 ?>
 <div class="page-head">
-  <h1>Committee Interest</h1>
+  <h1>Volunteer</h1>
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
+<?php admin_tabs(['volunteer-signup.php' => 'Opportunities', 'my-committees.php' => 'My Committees'], 'my-committees.php'); ?>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Flag which areas you'd be willing to help with — officers will reach out when there's a specific need.</p>
 
 <div class="card" style="max-width:480px">
