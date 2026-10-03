@@ -209,7 +209,15 @@
     @media(max-width:768px){.contact-grid{grid-template-columns:1fr;gap:2rem;}.form-row{grid-template-columns:1fr;}}
 
     /* OPEN VOLUNTEER OPPORTUNITIES — specific dated needs, claimable without a portal login */
-    .vol-opp-card{background:var(--light);border-radius:8px;padding:1.25rem 1.5rem;border-left:4px solid var(--navy);}
+    .vol-opp-panel{background:linear-gradient(135deg,var(--navy) 0%,#001e52 100%);border-radius:12px;padding:2rem 2rem 2.25rem;margin-bottom:2.75rem;box-shadow:0 10px 28px rgba(0,37,84,.28);position:relative;overflow:hidden;}
+    .vol-opp-panel::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:#FFC72C;}
+    .vol-opp-kicker{display:inline-block;background:#FFC72C;color:var(--navy);font-weight:700;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:.3rem .8rem;border-radius:99px;margin-bottom:.85rem;}
+    .vol-opp-title{color:#fff;font-family:var(--font-display);font-size:1.6rem;margin:0 0 .45rem;}
+    .vol-opp-sub{color:rgba(245,245,240,.85);margin:0 0 1.5rem;font-size:.98rem;}
+    .vol-opp-card{background:#fff;border-radius:8px;padding:1.35rem 1.5rem;border-left:5px solid #FFC72C;box-shadow:0 4px 14px rgba(0,0,0,.18);}
+    .vol-opp-claim-btn{background:#FFC72C !important;color:var(--navy) !important;border:none !important;font-weight:700;padding:.7rem 1.6rem;box-shadow:0 3px 0 #c99a00;}
+    .vol-opp-claim-btn:hover{filter:brightness(1.05);transform:translateY(-1px);}
+    @media(max-width:600px){.vol-opp-panel{padding:1.5rem 1.1rem 1.6rem;}.vol-opp-title{font-size:1.3rem;}}
     .vol-opp-card.linked{box-shadow:0 0 0 3px #FFC72C;transition:box-shadow .4s ease;}
     .btn-spinner{display:inline-block;width:.9em;height:.9em;margin-right:.5em;vertical-align:-.1em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:btnspin .7s linear infinite;}
     @keyframes btnspin{to{transform:rotate(360deg)}}
@@ -543,9 +551,10 @@
     <h2 class="section-title">Volunteer with Us</h2>
     <div class="divider"></div>
 
-    <div id="volunteer-opportunities-wrap" style="display:none;margin-bottom:2.75rem">
-      <h3 style="color:var(--navy);font-family:var(--font-display);font-size:1.3rem;margin-bottom:.5rem">Open Volunteer Spots</h3>
-      <p style="color:var(--gray);margin-bottom:1.25rem">Sign up for a specific need below — no club membership or portal account required.</p>
+    <div id="volunteer-opportunities-wrap" class="vol-opp-panel" style="display:none">
+      <div class="vol-opp-kicker">📣 Volunteers Needed</div>
+      <h3 class="vol-opp-title">Open Volunteer Spots</h3>
+      <p class="vol-opp-sub">Grab a spot below — just verify your family with your cadet's last name, birthday, and an email on file. No portal login needed.</p>
       <div id="volunteer-opportunities-list" style="display:grid;gap:1rem"></div>
     </div>
 
