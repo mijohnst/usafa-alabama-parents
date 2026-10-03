@@ -31,7 +31,10 @@ if (honeypot_tripped($data)) {
 
 $pdo = get_pdo();
 
-if (rate_limited($pdo, 'volunteer_claim')) {
+// 15 per 15 min per IP (not the 5 default): a household shares one IP,
+// and every claim must now match a real roster family anyway, so a few
+// parents signing up for several spots shouldn't trip the throttle.
+if (rate_limited($pdo, 'volunteer_claim', 15, 15)) {
     http_response_code(429);
     echo json_encode(['success' => false, 'error' => 'Too many submissions from your network. Please try again later or email us directly at info@alabamafalcons.org.']);
     exit;
