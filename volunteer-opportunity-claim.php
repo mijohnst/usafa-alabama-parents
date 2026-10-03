@@ -95,19 +95,14 @@ try {
         http_response_code(409); echo json_encode(['success' => false, 'error' => 'That opportunity is already full.']); exit();
     }
 
-    // One claim per family per opportunity, whichever of their emails they
-    // use (the table's own unique key is only per email). Guarded: the
-    // member_id column only exists once migrate_volunteer_member_link.sql
-    // has run — before that, claims save exactly as they used to.
+    // One claim per PERSON (email) per opportunity — enforced by the table's
+    // unique key on (opportunity_id, guest_email), caught as 23000 below.
+    // Deliberately not one per family: two parents on the same record are
+    // two volunteers, and each should get their own spot and confirmation.
+    // member_id just links the claim to the family; it's guarded because
+    // that column only exists once its migration has run.
     $has_member_col = (bool)$pdo->query("SHOW COLUMNS FROM volunteer_signups LIKE 'member_id'")->fetch();
     if ($has_member_col) {
-        $dup = $pdo->prepare('SELECT 1 FROM volunteer_signups WHERE opportunity_id = ? AND member_id = ?');
-        $dup->execute([$opportunity_id, $member_id]);
-        if ($dup->fetchColumn()) {
-            $pdo->rollBack();
-            echo json_encode(['success' => true, 'message' => "Your family is already signed up for that one — thank you!"]);
-            exit;
-        }
         $pdo->prepare('INSERT INTO volunteer_signups (opportunity_id, guest_name, guest_email, member_id) VALUES (?, ?, ?, ?)')
             ->execute([$opportunity_id, $name, $lc, $member_id]);
     } else {
