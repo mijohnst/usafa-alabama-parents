@@ -1620,5 +1620,143 @@ if (document.readyState === 'loading') {
   });
 })();
 </script>
+
+<!-- ── HALLOWEEN SPLASH ───────────────────────────────────────────────────
+     Seasonal overlay: only shows Oct 1–31 (auto-retires, nothing to remove
+     in November), once per visitor per day (localStorage, wrapped in
+     try/catch so a blocked storage just means it shows), auto-closes after
+     ~8s, and closes on Enter Site / × / backdrop click / Esc. All art is
+     inline SVG + CSS animation; motion stops under prefers-reduced-motion.
+     To retire it early or for good, delete this block. -->
+<style>
+  .hw-splash{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:1.5rem;
+    background:radial-gradient(ellipse at 50% 35%,#1b2a5c 0%,#0b1433 55%,#050912 100%);color:#f5f5f0;overflow:hidden;
+    opacity:0;transition:opacity .45s ease;}
+  .hw-splash.show{display:flex;}
+  .hw-splash.visible{opacity:1;}
+  .hw-moon{position:absolute;top:7%;right:9%;width:120px;height:120px;border-radius:50%;
+    background:radial-gradient(circle at 38% 38%,#fff8e1 0%,#ffe9a8 55%,#f7c948 100%);box-shadow:0 0 60px 18px rgba(255,214,120,.35);}
+  .hw-star{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;animation:hwTwinkle 3s ease-in-out infinite;}
+  @keyframes hwTwinkle{0%,100%{opacity:.2}50%{opacity:1}}
+  .hw-bat{position:absolute;left:-90px;width:70px;height:auto;fill:#0a0a14;animation:hwFly linear infinite;}
+  .hw-bat .wing{transform-origin:50% 60%;animation:hwFlap .28s ease-in-out infinite alternate;}
+  @keyframes hwFly{0%{transform:translate(0,0) scale(var(--s,1))}25%{transform:translate(30vw,-6vh) scale(var(--s,1))}
+    50%{transform:translate(60vw,4vh) scale(var(--s,1))}75%{transform:translate(85vw,-5vh) scale(var(--s,1))}100%{transform:translate(115vw,2vh) scale(var(--s,1))}}
+  @keyframes hwFlap{from{transform:scaleY(1)}to{transform:scaleY(.45)}}
+  .hw-ghost{position:absolute;bottom:14%;left:8%;width:80px;opacity:.85;animation:hwFloat 4.5s ease-in-out infinite;}
+  @keyframes hwFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-22px) rotate(4deg)}}
+  .hw-card{position:relative;z-index:2;text-align:center;max-width:540px;}
+  .hw-pumpkin{width:150px;height:auto;margin:0 auto .75rem;display:block;animation:hwBob 3s ease-in-out infinite;filter:drop-shadow(0 0 22px rgba(255,140,0,.55));}
+  .hw-pumpkin .glow{animation:hwFlicker 1.6s infinite;}
+  @keyframes hwBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes hwFlicker{0%,100%{opacity:1}20%{opacity:.75}22%{opacity:1}55%{opacity:.85}57%{opacity:.6}60%{opacity:1}}
+  .hw-kicker{display:inline-block;background:#ff7a00;color:#1a0e00;font-weight:700;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;padding:.3rem .85rem;border-radius:99px;margin-bottom:.9rem;}
+  .hw-title{font-family:var(--font-display);font-size:clamp(1.9rem,6vw,3rem);line-height:1.15;margin:0 0 .6rem;color:#fff;text-shadow:0 0 18px rgba(255,122,0,.45);}
+  .hw-title span{color:#ff9a2e;}
+  .hw-text{color:rgba(245,245,240,.88);font-size:1.02rem;line-height:1.6;margin:0 auto 1.5rem;max-width:460px;}
+  .hw-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;}
+  .hw-btn{display:inline-block;padding:.8rem 1.6rem;border-radius:6px;font-weight:700;font-size:.92rem;letter-spacing:.03em;text-decoration:none;cursor:pointer;border:none;font-family:var(--font-body);}
+  .hw-btn-primary{background:#ff7a00;color:#1a0e00;box-shadow:0 4px 0 #b35500;}
+  .hw-btn-primary:hover{filter:brightness(1.07);text-decoration:none;}
+  .hw-btn-ghost{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.55);}
+  .hw-btn-ghost:hover{border-color:#fff;}
+  .hw-close{position:absolute;top:1rem;right:1.1rem;z-index:3;background:rgba(255,255,255,.12);color:#fff;border:none;width:40px;height:40px;border-radius:50%;font-size:1.5rem;line-height:1;cursor:pointer;}
+  .hw-close:hover{background:rgba(255,255,255,.25);}
+  @media(max-width:600px){.hw-moon{width:80px;height:80px;top:5%;right:6%}.hw-ghost{width:56px;bottom:8%}.hw-pumpkin{width:118px}}
+  @media(prefers-reduced-motion:reduce){.hw-splash *{animation:none !important}.hw-bat{display:none}}
+</style>
+
+<div class="hw-splash" id="hwSplash" role="dialog" aria-modal="true" aria-labelledby="hwTitle" aria-hidden="true">
+  <button type="button" class="hw-close" id="hwClose" aria-label="Close">&times;</button>
+  <div class="hw-moon" aria-hidden="true"></div>
+  <div id="hwStars" aria-hidden="true"></div>
+
+  <!-- Bats: same shape, different speed / height / size / delay -->
+  <svg class="hw-bat" style="top:18%;animation-duration:11s;--s:1" viewBox="0 0 100 50" aria-hidden="true"><g class="wing"><path d="M50 22c-3-6-9-9-15-8 3 2 4 5 3 8-5-5-14-6-22-2 5 1 8 4 9 8-6-2-14 0-20 5 9-1 17 2 22 7 5-4 11-6 17-5 2 3 4 5 6 5s4-2 6-5c6-1 12 1 17 5 5-5 13-8 22-7-6-5-14-7-20-5 1-4 4-7 9-8-8-4-17-3-22 2-1-3 0-6 3-8-6-1-12 2-15 8z"/></g><circle cx="47" cy="26" r="1.2" fill="#ff7a00"/><circle cx="53" cy="26" r="1.2" fill="#ff7a00"/></svg>
+  <svg class="hw-bat" style="top:32%;animation-duration:15s;animation-delay:-5s;--s:.7" viewBox="0 0 100 50" aria-hidden="true"><g class="wing"><path d="M50 22c-3-6-9-9-15-8 3 2 4 5 3 8-5-5-14-6-22-2 5 1 8 4 9 8-6-2-14 0-20 5 9-1 17 2 22 7 5-4 11-6 17-5 2 3 4 5 6 5s4-2 6-5c6-1 12 1 17 5 5-5 13-8 22-7-6-5-14-7-20-5 1-4 4-7 9-8-8-4-17-3-22 2-1-3 0-6 3-8-6-1-12 2-15 8z"/></g></svg>
+  <svg class="hw-bat" style="top:10%;animation-duration:13s;animation-delay:-9s;--s:.55" viewBox="0 0 100 50" aria-hidden="true"><g class="wing"><path d="M50 22c-3-6-9-9-15-8 3 2 4 5 3 8-5-5-14-6-22-2 5 1 8 4 9 8-6-2-14 0-20 5 9-1 17 2 22 7 5-4 11-6 17-5 2 3 4 5 6 5s4-2 6-5c6-1 12 1 17 5 5-5 13-8 22-7-6-5-14-7-20-5 1-4 4-7 9-8-8-4-17-3-22 2-1-3 0-6 3-8-6-1-12 2-15 8z"/></g></svg>
+  <svg class="hw-bat" style="top:62%;animation-duration:17s;animation-delay:-2s;--s:.8" viewBox="0 0 100 50" aria-hidden="true"><g class="wing"><path d="M50 22c-3-6-9-9-15-8 3 2 4 5 3 8-5-5-14-6-22-2 5 1 8 4 9 8-6-2-14 0-20 5 9-1 17 2 22 7 5-4 11-6 17-5 2 3 4 5 6 5s4-2 6-5c6-1 12 1 17 5 5-5 13-8 22-7-6-5-14-7-20-5 1-4 4-7 9-8-8-4-17-3-22 2-1-3 0-6 3-8-6-1-12 2-15 8z"/></g></svg>
+
+  <!-- Ghost -->
+  <svg class="hw-ghost" viewBox="0 0 80 100" aria-hidden="true">
+    <path d="M40 4C20 4 8 20 8 40v52l8-8 8 8 8-8 8 8 8-8 8 8 8-8 8 8V40C72 20 60 4 40 4z" fill="#f5f5f0"/>
+    <ellipse cx="30" cy="38" rx="5" ry="7" fill="#0b1433"/><ellipse cx="50" cy="38" rx="5" ry="7" fill="#0b1433"/>
+    <ellipse cx="40" cy="56" rx="6" ry="4" fill="#0b1433"/>
+  </svg>
+
+  <div class="hw-card">
+    <!-- Jack-o'-lantern -->
+    <svg class="hw-pumpkin" viewBox="0 0 160 150" aria-hidden="true">
+      <path d="M78 22c-2-10 2-18 10-20 2 4-2 10-4 20z" fill="#4e7d2a"/>
+      <ellipse cx="50" cy="88" rx="38" ry="52" fill="#e8650c"/>
+      <ellipse cx="110" cy="88" rx="38" ry="52" fill="#e8650c"/>
+      <ellipse cx="80" cy="86" rx="40" ry="56" fill="#ff7a00"/>
+      <path d="M80 32c-6 18-6 92 0 110M58 36c-14 22-14 82 0 104M102 36c14 22 14 82 0 104" stroke="#d45a08" stroke-width="2.5" fill="none" opacity=".7"/>
+      <g class="glow" fill="#ffe066">
+        <path d="M50 70l14-14 8 18z"/>
+        <path d="M110 70l-14-14-8 18z"/>
+        <path d="M80 82l-7 12h14z"/>
+        <path d="M44 104c10 14 62 14 72 0l-10 2-6 8-8-6-8 8-8-8-8 6-6-8z"/>
+      </g>
+    </svg>
+    <div class="hw-kicker">Happy Halloween</div>
+    <h2 class="hw-title" id="hwTitle">Spooky Greetings from the <span>Alabama Falcons</span></h2>
+    <p class="hw-text">The USAFA Parents Club of Alabama wishes our cadets and families a safe and happy Halloween. Join us to pack boodle boxes and send some spooky love to Colorado Springs!</p>
+    <div class="hw-actions">
+      <a href="#volunteer" class="hw-btn hw-btn-primary" id="hwCta">🎃 Boodle Box Packing Party</a>
+      <button type="button" class="hw-btn hw-btn-ghost" id="hwEnter">Enter Site</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var now = new Date();
+  if (now.getMonth() !== 9) return; // October only (months are 0-based)
+
+  var KEY = 'hwSplashSeen';
+  var today = now.toISOString().slice(0, 10);
+  try { if (localStorage.getItem(KEY) === today) return; } catch (e) {}
+
+  var el = document.getElementById('hwSplash');
+  if (!el) return;
+
+  // A light scatter of twinkling stars.
+  var stars = document.getElementById('hwStars');
+  for (var i = 0; i < 40; i++) {
+    var s = document.createElement('span');
+    s.className = 'hw-star';
+    s.style.left = (Math.random() * 100) + '%';
+    s.style.top = (Math.random() * 70) + '%';
+    s.style.animationDelay = (Math.random() * 3) + 's';
+    stars.appendChild(s);
+  }
+
+  var timer;
+  function close() {
+    clearTimeout(timer);
+    el.classList.remove('visible');
+    el.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', onKey);
+    setTimeout(function() { el.classList.remove('show'); }, 450);
+    try { localStorage.setItem(KEY, today); } catch (e) {}
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+
+  el.classList.add('show');
+  el.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(function() { el.classList.add('visible'); });
+  document.getElementById('hwEnter').focus();
+
+  document.getElementById('hwEnter').addEventListener('click', close);
+  document.getElementById('hwClose').addEventListener('click', close);
+  document.getElementById('hwCta').addEventListener('click', close); // then follows the #volunteer link
+  el.addEventListener('click', function(e) { if (e.target === el) close(); });
+  document.addEventListener('keydown', onKey);
+  timer = setTimeout(close, 8000);
+})();
+</script>
 </body>
 </html>
