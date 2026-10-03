@@ -829,7 +829,11 @@ if (volForm) {
     var email    = form.querySelector('.vol-opp-email').value.trim();
     var website  = form.querySelector('.vol-opp-website').value;
 
-    statusEl.className = 'vol-opp-status'; statusEl.style.display = 'none';
+    // Visibility comes from the CSS classes alone (.vol-opp-status hidden,
+    // .error/.success shown) — an inline display:none here used to override
+    // them, so every error message stayed invisible and the button just
+    // looked like it did nothing.
+    statusEl.className = 'vol-opp-status'; statusEl.style.display = '';
     if (!last || !birthday || !email) {
       statusEl.textContent = "Please enter your cadet's last name, birthday, and the email on file.";
       statusEl.className = 'vol-opp-status error';
