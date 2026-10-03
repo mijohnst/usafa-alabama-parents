@@ -37,6 +37,9 @@ function configure_smtp_relay(PHPMailer $mail): void {
     $mail->isSMTP();
     $mail->Host       = 'smtp-relay.gmail.com';
     $mail->Port       = 587;
+    // PHPMailer's default is 300s — long enough to freeze a public form's
+    // button (the save has already happened by then) if the relay is slow.
+    $mail->Timeout    = 10;
     $mail->SMTPAuth   = false; // authenticated by the server's IP being allowlisted in Google Admin
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->CharSet    = 'UTF-8';

@@ -67,6 +67,10 @@ if ($lc === strtolower((string)$member['parent1_email'])) {
 if ($name === '') $name = cadet_full_name($member) ?: $email;
 
 try {
+    // Fail fast instead of hanging the visitor's button for MySQL's default
+    // 50s if the opportunity row / signups table is locked (e.g. by a
+    // long-running query or schema change in phpMyAdmin).
+    try { $pdo->exec('SET SESSION innodb_lock_wait_timeout = 10'); } catch (PDOException $e) {}
     $pdo->beginTransaction();
 
     // FOR UPDATE locks the opportunity row for the rest of this

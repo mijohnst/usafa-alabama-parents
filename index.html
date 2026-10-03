@@ -827,11 +827,17 @@ if (volForm) {
     var originalText = btn.textContent;
     btn.disabled = true; btn.textContent = 'Submitting…';
 
+    // Never leave the button stuck on "Submitting…" if the server stalls —
+    // give up after 25s and fall through to the error message below.
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var stall = ctrl ? setTimeout(function() { ctrl.abort(); }, 25000) : null;
+
     fetch('volunteer-opportunity-claim.php', {
+      signal: ctrl ? ctrl.signal : undefined,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ opportunity_id: card.getAttribute('data-id'), cadetLastName: last, cadetBirthday: birthday, email: email, website: website })
-    }).then(function(r) { return r.json(); }).then(function(data) {
+    }).then(function(r) { if (stall) clearTimeout(stall); return r.json(); }).then(function(data) {
       if (data.success) {
         form.innerHTML = '<p class="vol-opp-status success" style="display:block">' + escHtml(data.message || "You're signed up — thank you!") + '</p>';
         var spotsEl  = card.querySelector('.vol-opp-spots');
