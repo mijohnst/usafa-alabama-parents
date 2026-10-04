@@ -65,8 +65,19 @@ function revalidate_session_periodically(): void {
     $stmt->execute([$_SESSION['user_id'] ?? 0]);
     $user = $stmt->fetch();
 
-    $auth_version = $user ? hash('sha256', (string)$user['password_hash']) : '';
-    if (!$user || !$user['active'] || empty($_SESSION['auth_version'])
+    // auth_version is a fingerprint of the password hash of whoever actually
+    // logged in. While an admin is impersonating ("Login As"), $_SESSION's
+    // user_id is the target, but auth_version is still the admin's — so
+    // compare it against the impersonator's own row, or every impersonation
+    // session would be kicked out at the first 5-minute re-check.
+    $auth_row = $user;
+    if ($user && !empty($_SESSION['impersonator_id'])) {
+        $imp = get_pdo()->prepare('SELECT active, password_hash FROM users WHERE id = ?');
+        $imp->execute([(int)$_SESSION['impersonator_id']]);
+        $auth_row = $imp->fetch() ?: null;
+    }
+    $auth_version = $auth_row ? hash('sha256', (string)$auth_row['password_hash']) : '';
+    if (!$user || !$user['active'] || !$auth_row || !$auth_row['active'] || empty($_SESSION['auth_version'])
         || !hash_equals((string)$_SESSION['auth_version'], $auth_version)) {
         session_unset();
         session_destroy();
