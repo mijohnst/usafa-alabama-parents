@@ -74,17 +74,9 @@ if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) 
 // into cadet_last_name (e.g. "Jimmerson Jr", from before cadet_suffix
 // existed) would otherwise never match a lookup for the clean "Jimmerson"
 // a parent naturally types now that Suffix is its own field.
-$stmt = $pdo->prepare(
-    'SELECT * FROM members
-     WHERE archived = 0 AND cadet_birthday = :birthday
-       AND (parent1_email = :e1 OR parent2_email = :e2 OR cadet_email = :e3)'
-);
-$stmt->execute(['birthday' => $birthday, 'e1' => $email, 'e2' => $email, 'e3' => $email]);
-$target_norm = strip_name_suffix(normalize_name($last));
-$m = null;
-foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target_norm) { $m = $row; break; }
-}
+// One shared implementation (admin/lib.php) for every public identity
+// check, so a fix there reaches all of them at once.
+$m = find_member_by_identity($pdo, $last, $birthday, $email);
 
 if (!$m) {
     echo json_encode([

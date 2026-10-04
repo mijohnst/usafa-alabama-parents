@@ -660,15 +660,6 @@ function campaign_cadet_count_and_goal(PDO $pdo, string $slug): array {
     return [$count, $count * SABER_PRICE];
 }
 
-function site_setting_upsert(PDO $pdo, string $key, string $val): void {
-    $exists = $pdo->prepare('SELECT COUNT(*) FROM site_settings WHERE setting_key = ?');
-    $exists->execute([$key]);
-    if ((int)$exists->fetchColumn() > 0) {
-        $pdo->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?')->execute([$val, $key]);
-    } else {
-        $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)')->execute([$key, $val]);
-    }
-}
 
 // Switches which campaign fundraiser.html shows, without creating a new
 // one — lets a treasurer flip back to an earlier campaign if a new one was
