@@ -73,13 +73,23 @@ function send_json_and_continue(array $payload, int $status = 200): void {
 // a strict SQL `=`, so a legacy "Jimmerson Jr" record still matches a
 // lookup for "Jimmerson". Callers validate input format and rate-limit
 // before calling this.
-function find_member_by_identity(PDO $pdo, string $lastName, string $birthday, string $email): ?array {
-    $stmt = $pdo->prepare(
-        'SELECT * FROM members
-         WHERE archived = 0 AND cadet_birthday = :birthday
-           AND (parent1_email = :e1 OR parent2_email = :e2 OR cadet_email = :e3)'
-    );
-    $stmt->execute(['birthday' => $birthday, 'e1' => $email, 'e2' => $email, 'e3' => $email]);
+// $allowCadetEmail = false restricts the email match to the parents' (Job
+// Drop Night, parent letters); $classYear limits it to one class (Job Drop).
+// Each placeholder appears once — native prepares reject repeats.
+function find_member_by_identity(PDO $pdo, string $lastName, string $birthday, string $email,
+                                 bool $allowCadetEmail = true, ?string $classYear = null): ?array {
+    $sql = 'SELECT * FROM members
+            WHERE archived = 0 AND cadet_birthday = :birthday
+              AND (parent1_email = :e1 OR parent2_email = :e2'
+         . ($allowCadetEmail ? ' OR cadet_email = :e3' : '') . ')';
+    $params = ['birthday' => $birthday, 'e1' => $email, 'e2' => $email];
+    if ($allowCadetEmail) $params['e3'] = $email;
+    if ($classYear !== null) {
+        $sql .= ' AND class_year = :class_year';
+        $params['class_year'] = $classYear;
+    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $target = strip_name_suffix(normalize_name($lastName));
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target) return $row;

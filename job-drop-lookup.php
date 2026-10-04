@@ -70,17 +70,8 @@ if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) 
 // class_year will ever match this lookup.
 $eligible_year = job_drop_eligible_year($pdo);
 
-$stmt = $pdo->prepare(
-    'SELECT * FROM members
-     WHERE archived = 0 AND class_year = :class_year AND cadet_birthday = :birthday
-       AND (parent1_email = :e1 OR parent2_email = :e2)'
-);
-$stmt->execute(['class_year' => $eligible_year, 'birthday' => $birthday, 'e1' => $email, 'e2' => $email]);
-$target_norm = strip_name_suffix(normalize_name($last));
-$m = null;
-foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    if (strip_name_suffix(normalize_name($row['cadet_last_name'])) === $target_norm) { $m = $row; break; }
-}
+// Shared identity check (admin/lib.php), parent emails only.
+$m = find_member_by_identity($pdo, $last, $birthday, $email, false, (string)$eligible_year);
 
 if (!$m) {
     echo json_encode([
