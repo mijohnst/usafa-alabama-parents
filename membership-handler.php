@@ -153,14 +153,16 @@ try {
         'SELECT id, cadet_last_name, parent1_email, parent2_email FROM members
          WHERE class_year = :class_year
            AND (
-                (:parent1_email <> "" AND (parent1_email = :parent1_email OR parent2_email = :parent1_email))
-             OR (:parent2_email <> "" AND (parent1_email = :parent2_email OR parent2_email = :parent2_email))
+                (:p1a <> "" AND (parent1_email = :p1b OR parent2_email = :p1c))
+             OR (:p2a <> "" AND (parent1_email = :p2b OR parent2_email = :p2c))
            )'
     );
     $cand->execute([
         'class_year'    => s($payload, 'graduationYear'),
-        'parent1_email' => $parent1_email,
-        'parent2_email' => $parent2_email,
+        // Each placeholder used once — native prepares (no emulation) reject
+        // a repeated named parameter.
+        'p1a' => $parent1_email, 'p1b' => $parent1_email, 'p1c' => $parent1_email,
+        'p2a' => $parent2_email, 'p2b' => $parent2_email, 'p2c' => $parent2_email,
     ]);
     $target_norm = strip_name_suffix(normalize_name(s($payload, 'cadetLastName')));
     $existing_id = null;

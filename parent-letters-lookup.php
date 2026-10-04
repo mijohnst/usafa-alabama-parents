@@ -81,9 +81,9 @@ if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) 
 $stmt = $pdo->prepare(
     'SELECT * FROM members
      WHERE archived = 0 AND cadet_birthday = :birthday
-       AND (parent1_email = :email OR parent2_email = :email)'
+       AND (parent1_email = :e1 OR parent2_email = :e2)'
 );
-$stmt->execute(['birthday' => $birthday, 'email' => $email]);
+$stmt->execute(['birthday' => $birthday, 'e1' => $email, 'e2' => $email]);
 $target_norm = strip_name_suffix(normalize_name($last));
 $m = null;
 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {

@@ -73,9 +73,9 @@ $eligible_year = job_drop_eligible_year($pdo);
 $stmt = $pdo->prepare(
     'SELECT * FROM members
      WHERE archived = 0 AND class_year = :class_year AND cadet_birthday = :birthday
-       AND (parent1_email = :email OR parent2_email = :email)'
+       AND (parent1_email = :e1 OR parent2_email = :e2)'
 );
-$stmt->execute(['class_year' => $eligible_year, 'birthday' => $birthday, 'email' => $email]);
+$stmt->execute(['class_year' => $eligible_year, 'birthday' => $birthday, 'e1' => $email, 'e2' => $email]);
 $target_norm = strip_name_suffix(normalize_name($last));
 $m = null;
 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {

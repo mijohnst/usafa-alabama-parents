@@ -98,9 +98,9 @@ if (!is_member()) {
         // shifting "today" by hours.
         $b_stmt = $pdo->prepare("SELECT COUNT(*) FROM members WHERE archived=0
             AND cadet_birthday IS NOT NULL AND cadet_birthday!=''
-            AND (DAYOFYEAR(cadet_birthday)-DAYOFYEAR(:today) BETWEEN 0 AND 7
-                 OR DAYOFYEAR(cadet_birthday)-DAYOFYEAR(:today)+365 BETWEEN 0 AND 7)");
-        $b_stmt->execute(['today' => date('Y-m-d')]);
+            AND (DAYOFYEAR(cadet_birthday)-DAYOFYEAR(:today1) BETWEEN 0 AND 7
+                 OR DAYOFYEAR(cadet_birthday)-DAYOFYEAR(:today2)+365 BETWEEN 0 AND 7)");
+        $b_stmt->execute(['today1' => date('Y-m-d'), 'today2' => date('Y-m-d')]);
         $bday_soon = (int)$b_stmt->fetchColumn();
     } catch(Exception $e) {}
 }
