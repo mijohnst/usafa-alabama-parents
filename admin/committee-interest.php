@@ -20,7 +20,7 @@ admin_header('Committee Interest'); volunteer_admin_tabs(get_pdo(), 'committee-i
 </style>
 
 <div class="page-head">
-  <h1>Committee Interest</h1>
+  <h1>Manage Volunteers</h1>
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
 <p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Members who've flagged interest in helping with each area, from their own dashboard.</p>

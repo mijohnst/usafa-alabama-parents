@@ -144,7 +144,7 @@ echo show_flash();
 </style>
 
 <div class="page-head">
-  <h1>Volunteers</h1>
+  <h1>Manage Volunteers</h1>
   <div style="display:flex;gap:.5rem">
     <?php if (!$edit): ?><a href="volunteer-opportunities.php?edit=new" class="btn btn-primary">+ Add Opportunity</a><?php endif; ?>
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>

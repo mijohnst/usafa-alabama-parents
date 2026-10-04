@@ -116,7 +116,7 @@ echo show_flash();
 </style>
 
 <div class="page-head">
-  <h1>Volunteers</h1>
+  <h1>Manage Volunteers</h1>
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
 <?php volunteer_admin_tabs($pdo, 'volunteers.php'); ?>

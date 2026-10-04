@@ -193,7 +193,7 @@ try {
 } catch (Exception $e) { $my_open_slots = 0; }
 // One Volunteer tile: its page has Opportunities + My Committees tabs
 // (volunteer-signup.php / my-committees.php).
-$sections['For You'][] = ['icon'=>'🙋','label'=>'Volunteer','sub'=>$my_open_slots>0?"$my_open_slots need people · committees":'Opportunities & committees','href'=>'volunteer-signup.php','color'=>'#1b5e20'];
+$sections['For You'][] = ['icon'=>'🙋','label'=>'Sign Up to Volunteer','sub'=>$my_open_slots>0?"$my_open_slots need people · claim a spot":'Claim a spot · committees','href'=>'volunteer-signup.php','color'=>'#1b5e20'];
 $sections['For You'][] = ['icon'=>'📆','label'=>'My Events','sub'=>'RSVP to club events','href'=>'event-rsvp.php','color'=>'#1565c0'];
 $my_photo_eligible = is_super_admin() || is_board_role() || ($my_member && !empty($my_member['membership_paid']));
 $sections['For You'][] = ['icon'=>'📷','label'=>'Photo Submission','sub'=>$my_photo_eligible?'For the homepage slideshow':'Requires paid membership','href'=>'submit-photo.php','color'=>'#6a1b9a'];
@@ -253,7 +253,7 @@ if (can_manage_members()) {
     // opportunities still short of people + interest submissions still "new".
     try { $vi_new = (int)get_pdo()->query("SELECT COUNT(*) FROM volunteers WHERE status = 'new'")->fetchColumn(); } catch(Exception $e) { $vi_new = 0; }
     $vol_sub = trim(($vo_needed > 0 ? "$vo_needed need people" : '') . ($vo_needed > 0 && $vi_new > 0 ? ' · ' : '') . ($vi_new > 0 ? "$vi_new new interest" : ''));
-    $sections['Member Management'][] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vol_sub !== '' ? $vol_sub : 'Opportunities & interest','href'=>'volunteer-opportunities.php','color'=>'#1b5e20','badge'=>$vo_needed + $vi_new];
+    $sections['Member Management'][] = ['icon'=>'🗂️','label'=>'Manage Volunteers','sub'=>$vol_sub !== '' ? $vol_sub : 'Post needs · see who signed up','href'=>'volunteer-opportunities.php','color'=>'#00695c','badge'=>$vo_needed + $vi_new];
     $sections['Member Management'][] = ['icon'=>'👀','label'=>'Event Sign-Ups','sub'=>'See who\'s coming','href'=>'event-rsvps.php','color'=>'#1565c0'];
 }
 

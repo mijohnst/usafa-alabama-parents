@@ -24,7 +24,7 @@ admin_header('Volunteer — My Committees');
 echo show_flash();
 ?>
 <div class="page-head">
-  <h1>Volunteer</h1>
+  <h1>Sign Up to Volunteer</h1>
   <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
 </div>
 <?php admin_tabs(['volunteer-signup.php' => 'Opportunities', 'my-committees.php' => 'My Committees'], 'my-committees.php'); ?>
