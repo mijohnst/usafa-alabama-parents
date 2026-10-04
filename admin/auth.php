@@ -285,9 +285,9 @@ function find_linked_member(PDO $pdo, array $user): ?array {
 // Verify credentials against the users table
 function verify_login(PDO $pdo, string $username, string $password): ?array {
     $stmt = $pdo->prepare(
-        'SELECT * FROM users WHERE (username = :u OR email = :u) AND active = 1 LIMIT 1'
+        'SELECT * FROM users WHERE (username = :username OR email = :email) AND active = 1 LIMIT 1'
     );
-    $stmt->execute([':u' => $username]);
+    $stmt->execute([':username' => $username, ':email' => $username]);
     $user = $stmt->fetch();
     if ($user && $user['password_hash'] && password_verify($password, $user['password_hash'])) {
         return $user;
@@ -301,9 +301,9 @@ const LOGIN_LOCKOUT_MINUTES = 15;
 // Look up an account's current lockout state by username or email
 function login_attempt_status(PDO $pdo, string $username): ?array {
     $stmt = $pdo->prepare(
-        'SELECT id, failed_attempts, locked_until FROM users WHERE (username = :u OR email = :u) AND active = 1 LIMIT 1'
+        'SELECT id, failed_attempts, locked_until FROM users WHERE (username = :username OR email = :email) AND active = 1 LIMIT 1'
     );
-    $stmt->execute([':u' => $username]);
+    $stmt->execute([':username' => $username, ':email' => $username]);
     return $stmt->fetch() ?: null;
 }
 
