@@ -217,7 +217,7 @@ if ($edit_id > 0) {
 $type_labels = ['general'=>'General','board'=>'Board','special'=>'Special','other'=>'Other'];
 $type_colors = ['general'=>'#003594','board'=>'#1b5e20','special'=>'#A6192E','other'=>'#5a6a7a'];
 
-admin_header('Meeting Minutes');
+admin_header('Meeting Minutes'); admin_group_tabs('meetings', 'minutes.php');
 echo show_flash();
 ?>
 <style>

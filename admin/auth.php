@@ -477,6 +477,7 @@ function admin_header(string $title): void {
     try { $open_tickets = (int)get_pdo()->query("SELECT COUNT(*) FROM tickets WHERE status != 'resolved'")->fetchColumn(); } catch(Exception $e) {}
     $tbadge = (can_manage_tickets() && $open_tickets > 0) ? ' <span style="background:#f57c00;color:#fff;font-size:.6rem;padding:.1rem .4rem;border-radius:99px;vertical-align:middle;font-weight:700">' . $open_tickets . '</span>' : '';
     echo '<a href="helpdesk.php">🎫 Support' . $tbadge . '</a>';
+    echo '<a href="staff-guide.php" title="Portal guide — what each tile does">❔ Help</a>'; // was a dashboard tile
     echo '<span style="width:1px;height:16px;background:rgba(255,255,255,.25);display:inline-block"></span>';
     echo '<a href="change-password.php" style="font-size:.75rem;opacity:.55;color:rgba(255,255,255,.8);text-decoration:none" title="Change password">' . h(current_user_name()) . ' 🔑</a>';
     echo '<form method="POST" action="logout.php" style="display:inline;margin:0">' . csrf_field()
@@ -531,10 +532,35 @@ function volunteer_admin_tabs(PDO $pdo, string $active): void {
     } catch (PDOException $e) {}
     try { $new = (int)$pdo->query("SELECT COUNT(*) FROM volunteers WHERE status = 'new'")->fetchColumn(); } catch (PDOException $e) {}
     admin_tabs(
-        ['volunteer-opportunities.php' => 'Opportunities', 'volunteers.php' => 'General Interest'],
+        ['volunteer-opportunities.php' => 'Opportunities', 'volunteers.php' => 'General Interest', 'committee-interest.php' => 'Committees'],
         $active,
         ['volunteer-opportunities.php' => $need, 'volunteers.php' => $new]
     );
+}
+
+// Dashboard simplification: related pages that share one dashboard tile,
+// shown as tabs across each page. Every page in a group has the same
+// access check, so a tab never points somewhere the viewer can't open.
+// Navigation only — each tab is its own page with normal full-page POSTs.
+const ADMIN_TAB_GROUPS = [
+    'reports'  => ['report.php' => 'Year-End & Budgets', 'receipts-by.php' => 'Receipts', 'vendor-summary.php' => 'Vendors / 1099', 'year-compare.php' => 'Year Compare'],
+    'income'   => ['income.php' => 'Income Ledger', 'manual-receipts.php' => 'Manual Receipts'],
+    'photos'   => ['gallery.php' => 'Homepage Gallery', 'event-albums.php' => 'Event Albums', 'photo-submissions.php' => 'Submissions'],
+    'email'    => ['email.php' => 'Email Members', 'lists.php' => 'Lists'],
+    'digest'   => ['digest-composer.php' => 'Compose', 'digest-catalog.php' => 'Saved Digests'],
+    'letters'  => ['member-letter.php' => 'Member Status Letter', 'parent-letters.php' => 'Parent Letters'],
+    'meetings' => ['minutes.php' => 'Minutes', 'attendance.php' => 'Attendance'],
+    'store'    => ['store-products.php' => 'Products', 'store-orders.php' => 'Orders', 'store-orders.php?mode=vendor' => 'Vendor Export'],
+];
+
+function admin_group_tabs(string $group, string $active): void {
+    $tabs = ADMIN_TAB_GROUPS[$group] ?? [];
+    if (!$tabs) return;
+    $badges = [];
+    if ($group === 'photos') {
+        try { $badges['photo-submissions.php'] = (int)get_pdo()->query("SELECT COUNT(*) FROM photo_submissions WHERE status='pending'")->fetchColumn(); } catch (PDOException $e) {}
+    }
+    admin_tabs($tabs, $active, $badges);
 }
 
 const ELECTION_POSITIONS = ['President', 'Vice President', 'Secretary', 'Treasurer'];

@@ -59,7 +59,7 @@ if ($view_mode === 'vendor') {
         fclose($out); exit;
     }
 
-    admin_header('Club Store — Vendor Export');
+    admin_header('Club Store — Vendor Export'); admin_group_tabs('store', 'store-orders.php?mode=vendor');
     ?>
     <div class="page-head">
       <h1>🏭 Club Store — Vendor Export</h1>
@@ -130,7 +130,7 @@ if ($orders) {
     foreach ($cstmt->fetchAll(PDO::FETCH_ASSOC) as $r) $counts[$r['order_id']] = (int)$r['qty'];
 }
 
-admin_header('Club Store — Order Ledger');
+admin_header('Club Store — Order Ledger'); admin_group_tabs('store', 'store-orders.php');
 echo show_flash();
 $status_colors = ['created' => '#8A8D8F', 'processing' => '#f57c00', 'captured' => '#1b5e20', 'amount_mismatch' => '#c62828', 'capture_ok_apply_failed' => '#c62828', 'needs_manual_review' => '#c62828'];
 $fulfillment_colors = ['pending' => '#f57c00', 'ready_for_pickup' => '#1565c0', 'picked_up' => '#1b5e20'];

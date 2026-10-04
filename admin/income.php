@@ -118,7 +118,7 @@ function income_field(?array $old, ?array $editing, string $key, string $default
     return (string)($editing[$key] ?? $default);
 }
 
-admin_header('Income Ledger');
+admin_header('Income Ledger'); admin_group_tabs('income', 'income.php');
 echo show_flash();
 ?>
 <style>

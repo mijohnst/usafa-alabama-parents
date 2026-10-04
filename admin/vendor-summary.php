@@ -66,7 +66,7 @@ if (isset($_GET['export'])) {
     fclose($out); exit;
 }
 
-admin_header('Vendor Spend Summary');
+admin_header('Vendor Spend Summary'); admin_group_tabs('reports', 'vendor-summary.php');
 echo show_flash();
 ?>
 <style>

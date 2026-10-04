@@ -41,7 +41,7 @@ $letters = $pdo->query(
 $open_row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='parent_letters_open'")->fetch();
 $letters_open = $open_row ? (bool)(int)$open_row['setting_value'] : true;
 
-admin_header('Parent Letters');
+admin_header('Parent Letters'); admin_group_tabs('letters', 'parent-letters.php');
 echo show_flash();
 ?>
 <style>

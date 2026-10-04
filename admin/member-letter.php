@@ -171,7 +171,7 @@ body{font-family:'Times New Roman',Times,serif;font-size:12pt;color:#000;backgro
 }
 
 // ── Normal admin view (search + select) ─────────────────────────────────
-admin_header('Member Status Letter');
+admin_header('Member Status Letter'); admin_group_tabs('letters', 'member-letter.php');
 ?>
 <style>
 .letter-search-form{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:1.5rem;margin-bottom:1.5rem}

@@ -11,7 +11,7 @@ $rows = $pdo->query(
 $by_committee = [];
 foreach ($rows as $r) $by_committee[$r['committee']][] = $r;
 
-admin_header('Committee Interest');
+admin_header('Committee Interest'); volunteer_admin_tabs(get_pdo(), 'committee-interest.php');
 ?>
 <style>
 .ci-group{margin-bottom:1.25rem}

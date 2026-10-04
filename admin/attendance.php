@@ -63,7 +63,7 @@ if ($meeting_id < 1) {
     $stmt->execute([$year]);
     $meetings = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    admin_header('Meeting Attendance');
+    admin_header('Meeting Attendance'); admin_group_tabs('meetings', 'attendance.php');
     ?>
 <style>
 .att-table{width:100%;border-collapse:collapse;font-size:.85rem}

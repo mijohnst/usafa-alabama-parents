@@ -98,7 +98,7 @@ function mr_field(?array $old, string $key, string $default = ''): string {
     return (string)($old[$key] ?? $default);
 }
 
-admin_header('Manual Receipts');
+admin_header('Manual Receipts'); admin_group_tabs('income', 'manual-receipts.php');
 echo show_flash();
 ?>
 <style>

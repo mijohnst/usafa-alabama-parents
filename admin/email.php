@@ -285,7 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['send'])) {
 
 $preview_count = count(extract_emails($recipients));
 
-admin_header('Compose Email');
+admin_header('Compose Email'); admin_group_tabs('email', 'email.php');
 ?>
 <!-- Quill rich text editor (CDN) -->
 <link href="vendor/quill/quill.snow.css" rel="stylesheet">

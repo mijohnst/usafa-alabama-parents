@@ -53,7 +53,7 @@ $pending = $pdo->query(
      JOIN users u ON p.user_id = u.id WHERE p.status = 'pending' ORDER BY p.submitted_at ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
-admin_header('Photo Submissions');
+admin_header('Photo Submissions'); admin_group_tabs('photos', 'photo-submissions.php');
 echo show_flash();
 ?>
 <style>

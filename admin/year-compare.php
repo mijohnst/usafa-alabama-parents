@@ -58,7 +58,7 @@ function delta_pct(float $prev, float $curr): ?float {
 
 $bar_colors = ['#003594','#A6192E','#1b5e20'];
 
-admin_header('Multi-Year Spending Comparison');
+admin_header('Multi-Year Spending Comparison'); admin_group_tabs('reports', 'year-compare.php');
 ?>
 <style>
 .yc-header-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem}

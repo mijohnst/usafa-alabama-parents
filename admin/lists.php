@@ -245,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $results = ['lines' => $lines, 'rows' => $rows, 'count' => count($rows), 'label' => $label];
 }
 
-admin_header('Lists');
+admin_header('Lists'); admin_group_tabs('email', 'lists.php');
 ?>
 <style>
 .cd{position:relative}

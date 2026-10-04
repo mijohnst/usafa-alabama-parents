@@ -222,28 +222,27 @@ if (can_manage_members()) {
             FROM members m WHERE m.archived=0 AND m.membership_paid=1
         ")->fetchColumn();
     } catch (Exception $e) { $badge_pending = 0; }
-    $sections['Member Management'][] = ['icon'=>'🏅','label'=>'Badges','sub'=>$badge_pending>0?"$badge_pending pending":'Track parent badge orders','href'=>'badges.php','color'=>'#8A8D8F','badge'=>$badge_pending];
-    $sections['Member Management'][] = ['icon'=>'🎂','label'=>'Birthday Cards','sub'=>'Printable list by month, paid highlighted','href'=>'birthdays.php','color'=>'#6a1b9a'];
+    $sections['Occasional'][] = ['icon'=>'🏅','label'=>'Badges','sub'=>$badge_pending>0?"$badge_pending pending":'Track parent badge orders','href'=>'badges.php','color'=>'#8A8D8F','badge'=>$badge_pending];
+    $sections['Occasional'][] = ['icon'=>'🎂','label'=>'Birthday Cards','sub'=>'Printable list by month, paid highlighted','href'=>'birthdays.php','color'=>'#6a1b9a'];
     $sections['Site Management'][] = ['icon'=>'📣','label'=>'Announcements','sub'=>'Site banner notices','href'=>'announcements.php','color'=>'#b71c1c'];
-    $sections['Site Management'][] = ['icon'=>'🖼️','label'=>'Homepage Gallery','sub'=>'Direct-upload homepage photos','href'=>'gallery.php','color'=>'#1b5e20'];
-    $sections['Site Management'][] = ['icon'=>'📸','label'=>'Event Albums','sub'=>'Photos for a specific club event','href'=>'event-albums.php','color'=>'#1565c0'];
+    // Photos: one tile; its page has Homepage Gallery / Event Albums / Submissions tabs.
+    try { $photo_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM photo_submissions WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $photo_pending = 0; }
+    $sections['Site Management'][] = ['icon'=>'🖼️','label'=>'Photos','sub'=>$photo_pending>0?"$photo_pending submission".($photo_pending>1?'s':'')." to review":'Gallery, albums & submissions','href'=>$photo_pending>0?'photo-submissions.php':'gallery.php','color'=>$photo_pending>0?'#A6192E':'#1b5e20','badge'=>$photo_pending>0?$photo_pending:0];
     if (!$sponsors_tile_added) {
         $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
         $sponsors_tile_added = true;
     }
-    $sections['Member Management'][] = ['icon'=>'📋','label'=>'Lists','sub'=>'Email & contact lists','href'=>'lists.php','color'=>'#1565c0'];
-    $sections['Member Management'][] = ['icon'=>'✉️','label'=>'Email Members','sub'=>'Compose blast','href'=>'email.php','color'=>'#6a1b9a'];
+    $sections['Member Management'][] = ['icon'=>'✉️','label'=>'Email & Lists','sub'=>'Compose a blast, contact lists','href'=>'email.php','color'=>'#6a1b9a'];
     // Secretary tools
-    $sections['Secretary Tools'][] = ['icon'=>'📝','label'=>'Minutes','sub'=>'Meeting minutes & files','href'=>'minutes.php','color'=>'#5c007a'];
-    $sections['Secretary Tools'][] = ['icon'=>'✅','label'=>'Attendance','sub'=>'Track who attended','href'=>'attendance.php','color'=>'#5c007a'];
-    $sections['Secretary Tools'][] = ['icon'=>'📬','label'=>'Correspondence','sub'=>'Log official comms','href'=>'correspondence.php','color'=>'#5c007a'];
-    $sections['Secretary Tools'][] = ['icon'=>'🖊️','label'=>'Member Letter','sub'=>'Print status letter','href'=>'member-letter.php','color'=>'#5c007a'];
+    // Meetings = Minutes + Attendance tabs. Correspondence has no tile: never used
+    // (0 rows as of 2026-10-04); correspondence.php still works by URL.
+    $sections['Secretary Tools'][] = ['icon'=>'📝','label'=>'Meetings','sub'=>'Minutes & attendance','href'=>'minutes.php','color'=>'#5c007a'];
     try { $pl_count = (int)get_pdo()->query('SELECT COUNT(*) FROM parent_letters')->fetchColumn(); } catch(Exception $e) { $pl_count = 0; }
-    $sections['Secretary Tools'][] = ['icon'=>'💌','label'=>'Parent Letters','sub'=>$pl_count>0?"$pl_count saved — print A\u{2013}Z":'None saved yet','href'=>'parent-letters.php','color'=>'#5c007a'];
+    $sections['Secretary Tools'][] = ['icon'=>'💌','label'=>'Letters','sub'=>$pl_count>0?"Status letters · $pl_count parent letters":'Status & parent letters','href'=>'member-letter.php','color'=>'#5c007a'];
     try { $pending_noms = (int)get_pdo()->query("SELECT COUNT(*) FROM election_candidates WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $pending_noms = 0; }
     $sections['Secretary Tools'][] = ['icon'=>'🗳️','label'=>'Elections','sub'=>$pending_noms>0?"$pending_noms nomination".($pending_noms>1?'s':'')." to review":'Set up officer voting','href'=>'elections.php','color'=>'#5c007a','badge'=>$pending_noms>0?$pending_noms:0];
     try { $pending_jd = (int)get_pdo()->query("SELECT COUNT(*) FROM job_drop_submissions WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $pending_jd = 0; }
-    $sections['Secretary Tools'][] = ['icon'=>'🎖️','label'=>'Job Drop Night','sub'=>$pending_jd>0?"$pending_jd to review":'No submissions yet','href'=>'job-drop-submissions.php','color'=>'#5c007a','badge'=>$pending_jd>0?$pending_jd:0];
+    $sections[$pending_jd>0 ? 'Secretary Tools' : 'Occasional'][] = ['icon'=>'🎖️','label'=>'Job Drop Night','sub'=>$pending_jd>0?"$pending_jd to review":'No submissions yet','href'=>'job-drop-submissions.php','color'=>'#5c007a','badge'=>$pending_jd>0?$pending_jd:0];
     // Member support features
     try { $vo_needed = (int)get_pdo()->query(
         "SELECT COUNT(*) FROM volunteer_opportunities o WHERE o.active=1
@@ -256,15 +255,11 @@ if (can_manage_members()) {
     $vol_sub = trim(($vo_needed > 0 ? "$vo_needed need people" : '') . ($vo_needed > 0 && $vi_new > 0 ? ' · ' : '') . ($vi_new > 0 ? "$vi_new new interest" : ''));
     $sections['Member Management'][] = ['icon'=>'🙋','label'=>'Volunteers','sub'=>$vol_sub !== '' ? $vol_sub : 'Opportunities & interest','href'=>'volunteer-opportunities.php','color'=>'#1b5e20','badge'=>$vo_needed + $vi_new];
     $sections['Member Management'][] = ['icon'=>'👀','label'=>'Event Sign-Ups','sub'=>'See who\'s coming','href'=>'event-rsvps.php','color'=>'#1565c0'];
-    try { $photo_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM photo_submissions WHERE status='pending'")->fetchColumn(); } catch(Exception $e) { $photo_pending = 0; }
-    $sections['Member Management'][] = ['icon'=>'🔍','label'=>'Review Photo Submissions','sub'=>$photo_pending>0?"$photo_pending awaiting review":'All caught up','href'=>'photo-submissions.php','color'=>$photo_pending>0?'#A6192E':'#6a1b9a','badge'=>$photo_pending>0?$photo_pending:0];
-    $sections['Member Management'][] = ['icon'=>'📇','label'=>'Committee Interest','sub'=>'See who volunteered','href'=>'committee-interest.php','color'=>'#f57f17'];
 }
 
 if (can_use_digest_composer()) {
-    $sections['Site Management'][] = ['icon'=>'🧵','label'=>'Digest Composer','sub'=>'AI-organize forwarded emails','href'=>'digest-composer.php','color'=>'#6a1b9a'];
     try { $digest_count = (int)get_pdo()->query('SELECT COUNT(*) FROM digest_emails')->fetchColumn(); } catch(Exception $e) { $digest_count = 0; }
-    $sections['Site Management'][] = ['icon'=>'📚','label'=>'Digest Catalog','sub'=>$digest_count>0?"$digest_count saved":'Saved digest drafts','href'=>'digest-catalog.php','color'=>'#6a1b9a'];
+    $sections['Site Management'][] = ['icon'=>'🧵','label'=>'Digest','sub'=>$digest_count>0?"Compose · $digest_count saved":'AI-organize forwarded emails','href'=>'digest-composer.php','color'=>'#6a1b9a'];
 }
 
 if (can_manage_finances()) {
@@ -277,12 +272,9 @@ if (can_manage_finances()) {
     $sections['For You'][] = ['icon'=>'🧾','label'=>'Add Purchase','sub'=>$my_pending>0?"$my_pending pending":'Submit an expense','href'=>'purchase-form.php','color'=>'#003594','badge'=>$my_pending>0?$my_pending:0];
     if (is_treasurer()) {
         $sections['Finance'][] = ['icon'=>'💳','label'=>'Payments','sub'=>$approved>0?"$approved awaiting payment":'Nothing pending','href'=>'pending-reimbursements.php','color'=>$approved>0?'#003594':'#5a6a7a','badge'=>$approved>0?$approved:0];
-        $sections['Finance'][] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end & budgets','href'=>'report.php','color'=>'#37474f'];
-        $sections['Finance'][] = ['icon'=>'🗂️','label'=>'Receipts','sub'=>'Browse by event or vendor','href'=>'receipts-by.php','color'=>'#37474f'];
-        $sections['Finance'][] = ['icon'=>'📥','label'=>'Income','sub'=>'Record & review income','href'=>'income.php','color'=>'#1b5e20'];
-        $sections['Finance'][] = ['icon'=>'🧾','label'=>'Manual Receipts','sub'=>'Email a payer a receipt','href'=>'manual-receipts.php','color'=>'#00695c'];
-        $sections['Finance'][] = ['icon'=>'🏭','label'=>'Vendors','sub'=>'Spend by vendor + 1099','href'=>'vendor-summary.php','color'=>'#1565c0'];
-        $sections['Finance'][] = ['icon'=>'📈','label'=>'Year Compare','sub'=>'Multi-year spending','href'=>'year-compare.php','color'=>'#6a1b9a'];
+        // Reports and Income each open a page with tabs (admin_group_tabs in auth.php).
+        $sections['Finance'][] = ['icon'=>'📊','label'=>'Reports','sub'=>'Year-end, receipts, vendors, compare','href'=>'report.php','color'=>'#37474f'];
+        $sections['Finance'][] = ['icon'=>'📥','label'=>'Income','sub'=>'Income ledger & manual receipts','href'=>'income.php','color'=>'#1b5e20'];
         if (!$sponsors_tile_added) {
             $sections['Finance'][] = ['icon'=>'🏆','label'=>'Sponsors','sub'=>'Manage sponsor listings','href'=>'sponsors.php','color'=>'#f57f17'];
             $sponsors_tile_added = true;
@@ -294,7 +286,9 @@ if (can_manage_finances()) {
     // never saw a tile to reach the page even after it started allowing them in.
     if (is_treasurer() || is_super_admin() || is_officer()) {
         $sections['Finance'][] = ['icon'=>'🅿️','label'=>'PayPal Activity','sub'=>'Online dues & donations','href'=>'paypal-dues-orders.php','color'=>'#003594'];
-        $sections['Finance'][] = ['icon'=>'🗡️','label'=>'Saber Fund','sub'=>'Class of 2027 fundraiser progress','href'=>'fundraiser.php','color'=>'#A6192E'];
+        if (active_campaign_slug(get_pdo()) !== null) {
+            $sections['Finance'][] = ['icon'=>'🗡️','label'=>'Saber Fund','sub'=>'Fundraiser progress','href'=>'fundraiser.php','color'=>'#A6192E'];
+        }
     }
 }
 
@@ -316,19 +310,18 @@ if (can_manage_store()) {
     try {
         $store_pending = (int)get_pdo()->query("SELECT COUNT(*) FROM store_orders WHERE status='captured' AND fulfillment_status='pending'")->fetchColumn();
     } catch (Exception $e) { $store_pending = 0; }
-    $sections['Site Management'][] = ['icon'=>'🛍️','label'=>'Manage Products','sub'=>'Club Store catalog & photos','href'=>'store-products.php','color'=>'#00695c'];
-    $sections['Site Management'][] = ['icon'=>'📦','label'=>'Order Ledger','sub'=>$store_pending>0?"$store_pending awaiting fulfillment":'All orders fulfilled','href'=>'store-orders.php','color'=>$store_pending>0?'#f57c00':'#1b5e20','badge'=>$store_pending>0?$store_pending:0];
-    $sections['Site Management'][] = ['icon'=>'🏭','label'=>'Vendor Export','sub'=>'Quantities to order by product','href'=>'store-orders.php?mode=vendor','color'=>'#1565c0'];
+    // One Club Store tile (Products / Orders / Vendor Export tabs), in Occasional
+    // until there are orders to fulfill.
+    $sections[$store_pending>0 ? 'Site Management' : 'Occasional'][] = ['icon'=>'🛍️','label'=>'Club Store','sub'=>$store_pending>0?"$store_pending order".($store_pending>1?'s':'')." to fulfill":'Products, orders, vendor export','href'=>$store_pending>0?'store-orders.php':'store-products.php','color'=>$store_pending>0?'#f57c00':'#00695c','badge'=>$store_pending>0?$store_pending:0];
 }
 $sections['For You'][] = ['icon'=>'👤','label'=>'My Profile','sub'=>'Photo & password','href'=>'change-password.php','color'=>'#546e7a'];
-$sections['Site Management'][] = ['icon'=>'📚','label'=>'Staff Guide','sub'=>'Portal orientation','href'=>'staff-guide.php','color'=>'#002554'];
 
 if (is_super_admin()) {
     $sections['Site Management'][] = ['icon'=>'👤','label'=>'Users','sub'=>'Manage accounts','href'=>'users.php','color'=>'#37474f'];
 }
 
 // Display order — only sections with at least one visible tile are rendered.
-$section_order = ['For You', 'Member Management', 'Secretary Tools', 'Finance', 'Site Management'];
+$section_order = ['For You', 'Member Management', 'Secretary Tools', 'Finance', 'Site Management', 'Occasional'];
 
 admin_header('Dashboard');
 ?>

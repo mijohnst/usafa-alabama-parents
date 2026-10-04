@@ -236,7 +236,7 @@ function store_field(?array $old, ?array $editing, string $key, string $default 
     return (string)($editing[$key] ?? $default);
 }
 
-admin_header('Club Store — Products');
+admin_header('Club Store — Products'); admin_group_tabs('store', 'store-products.php');
 echo show_flash();
 ?>
 <style>

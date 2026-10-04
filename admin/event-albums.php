@@ -85,7 +85,7 @@ $albums = $pdo->query('SELECT a.id, a.name, a.event_date, a.description, a.cover
     FROM event_albums a
     ORDER BY a.sort_order ASC, a.id DESC')->fetchAll(PDO::FETCH_ASSOC);
 
-admin_header('Event Albums');
+admin_header('Event Albums'); admin_group_tabs('photos', 'event-albums.php');
 echo show_flash();
 ?>
 <div class="page-head">

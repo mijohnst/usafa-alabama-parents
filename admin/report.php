@@ -96,7 +96,7 @@ foreach ($brows as $b) $budgets[$b['event']] = (float)$b['budget'];
 $months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 $status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','submitted'=>'#6a1b9a','paid'=>'#003594'];
 
-admin_header('Finance Report');
+admin_header('Finance Report'); admin_group_tabs('reports', 'report.php');
 ?>
 <style>
 .rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem}

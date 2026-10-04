@@ -58,7 +58,7 @@ foreach ($digests as $d) {
     $digest_data[$d['id']] = ['html' => $d['html_body'], 'text' => digest_html_to_text($d['html_body'])];
 }
 
-admin_header('Digest Catalog');
+admin_header('Digest Catalog'); admin_group_tabs('digest', 'digest-catalog.php');
 echo show_flash();
 ?>
 <!-- Quill rich text editor (CDN) -->

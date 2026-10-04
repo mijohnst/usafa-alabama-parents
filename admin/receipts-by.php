@@ -41,7 +41,7 @@ ksort($groups);
 
 $status_colors = ['pending'=>'#f57c00','approved'=>'#1b5e20','submitted'=>'#6a1b9a','paid'=>'#003594'];
 
-admin_header('Receipts by ' . ucfirst($by));
+admin_header('Receipts by ' . ucfirst($by)); admin_group_tabs('reports', 'receipts-by.php');
 ?>
 <style>
 .rb-tabs{display:flex;gap:.4rem;margin-bottom:1.5rem;flex-wrap:wrap}

@@ -5,7 +5,7 @@ require_digest_composer_access();
 if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
 $csrf_token = $_SESSION['csrf'];
 
-admin_header('Digest Composer');
+admin_header('Digest Composer'); admin_group_tabs('digest', 'digest-composer.php');
 ?>
 <style>
 .digest-card{background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:1.5rem;max-width:900px;margin-bottom:1.25rem}

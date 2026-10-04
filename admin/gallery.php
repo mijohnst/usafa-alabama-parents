@@ -115,7 +115,7 @@ $total  = count($photos);
 $vis_row = $pdo->query("SELECT setting_value FROM site_settings WHERE setting_key='gallery_section_visible'")->fetch();
 $section_visible = $vis_row ? (bool)(int)$vis_row['setting_value'] : true;
 
-admin_header('Homepage Gallery');
+admin_header('Homepage Gallery'); admin_group_tabs('photos', 'gallery.php');
 echo show_flash();
 ?>
 <style>
