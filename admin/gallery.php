@@ -234,7 +234,7 @@ document.getElementById('upload-btn').closest('form').addEventListener('submit',
     </div>
     <div class="photo-card-body">
       <div style="font-size:.7rem;color:<?= $age_color ?>;margin-bottom:.4rem;font-weight:700">
-        <?= $p['days_old'] === '0' ? 'Added today' : $p['days_old'] . 'd old' ?> · expires in <?= max(0,30-(int)$p['days_old']) ?>d
+        <?= (int)$p['days_old'] === 0 ? 'Added today' : $p['days_old'] . 'd old' ?> · expires in <?= max(0,30-(int)$p['days_old']) ?>d
       </div>
       <form method="POST">
         <?= csrf_field() ?><input type="hidden" name="action" value="update"><input type="hidden" name="id" value="<?= $p['id'] ?>">
