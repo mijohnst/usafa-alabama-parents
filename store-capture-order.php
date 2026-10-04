@@ -10,7 +10,8 @@
  * redesign them for a multi-item order. Two deliberate differences from
  * the donation version: (1) exactly one income_entries row per order, not
  * per line item — store_order_items carries the per-line detail instead;
- * (2) inventory is intentionally left untouched here for MVP.
+ * (2) finite variant inventory is decremented in the same local transaction
+ * as the order/ledger update; blank inventory remains unlimited.
  */
 
 header('Content-Type: application/json');
@@ -175,6 +176,18 @@ $description = 'Club Store order (' . $item_count . ' item' . ($item_count === 1
 $applied_ok = false;
 $pdo->beginTransaction();
 try {
+    foreach ($order_items as $item) {
+        if (empty($item['variant_id'])) continue;
+        $stock = $pdo->prepare('SELECT inventory_qty FROM store_product_variants WHERE id=? FOR UPDATE');
+        $stock->execute([(int)$item['variant_id']]);
+        $available = $stock->fetchColumn();
+        if ($available === false || $available === null || $available === '') continue; // unlimited/deleted legacy variant
+        if ((int)$available < (int)$item['quantity']) {
+            throw new RuntimeException('Insufficient inventory for variant #' . (int)$item['variant_id']);
+        }
+        $pdo->prepare('UPDATE store_product_variants SET inventory_qty=inventory_qty-? WHERE id=?')
+            ->execute([(int)$item['quantity'], (int)$item['variant_id']]);
+    }
     $pdo->prepare("UPDATE store_orders SET paypal_capture_id=?, status='captured', funding_source=?, captured_at=NOW() WHERE id=?")
         ->execute([$capture_id, $funding_source, $track['id']]);
 

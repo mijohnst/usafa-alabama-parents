@@ -502,6 +502,9 @@ function sanitize_style_value(string $style, array $allowed_props): string {
 // throwing, so callers can always fall back to serving the full-size image.
 function generate_photo_thumbnail(string $source_path, string $dest_path, int $max_dim = 400): bool {
     if (!function_exists('imagecreatefromstring')) return false;
+    $dims = @getimagesize($source_path);
+    if (!$dims || $dims[0] < 1 || $dims[1] < 1 || $dims[0] > 12000 || $dims[1] > 12000
+        || ((int)$dims[0] * (int)$dims[1]) > 40000000) return false;
     $data = @file_get_contents($source_path);
     if ($data === false) return false;
     $src = @imagecreatefromstring($data);

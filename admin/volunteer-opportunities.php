@@ -99,15 +99,19 @@ if (!empty($opportunities)) {
     // they belong to instead of "(Guest)". Only a claim with neither a
     // portal user nor a member link is a true unverified guest.
     $has_member_col = (bool)$pdo->query("SHOW COLUMNS FROM volunteer_signups LIKE 'member_id'")->fetch();
-    if ($has_member_col) {
+    $has_user_member_col = (bool)$pdo->query("SHOW COLUMNS FROM users LIKE 'member_id'")->fetch();
+    if ($has_member_col || $has_user_member_col) {
+        $member_expr = $has_member_col && $has_user_member_col ? 'COALESCE(s.member_id, u.member_id)'
+                     : ($has_member_col ? 's.member_id' : 'u.member_id');
+        $guest_expr = $has_member_col ? '(s.user_id IS NULL AND s.member_id IS NULL)' : '(s.user_id IS NULL)';
         $rows = $pdo->prepare(
             "SELECT s.opportunity_id, s.user_id AS signup_user_id, s.guest_email AS signup_guest_email, COALESCE(u.name, s.guest_name) AS name,
                     COALESCE(u.email, s.guest_email) AS email,
-                    (s.user_id IS NULL AND s.member_id IS NULL) AS is_guest,
+                    $guest_expr AS is_guest,
                     m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix, m.class_year AS cadet_class
              FROM volunteer_signups s
              LEFT JOIN users u ON s.user_id = u.id
-             LEFT JOIN members m ON s.member_id = m.id
+             LEFT JOIN members m ON m.id = $member_expr
              WHERE s.opportunity_id IN ($ph) ORDER BY s.signed_up_at ASC"
         );
     } else {
@@ -153,7 +157,8 @@ echo show_flash();
 <?php if (!(bool)$pdo->query("SHOW COLUMNS FROM volunteer_signups LIKE 'member_id'")->fetch()): ?>
   <div class="alert alert-error">
     Homepage sign-ups are verified against the member roster, but they can't be <strong>linked</strong> to the family yet (so they show as "Guest") —
-    the <code>member_id</code> column is missing. Run in phpMyAdmin: <code>ALTER TABLE volunteer_signups ADD COLUMN member_id INT NULL;</code>
+    the <code>member_id</code> column is missing. Run the project migration in phpMyAdmin without using its Format button, or use:
+    <code>ALTER TABLE `volunteer_signups` ADD COLUMN `member_id` INT NULL, ADD INDEX `idx_volunteer_signups_member_id` (`member_id`);</code>
   </div>
 <?php endif; ?>
 

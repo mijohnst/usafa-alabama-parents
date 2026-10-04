@@ -31,7 +31,7 @@ try {
         'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
         DB_USER, DB_PASS,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-         PDO::ATTR_EMULATE_PREPARES => true]
+         PDO::ATTR_EMULATE_PREPARES => false]
     );
 } catch (PDOException $e) {
     echo "Database error: " . $e->getMessage() . "\n";
@@ -67,6 +67,10 @@ try {
         $results['Birthdays'], $results['Dues renewals'], $results['Meeting reminders'],
         $results['New member welcomes'], $results['Lapsed re-engagements'], $results['Volunteer opportunity reminders'],
     ]);
+    if (table_has_column($pdo, 'automated_email_runs', 'event_signup_reminders')) {
+        $pdo->prepare('UPDATE automated_email_runs SET event_signup_reminders=? WHERE id=1')
+            ->execute([$results['Event sign-up reminders']]);
+    }
 } catch (PDOException $e) {
     echo "(Could not record last-run status — has migrate_add_volunteer_opp_reminder.sql been run? " . $e->getMessage() . ")\n";
 }

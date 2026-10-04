@@ -5,7 +5,7 @@ require_once __DIR__ . '/admin/config.php';
 require_once __DIR__ . '/admin/lib.php'; // dependency-free — for job_drop_eligible_year()
 try {
     $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS,
-        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>true, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
     // Whole-section manual off switch — separate from the per-class
     // auto-retirement below, for when an officer just wants to turn the
     // whole thing off right now rather than hide entries one at a time.

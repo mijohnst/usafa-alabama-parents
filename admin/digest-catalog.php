@@ -62,8 +62,8 @@ admin_header('Digest Catalog');
 echo show_flash();
 ?>
 <!-- Quill rich text editor (CDN) -->
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<link href="vendor/quill/quill.snow.css" rel="stylesheet">
+<script src="vendor/quill/quill.js"></script>
 <style>
 .dg-row{background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:.9rem 1.1rem;margin-bottom:.6rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center}
 .dg-snippet{font-size:.82rem;color:#5a6a7a;margin-top:.25rem;max-width:560px;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}

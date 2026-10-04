@@ -45,7 +45,7 @@ if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootst
     // every attempt regardless of whether the username is real, without
     // being a second permanent lock a legitimate user could get stuck
     // behind — it only ever delays, and always clears itself after the window.
-    if (rate_limited($pdo, 'admin_login')) {
+    if (rate_limited($pdo, 'admin_login', 5, 15, true)) {
         $error = 'Too many login attempts from your network. Please try again in a few minutes.';
     } else {
     $status = login_attempt_status($pdo, $username_input);
@@ -66,6 +66,7 @@ if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootst
             $_SESSION['user_id']    = $user['id'];
             $_SESSION['user_name']  = $user['name'];
             $_SESSION['user_email'] = $user['email'];
+            $_SESSION['auth_version'] = hash('sha256', (string)$user['password_hash']);
             header('Location: ' . $next); exit;
         }
         if ($status) register_login_failure($pdo, (int)$status['id'], (int)$status['failed_attempts']);

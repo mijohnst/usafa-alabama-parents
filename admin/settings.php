@@ -77,8 +77,8 @@ admin_header('Site Settings');
 echo show_flash();
 ?>
 <!-- Quill rich text editor (CDN) -->
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<link href="vendor/quill/quill.snow.css" rel="stylesheet">
+<script src="vendor/quill/quill.js"></script>
 <style>
 .ql-editor{min-height:300px;font-family:"Segoe UI",Arial,sans-serif;font-size:1rem}
 .ql-toolbar{border-radius:4px 4px 0 0}

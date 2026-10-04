@@ -288,8 +288,8 @@ $preview_count = count(extract_emails($recipients));
 admin_header('Compose Email');
 ?>
 <!-- Quill rich text editor (CDN) -->
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<link href="vendor/quill/quill.snow.css" rel="stylesheet">
+<script src="vendor/quill/quill.js"></script>
 <style>
 .compose-card{background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:1.5rem;max-width:900px;margin-bottom:1.25rem}
 .loader-card{background:#f0f4ff;border:1px solid #c7d4f5;border-radius:6px;padding:1.25rem 1.5rem;max-width:900px;margin-bottom:1.25rem}

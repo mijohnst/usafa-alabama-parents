@@ -1,0 +1,15 @@
+.claude/
+CLAUDE.md
+.nojekyll
+.gitignore
+.git
+devserver.py
+schema.sql
+admin/import.php
+admin/migrate_*.sql
+admin/config.php
+admin/guide-images/
+debug.txt
+admin/lib/tfpdf/font/unifont/*.mtx.php
+admin/lib/tfpdf/font/unifont/*.cw.dat
+admin/lib/tfpdf/font/unifont/*.cw127.php

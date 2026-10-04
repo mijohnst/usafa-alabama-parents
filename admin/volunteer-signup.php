@@ -10,20 +10,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $opportunity_id = (int)($_POST['opportunity_id'] ?? 0);
 
     if ($action === 'signup' && $opportunity_id) {
-        $o = $pdo->prepare('SELECT id, spots_needed, active, (SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id=?) AS filled FROM volunteer_opportunities WHERE id=?');
-        $o->execute([$opportunity_id, $opportunity_id]);
-        $row = $o->fetch(PDO::FETCH_ASSOC);
-        if (!$row || !$row['active']) {
-            flash('error', 'This opportunity is no longer open.');
-        } elseif ((int)$row['filled'] >= (int)$row['spots_needed']) {
-            flash('error', 'That opportunity is already full.');
-        } else {
-            try {
+        try {
+            $pdo->beginTransaction();
+            $o = $pdo->prepare('SELECT id, spots_needed, active FROM volunteer_opportunities WHERE id=? FOR UPDATE');
+            $o->execute([$opportunity_id]);
+            $row = $o->fetch(PDO::FETCH_ASSOC);
+            $filled_stmt = $pdo->prepare('SELECT COUNT(*) FROM volunteer_signups WHERE opportunity_id=?');
+            $filled_stmt->execute([$opportunity_id]);
+            $filled = (int)$filled_stmt->fetchColumn();
+            if (!$row || !$row['active']) {
+                $pdo->rollBack();
+                flash('error', 'This opportunity is no longer open.');
+            } elseif ($filled >= (int)$row['spots_needed']) {
+                $pdo->rollBack();
+                flash('error', 'That opportunity is already full.');
+            } else {
                 $pdo->prepare('INSERT INTO volunteer_signups (opportunity_id, user_id) VALUES (?,?)')->execute([$opportunity_id, $user_id]);
+                $pdo->commit();
                 flash('success', "You're signed up — thank you!");
-            } catch (PDOException $e) {
-                flash('error', "You're already signed up for that one.");
             }
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            flash('error', $e->getCode() === '23000' ? "You're already signed up for that one." : 'Sign-up could not be completed. Please try again.');
         }
     } elseif ($action === 'cancel' && $opportunity_id) {
         $pdo->prepare('DELETE FROM volunteer_signups WHERE opportunity_id=? AND user_id=?')->execute([$opportunity_id, $user_id]);
@@ -75,8 +83,9 @@ echo show_flash();
       <strong style="color:#002554"><?= h($o['title']) ?></strong>
       <div class="vs-meta">
         <?php if ($o['event_date']): ?><?= date('M j, Y', strtotime($o['event_date'])) ?><?php endif; ?>
-        <?php if ($o['location']): ?><?= $o['event_date'] ? ' &bull; ' : '' ?><?= h($o['location']) ?><?php endif; ?>
-        <?php if ($o['event_date'] || $o['location']): ?> &bull; <?php endif; ?>
+        <?php if (!empty($o['event_time'])): ?><?= $o['event_date'] ? ' &bull; ' : '' ?><?= h($o['event_time']) ?><?php endif; ?>
+        <?php if ($o['location']): ?><?= ($o['event_date'] || !empty($o['event_time'])) ? ' &bull; ' : '' ?><?= h($o['location']) ?><?php endif; ?>
+        <?php if ($o['event_date'] || !empty($o['event_time']) || $o['location']): ?> &bull; <?php endif; ?>
         <?= $needed - $filled > 0 ? ($needed - $filled) . ' spot' . (($needed-$filled)!==1?'s':'') . ' left' : 'Full' ?>
       </div>
       <?php if ($o['description']): ?><div class="vs-meta"><?= h($o['description']) ?></div><?php endif; ?>

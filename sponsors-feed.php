@@ -4,7 +4,7 @@ header('Cache-Control: public, max-age=300');
 require_once __DIR__ . '/admin/config.php';
 try {
     $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS,
-        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>true, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
     // Explicit column list, not SELECT * — `description` is admin-only
     // internal notes (see the "internal notes only" label on its field in
     // admin/sponsors.php) and must never reach this public feed, even

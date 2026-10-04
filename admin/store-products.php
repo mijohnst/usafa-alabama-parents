@@ -321,7 +321,7 @@ echo show_flash();
 
     <hr style="margin:1.25rem 0;border:none;border-top:1px solid #f0f2f5">
     <h3 style="font-size:.9rem;margin-bottom:.5rem">Sizes / Colors (optional)</h3>
-    <p style="font-size:.78rem;color:#9aa5b4;margin-bottom:.75rem">Leave this section empty for a product with no size/color choice (e.g. an ornament) — it'll sell as a single item. Add a row per size/color combination for something like a shirt. Price, cost, and inventory are optional per row; blank price/cost fall back to the base price/cost above, blank inventory means unlimited.</p>
+    <p style="font-size:.78rem;color:#9aa5b4;margin-bottom:.75rem">Leave this section empty for a product with no size/color choice (e.g. an ornament). Add a row per size/color combination for something like a shirt. Blank price/cost falls back to the product value; blank inventory means unlimited. Entering inventory prevents carts from requesting more than the currently recorded quantity.</p>
     <div id="variantRows">
       <?php foreach ($variants as $v): ?>
       <div class="variant-row">

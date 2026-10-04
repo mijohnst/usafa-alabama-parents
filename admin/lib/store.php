@@ -148,6 +148,13 @@ function store_price_cart(PDO $pdo, array $items): array {
                 $line['reason'] = 'That size/color is no longer available.';
                 $lines[] = $line; $hasInvalid = true; continue;
             }
+            if ($variant['inventory_qty'] !== null && $variant['inventory_qty'] !== ''
+                && $qty > (int)$variant['inventory_qty']) {
+                $line['reason'] = (int)$variant['inventory_qty'] > 0
+                    ? 'Only ' . (int)$variant['inventory_qty'] . ' currently available.'
+                    : 'That size/color is sold out.';
+                $lines[] = $line; $hasInvalid = true; continue;
+            }
             $unit_price = round((float)($variant['price_override'] ?? $product['base_price']), 2);
             $line['variantLabel'] = trim(implode(' / ', array_filter([$variant['size'], $variant['color']], fn($v) => $v !== null && $v !== '')));
         }

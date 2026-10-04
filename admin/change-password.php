@@ -67,8 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $post_action === 'avatar_upload') {
         $errors[] = 'New passwords do not match.';
 
     if (empty($errors)) {
+        $new_hash = password_hash($new_pw, PASSWORD_BCRYPT);
         $pdo->prepare('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?')
-            ->execute([password_hash($new_pw, PASSWORD_BCRYPT), $_SESSION['user_id']]);
+            ->execute([$new_hash, $_SESSION['user_id']]);
+        session_regenerate_id(true);
+        $_SESSION['auth_version'] = hash('sha256', $new_hash);
         $done = true;
     }
 }

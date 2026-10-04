@@ -107,7 +107,8 @@ $lr_text  = !$last_run ? '#5f4c00' : ($is_stale ? '#c62828' : '#1b5e20');
     Meeting reminders: <?= (int)$last_run['meeting_reminders'] ?>,
     New member welcomes: <?= (int)$last_run['new_member_welcomes'] ?>,
     Lapsed re-engagements: <?= (int)$last_run['lapsed_reengagements'] ?>,
-    Volunteer opportunity reminders: <?= (int)($last_run['volunteer_opp_reminders'] ?? 0) ?>
+    Volunteer opportunity reminders: <?= (int)($last_run['volunteer_opp_reminders'] ?? 0) ?>,
+    Event sign-up reminders: <?= (int)($last_run['event_signup_reminders'] ?? 0) ?>
   <?php endif; ?>
 </div>
 

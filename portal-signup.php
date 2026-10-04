@@ -23,14 +23,16 @@ if ($user && !$expired && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (strlen($pw) < 8)     $error = 'Password must be at least 8 characters.';
     elseif ($pw !== $pw2)    $error = 'Passwords do not match.';
     else {
+        $new_hash = password_hash($pw, PASSWORD_BCRYPT);
         $pdo->prepare('UPDATE users SET password_hash=?, invite_token=NULL, invite_expires=NULL WHERE id=?')
-            ->execute([password_hash($pw, PASSWORD_BCRYPT), $user['id']]);
+            ->execute([$new_hash, $user['id']]);
         session_regenerate_id(true);
         $_SESSION['logged_in']  = true;
         $_SESSION['role']       = $user['role'];
         $_SESSION['user_id']    = $user['id'];
         $_SESSION['user_name']  = $user['name'];
         $_SESSION['user_email'] = $user['email'];
+        $_SESSION['auth_version'] = hash('sha256', $new_hash);
         header('Location: admin/dashboard.php'); exit;
     }
 }

@@ -61,11 +61,13 @@ function revalidate_session_periodically(): void {
     $now = time();
     if ($now - (int)($_SESSION['role_checked_at'] ?? 0) < 300) return;
 
-    $stmt = get_pdo()->prepare('SELECT role, officer_title, active FROM users WHERE id = ?');
+    $stmt = get_pdo()->prepare('SELECT role, officer_title, active, password_hash FROM users WHERE id = ?');
     $stmt->execute([$_SESSION['user_id'] ?? 0]);
     $user = $stmt->fetch();
 
-    if (!$user || !$user['active']) {
+    $auth_version = $user ? hash('sha256', (string)$user['password_hash']) : '';
+    if (!$user || !$user['active'] || empty($_SESSION['auth_version'])
+        || !hash_equals((string)$_SESSION['auth_version'], $auth_version)) {
         session_unset();
         session_destroy();
         header('Location: login.php?deactivated=1');
@@ -336,7 +338,7 @@ function get_pdo(): PDO {
         DB_USER, DB_PASS,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
          PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-         PDO::ATTR_EMULATE_PREPARES => true]
+         PDO::ATTR_EMULATE_PREPARES => false]
     );
     return $pdo;
 }
