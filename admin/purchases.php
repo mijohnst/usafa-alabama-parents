@@ -29,8 +29,7 @@ if ($filter_event    !== '') { $where[] = 'p.event = :event';          $params['
 if ($filter_from     !== '') { $where[] = 'p.purchase_date >= :dfrom'; $params[':dfrom']    = $filter_from; }
 if ($filter_to       !== '') { $where[] = 'p.purchase_date <= :dto';   $params[':dto']      = $filter_to; }
 if ($filter_search   !== '') {
-    $where[] = '(p.vendor LIKE :q OR p.description LIKE :q OR p.order_number LIKE :q OR p.notes LIKE :q)';
-    $params[':q'] = '%' . $filter_search . '%';
+    $where[] = sql_any_column(['p.vendor', 'p.description', 'p.order_number', 'p.notes'], 'LIKE', '%' . $filter_search . '%', 'q', $params);
 }
 // Archived purchases (fully paid, reviewed, tucked away) are hidden by
 // default — never excluded from any totals/reports, just this list view —

@@ -15,8 +15,7 @@ if ($filter_category !== '') { $where[] = 't.category = :cat';    $params[':cat'
 // Non-staff (not admin/tech/officer/secretary) can only ever see their own tickets.
 if ($mine || !can_manage_members()) { $where[] = 't.submitted_by = :me'; $params[':me'] = $_SESSION['user_id'] ?? 0; }
 if ($filter_search   !== '') {
-    $where[] = '(t.subject LIKE :q OR t.ticket_number LIKE :q OR t.description LIKE :q)';
-    $params[':q'] = '%' . $filter_search . '%';
+    $where[] = sql_any_column(['t.subject', 't.ticket_number', 't.description'], 'LIKE', '%' . $filter_search . '%', 'q', $params);
 }
 
 $sql = 'SELECT t.*, u.name as submitter_name, a.name as assigned_name,

@@ -76,6 +76,20 @@ function send_json_and_continue(array $payload, int $status = 200): void {
 // $allowCadetEmail = false restricts the email match to the parents' (Job
 // Drop Night, parent letters); $classYear limits it to one class (Job Drop).
 // Each placeholder appears once — native prepares reject repeats.
+// "(colA LIKE :q0 OR colB LIKE :q1 ...)" — the same value tested against
+// several columns, each with its own placeholder, since native prepares
+// reject one :name used twice (a single shared :q 500'd every admin search
+// box). Adds the bindings to $params; $op is '=' or 'LIKE' (caller wraps
+// the value in % for LIKE).
+function sql_any_column(array $cols, string $op, string $value, string $prefix, array &$params): string {
+    $parts = [];
+    foreach (array_values($cols) as $i => $col) {
+        $parts[] = "$col $op :{$prefix}{$i}";
+        $params[":{$prefix}{$i}"] = $value;
+    }
+    return '(' . implode(' OR ', $parts) . ')';
+}
+
 function find_member_by_identity(PDO $pdo, string $lastName, string $birthday, string $email,
                                  bool $allowCadetEmail = true, ?string $classYear = null): ?array {
     $sql = 'SELECT * FROM members

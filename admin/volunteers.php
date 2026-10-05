@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $search = trim($_GET['q'] ?? '');
 $where  = ['1=1']; $params = [];
-if ($search) { $where[] = '(name LIKE :q OR email LIKE :q OR areas LIKE :q)'; $params[':q'] = "%$search%"; }
+if ($search) { $where[] = sql_any_column(['name', 'email', 'areas'], 'LIKE', "%$search%", 'q', $params); }
 
 $stmt = $pdo->prepare('SELECT * FROM volunteers WHERE ' . implode(' AND ', $where) . ' ORDER BY created_at DESC');
 $stmt->execute($params);

@@ -30,12 +30,10 @@ if (can_view_member_pii()) {
 }
 $params = [];
 if ($search !== '') {
-    $where[] = '(cadet_last_name LIKE :q OR cadet_first_name LIKE :q OR cadet_middle_name LIKE :q
-                 OR parent1_last_name LIKE :q OR parent1_first_name LIKE :q
-                 OR parent2_last_name LIKE :q OR parent2_first_name LIKE :q
-                 OR cadet_email LIKE :q OR parent1_email LIKE :q OR parent2_email LIKE :q
-                 OR cadet_cell LIKE :q OR parent1_cell LIKE :q)';
-    $params[':q'] = '%' . $search . '%';
+    $where[] = sql_any_column(['cadet_last_name', 'cadet_first_name', 'cadet_middle_name',
+                               'parent1_last_name', 'parent1_first_name', 'parent2_last_name', 'parent2_first_name',
+                               'cadet_email', 'parent1_email', 'parent2_email', 'cadet_cell', 'parent1_cell'],
+                              'LIKE', '%' . $search . '%', 'q', $params);
 }
 if (!empty($selected_years) && count($selected_years) < count($all_years)) {
     $ph = [];

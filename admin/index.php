@@ -65,12 +65,10 @@ $where  = ['1=1'];
 $params = [];
 
 if ($search !== '') {
-    $where[] = '(cadet_last_name LIKE :q OR cadet_first_name LIKE :q OR cadet_middle_name LIKE :q
-                 OR parent1_last_name LIKE :q OR parent1_first_name LIKE :q
-                 OR parent2_last_name LIKE :q OR parent2_first_name LIKE :q
-                 OR cadet_email LIKE :q OR parent1_email LIKE :q OR parent2_email LIKE :q
-                 OR cadet_cell LIKE :q OR parent1_cell LIKE :q)';
-    $params[':q'] = '%' . $search . '%';
+    $where[] = sql_any_column(['cadet_last_name', 'cadet_first_name', 'cadet_middle_name',
+                               'parent1_last_name', 'parent1_first_name', 'parent2_last_name', 'parent2_first_name',
+                               'cadet_email', 'parent1_email', 'parent2_email', 'cadet_cell', 'parent1_cell'],
+                              'LIKE', '%' . $search . '%', 'q', $params);
 }
 $safe_years = array_intersect($years, CLASS_YEAR_LIST);
 if (!empty($safe_years)) {
@@ -82,8 +80,7 @@ if ($region !== '') { $where[] = 'al_region  = :region'; $params[':region'] = $r
 if ($paid     === '1') { $where[] = 'membership_paid = 1'; }
 if ($paid     === '0') { $where[] = 'membership_paid = 0'; }
 if ($squadron !== '') {
-    $where[] = '(bct_squadron = :sqd OR fall_squadron = :sqd OR squadron_yr2_4 = :sqd)';
-    $params[':sqd'] = $squadron;
+    $where[] = sql_any_column(['bct_squadron', 'fall_squadron', 'squadron_yr2_4'], '=', $squadron, 'sqd', $params);
 }
 if ($split_only) { $where[] = "cadet_first_name LIKE '% %'"; }
 if ($dup_only) {
