@@ -41,7 +41,7 @@ if ($search !== '' || $year !== '') {
     $members = $stmt->fetchAll();
 }
 
-admin_header('Roster Lookup');
+admin_header('Finder');
 ?>
 <style>
 .main{margin-top:1rem}
@@ -71,7 +71,7 @@ admin_header('Roster Lookup');
 @media(min-width:700px){.rl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:.85rem}}
 </style>
 
-<h1 style="margin-bottom:.85rem">📋 Roster Lookup</h1>
+<h1 style="margin-bottom:.85rem">📋 Finder</h1>
 
 <div class="rl-search-wrap">
   <form method="GET" class="rl-search">
