@@ -13,6 +13,7 @@
  * here; removing one belongs on the Purchases page.
  */
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/lib/paypal.php';
 require_finance();
 // Treasurer/Admin/Tech get full access (view + delete rows + test
@@ -166,12 +167,21 @@ foreach ($donation_stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
 // everything else about a purchase (approval, receipts, etc.) belongs on
 // the Purchases page, not here.
 $payout_stmt = $pdo->query(
-    "SELECT p.vendor, p.amount_total, p.paypal_payout_batch_id, p.paypal_payout_status, p.paypal_payout_sent_at, u.name AS submitted_by_name
+    "SELECT p.*, u.name AS submitted_by_name
      FROM purchases p
      LEFT JOIN users u ON u.id = p.submitted_by
      WHERE p.paypal_payout_batch_id IS NOT NULL AND p.paypal_payout_batch_id <> ''"
 );
-foreach ($payout_stmt->fetchAll(PDO::FETCH_ASSOC) as $po) {
+$payouts = $payout_stmt->fetchAll(PDO::FETCH_ASSOC);
+// The status stored at send time is whatever PayPal said in that instant —
+// almost always PENDING, since a payout batch is never complete the moment
+// it's created. Re-check in-flight ones here too (same passive refresh the
+// Finance page does), otherwise this page keeps showing PENDING for a
+// payout PayPal finished long ago unless someone happens to load Finance.
+if ($can_manage) {
+    paypal_refresh_pending_purchase_payouts($pdo, $payouts);
+}
+foreach ($payouts as $po) {
     $rows[] = [
         'type'        => 'payout',
         'id'          => null,
