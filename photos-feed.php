@@ -2,9 +2,10 @@
 header('Content-Type: application/json');
 header('Cache-Control: public, max-age=300');
 require_once __DIR__ . '/admin/config.php';
+require_once __DIR__ . '/admin/lib.php'; // db_timezone_init_option()
 try {
     $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS,
-        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC] + db_timezone_init_option());
 
     // Whole-section manual off switch, set from admin/gallery.php. Defaults
     // to visible if the setting has never been touched.

@@ -3,6 +3,18 @@
 // (auth.php) and the public-facing form handlers (e.g. membership-handler.php)
 // that intentionally don't pull in the full admin bootstrap.
 
+// PDO connect option that puts each MySQL session on club time (Central).
+// PHP already runs in America/Chicago (auth.php/mailer.php), but MySQL's
+// NOW()/CURDATE()/CURRENT_TIMESTAMP use the *DB server's* clock — Eastern
+// on this host — so anything stamped with NOW() displayed an hour ahead of
+// PayPal and of PHP-generated times. A numeric offset rather than the
+// 'America/Chicago' name, since shared hosts often don't load MySQL's
+// named-zone tables; computed per connection so it follows DST.
+function db_timezone_init_option(): array {
+    $offset = (new DateTime('now', new DateTimeZone('America/Chicago')))->format('P');
+    return [PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '$offset'"];
+}
+
 // Strips punctuation/whitespace differences so "Jimmerson, Jr" and
 // "Jimmerson, Jr." compare equal for duplicate-member detection.
 function normalize_name(string $s): string {

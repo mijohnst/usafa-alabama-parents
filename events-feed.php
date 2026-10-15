@@ -4,6 +4,7 @@ header('Cache-Control: public, max-age=300');
 header('Access-Control-Allow-Origin: *');
 
 require_once __DIR__ . '/admin/config.php';
+require_once __DIR__ . '/admin/lib.php'; // db_timezone_init_option()
 
 try {
     $pdo = new PDO(
@@ -11,7 +12,7 @@ try {
         DB_USER, DB_PASS,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
          PDO::ATTR_EMULATE_PREPARES => false,
-         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC] + db_timezone_init_option()
     );
     $rows = $pdo->query(
         "SELECT id, title, event_date, event_date_end, event_time, location, description, tag,

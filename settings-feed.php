@@ -3,9 +3,10 @@ header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Pragma: no-cache');
 require_once __DIR__ . '/admin/config.php';
+require_once __DIR__ . '/admin/lib.php'; // db_timezone_init_option()
 try {
     $pdo  = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS,
-        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES=>false, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC] + db_timezone_init_option());
     // Whitelist keys safe for public consumption — never dump the full table
     $public_keys = ['hero_subtitle','hero_cta_text','hero_cta_url','membership_dues',
                     'membership_description','president_letter','president_name',
