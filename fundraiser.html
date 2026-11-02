@@ -58,10 +58,12 @@
     .progress-card { background: var(--white); border-radius: 8px; padding: 2rem 2rem 2.25rem; box-shadow: 0 4px 16px rgba(0,53,148,.08); text-align: center; }
     .progress-amount { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 2.75rem); color: var(--navy); font-weight: 700; margin-bottom: .25rem; }
     .progress-amount .of-goal { font-size: .5em; color: var(--gray); font-weight: 400; font-family: var(--font-body); }
-    .progress-track-wrap { display: flex; align-items: center; gap: .6rem; margin: 1.25rem 0 .75rem; }
-    .progress-hilt { flex-shrink: 0; width: 22px; height: 22px; }
-    .progress-track { flex: 1; background: #e1e5eb; border-radius: 99px; height: 20px; overflow: hidden; position: relative; }
-    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #d62d47); border-radius: 99px; transition: width .6s ease; position: relative; }
+    .progress-track-wrap { display: flex; align-items: center; margin: 1.25rem 0 .75rem; }
+    .progress-hilt { flex-shrink: 0; width: 84px; height: 51px; margin-right: -2px; position: relative; z-index: 1; }
+    /* The track is the blade: square at the guard, pointed at the far end. */
+    .progress-track { flex: 1; background: #e1e5eb; height: 18px; overflow: hidden; position: relative; clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 100%, 0 100%); }
+    .progress-track::after { content: ''; position: absolute; left: 4px; right: 44px; top: 4px; height: 2px; background: rgba(255,255,255,.45); pointer-events: none; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #d62d47); transition: width .6s ease; position: relative; }
     .progress-fill-tip { position: absolute; top: 50%; right: 0; transform: translate(50%, -50%); width: 10px; height: 10px; background: #FFC72C; border-radius: 50%; box-shadow: 0 0 8px 3px rgba(255,199,44,.75); display: none; }
     .progress-fill-tip.show { display: block; }
     .progress-meta { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; font-size: .82rem; color: var(--gray); margin-top: .5rem; }
@@ -259,10 +261,15 @@
         <div id="goalReachedBanner" class="goal-reached-banner">🎉 <span id="goalReachedText"></span></div>
         <div class="progress-amount"><span id="progress-raised">$0</span> <span class="of-goal">of <span id="progress-goal">$10,000</span> goal</span></div>
         <div class="progress-track-wrap">
-          <svg class="progress-hilt" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="8" y="2" width="3" height="20" rx="1" fill="#8A8D8F"/>
-            <rect x="2" y="8" width="6" height="8" rx="1.5" fill="#FFC72C"/>
-            <circle cx="3" cy="12" r="2.5" fill="#FFC72C"/>
+          <!-- Saber hilt; the track beside it is drawn as the blade (pointed
+               tip via clip-path) so the whole bar reads as one saber. -->
+          <svg class="progress-hilt" viewBox="0 0 66 40" aria-hidden="true">
+            <path d="M60 33 C52 42 22 41 13 28" fill="none" stroke="#E0A800" stroke-width="3" stroke-linecap="round"/>
+            <rect x="17" y="14" width="40" height="12" rx="3" fill="#2b2f36"/>
+            <path d="M22 26 L27 14 M29 26 L34 14 M36 26 L41 14 M43 26 L48 14 M50 26 L55 14" stroke="#E0A800" stroke-width="1.4"/>
+            <ellipse cx="12" cy="20" rx="7" ry="8" fill="#E0A800"/>
+            <circle cx="4" cy="20" r="3" fill="#E0A800"/>
+            <rect x="57" y="4" width="7" height="32" rx="3.5" fill="#E0A800"/>
           </svg>
           <div class="progress-track">
             <div class="progress-fill" id="progress-fill"><span class="progress-fill-tip" id="progress-fill-tip"></span></div>
