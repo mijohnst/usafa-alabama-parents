@@ -96,7 +96,7 @@ function saber_pdf_sheet(tFPDF $pdf, string $title, array $rows, array $missing)
         foreach ($rows as $i => $r) {
             $pdf->SetFont(VR_FONT, '', 10.5);
             $cadet_lines = vr_wrap($pdf, (string)$r['cadet'], $col['cadet'] - 2 * $pad_x);
-            $ins_size  = saber_fit_size($pdf, (string)$r['inscription'], $col['ins'] - 2 * $pad_x, 12, 8);
+            $ins_size  = saber_fit_size($pdf, (string)$r['inscription'], $col['ins'] - 2 * $pad_x, 12, 7);
             $ins_lines = vr_wrap($pdf, (string)$r['inscription'], $col['ins'] - 2 * $pad_x);
             $row_h = max(count($cadet_lines), count($ins_lines)) * $line_h + 2 * $pad_y;
 
@@ -170,7 +170,7 @@ function saber_pdf_slips(tFPDF $pdf, string $title, array $rows): void {
         $pdf->SetTextColor(90, 106, 122);
         $pdf->Cell(0, 0.22, 'INSCRIPTION — ENGRAVE EXACTLY AS SHOWN', 0, 1, 'L');
 
-        $size  = saber_fit_size($pdf, (string)$r['inscription'], $box_w - 0.4, 22, 12);
+        $size  = saber_fit_size($pdf, (string)$r['inscription'], $box_w - 0.4, 22, 11);
         $lines = vr_wrap($pdf, (string)$r['inscription'], $box_w - 0.4);
         $box_h = count($lines) * $line_h + 0.6;
         $y = $pdf->GetY() + 0.05;
