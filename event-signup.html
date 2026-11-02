@@ -28,7 +28,7 @@
     .form-section { background: var(--light); padding: 2rem; border-radius: 4px; }
     .form-divider-label { font-family: var(--font-display); font-size: 1.1rem; color: var(--navy); margin-bottom: 0.75rem; }
     .form-section p.lead { color: var(--gray); font-size: 0.95rem; margin-bottom: 1.25rem; }
-    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; align-items: end; }
     @media (max-width: 600px) { .form-row-3 { grid-template-columns: 1fr; } }
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; color: var(--navy); font-size: 0.9rem; }
@@ -174,7 +174,7 @@
             <input type="date" id="lookupBirthday" />
           </div>
           <div class="form-group">
-            <label for="lookupEmail">Parent's or Cadet's Email on File *</label>
+            <label for="lookupEmail">Email on File *</label>
             <input type="email" id="lookupEmail" autocomplete="email" />
           </div>
         </div>
