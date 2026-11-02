@@ -115,10 +115,10 @@
     .events-list{display:flex;flex-direction:column;gap:1rem;margin-top:1rem;}
     .event-card{display:grid;grid-template-columns:80px 1fr;gap:1.5rem;align-items:center;background:var(--white);border:1px solid rgba(166,25,46,.25);border-left:4px solid #A6192E;border-radius:4px;padding:1.5rem;transition:background .2s,box-shadow .2s;}
     .event-card:hover{background:#fdf5f6;box-shadow:0 4px 16px rgba(166,25,46,.12);}
-    .events-group-label{font-family:var(--font-display);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;padding:.4rem .75rem;margin-bottom:.5rem;border-radius:3px;display:inline-block;}
-    .events-group-label.label-upcoming{background:var(--blue);color:#fff;}
-    .events-group-label.label-cadets{background:#A6192E;color:#fff;}
-    .events-group-label.label-future{background:#002554;color:#FFC72C;}
+    .events-group-label{font-family:var(--font-display);font-size:1.3rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--navy);display:flex;align-items:center;gap:1rem;margin:.25rem 0 .1rem;}
+    .events-group-label::after{content:'';flex:1;height:3px;border-radius:2px;background:linear-gradient(90deg,#A6192E,transparent);}
+    .events-group-label.label-past{color:#5a6a7a;margin-top:2.25rem;}
+    .events-group-label.label-past::after{background:linear-gradient(90deg,#9aa5b4,transparent);}
     .event-date{text-align:center;background:var(--blue);color:var(--white);border-radius:4px;padding:.5rem;min-width:80px;}
     .event-date .month{font-size:.65rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;}
     .event-date .day{font-family:var(--font-display);font-size:1.4rem;line-height:1;white-space:nowrap;}
@@ -1375,16 +1375,17 @@ function tagClass(tag) {
 function renderEvents(events) {
   var list = document.getElementById('events-list');
   if (!list) return;
+  // "planning" (the retired Planning Ahead group) is shown as Upcoming, so
+  // older events still tagged with it land in the right place.
   var groups = [
-    {key:'past',  label:'Past Events',   style:'background:#f0f2f5;color:#5a6a7a;border-left:3px solid #c0c7cf;', opacity:'.7'},
-    {key:'upcoming', label:'Upcoming',   style:'', opacity:'1'},
-    {key:'planning', label:'Planning Ahead', style:'margin-top:1.5rem;background:#f0f4ff;color:#003594;border-left:3px solid #003594;', opacity:'1'}
+    {keys:['upcoming','planning'], label:'Upcoming',    cls:'label-upcoming', opacity:'1'},
+    {keys:['past'],                label:'Past Events', cls:'label-past',     opacity:'.7'}
   ];
   var html = '';
   groups.forEach(function(g) {
-    var grpEvents = events.filter(function(e){ return e.group_label === g.key; });
+    var grpEvents = events.filter(function(e){ return g.keys.indexOf(e.group_label) !== -1; });
     if (!grpEvents.length) return;
-    html += '<div class="events-group-label" style="' + g.style + '">' + g.label + '</div>';
+    html += '<h3 class="events-group-label ' + g.cls + '">' + g.label + '</h3>';
     grpEvents.forEach(function(e) {
       var dt = formatEventDate(e);
       var info = '<h3>' + escHtml(e.title) + '</h3>';

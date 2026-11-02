@@ -34,7 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$title) $errors[] = 'Title is required.';
         if ($cta_url !== '' && !is_safe_http_url($cta_url)) $errors[] = 'Button URL must start with https:// or http://';
-        if (!in_array($group_label, ['past','upcoming','planning'])) $group_label = 'upcoming';
+        // 'planning' (Planning Ahead) was merged into Upcoming — anything
+        // that isn't Past saves as Upcoming.
+        if ($group_label !== 'past') $group_label = 'upcoming';
 
         if (empty($errors)) {
             $fields = [$title,$event_date,$event_date_end,$event_time,$location,$description,$tag,$group_label,$cta_text,$cta_url,$cta_note,$sort_order,$visible,$cta_deadline,$countdown_type];
@@ -72,8 +74,9 @@ if (isset($_GET['edit'])) {
     $s = $pdo->prepare('SELECT * FROM events WHERE id=?'); $s->execute([(int)$_GET['edit']]); $edit = $s->fetch();
 }
 
-$events = $pdo->query('SELECT * FROM events ORDER BY group_label DESC, sort_order ASC, event_date ASC')->fetchAll();
-$groups = ['past'=>'Past Events','upcoming'=>'Upcoming','planning'=>'Planning Ahead'];
+// Same order as the website (events-feed.php).
+$events = $pdo->query('SELECT * FROM events ORDER BY sort_order ASC, event_date ASC')->fetchAll();
+$groups = ['upcoming'=>'Upcoming','past'=>'Past Events'];
 $tags   = ['Social','Academy','Cadet Support','Community','Other'];
 
 admin_header('Events');
@@ -83,7 +86,8 @@ echo show_flash();
 .ev-row{border-left:3px solid #e1e5eb;padding:.6rem .85rem;margin-bottom:.4rem;background:#fff;border-radius:0 4px 4px 0;display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}
 .ev-row.hidden{opacity:.45}
 .ev-meta{font-size:.75rem;color:#5a6a7a;margin-top:.15rem}
-.group-head{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a6a7a;margin:.75rem 0 .3rem;padding-left:.85rem;border-left:3px solid #003594}
+.group-head{font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#002554;margin:1.25rem 0 .5rem;padding:.35rem 0 .35rem .85rem;border-left:4px solid #A6192E;border-bottom:1px solid #e1e5eb}
+.group-head.past{color:#5a6a7a;border-left-color:#9aa5b4;margin-top:2rem}
 </style>
 
 <div class="page-head">
@@ -210,10 +214,11 @@ echo show_flash();
 
 <!-- Event list by group -->
 <?php foreach ($groups as $grp => $grp_label):
-  $grp_events = array_filter($events, fn($e) => $e['group_label'] === $grp);
+  // Legacy 'planning' rows show under Upcoming.
+  $grp_events = array_filter($events, fn($e) => ($e['group_label'] === 'past' ? 'past' : 'upcoming') === $grp);
   if (empty($grp_events)) continue;
 ?>
-  <div class="group-head"><?= $grp_label ?></div>
+  <div class="group-head<?= $grp === 'past' ? ' past' : '' ?>"><?= $grp_label ?></div>
   <?php foreach ($grp_events as $e): ?>
   <div class="ev-row <?= $e['visible']?'':'hidden' ?>">
     <div style="flex:1;min-width:0">
