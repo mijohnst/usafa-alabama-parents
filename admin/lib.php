@@ -744,15 +744,16 @@ function clean_saber_inscription(string $raw): string {
     return trim(preg_replace('/\s+/', ' ', $s));
 }
 
-// The class year is added automatically — before ("2027 - Name") or after
-// ("Name - 2027") the name, the family's choice — so families type only the
-// name. Drop a leading or trailing copy of the year ("2027 - …", "… 2027",
-// "… - '27") in case they typed it anyway, so it isn't engraved twice.
+// The class year is added automatically — before ("Class of 2027 - Name") or
+// after ("Name - Class of 2027") the name, the family's choice — so families
+// type only the name. Drop a leading or trailing copy in case they typed it
+// anyway ("Class of 2027 - …", "… 2027", "… class of '27"), so it isn't
+// engraved twice.
 function saber_strip_year(string $s, string $year): string {
     if ($year === '') return $s;
-    $y = '(?:' . preg_quote($year, '~') . "|'" . preg_quote(substr($year, -2), '~') . ')';
-    $s = preg_replace('~^' . $y . '[\s,\-]+~', '', $s);
-    return trim(preg_replace('~[\s,\-]+' . $y . '$~', '', $s));
+    $y = '(?:class\s+of\s+)?(?:' . preg_quote($year, '~') . "|'" . preg_quote(substr($year, -2), '~') . ')';
+    $s = preg_replace('~^' . $y . '[\s,\-]+~i', '', $s);
+    return trim(preg_replace('~[\s,\-]+' . $y . '$~i', '', $s));
 }
 
 // 'before' or 'after' (the default, also for rows saved before families
@@ -764,7 +765,7 @@ function saber_year_position(?string $position): string {
 // Full text to engrave: the stored name part plus the class year.
 function saber_engraving(string $name, string $year, ?string $position = 'after'): string {
     if ($year === '') return $name;
-    return saber_year_position($position) === 'before' ? "{$year} - {$name}" : "{$name} - {$year}";
+    return saber_year_position($position) === 'before' ? "Class of {$year} - {$name}" : "{$name} - Class of {$year}";
 }
 
 // Whether migrate_saber_year_position.sql has added the year_position

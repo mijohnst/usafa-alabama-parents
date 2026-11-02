@@ -61,7 +61,7 @@ function build_saber_inscriptions_pdf(string $title, array $rows, array $missing
 
 function saber_pdf_sheet(tFPDF $pdf, string $title, array $rows, array $missing): void {
     // Columns sum to 7.0in — Letter width (8.5in) minus 0.75in margins.
-    $col      = ['n' => 0.4, 'cadet' => 2.4, 'ins' => 4.2];
+    $col      = ['n' => 0.4, 'cadet' => 2.0, 'ins' => 4.6];
     $pad_x    = 0.08;
     $pad_y    = 0.09;
     $line_h   = 0.24;  // one line of 12pt bold inscription text
@@ -170,7 +170,7 @@ function saber_pdf_slips(tFPDF $pdf, string $title, array $rows): void {
         $pdf->SetTextColor(90, 106, 122);
         $pdf->Cell(0, 0.22, 'INSCRIPTION — ENGRAVE EXACTLY AS SHOWN', 0, 1, 'L');
 
-        $size  = saber_fit_size($pdf, (string)$r['inscription'], $box_w - 0.4, 22, 11);
+        $size  = saber_fit_size($pdf, (string)$r['inscription'], $box_w - 0.4, 22, 10);
         $lines = vr_wrap($pdf, (string)$r['inscription'], $box_w - 0.4);
         $box_h = count($lines) * $line_h + 0.6;
         $y = $pdf->GetY() + 0.05;
