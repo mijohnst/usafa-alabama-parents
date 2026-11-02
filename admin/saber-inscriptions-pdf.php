@@ -5,7 +5,8 @@
  * saber-inscription.html, managed on admin/fundraiser.php) to send in with
  * the saber order. ?layout=sheet (default) is one table of every cadet;
  * ?layout=slips is one page per cadet. Rendering lives in
- * lib/saber-inscriptions-pdf.php.
+ * lib/saber-inscriptions-pdf.php. Once any cadet is marked Awarded, only
+ * awarded cadets are included.
  */
 require_once __DIR__ . '/auth.php';
 require_login();
@@ -37,6 +38,13 @@ if ($roster === null) {
     header('Location: fundraiser.php?campaign=' . urlencode($campaign)); exit;
 }
 
+// Once any cadet is marked Awarded, the order covers only them — a family
+// that submitted but isn't getting a saber must not end up on the order.
+$any_awarded = (bool)array_filter($roster, fn($r) => (int)$r['awarded'] === 1);
+if ($any_awarded) {
+    $roster = array_values(array_filter($roster, fn($r) => (int)$r['awarded'] === 1));
+}
+
 $rows = [];
 $missing = [];
 foreach ($roster as $r) {
@@ -50,4 +58,7 @@ foreach ($roster as $r) {
 
 $title = ($year !== '' ? "Class of {$year} " : '') . 'Saber Inscriptions';
 $pdf = build_saber_inscriptions_pdf($title, $rows, $missing, $layout);
+
+// So the officer list can flag entries edited after this printout.
+saber_save_setting($pdo, "fundraiser_{$campaign}_inscriptions_printed_at", 'Saber inscriptions last PDF', date('Y-m-d H:i:s'));
 $pdf->Output('D', 'Saber-Inscriptions-' . ($year ?: $campaign) . ($layout === 'slips' ? '-Slips' : '') . '-' . date('Y-m-d') . '.pdf');

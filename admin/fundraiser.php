@@ -84,6 +84,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign
     header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
 }
 
+$inscriptions_deadline_key = "fundraiser_{$campaign}_inscriptions_deadline";
+$inscriptions_printed_key  = "fundraiser_{$campaign}_inscriptions_printed_at";
+$inscriptions_reminded_key = "fundraiser_{$campaign}_inscriptions_reminded_at";
+
+// Mark/unmark a cadet as actually receiving a saber — the order PDF lists
+// only awarded cadets once any are marked.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign !== '' && $post_action === 'inscription_award') {
+    csrf_verify();
+    $member_id = (int)($_POST['member_id'] ?? 0);
+    $ystmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    $ystmt->execute([$year_key]);
+    $roster_year = trim((string)$ystmt->fetchColumn());
+    $mstmt = $pdo->prepare('SELECT class_year FROM members WHERE id = ? AND archived = 0');
+    $mstmt->execute([$member_id]);
+    $member_year = $mstmt->fetchColumn();
+    if (!saber_awards_available($pdo)) {
+        flash('error', 'Saber awards are not set up yet — run migrate_saber_awards.sql in phpMyAdmin first.');
+    } elseif ($roster_year === '' || $member_year === false || trim((string)$member_year) !== $roster_year) {
+        flash('error', "That cadet isn't in this campaign's class year.");
+    } else {
+        $awarded = ($_POST['awarded'] ?? '') === '1';
+        set_saber_award($pdo, $campaign, $member_id, $awarded, (string)($_SESSION['user_name'] ?? 'Officer'));
+        flash('success', $awarded ? 'Marked as receiving a saber.' : 'Removed from the saber list.');
+    }
+    header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
+}
+
+// Optional last day families can submit/change (inclusive). Blank clears it.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign !== '' && $post_action === 'inscriptions_deadline') {
+    csrf_verify();
+    $raw = trim((string)($_POST['deadline'] ?? ''));
+    $deadline = saber_valid_date($raw);
+    if ($raw !== '' && $deadline === '') {
+        flash('error', 'Please pick a valid date.');
+    } else {
+        saber_save_setting($pdo, $inscriptions_deadline_key, 'Saber inscriptions deadline', $deadline);
+        flash('success', $deadline === '' ? 'Inscription deadline cleared.' : 'Inscriptions will close automatically after ' . saber_deadline_label($deadline) . '.');
+    }
+    header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
+}
+
+// Email every family who hasn't submitted (only awarded cadets' families
+// once any cadet is marked Awarded). One email per address, parents only.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign !== '' && $post_action === 'inscriptions_remind') {
+    csrf_verify();
+    $c = saber_inscription_campaign($pdo);
+    if (!$c || $c['slug'] !== $campaign || !$c['open']) {
+        flash('error', "Reminders can only go out while this campaign's inscriptions are open — otherwise the link would just say they're closed.");
+        header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
+    }
+    $roster = saber_inscription_roster($pdo, $campaign, $c['year']) ?? [];
+    $any_awarded = (bool)array_filter($roster, fn($r) => (int)$r['awarded'] === 1);
+    require_once __DIR__ . '/mailer.php';
+    $sent = 0; $failed = 0; $families = 0;
+    foreach ($roster as $r) {
+        if ((string)($r['inscription'] ?? '') !== '') continue;
+        if ($any_awarded && (int)$r['awarded'] !== 1) continue;
+        $to = array_unique(array_filter(array_map('strtolower', array_map('trim', [(string)$r['parent1_email'], (string)$r['parent2_email']])),
+            fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL)));
+        if (!$to) continue;
+        $families++;
+        $cadet = cadet_full_name($r);
+        $body = CLUB_NAME . "\n"
+              . "Saber Inscription Needed\n"
+              . str_repeat('─', 48) . "\n\n"
+              . "We don't have a saber inscription on file yet for Cadet {$cadet} (Class of {$c['year']}).\n\n"
+              . "Please enter the name to be engraved here — you'll verify with your cadet's\n"
+              . "last name, birthday, and this email address (no login needed):\n"
+              . SITE_URL . "saber-inscription.html\n\n"
+              . ($c['deadline'] !== '' ? 'Inscriptions close ' . saber_deadline_label($c['deadline']) . ".\n\n" : '')
+              . "Questions? Contact treasurer@alabamafalcons.org.\n\n"
+              . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+        foreach ($to as $addr) {
+            send_notification($addr, "Saber inscription needed: Cadet {$cadet}", $body) ? $sent++ : $failed++;
+        }
+    }
+    if ($families > 0) {
+        saber_save_setting($pdo, $inscriptions_reminded_key, 'Saber inscriptions last reminder', date('Y-m-d H:i:s') . '|' . $families);
+    }
+    flash($failed ? 'error' : 'success', $families === 0
+        ? 'Nobody to remind — every ' . ($any_awarded ? 'awarded ' : '') . 'family with an email on file has submitted.'
+        : "Reminder sent to {$families} " . ($families === 1 ? 'family' : 'families') . " ({$sent} email" . ($sent === 1 ? '' : 's') . ')'
+          . ($failed ? "; {$failed} could not be sent." : '.'));
+    header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'activate') {
     csrf_verify();
     $target = trim($_POST['campaign'] ?? '');
@@ -242,12 +328,19 @@ if ($campaign !== '') {
 }
 
 $inscription_roster = null;
-$inscriptions_open  = false;
+$inscriptions_open  = false; // the officer's Open/Closed switch
+$inscriptions_deadline = '';
+$inscriptions_printed_at = '';
+$inscriptions_reminded = '';
 if ($can_edit_inscriptions && $campaign !== '') {
     $inscription_roster = saber_inscription_roster($pdo, $campaign, $year);
-    $ostmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
-    $ostmt->execute([$inscriptions_open_key]);
-    $inscriptions_open = (string)$ostmt->fetchColumn() === '1';
+    $ostmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?, ?, ?)');
+    $ostmt->execute([$inscriptions_open_key, $inscriptions_deadline_key, $inscriptions_printed_key, $inscriptions_reminded_key]);
+    $ivals = $ostmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $inscriptions_open       = (string)($ivals[$inscriptions_open_key] ?? '') === '1';
+    $inscriptions_deadline   = saber_valid_date((string)($ivals[$inscriptions_deadline_key] ?? ''));
+    $inscriptions_printed_at = (string)($ivals[$inscriptions_printed_key] ?? '');
+    $inscriptions_reminded   = (string)($ivals[$inscriptions_reminded_key] ?? '');
 }
 
 $raised_total = $raised_online + $offline;
@@ -424,20 +517,37 @@ echo show_flash();
       $with_text = count(array_filter($inscription_roster, fn($r) => (string)($r['inscription'] ?? '') !== ''));
       $is_active = $campaign === $active_slug;
       $public_url = 'https://alabamafalcons.org/saber-inscription.html';
+      $has_awards = saber_awards_available($pdo);
+      $awarded_rows = array_filter($inscription_roster, fn($r) => (int)$r['awarded'] === 1);
+      $awarded_count = count($awarded_rows);
+      $awarded_with_text = count(array_filter($awarded_rows, fn($r) => (string)($r['inscription'] ?? '') !== ''));
+      $deadline_passed = saber_deadline_passed($inscriptions_deadline);
+      $effectively_open = $inscriptions_open && !$deadline_passed;
+      // Who a reminder would go to right now (same rule as the handler).
+      $remind_count = count(array_filter($inscription_roster, fn($r) =>
+          (string)($r['inscription'] ?? '') === '' && ($awarded_count === 0 || (int)$r['awarded'] === 1)
+          && (filter_var(trim((string)$r['parent1_email']), FILTER_VALIDATE_EMAIL) || filter_var(trim((string)$r['parent2_email']), FILTER_VALIDATE_EMAIL))));
+      $show_formats = count(saber_year_formats()) > 1;
+      [$reminded_at, $reminded_n] = array_pad(explode('|', $inscriptions_reminded, 2), 2, '');
     ?>
     <p style="font-size:.82rem;color:#9aa5b4;margin-bottom:1rem">
       Families of Class of <?= h($year ?: '—') ?> cadets enter what goes on the saber at
       <a href="<?= h($public_url) ?>" target="_blank" rel="noopener"><?= h($public_url) ?></a>, verifying with cadet last name + birthday + email on file (no login).
-      They type the name only and pick how the class year is engraved (e.g. &ldquo;Class of <?= h($year ?: '2027') ?> - Name&rdquo;, &ldquo;Name <?= h($year ?: '2027') ?>&rdquo;, or no year); the year is added automatically on the PDF and in their confirmation email. They can change it until you close inscriptions. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
+      They type the name only; &ldquo;- Class of <?= h($year ?: '2027') ?>&rdquo; is added automatically (the only format the saber company engraves). They can change it until you close inscriptions or the deadline passes. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
+      <br><strong>Awarded</strong> = this cadet is actually getting a saber (paid members first, then the lottery). Once anyone is marked Awarded, the PDFs list only awarded cadets.
     </p>
     <?php if (!$is_active): ?>
       <div class="alert alert-error">This isn't the active campaign, so the public page isn't collecting for it. Its list is shown for reference.</div>
     <?php endif; ?>
+    <?php if (!$has_awards): ?>
+      <div class="alert alert-error">The Awarded column needs <code>migrate_saber_awards.sql</code> run in phpMyAdmin. Until then, the PDFs list every cadet who submitted.</div>
+    <?php endif; ?>
 
-    <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1.25rem">
+    <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem">
       <span style="font-size:.9rem">
-        <strong style="color:<?= $inscriptions_open ? '#1b5e20' : '#A6192E' ?>"><?= $inscriptions_open ? 'Open' : 'Closed' ?></strong>
+        <strong style="color:<?= $effectively_open ? '#1b5e20' : '#A6192E' ?>"><?= $effectively_open ? 'Open' : ($inscriptions_open && $deadline_passed ? 'Closed (deadline passed)' : 'Closed') ?></strong>
         &middot; <strong><?= $with_text ?></strong> of <?= count($inscription_roster) ?> submitted
+        <?php if ($awarded_count): ?>&middot; <strong><?= $awarded_with_text ?></strong> of <?= $awarded_count ?> awarded submitted<?php endif; ?>
       </span>
       <form method="POST" style="margin:0">
         <?= csrf_field() ?>
@@ -450,32 +560,79 @@ echo show_flash();
       <a class="btn btn-secondary btn-sm" href="saber-inscriptions-pdf.php?campaign=<?= urlencode($campaign) ?>&amp;layout=slips">PDF (One Page per Cadet)</a>
     </div>
 
+    <div style="display:flex;gap:1.25rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1.25rem;font-size:.85rem">
+      <form method="POST" style="display:flex;gap:.4rem;align-items:flex-end;margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="inscriptions_deadline">
+        <label style="margin:0">Deadline <span style="font-weight:400;color:#9aa5b4">(last day, closes automatically after)</span>
+          <input type="date" name="deadline" value="<?= h($inscriptions_deadline) ?>" style="width:auto;display:block;margin-top:.2rem">
+        </label>
+        <button type="submit" class="btn btn-secondary btn-sm">Save Deadline</button>
+      </form>
+      <form method="POST" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="inscriptions_remind">
+        <button type="submit" class="btn btn-secondary btn-sm" <?= ($effectively_open && $is_active && $remind_count) ? '' : 'disabled' ?>
+          onclick="return confirm('Email a reminder to <?= (int)$remind_count ?> <?= $remind_count === 1 ? 'family' : 'families' ?> who <?= $awarded_count ? 'are awarded a saber but ' : '' ?>haven\'t submitted?')">
+          Remind <?= (int)$remind_count ?> <?= $awarded_count ? 'Awarded ' : '' ?><?= $remind_count === 1 ? 'Family' : 'Families' ?> Without One
+        </button>
+      </form>
+      <span style="color:#9aa5b4">
+        <?php if ($reminded_at !== ''): ?>Last reminder: <?= h(date('M j, g:i a', strtotime($reminded_at))) ?> (<?= (int)$reminded_n ?> families).<?php endif; ?>
+        <?php if ($inscriptions_printed_at !== ''): ?> Last PDF: <?= h(date('M j, g:i a', strtotime($inscriptions_printed_at))) ?>.<?php endif; ?>
+      </span>
+    </div>
+
     <?php if (!$inscription_roster): ?>
       <p style="color:#9aa5b4;font-size:.85rem">No active members have a cadet in the Class of <?= h($year ?: '—') ?>. Check the Target Class Year above matches cadets' Graduation Year on file.</p>
     <?php else: ?>
     <table>
-      <thead><tr><th>Cadet</th><th>Inscription</th><th>Last Updated</th></tr></thead>
+      <thead><tr><th>Cadet</th><?php if ($has_awards): ?><th>Awarded</th><?php endif; ?><th>Inscription</th><th>Last Updated</th></tr></thead>
       <tbody>
-        <?php foreach ($inscription_roster as $r): ?>
-        <tr>
+        <?php foreach ($inscription_roster as $r):
+          $r_text = (string)($r['inscription'] ?? '');
+          $r_awarded = (int)$r['awarded'] === 1;
+          $name_mismatch = $r_text !== '' && !saber_inscription_has_last_name($r_text, $r);
+          $changed_since_print = $r_text !== '' && $inscriptions_printed_at !== '' && !empty($r['updated_at']) && strtotime($r['updated_at']) > strtotime($inscriptions_printed_at);
+        ?>
+        <tr<?= $r_awarded ? ' style="background:#fffbea"' : '' ?>>
           <td>
             <?= h(cadet_full_name($r)) ?>
             <?php if ((int)$r['membership_paid'] === 1): ?><span style="font-size:.7rem;background:#e8f5e9;color:#1b5e20;border-radius:99px;padding:.1rem .45rem;margin-left:.3rem">Paid</span><?php endif; ?>
           </td>
+          <?php if ($has_awards): ?>
+          <td>
+            <form method="POST" style="margin:0">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="inscription_award">
+              <input type="hidden" name="member_id" value="<?= (int)$r['id'] ?>">
+              <input type="hidden" name="awarded" value="<?= $r_awarded ? '0' : '1' ?>">
+              <button type="submit" class="btn btn-sm <?= $r_awarded ? 'btn-primary' : 'btn-secondary' ?>" title="<?= $r_awarded ? 'Click to remove from the saber list' : 'Click to mark as receiving a saber' ?>"><?= $r_awarded ? '✓ Awarded' : 'Award' ?></button>
+            </form>
+          </td>
+          <?php endif; ?>
           <td>
             <form method="POST" style="display:flex;gap:.4rem;margin:0">
               <?= csrf_field() ?>
               <input type="hidden" name="action" value="inscription_save">
               <input type="hidden" name="member_id" value="<?= (int)$r['id'] ?>">
-              <?php $r_pos = saber_year_position($r['year_position'] ?? 'after'); ?>
+              <?php if ($show_formats): $r_pos = saber_year_position($r['year_position'] ?? 'after'); ?>
               <select name="position" title="How the class year is engraved" style="width:auto;font-weight:600">
                 <?php foreach (saber_year_formats() as $fk => $fmt): ?>
                   <option value="<?= h($fk) ?>" <?= $r_pos === $fk ? 'selected' : '' ?>><?= h($fk === 'none' ? 'Name only (no year)' : strtr($fmt, ['{N}' => 'Name', '{Y}' => $year])) ?></option>
                 <?php endforeach; ?>
               </select>
-              <input type="text" name="inscription" value="<?= h((string)($r['inscription'] ?? '')) ?>" maxlength="<?= SABER_INSCRIPTION_MAX ?>" placeholder="Not submitted" style="flex:1;min-width:180px;font-weight:600">
+              <?php endif; ?>
+              <input type="text" name="inscription" value="<?= h($r_text) ?>" maxlength="<?= SABER_INSCRIPTION_MAX ?>" placeholder="Not submitted" style="flex:1;min-width:180px;font-weight:600">
+              <?php if (!$show_formats): ?><span style="align-self:center;font-weight:600;color:#5a6a7a;white-space:nowrap">- Class of <?= h($year) ?></span><?php endif; ?>
               <button type="submit" class="btn btn-secondary btn-sm">Save</button>
             </form>
+            <?php if ($name_mismatch): ?>
+              <div style="font-size:.75rem;color:#A6192E;margin-top:.2rem">⚠ Doesn't contain the last name on file (&ldquo;<?= h((string)$r['cadet_last_name']) ?>&rdquo;) — check spelling.</div>
+            <?php endif; ?>
+            <?php if ($changed_since_print): ?>
+              <div style="font-size:.75rem;color:#8a5a00;margin-top:.2rem">↻ Changed after the last PDF was downloaded — re-download before ordering.</div>
+            <?php endif; ?>
           </td>
           <td style="font-size:.8rem;color:#5a6a7a;white-space:nowrap">
             <?php if (!empty($r['updated_at'])): ?>

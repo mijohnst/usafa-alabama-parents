@@ -72,6 +72,7 @@
     .status.success { display: block; background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
     .status.error { display: block; background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
 
+    .deadline-note { background: #fff8e1; border-left: 4px solid #FFC72C; border-radius: 4px; padding: .7rem 1rem; margin-bottom: 1.25rem; color: #5f4c00; font-weight: 600; font-size: .92rem; }
     .closed-box { background: var(--light); border-left: 4px solid var(--accent); border-radius: 4px; padding: 1.5rem 2rem; color: var(--gray); }
 
     /* FOOTER */
@@ -168,6 +169,8 @@
   <section class="section">
     <p class="intro">Tell us exactly what should be engraved on your cadet's graduation saber. Only families of cadets in the graduating class can use this page. Submitting an inscription does not by itself guarantee a saber — see <a href="fundraiser.html" style="color:var(--blue)">how sabers are awarded</a>.</p>
 
+    <div class="deadline-note" id="deadlineNote" style="display:none"></div>
+
     <!-- Shown when no campaign is active or the status can't load -->
     <div class="closed-box" id="closedBox" style="display:none"></div>
 
@@ -205,8 +208,8 @@
         <div class="family-banner" id="familyBanner"></div>
         <div class="form-group">
           <label for="inscription">Inscription *</label>
-          <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2nd Lt John A. Smith" />
-          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any prefix (like 2nd Lt). Don't type the class year; choose how it's engraved below. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
+          <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2d Lt John A. Smith" />
+          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any rank (the Air Force abbreviation is &ldquo;2d Lt&rdquo;). Don't type the class year; &ldquo;- Class of <span class="yr">2027</span>&rdquo; is added after the name automatically. If the line is too long, the engraver stacks it onto two lines in smaller text. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
         </div>
         <!-- Options come from saber_year_formats() via the GET response. -->
         <fieldset class="form-group year-position" id="positionGroup" style="display:none">
@@ -302,7 +305,9 @@
     function buildFormatOptions() {
       var box = $('positionOptions');
       box.innerHTML = '';
-      if (!formats) return;
+      // Nothing to choose with a single format (the saber company's only
+      // one is "Name - Class of 2027").
+      if (!formats || Object.keys(formats).length < 2) return;
       Object.keys(formats).forEach(function(key) {
         var label = document.createElement('label');
         var input = document.createElement('input');
@@ -335,6 +340,11 @@
         formats = d.formats || null;
         defaultFormat = d.defaultFormat || 'after';
         buildFormatOptions();
+        document.querySelectorAll('.hint .yr').forEach(function(el) { el.textContent = classYear; });
+        if (d.deadline && isOpen) {
+          $('deadlineNote').textContent = 'Inscriptions close ' + d.deadline + '. You can change yours anytime until then.';
+          $('deadlineNote').style.display = 'block';
+        }
         $('formCard').style.display = 'block';
         updatePreview();
       })

@@ -52,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'success' => true, 'year' => $c['year'], 'open' => $c['open'], 'max' => SABER_INSCRIPTION_MAX,
         'formats' => saber_has_year_position($pdo) ? saber_year_formats() : null,
         'defaultFormat' => 'after',
+        'deadline' => saber_deadline_label($c['deadline']),
     ]);
     exit();
 }
@@ -221,7 +222,8 @@ if ($action === 'save') {
               . "    " . saber_engraving($inscription, $c['year'], $position) . "\n\n"
               . "Please check the spelling, capitalization, and punctuation carefully — it\n"
               . "will be engraved exactly as shown above.\n\n"
-              . "Need to fix something? Use the same page again before inscriptions close:\n$link\n\n"
+              . "Need to fix something? Use the same page again before inscriptions close"
+              . ($c['deadline'] !== '' ? ' on ' . saber_deadline_label($c['deadline']) : '') . ":\n$link\n\n"
               . "Questions? Contact treasurer@alabamafalcons.org.\n\n"
               . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
         send_notification($entry['email'], "Saber inscription received: Cadet {$cadet}", $body);

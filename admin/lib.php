@@ -719,20 +719,47 @@ function campaign_cadet_count_and_goal(PDO $pdo, string $slug): array {
 // The active campaign as the public inscription form sees it, or null when
 // no campaign is active. 'open' is false when the setting row is missing
 // (migration not run, or a campaign created before this existed) — the
-// form stays closed until an officer explicitly opens it.
+// form stays closed until an officer explicitly opens it — and also once
+// the optional deadline (a YYYY-MM-DD site setting, inclusive, Central
+// time) has passed, so a late edit can't slip in after the order is printed.
 function saber_inscription_campaign(PDO $pdo): ?array {
     $slug = active_campaign_slug($pdo);
     if (!$slug) return null;
-    $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?)');
-    $stmt->execute(["fundraiser_{$slug}_year", "fundraiser_{$slug}_inscriptions_open"]);
+    $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?, ?)');
+    $stmt->execute(["fundraiser_{$slug}_year", "fundraiser_{$slug}_inscriptions_open", "fundraiser_{$slug}_inscriptions_deadline"]);
     $vals = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     $year = trim((string)($vals["fundraiser_{$slug}_year"] ?? ''));
     if ($year === '') return null;
+    $deadline = saber_valid_date((string)($vals["fundraiser_{$slug}_inscriptions_deadline"] ?? ''));
+    $switched_on = (string)($vals["fundraiser_{$slug}_inscriptions_open"] ?? '0') === '1';
     return [
-        'slug' => $slug,
-        'year' => $year,
-        'open' => (string)($vals["fundraiser_{$slug}_inscriptions_open"] ?? '0') === '1',
+        'slug'     => $slug,
+        'year'     => $year,
+        'open'     => $switched_on && !saber_deadline_passed($deadline),
+        'deadline' => $deadline,
     ];
+}
+
+// A YYYY-MM-DD string, or '' for anything else.
+function saber_valid_date(string $s): string {
+    $s = trim($s);
+    return preg_match('/^\d{4}-\d{2}-\d{2}$/', $s) ? $s : '';
+}
+
+// True once the day after $deadline has started. '' (no deadline) never passes.
+function saber_deadline_passed(string $deadline): bool {
+    return $deadline !== '' && date('Y-m-d') > $deadline;
+}
+
+// "Friday, January 15, 2027" for families; '' when there's no deadline.
+function saber_deadline_label(string $deadline): string {
+    return $deadline === '' ? '' : date('l, F j, Y', strtotime($deadline . ' 12:00:00'));
+}
+
+// Upsert one fundraiser_* site setting.
+function saber_save_setting(PDO $pdo, string $key, string $label, string $value): void {
+    $pdo->prepare("INSERT INTO site_settings (setting_key, setting_label, setting_value, setting_type) VALUES (?, ?, ?, 'text') ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)")
+        ->execute([$key, $label, $value]);
 }
 
 // Phones turn ' and " into curly quotes, which most engravers can't cut
@@ -744,11 +771,11 @@ function clean_saber_inscription(string $raw): string {
     return trim(preg_replace('/\s+/', ' ', $s));
 }
 
-// The class year is added automatically in the family's chosen format (see
-// saber_year_formats()), so families type only the name. Drop a leading or
-// trailing copy in case they typed it anyway ("Class of 2027 - …", "… 2027",
-// "… class of '27"), so it isn't engraved twice. Not applied for the
-// no-year format, where whatever they typed is what they want.
+// The class year is added automatically (see saber_year_formats()), so
+// families type only the name. Drop a leading or trailing copy in case they
+// typed it anyway ("Class of 2027 - …", "… 2027", "… class of '27"), so it
+// isn't engraved twice. Callers skip this for a 'none' format if one is
+// ever offered again, where whatever they typed is what they want.
 function saber_strip_year(string $s, string $year): string {
     if ($year === '') return $s;
     $y = '(?:class\s+of\s+)?(?:' . preg_quote($year, '~') . "|'" . preg_quote(substr($year, -2), '~') . ')';
@@ -759,15 +786,15 @@ function saber_strip_year(string $s, string $year): string {
 // How the class year is combined with the name, keyed by the value stored in
 // saber_inscriptions.year_position (VARCHAR(6), so keys stay ≤ 6 chars).
 // {N} = name, {Y} = class year. Order here is the order families see.
-// 'before'/'after' keep their original meaning for rows already saved.
+// The saber company only engraves "Name - Class of 2027" (Nov 2026: "keep
+// the name – class structure only"; names too long for one line are
+// stacked by them in smaller text), so there's one format and no choice is
+// shown. Rows saved earlier with another key fall back to it via
+// saber_year_position(). Add entries here to offer a choice again — the
+// public page and officer list show one automatically when there's > 1.
 function saber_year_formats(): array {
     return [
-        'before' => 'Class of {Y} - {N}',
-        'yrbef'  => '{Y} - {N}',
-        'after'  => '{N} - Class of {Y}',
-        'yraft'  => '{N} - {Y}',
-        'yrspc'  => '{N} {Y}',
-        'none'   => '{N}',
+        'after' => '{N} - Class of {Y}',
     ];
 }
 
@@ -806,24 +833,66 @@ function saber_inscription_error(string $s): ?string {
     return null;
 }
 
+// Whether migrate_saber_awards.sql has created saber_awards — which cadets
+// are actually getting a saber this campaign (paid members first, then the
+// lottery), so the order PDF lists only them.
+function saber_awards_available(PDO $pdo): bool {
+    static $has = null;
+    if ($has === null) {
+        try {
+            $pdo->query('SELECT 1 FROM `saber_awards` LIMIT 1');
+            $has = true;
+        } catch (\PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
+}
+
+// Mark or unmark one cadet as receiving a saber in $slug.
+function set_saber_award(PDO $pdo, string $slug, int $memberId, bool $awarded, string $by): void {
+    if ($awarded) {
+        $pdo->prepare('INSERT IGNORE INTO saber_awards (campaign_slug, member_id, awarded_by) VALUES (?, ?, ?)')
+            ->execute([$slug, $memberId, mb_substr($by, 0, 100)]);
+    } else {
+        $pdo->prepare('DELETE FROM saber_awards WHERE campaign_slug = ? AND member_id = ?')->execute([$slug, $memberId]);
+    }
+}
+
+// False when the inscription doesn't contain the cadet's last name on file
+// (ignoring case, periods, commas, and a Jr/III-style suffix) — flags a
+// likely typo for an officer to double-check. Not a validation error: a
+// family may legitimately use a different name.
+function saber_inscription_has_last_name(string $inscription, array $m): bool {
+    $last = strip_name_suffix(normalize_name((string)($m['cadet_last_name'] ?? '')));
+    if ($last === '') return true;
+    // Whole word only, so "Smith" isn't satisfied by "Smithson".
+    return (bool)preg_match('~(?<![a-z0-9])' . preg_quote($last, '~') . '(?![a-z0-9])~', normalize_name($inscription));
+}
+
 // Every active cadet in $classYear with their inscription for $slug (or
-// null), for the admin list and PDF. Null when saber_inscriptions doesn't
-// exist yet (migration not run).
+// null) and whether they're awarded a saber, for the admin list and PDF.
+// Null when saber_inscriptions doesn't exist yet (migration not run).
 function saber_inscription_roster(PDO $pdo, string $slug, string $classYear): ?array {
     if ($classYear === '') return [];
     // Aliased so the array key is lowercase even if phpMyAdmin capitalised
     // the column when the migration ran.
     $pos = saber_has_year_position($pdo) ? 'si.year_position AS year_position' : "'after' AS year_position";
+    $has_awards = saber_awards_available($pdo);
+    $awarded = $has_awards ? '(sa.id IS NOT NULL) AS awarded' : '0 AS awarded';
+    $award_join = $has_awards ? 'LEFT JOIN saber_awards sa ON sa.member_id = m.id AND sa.campaign_slug = ?' : '';
     try {
         $stmt = $pdo->prepare(
             "SELECT m.id, m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix,
-                    m.membership_paid, si.inscription, si.updated_at, si.updated_by, {$pos}
+                    m.parent1_email, m.parent2_email,
+                    m.membership_paid, si.inscription, si.updated_at, si.updated_by, {$pos}, {$awarded}
              FROM members m
              LEFT JOIN saber_inscriptions si ON si.member_id = m.id AND si.campaign_slug = ?
+             {$award_join}
              WHERE m.archived = 0 AND m.class_year = ?
              ORDER BY m.cadet_last_name ASC, m.cadet_first_name ASC"
         );
-        $stmt->execute([$slug, $classYear]);
+        $stmt->execute($has_awards ? [$slug, $slug, $classYear] : [$slug, $classYear]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (\PDOException $e) {
         return null;
