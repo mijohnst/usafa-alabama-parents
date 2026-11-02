@@ -14,6 +14,12 @@ try {
          PDO::ATTR_EMULATE_PREPARES => false,
          PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC] + db_timezone_init_option()
     );
+    try {
+        archive_past_events($pdo);
+    } catch (PDOException $e) {
+        // Never let the auto-move break the public feed.
+        error_log('events-feed: archive_past_events failed — ' . $e->getMessage());
+    }
     $rows = $pdo->query(
         "SELECT id, title, event_date, event_date_end, event_time, location, description, tag,
                 group_label, cta_text, cta_url, cta_note, cta_deadline, countdown_type, sort_order

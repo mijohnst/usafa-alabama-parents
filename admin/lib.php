@@ -139,6 +139,19 @@ function signup_open_event(PDO $pdo, int $eventId): ?array {
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
+// Move dated events whose last day (end date, else start date) is before
+// today into Past Events. Undated events are left in whatever group an
+// officer put them in. Idempotent and cheap, so it runs on every load of
+// admin/events.php and events-feed.php instead of needing a cron job.
+// Returns how many events were moved.
+function archive_past_events(PDO $pdo): int {
+    return $pdo->exec(
+        "UPDATE events SET group_label = 'past'
+         WHERE group_label <> 'past' AND event_date IS NOT NULL
+           AND COALESCE(event_date_end, event_date) < CURDATE()"
+    );
+}
+
 // Family label for lists and greetings — "Smith Family (Cadet John Smith,
 // 2027)" style pieces, built from a members row.
 function member_family_label(array $m): string {

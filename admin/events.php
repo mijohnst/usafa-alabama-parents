@@ -74,8 +74,9 @@ if (isset($_GET['edit'])) {
     $s = $pdo->prepare('SELECT * FROM events WHERE id=?'); $s->execute([(int)$_GET['edit']]); $edit = $s->fetch();
 }
 
+archive_past_events($pdo); // dated events whose day has passed → Past Events
 // Same order as the website (events-feed.php).
-$events = $pdo->query('SELECT * FROM events ORDER BY sort_order ASC, event_date ASC')->fetchAll();
+$events =$pdo->query('SELECT * FROM events ORDER BY sort_order ASC, event_date ASC')->fetchAll();
 $groups = ['upcoming'=>'Upcoming','past'=>'Past Events'];
 $tags   = ['Social','Academy','Cadet Support','Community','Other'];
 
@@ -97,7 +98,7 @@ echo show_flash();
     <a href="dashboard.php" class="btn btn-secondary">← Dashboard</a>
   </div>
 </div>
-<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Changes here update the main website's Events section automatically.</p>
+<p style="font-size:.82rem;color:#5a6a7a;margin-bottom:1.25rem">Changes here update the main website's Events section automatically. Dated events move to Past Events on their own the day after they end; events without a date stay where you put them.</p>
 
 <?php if (!empty($errors)): ?>
   <div class="alert alert-error"><?= implode('<br>', array_map('htmlspecialchars',$errors)) ?></div>
@@ -116,7 +117,7 @@ echo show_flash();
     </div>
     <div class="form-row col-3">
       <div class="form-group">
-        <label>Group</label>
+        <label>Group <span style="font-weight:400;font-size:.72rem;color:#9aa5b4">moves to Past automatically after the date</span></label>
         <select name="group_label">
           <?php foreach ($groups as $k=>$v): ?>
             <option value="<?= $k ?>" <?= ($edit['group_label']??'upcoming')===$k?'selected':''?>><?= $v ?></option>
