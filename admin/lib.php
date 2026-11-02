@@ -675,6 +675,7 @@ function create_donation_campaign(PDO $pdo, string $slug, string $label, string 
         "fundraiser_{$slug}_deadline"       => $deadline,
         "fundraiser_{$slug}_cadet_count"    => (string)$cadetCount,
         "fundraiser_{$slug}_show_homepage"  => $showHomepage ? '1' : '0',
+        "fundraiser_{$slug}_inscriptions_open" => '0',
     ];
     $stmt = $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)');
     foreach ($settings as $key => $val) $stmt->execute([$key, $val]);
@@ -694,6 +695,81 @@ function campaign_cadet_count_and_goal(PDO $pdo, string $slug): array {
     $stmt->execute(["fundraiser_{$slug}_cadet_count"]);
     $count = (int)$stmt->fetchColumn();
     return [$count, $count * SABER_PRICE];
+}
+
+// ── Saber inscriptions ──────────────────────────────────────────────────
+// What a graduating cadet's family wants engraved on the saber, collected
+// on saber-inscription.html and printed for the order from
+// admin/fundraiser.php. Stored per campaign in saber_inscriptions (one row
+// per campaign + member), so next year's campaign starts with an empty list.
+
+// The active campaign as the public inscription form sees it, or null when
+// no campaign is active. 'open' is false when the setting row is missing
+// (migration not run, or a campaign created before this existed) — the
+// form stays closed until an officer explicitly opens it.
+function saber_inscription_campaign(PDO $pdo): ?array {
+    $slug = active_campaign_slug($pdo);
+    if (!$slug) return null;
+    $stmt = $pdo->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (?, ?)');
+    $stmt->execute(["fundraiser_{$slug}_year", "fundraiser_{$slug}_inscriptions_open"]);
+    $vals = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $year = trim((string)($vals["fundraiser_{$slug}_year"] ?? ''));
+    if ($year === '') return null;
+    return [
+        'slug' => $slug,
+        'year' => $year,
+        'open' => (string)($vals["fundraiser_{$slug}_inscriptions_open"] ?? '0') === '1',
+    ];
+}
+
+// Phones turn ' and " into curly quotes, which most engravers can't cut
+// and which would fail the character check below for no visible reason —
+// straighten them, then collapse runs of whitespace.
+function clean_saber_inscription(string $raw): string {
+    $s = str_replace(["\u{2018}", "\u{2019}", "\u{201C}", "\u{201D}"], ["'", "'", '"', '"'], $raw);
+    return trim(preg_replace('/\s+/', ' ', $s));
+}
+
+// Null when the cleaned inscription is acceptable, otherwise the message to
+// show. Plain ASCII letters, digits, spaces, and basic punctuation only.
+function saber_inscription_error(string $s): ?string {
+    if ($s === '') return 'Please enter the inscription.';
+    if (mb_strlen($s) > SABER_INSCRIPTION_MAX) return 'The inscription can be at most ' . SABER_INSCRIPTION_MAX . ' characters (including spaces).';
+    if (!preg_match('~^[A-Za-z0-9 .,\'"&/#()\-]+$~', $s)) return 'The inscription can only use letters, numbers, spaces, and . , \' " & / # ( ) -';
+    return null;
+}
+
+// Every active cadet in $classYear with their inscription for $slug (or
+// null), for the admin list and PDF. Null when saber_inscriptions doesn't
+// exist yet (migration not run).
+function saber_inscription_roster(PDO $pdo, string $slug, string $classYear): ?array {
+    if ($classYear === '') return [];
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT m.id, m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix,
+                    m.membership_paid, si.inscription, si.updated_at, si.updated_by
+             FROM members m
+             LEFT JOIN saber_inscriptions si ON si.member_id = m.id AND si.campaign_slug = ?
+             WHERE m.archived = 0 AND m.class_year = ?
+             ORDER BY m.cadet_last_name ASC, m.cadet_first_name ASC'
+        );
+        $stmt->execute([$slug, $classYear]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (\PDOException $e) {
+        return null;
+    }
+}
+
+// Insert or replace one cadet's inscription. $updatedBy is 'Parent' for the
+// public form or the officer's name for an admin edit.
+function save_saber_inscription(PDO $pdo, string $slug, int $memberId, string $inscription, ?string $email, string $updatedBy): void {
+    $pdo->prepare(
+        'INSERT INTO saber_inscriptions (campaign_slug, member_id, inscription, submitted_email, updated_by)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE inscription = VALUES(inscription),
+                                 submitted_email = COALESCE(VALUES(submitted_email), submitted_email),
+                                 updated_by = VALUES(updated_by), updated_at = NOW()'
+    )->execute([$slug, $memberId, $inscription, $email, mb_substr($updatedBy, 0, 100)]);
 }
 
 

@@ -225,6 +225,14 @@ function can_manage_store(): bool {
     return is_club_officer() || is_treasurer() || is_secretary();
 }
 
+// Who sees and edits the Saber Inscriptions section of admin/fundraiser.php
+// and downloads its PDF. Narrower than require_finance() (which also lets
+// plain members view the fundraiser page) since this is per-cadet order
+// data, not campaign totals.
+function can_manage_saber_inscriptions(): bool {
+    return is_club_officer() || is_treasurer() || is_secretary();
+}
+
 // Admin/Treasurer can edit any purchase; Member/Secretary can only edit
 // their own. Officer (President/VP specifically, not Tech) can edit only a
 // still-Pending purchase — just enough that one redirected here to attach a
@@ -629,6 +637,12 @@ const INCOME_PAYMENT_METHODS = ['Check','Cash','Venmo','Zelle','PayPal','Bank Tr
 // goal from the Treasurer-edited cadet count, so this is the one place a
 // per-saber price change needs to happen server-side.
 const SABER_PRICE = 500;
+// Longest saber inscription a family can submit on saber-inscription.html
+// (and an officer can enter on admin/fundraiser.php). One line of text,
+// enforced server-side by saber_inscription_error() in lib.php and sent to
+// the page's maxlength by saber-inscription.php's GET, so this is the only
+// place to change it.
+const SABER_INSCRIPTION_MAX = 40;
 // Sequence position of each purchase status — used both to render the
 // progress stepper and to stop a Treasurer's raw Status-field edit from
 // skipping the workflow forward (see purchase-form.php).

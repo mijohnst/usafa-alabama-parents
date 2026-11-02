@@ -42,6 +42,47 @@ $all_keys          = $campaign !== '' ? [$offline_key, $year_key, $deadline_key,
 
 $post_action = trim($_POST['action'] ?? 'save');
 
+// Saber Inscriptions section (bottom of the page) — open/close the public
+// saber-inscription.html form for this campaign, and edit any cadet's
+// inscription. Each is a plain form POST that redirects back, so every
+// submit renders a fresh CSRF token.
+$can_edit_inscriptions = can_manage_saber_inscriptions();
+$inscriptions_open_key = "fundraiser_{$campaign}_inscriptions_open";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign !== '' && $post_action === 'inscriptions_toggle') {
+    csrf_verify();
+    $open = ($_POST['open'] ?? '') === '1' ? '1' : '0';
+    $pdo->prepare("INSERT INTO site_settings (setting_key,setting_label,setting_value,setting_type) VALUES (?,'Saber inscriptions open',?,'number') ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)")
+        ->execute([$inscriptions_open_key, $open]);
+    flash('success', $open === '1' ? 'Saber inscriptions are open — families can submit at saber-inscription.html.' : 'Saber inscriptions are closed — families can no longer change them.');
+    header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign !== '' && $post_action === 'inscription_save') {
+    csrf_verify();
+    $member_id = (int)($_POST['member_id'] ?? 0);
+    $text      = clean_saber_inscription((string)($_POST['inscription'] ?? ''));
+    $ystmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    $ystmt->execute([$year_key]);
+    $roster_year = trim((string)$ystmt->fetchColumn());
+    $mstmt = $pdo->prepare('SELECT class_year FROM members WHERE id = ? AND archived = 0');
+    $mstmt->execute([$member_id]);
+    $member_year = $mstmt->fetchColumn();
+
+    if ($roster_year === '' || $member_year === false || trim((string)$member_year) !== $roster_year) {
+        flash('error', "That cadet isn't in this campaign's class year.");
+    } elseif ($text === '') {
+        $pdo->prepare('DELETE FROM saber_inscriptions WHERE campaign_slug = ? AND member_id = ?')->execute([$campaign, $member_id]);
+        flash('success', 'Inscription removed.');
+    } elseif ($err = saber_inscription_error($text)) {
+        flash('error', h($err));
+    } else {
+        save_saber_inscription($pdo, $campaign, $member_id, $text, null, (string)($_SESSION['user_name'] ?? 'Officer'));
+        flash('success', 'Inscription saved.');
+    }
+    header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit && $post_action === 'activate') {
     csrf_verify();
     $target = trim($_POST['campaign'] ?? '');
@@ -197,6 +238,15 @@ if ($campaign !== '') {
     } catch (\PDOException $e) {
         // honoree_last_name column doesn't exist yet — no honoree section, not an error.
     }
+}
+
+$inscription_roster = null;
+$inscriptions_open  = false;
+if ($can_edit_inscriptions && $campaign !== '') {
+    $inscription_roster = saber_inscription_roster($pdo, $campaign, $year);
+    $ostmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    $ostmt->execute([$inscriptions_open_key]);
+    $inscriptions_open = (string)$ostmt->fetchColumn() === '1';
 }
 
 $raised_total = $raised_online + $offline;
@@ -362,6 +412,77 @@ echo show_flash();
     <?php endforeach; ?>
   <?php endif; ?>
 </div>
+
+<?php if ($can_edit_inscriptions): ?>
+<div class="card" style="max-width:900px" id="inscriptions">
+  <h2 style="margin-bottom:.25rem">🗡️ Saber Inscriptions</h2>
+  <?php if ($inscription_roster === null): ?>
+    <div class="alert alert-error" style="margin-top:1rem">The <code>saber_inscriptions</code> table doesn't exist yet. Run <code>migrate_saber_inscriptions.sql</code> in phpMyAdmin, then reload this page.</div>
+  <?php else: ?>
+    <?php
+      $with_text = count(array_filter($inscription_roster, fn($r) => (string)($r['inscription'] ?? '') !== ''));
+      $is_active = $campaign === $active_slug;
+      $public_url = 'https://alabamafalcons.org/saber-inscription.html';
+    ?>
+    <p style="font-size:.82rem;color:#9aa5b4;margin-bottom:1rem">
+      Families of Class of <?= h($year ?: '—') ?> cadets enter what goes on the saber at
+      <a href="<?= h($public_url) ?>" target="_blank" rel="noopener"><?= h($public_url) ?></a>, verifying with cadet last name + birthday + email on file (no login).
+      They can change it until you close inscriptions. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
+    </p>
+    <?php if (!$is_active): ?>
+      <div class="alert alert-error">This isn't the active campaign, so the public page isn't collecting for it. Its list is shown for reference.</div>
+    <?php endif; ?>
+
+    <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1.25rem">
+      <span style="font-size:.9rem">
+        <strong style="color:<?= $inscriptions_open ? '#1b5e20' : '#A6192E' ?>"><?= $inscriptions_open ? 'Open' : 'Closed' ?></strong>
+        &middot; <strong><?= $with_text ?></strong> of <?= count($inscription_roster) ?> submitted
+      </span>
+      <form method="POST" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="inscriptions_toggle">
+        <input type="hidden" name="open" value="<?= $inscriptions_open ? '0' : '1' ?>">
+        <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('<?= $inscriptions_open ? 'Close inscriptions? Families will no longer be able to change theirs.' : 'Open inscriptions so families can submit and edit them?' ?>')"><?= $inscriptions_open ? 'Close Inscriptions' : 'Open Inscriptions' ?></button>
+      </form>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('<?= h($public_url) ?>').then(()=>{this.textContent='Link Copied ✓'})">Copy Link for Families</button>
+      <a class="btn btn-primary btn-sm" href="saber-inscriptions-pdf.php?campaign=<?= urlencode($campaign) ?>">Download PDF (List)</a>
+      <a class="btn btn-secondary btn-sm" href="saber-inscriptions-pdf.php?campaign=<?= urlencode($campaign) ?>&amp;layout=slips">PDF (One Page per Cadet)</a>
+    </div>
+
+    <?php if (!$inscription_roster): ?>
+      <p style="color:#9aa5b4;font-size:.85rem">No active members have a cadet in the Class of <?= h($year ?: '—') ?>. Check the Target Class Year above matches cadets' Graduation Year on file.</p>
+    <?php else: ?>
+    <table>
+      <thead><tr><th>Cadet</th><th>Inscription</th><th>Last Updated</th></tr></thead>
+      <tbody>
+        <?php foreach ($inscription_roster as $r): ?>
+        <tr>
+          <td>
+            <?= h(cadet_full_name($r)) ?>
+            <?php if ((int)$r['membership_paid'] === 1): ?><span style="font-size:.7rem;background:#e8f5e9;color:#1b5e20;border-radius:99px;padding:.1rem .45rem;margin-left:.3rem">Paid</span><?php endif; ?>
+          </td>
+          <td>
+            <form method="POST" style="display:flex;gap:.4rem;margin:0">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="inscription_save">
+              <input type="hidden" name="member_id" value="<?= (int)$r['id'] ?>">
+              <input type="text" name="inscription" value="<?= h((string)($r['inscription'] ?? '')) ?>" maxlength="<?= SABER_INSCRIPTION_MAX ?>" placeholder="Not submitted" style="flex:1;min-width:180px;font-weight:600">
+              <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+            </form>
+          </td>
+          <td style="font-size:.8rem;color:#5a6a7a;white-space:nowrap">
+            <?php if (!empty($r['updated_at'])): ?>
+              <?= h(date('M j, Y', strtotime($r['updated_at']))) ?><br><?= h((string)($r['updated_by'] ?? '')) ?>
+            <?php else: ?>—<?php endif; ?>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
 <?php endif; ?>
 
 <?php if ($can_edit): ?>
