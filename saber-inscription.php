@@ -125,11 +125,16 @@ if ($action === 'lookup') {
     ];
 
     $existing = null;
+    $position = 'after';
     try {
-        $s = $pdo->prepare('SELECT inscription FROM saber_inscriptions WHERE campaign_slug = ? AND member_id = ?');
+        $pos_col = saber_has_year_position($pdo) ? 'year_position AS year_position' : "'after' AS year_position";
+        $s = $pdo->prepare("SELECT inscription, {$pos_col} FROM saber_inscriptions WHERE campaign_slug = ? AND member_id = ?");
         $s->execute([$c['slug'], (int)$m['id']]);
-        $val = $s->fetchColumn();
-        if ($val !== false) $existing = (string)$val;
+        $row = $s->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $existing = (string)$row['inscription'];
+            $position = saber_year_position($row['year_position']);
+        }
     } catch (PDOException $e) {
         // migrate_saber_inscriptions.sql not run yet — the save below reports it.
     }
@@ -140,6 +145,7 @@ if ($action === 'lookup') {
         'family'   => member_family_label($m),
         'cadet'    => cadet_full_name($m),
         'existing' => $existing,
+        'position' => $position,
         'open'     => $c['open'],
     ]);
     exit();
@@ -167,6 +173,9 @@ if ($action === 'save') {
 
     // Stored without the year; saber_engraving() appends it for display/print.
     $inscription = saber_strip_year(clean_saber_inscription((string)($payload['inscription'] ?? '')), $c['year']);
+    // Until migrate_saber_year_position.sql runs there's nowhere to store
+    // 'before', so report the 'after' that will actually be printed.
+    $position    = saber_has_year_position($pdo) ? saber_year_position((string)($payload['position'] ?? 'after')) : 'after';
     if ($err = saber_inscription_error($inscription)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => $err]);
@@ -182,14 +191,14 @@ if ($action === 'save') {
             echo json_encode(['success' => false, 'error' => INSCRIPTION_UNAVAILABLE_MSG]);
             exit();
         }
-        save_saber_inscription($pdo, $c['slug'], $member_id, $inscription, $entry['email'], 'Parent');
+        save_saber_inscription($pdo, $c['slug'], $member_id, $inscription, $entry['email'], 'Parent', $position);
     } catch (PDOException $e) {
         error_log('saber-inscription: ' . $e->getMessage());
         echo json_encode(['success' => false, 'error' => "Inscriptions can't be saved right now. Please email treasurer@alabamafalcons.org with your cadet's name and the inscription."]);
         exit();
     }
 
-    send_json_and_continue(['success' => true, 'inscription' => $inscription]);
+    send_json_and_continue(['success' => true, 'inscription' => $inscription, 'position' => $position]);
 
     // Confirmation to the address they verified with, so the family has a
     // written copy of exactly what was submitted. Best-effort only — the
@@ -202,7 +211,7 @@ if ($action === 'save') {
               . "Saber Inscription Received\n"
               . str_repeat('─', 48) . "\n\n"
               . "We received the saber inscription for Cadet {$cadet} (Class of {$c['year']}):\n\n"
-              . "    " . saber_engraving($inscription, $c['year']) . "\n\n"
+              . "    " . saber_engraving($inscription, $c['year'], $position) . "\n\n"
               . "Please check the spelling, capitalization, and punctuation carefully — it\n"
               . "will be engraved exactly as shown above.\n\n"
               . "Need to fix something? Use the same page again before inscriptions close:\n$link\n\n"

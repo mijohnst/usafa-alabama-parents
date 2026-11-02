@@ -42,7 +42,7 @@ $missing = [];
 foreach ($roster as $r) {
     $name = cadet_full_name($r);
     if ((string)($r['inscription'] ?? '') !== '') {
-        $rows[] = ['cadet' => $name, 'inscription' => saber_engraving((string)$r['inscription'], $year)];
+        $rows[] = ['cadet' => $name, 'inscription' => saber_engraving((string)$r['inscription'], $year, $r['year_position'] ?? 'after')];
     } else {
         $missing[] = $name;
     }

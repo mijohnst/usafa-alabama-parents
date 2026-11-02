@@ -36,6 +36,13 @@
     .form-group .hint { font-size: 0.78rem; color: var(--gray); margin-top: 0.3rem; display: flex; justify-content: space-between; gap: 1rem; }
     .form-group .hint .over { color: var(--accent); font-weight: 600; }
     #charCount { white-space: nowrap; }
+    .year-position { border: none; padding: 0; display: flex; gap: .75rem; flex-wrap: wrap; }
+    .year-position legend { font-weight: 600; color: var(--navy); font-size: 0.9rem; margin-bottom: 0.4rem; padding: 0; width: 100%; }
+    .year-position label { flex: 1; min-width: 150px; display: flex; align-items: center; gap: .55rem; background: var(--white); border: 1px solid var(--silver2); border-radius: 4px; padding: .7rem .9rem; cursor: pointer; color: var(--navy); font-weight: 600; }
+    .year-position label:has(input:checked) { border-color: var(--navy); box-shadow: 0 0 0 2px rgba(0, 53, 148, 0.15); }
+    .year-position input { width: auto; margin: 0; }
+    .year-position input:disabled + .pos-example { color: var(--gray); }
+    .pos-example { font-family: "Times New Roman", Times, "Liberation Serif", serif; font-size: 1.1rem; }
 
     /* Engraving preview */
     .preview { background: linear-gradient(180deg, #f4f5f6 0%, #d9dcdf 100%); border: 1px solid var(--silver2); border-radius: 4px; padding: 1.25rem 1rem; margin: .25rem 0 1.25rem; text-align: center; }
@@ -197,8 +204,13 @@
         <div class="form-group">
           <label for="inscription">Inscription *</label>
           <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2nd Lt John A. Smith" />
-          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any prefix (like 2nd Lt). The class year is added after the name automatically. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
+          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any prefix (like 2nd Lt). Don't type the class year; choose where it goes below. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
         </div>
+        <fieldset class="form-group year-position" id="positionGroup">
+          <legend>Class Year Placement *</legend>
+          <label><input type="radio" name="position" value="before" /> <span class="pos-example"><span class="yr">2027</span> - Name</span></label>
+          <label><input type="radio" name="position" value="after" checked /> <span class="pos-example">Name - <span class="yr">2027</span></span></label>
+        </fieldset>
         <div class="preview" id="previewBox" aria-live="polite">
           <div class="preview-label">Will be engraved as</div>
           <div class="preview-text empty" id="previewText">Start typing above</div>
@@ -254,13 +266,26 @@
     function cleaned(s) {
       return s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
     }
-    // The class year is engraved automatically, so drop it if they typed it
-    // anyway (same as saber_strip_year() server-side) — never engraved twice.
+    // The class year is engraved automatically, so drop a leading or trailing
+    // copy if they typed it anyway (same as saber_strip_year() server-side).
     function nameOnly(s) {
-      s = cleaned(s);
+      s = cleaned(s).replace(/[–—]/g, '-');
       if (!classYear) return s;
-      var re = new RegExp("[\\s,]+(?:" + classYear + "|'" + classYear.slice(-2) + ")$");
-      return s.replace(re, '').trim();
+      var y = "(?:" + classYear + "|'" + classYear.slice(-2) + ")";
+      return s.replace(new RegExp("^" + y + "[\\s,\\-]+"), '')
+              .replace(new RegExp("[\\s,\\-]+" + y + "$"), '').trim();
+    }
+    function position() {
+      var el = document.querySelector('input[name="position"]:checked');
+      return el && el.value === 'before' ? 'before' : 'after';
+    }
+    function setPosition(p) {
+      document.querySelector('input[name="position"][value="' + (p === 'before' ? 'before' : 'after') + '"]').checked = true;
+    }
+    // Same format as saber_engraving() server-side.
+    function engraving(name) {
+      if (!classYear) return name;
+      return position() === 'before' ? classYear + ' - ' + name : name + ' - ' + classYear;
     }
 
     // ── Campaign status ─────────────────────────────────────────────────
@@ -273,6 +298,7 @@
         $('inscription').maxLength = maxLen;
         $('heroSub').textContent = 'For families of Class of ' + d.year + ' cadets';
         classYear = String(d.year || '');
+        document.querySelectorAll('#positionGroup .yr').forEach(function(el) { el.textContent = classYear; });
         $('formCard').style.display = 'block';
         updatePreview();
       })
@@ -314,6 +340,7 @@
         $('familyBanner').appendChild(small);
         if (d.existing) {
           $('inscription').value = d.existing;
+          setPosition(d.position);
           $('saveBtn').textContent = 'Update Inscription';
         }
         if (!isOpen) {
@@ -321,10 +348,12 @@
           // hide the empty box entirely so it doesn't look like a broken form.
           $('familyBanner').className = 'family-banner closed';
           $('inscription').readOnly = true;
+          document.querySelectorAll('input[name="position"]').forEach(function(el) { el.disabled = true; });
           $('confirmRow').style.display = 'none';
           $('saveBtn').style.display = 'none';
           if (!d.existing) {
             $('inscription').parentNode.style.display = 'none';
+            $('positionGroup').style.display = 'none';
             $('previewBox').style.display = 'none';
           }
         }
@@ -342,7 +371,7 @@
     function updatePreview() {
       var val = nameOnly($('inscription').value);
       var p = $('previewText');
-      if (val) { p.textContent = val + (classYear ? ' ' + classYear : ''); p.className = 'preview-text'; }
+      if (val) { p.textContent = engraving(val); p.className = 'preview-text'; }
       else { p.textContent = 'Start typing above'; p.className = 'preview-text empty'; }
       var cnt = $('charCount');
       cnt.textContent = val.length + ' / ' + maxLen;
@@ -353,6 +382,13 @@
       $('confirmCheck').checked = false;
       clearStatus('saveStatus');
       updatePreview();
+    });
+    document.querySelectorAll('input[name="position"]').forEach(function(el) {
+      el.addEventListener('change', function() {
+        $('confirmCheck').checked = false;
+        clearStatus('saveStatus');
+        updatePreview();
+      });
     });
 
     $('saveBtn').addEventListener('click', async function() {
@@ -366,9 +402,10 @@
       var label = btn.textContent;
       btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>Please wait…';
       try {
-        var d = await post({ action: 'save', token: token, inscription: val });
+        var d = await post({ action: 'save', token: token, inscription: val, position: position() });
         if (!d.success) { showStatus('saveStatus', d.error || 'Could not save the inscription.', 'error'); btn.textContent = label; return; }
         $('inscription').value = d.inscription;
+        setPosition(d.position);
         updatePreview();
         showStatus('saveStatus', 'Saved! A copy has been emailed to you. You can change it here anytime until inscriptions close.', 'success');
         btn.textContent = 'Update Inscription';

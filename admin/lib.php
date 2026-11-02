@@ -739,23 +739,46 @@ function saber_inscription_campaign(PDO $pdo): ?array {
 // and which would fail the character check below for no visible reason —
 // straighten them, then collapse runs of whitespace.
 function clean_saber_inscription(string $raw): string {
-    $s = str_replace(["\u{2018}", "\u{2019}", "\u{201C}", "\u{201D}"], ["'", "'", '"', '"'], $raw);
+    // Phones also auto-convert "-" to en/em dashes; the engraver gets a hyphen.
+    $s = str_replace(["\u{2018}", "\u{2019}", "\u{201C}", "\u{201D}", "\u{2013}", "\u{2014}"], ["'", "'", '"', '"', '-', '-'], $raw);
     return trim(preg_replace('/\s+/', ' ', $s));
 }
 
-// The class year is engraved after the name automatically (blade format is
-// "Name 2027"), so families type only the name. Drop a trailing copy of the
-// year ("… 2027" / "… '27") in case they typed it anyway, so it isn't
-// engraved twice.
+// The class year is added automatically — before ("2027 - Name") or after
+// ("Name - 2027") the name, the family's choice — so families type only the
+// name. Drop a leading or trailing copy of the year ("2027 - …", "… 2027",
+// "… - '27") in case they typed it anyway, so it isn't engraved twice.
 function saber_strip_year(string $s, string $year): string {
     if ($year === '') return $s;
-    $yy = substr($year, -2);
-    return trim(preg_replace('~[\s,]+(?:' . preg_quote($year, '~') . "|'" . preg_quote($yy, '~') . ')$~', '', $s));
+    $y = '(?:' . preg_quote($year, '~') . "|'" . preg_quote(substr($year, -2), '~') . ')';
+    $s = preg_replace('~^' . $y . '[\s,\-]+~', '', $s);
+    return trim(preg_replace('~[\s,\-]+' . $y . '$~', '', $s));
+}
+
+// 'before' or 'after' (the default, also for rows saved before families
+// could choose).
+function saber_year_position(?string $position): string {
+    return $position === 'before' ? 'before' : 'after';
 }
 
 // Full text to engrave: the stored name part plus the class year.
-function saber_engraving(string $name, string $year): string {
-    return trim($name . ' ' . $year);
+function saber_engraving(string $name, string $year, ?string $position = 'after'): string {
+    if ($year === '') return $name;
+    return saber_year_position($position) === 'before' ? "{$year} - {$name}" : "{$name} - {$year}";
+}
+
+// Whether migrate_saber_year_position.sql has added the year_position
+// column. Until it has, everything behaves as 'after'.
+function saber_has_year_position(PDO $pdo): bool {
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (bool)$pdo->query("SHOW COLUMNS FROM `saber_inscriptions` LIKE 'year_position'")->fetch();
+        } catch (\PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
 }
 
 // Null when the cleaned inscription is acceptable, otherwise the message to
@@ -772,14 +795,17 @@ function saber_inscription_error(string $s): ?string {
 // exist yet (migration not run).
 function saber_inscription_roster(PDO $pdo, string $slug, string $classYear): ?array {
     if ($classYear === '') return [];
+    // Aliased so the array key is lowercase even if phpMyAdmin capitalised
+    // the column when the migration ran.
+    $pos = saber_has_year_position($pdo) ? 'si.year_position AS year_position' : "'after' AS year_position";
     try {
         $stmt = $pdo->prepare(
-            'SELECT m.id, m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix,
-                    m.membership_paid, si.inscription, si.updated_at, si.updated_by
+            "SELECT m.id, m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix,
+                    m.membership_paid, si.inscription, si.updated_at, si.updated_by, {$pos}
              FROM members m
              LEFT JOIN saber_inscriptions si ON si.member_id = m.id AND si.campaign_slug = ?
              WHERE m.archived = 0 AND m.class_year = ?
-             ORDER BY m.cadet_last_name ASC, m.cadet_first_name ASC'
+             ORDER BY m.cadet_last_name ASC, m.cadet_first_name ASC"
         );
         $stmt->execute([$slug, $classYear]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -790,7 +816,18 @@ function saber_inscription_roster(PDO $pdo, string $slug, string $classYear): ?a
 
 // Insert or replace one cadet's inscription. $updatedBy is 'Parent' for the
 // public form or the officer's name for an admin edit.
-function save_saber_inscription(PDO $pdo, string $slug, int $memberId, string $inscription, ?string $email, string $updatedBy): void {
+function save_saber_inscription(PDO $pdo, string $slug, int $memberId, string $inscription, ?string $email, string $updatedBy, string $position = 'after'): void {
+    if (saber_has_year_position($pdo)) {
+        $pdo->prepare(
+            'INSERT INTO saber_inscriptions (campaign_slug, member_id, inscription, year_position, submitted_email, updated_by)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE inscription = VALUES(inscription),
+                                     year_position = VALUES(year_position),
+                                     submitted_email = COALESCE(VALUES(submitted_email), submitted_email),
+                                     updated_by = VALUES(updated_by), updated_at = NOW()'
+        )->execute([$slug, $memberId, $inscription, saber_year_position($position), $email, mb_substr($updatedBy, 0, 100)]);
+        return;
+    }
     $pdo->prepare(
         'INSERT INTO saber_inscriptions (campaign_slug, member_id, inscription, submitted_email, updated_by)
          VALUES (?, ?, ?, ?, ?)

@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign
     } elseif ($err = saber_inscription_error($text)) {
         flash('error', h($err));
     } else {
-        save_saber_inscription($pdo, $campaign, $member_id, $text, null, (string)($_SESSION['user_name'] ?? 'Officer'));
+        save_saber_inscription($pdo, $campaign, $member_id, $text, null, (string)($_SESSION['user_name'] ?? 'Officer'), (string)($_POST['position'] ?? 'after'));
         flash('success', 'Inscription saved.');
     }
     header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
@@ -427,7 +427,7 @@ echo show_flash();
     <p style="font-size:.82rem;color:#9aa5b4;margin-bottom:1rem">
       Families of Class of <?= h($year ?: '—') ?> cadets enter what goes on the saber at
       <a href="<?= h($public_url) ?>" target="_blank" rel="noopener"><?= h($public_url) ?></a>, verifying with cadet last name + birthday + email on file (no login).
-      They type the name only; the class year is added after it automatically on the PDF and in their confirmation email. They can change it until you close inscriptions. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
+      They type the name only and choose whether the class year goes before it (&ldquo;<?= h($year ?: '2027') ?> - Name&rdquo;) or after it (&ldquo;Name - <?= h($year ?: '2027') ?>&rdquo;); the year is added automatically on the PDF and in their confirmation email. They can change it until you close inscriptions. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
     </p>
     <?php if (!$is_active): ?>
       <div class="alert alert-error">This isn't the active campaign, so the public page isn't collecting for it. Its list is shown for reference.</div>
@@ -466,8 +466,12 @@ echo show_flash();
               <?= csrf_field() ?>
               <input type="hidden" name="action" value="inscription_save">
               <input type="hidden" name="member_id" value="<?= (int)$r['id'] ?>">
+              <?php $r_pos = saber_year_position($r['year_position'] ?? 'after'); ?>
+              <select name="position" title="Where the class year goes" style="width:auto;font-weight:600">
+                <option value="before" <?= $r_pos === 'before' ? 'selected' : '' ?>><?= h($year) ?> - Name</option>
+                <option value="after"  <?= $r_pos === 'after'  ? 'selected' : '' ?>>Name - <?= h($year) ?></option>
+              </select>
               <input type="text" name="inscription" value="<?= h((string)($r['inscription'] ?? '')) ?>" maxlength="<?= SABER_INSCRIPTION_MAX ?>" placeholder="Not submitted" style="flex:1;min-width:180px;font-weight:600">
-              <span style="align-self:center;font-weight:600;color:#5a6a7a"><?= h($year) ?></span>
               <button type="submit" class="btn btn-secondary btn-sm">Save</button>
             </form>
           </td>
