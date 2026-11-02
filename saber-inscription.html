@@ -36,9 +36,11 @@
     .form-group .hint { font-size: 0.78rem; color: var(--gray); margin-top: 0.3rem; display: flex; justify-content: space-between; gap: 1rem; }
     .form-group .hint .over { color: var(--accent); font-weight: 600; }
     #charCount { white-space: nowrap; }
-    .year-position { border: none; padding: 0; display: flex; gap: .75rem; flex-wrap: wrap; }
+    .year-position { border: none; padding: 0; }
     .year-position legend { font-weight: 600; color: var(--navy); font-size: 0.9rem; margin-bottom: 0.4rem; padding: 0; width: 100%; }
-    .year-position label { flex: 1; min-width: 150px; display: flex; align-items: center; gap: .55rem; background: var(--white); border: 1px solid var(--silver2); border-radius: 4px; padding: .7rem .9rem; cursor: pointer; color: var(--navy); font-weight: 600; }
+    .pos-options { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+    @media (max-width: 600px) { .pos-options { grid-template-columns: 1fr; } }
+    .year-position label { display: flex; align-items: center; gap: .55rem; background: var(--white); border: 1px solid var(--silver2); border-radius: 4px; padding: .7rem .9rem; cursor: pointer; color: var(--navy); font-weight: 600; }
     .year-position label:has(input:checked) { border-color: var(--navy); box-shadow: 0 0 0 2px rgba(0, 53, 148, 0.15); }
     .year-position input { width: auto; margin: 0; }
     .year-position input:disabled + .pos-example { color: var(--gray); }
@@ -204,12 +206,12 @@
         <div class="form-group">
           <label for="inscription">Inscription *</label>
           <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2nd Lt John A. Smith" />
-          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any prefix (like 2nd Lt). Don't type the class year; choose where it goes below. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
+          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any prefix (like 2nd Lt). Don't type the class year; choose how it's engraved below. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
         </div>
-        <fieldset class="form-group year-position" id="positionGroup">
-          <legend>Class Year Placement *</legend>
-          <label><input type="radio" name="position" value="before" /> <span class="pos-example">Class of <span class="yr">2027</span> - Name</span></label>
-          <label><input type="radio" name="position" value="after" checked /> <span class="pos-example">Name - Class of <span class="yr">2027</span></span></label>
+        <!-- Options come from saber_year_formats() via the GET response. -->
+        <fieldset class="form-group year-position" id="positionGroup" style="display:none">
+          <legend>Class Year Format *</legend>
+          <div class="pos-options" id="positionOptions"></div>
         </fieldset>
         <div class="preview" id="previewBox" aria-live="polite">
           <div class="preview-label">Will be engraved as</div>
@@ -267,25 +269,57 @@
       return s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
     }
     // The class year is engraved automatically, so drop a leading or trailing
-    // copy if they typed it anyway (same as saber_strip_year() server-side).
+    // copy if they typed it anyway (same as saber_strip_year() server-side) —
+    // except for the no-year format, where what they type is what they get.
     function nameOnly(s) {
       s = cleaned(s).replace(/[–—]/g, '-');
-      if (!classYear) return s;
+      if (!classYear || position() === 'none') return s;
       var y = "(?:class\\s+of\\s+)?(?:" + classYear + "|'" + classYear.slice(-2) + ")";
       return s.replace(new RegExp("^" + y + "[\\s,\\-]+", 'i'), '')
               .replace(new RegExp("[\\s,\\-]+" + y + "$", 'i'), '').trim();
     }
+    // {key: pattern} from saber_year_formats(); null until the year_position
+    // column exists, in which case everything prints in the default format.
+    var formats = null;
+    var defaultFormat = 'after';
+    var DEFAULT_PATTERN = '{N} - Class of {Y}';
     function position() {
       var el = document.querySelector('input[name="position"]:checked');
-      return el && el.value === 'before' ? 'before' : 'after';
+      return el ? el.value : defaultFormat;
     }
     function setPosition(p) {
-      document.querySelector('input[name="position"][value="' + (p === 'before' ? 'before' : 'after') + '"]').checked = true;
+      var el = document.querySelector('input[name="position"][value="' + p + '"]');
+      if (el) el.checked = true;
     }
-    // Same format as saber_engraving() server-side.
+    function fill(pattern, name) {
+      return pattern.replace('{N}', name).replace('{Y}', classYear);
+    }
+    // Same result as saber_engraving() server-side.
     function engraving(name) {
       if (!classYear) return name;
-      return position() === 'before' ? 'Class of ' + classYear + ' - ' + name : name + ' - Class of ' + classYear;
+      return fill(formats && formats[position()] ? formats[position()] : DEFAULT_PATTERN, name);
+    }
+    function buildFormatOptions() {
+      var box = $('positionOptions');
+      box.innerHTML = '';
+      if (!formats) return;
+      Object.keys(formats).forEach(function(key) {
+        var label = document.createElement('label');
+        var input = document.createElement('input');
+        input.type = 'radio'; input.name = 'position'; input.value = key;
+        input.checked = key === defaultFormat;
+        input.addEventListener('change', function() {
+          $('confirmCheck').checked = false;
+          clearStatus('saveStatus');
+          updatePreview();
+        });
+        var span = document.createElement('span');
+        span.className = 'pos-example';
+        span.textContent = key === 'none' ? 'Name only (no year)' : fill(formats[key], 'Name');
+        label.appendChild(input); label.appendChild(span);
+        box.appendChild(label);
+      });
+      $('positionGroup').style.display = 'block';
     }
 
     // ── Campaign status ─────────────────────────────────────────────────
@@ -298,7 +332,9 @@
         $('inscription').maxLength = maxLen;
         $('heroSub').textContent = 'For families of Class of ' + d.year + ' cadets';
         classYear = String(d.year || '');
-        document.querySelectorAll('#positionGroup .yr').forEach(function(el) { el.textContent = classYear; });
+        formats = d.formats || null;
+        defaultFormat = d.defaultFormat || 'after';
+        buildFormatOptions();
         $('formCard').style.display = 'block';
         updatePreview();
       })
@@ -383,14 +419,6 @@
       clearStatus('saveStatus');
       updatePreview();
     });
-    document.querySelectorAll('input[name="position"]').forEach(function(el) {
-      el.addEventListener('change', function() {
-        $('confirmCheck').checked = false;
-        clearStatus('saveStatus');
-        updatePreview();
-      });
-    });
-
     $('saveBtn').addEventListener('click', async function() {
       var btn = this;
       var val = nameOnly($('inscription').value);

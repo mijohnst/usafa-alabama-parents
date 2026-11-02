@@ -64,7 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign
     $ystmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
     $ystmt->execute([$year_key]);
     $roster_year = trim((string)$ystmt->fetchColumn());
-    $text = saber_strip_year(clean_saber_inscription((string)($_POST['inscription'] ?? '')), $roster_year);
+    $text = clean_saber_inscription((string)($_POST['inscription'] ?? ''));
+    if (saber_year_position((string)($_POST['position'] ?? 'after')) !== 'none') $text = saber_strip_year($text, $roster_year);
     $mstmt = $pdo->prepare('SELECT class_year FROM members WHERE id = ? AND archived = 0');
     $mstmt->execute([$member_id]);
     $member_year = $mstmt->fetchColumn();
@@ -427,7 +428,7 @@ echo show_flash();
     <p style="font-size:.82rem;color:#9aa5b4;margin-bottom:1rem">
       Families of Class of <?= h($year ?: '—') ?> cadets enter what goes on the saber at
       <a href="<?= h($public_url) ?>" target="_blank" rel="noopener"><?= h($public_url) ?></a>, verifying with cadet last name + birthday + email on file (no login).
-      They type the name only and choose whether the class year goes before it (&ldquo;Class of <?= h($year ?: '2027') ?> - Name&rdquo;) or after it (&ldquo;Name - Class of <?= h($year ?: '2027') ?>&rdquo;); the year is added automatically on the PDF and in their confirmation email. They can change it until you close inscriptions. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
+      They type the name only and pick how the class year is engraved (e.g. &ldquo;Class of <?= h($year ?: '2027') ?> - Name&rdquo;, &ldquo;Name <?= h($year ?: '2027') ?>&rdquo;, or no year); the year is added automatically on the PDF and in their confirmation email. They can change it until you close inscriptions. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
     </p>
     <?php if (!$is_active): ?>
       <div class="alert alert-error">This isn't the active campaign, so the public page isn't collecting for it. Its list is shown for reference.</div>
@@ -467,9 +468,10 @@ echo show_flash();
               <input type="hidden" name="action" value="inscription_save">
               <input type="hidden" name="member_id" value="<?= (int)$r['id'] ?>">
               <?php $r_pos = saber_year_position($r['year_position'] ?? 'after'); ?>
-              <select name="position" title="Where the class year goes" style="width:auto;font-weight:600">
-                <option value="before" <?= $r_pos === 'before' ? 'selected' : '' ?>>Class of <?= h($year) ?> - Name</option>
-                <option value="after"  <?= $r_pos === 'after'  ? 'selected' : '' ?>>Name - Class of <?= h($year) ?></option>
+              <select name="position" title="How the class year is engraved" style="width:auto;font-weight:600">
+                <?php foreach (saber_year_formats() as $fk => $fmt): ?>
+                  <option value="<?= h($fk) ?>" <?= $r_pos === $fk ? 'selected' : '' ?>><?= h($fk === 'none' ? 'Name only (no year)' : strtr($fmt, ['{N}' => 'Name', '{Y}' => $year])) ?></option>
+                <?php endforeach; ?>
               </select>
               <input type="text" name="inscription" value="<?= h((string)($r['inscription'] ?? '')) ?>" maxlength="<?= SABER_INSCRIPTION_MAX ?>" placeholder="Not submitted" style="flex:1;min-width:180px;font-weight:600">
               <button type="submit" class="btn btn-secondary btn-sm">Save</button>

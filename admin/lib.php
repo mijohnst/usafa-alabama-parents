@@ -744,11 +744,11 @@ function clean_saber_inscription(string $raw): string {
     return trim(preg_replace('/\s+/', ' ', $s));
 }
 
-// The class year is added automatically — before ("Class of 2027 - Name") or
-// after ("Name - Class of 2027") the name, the family's choice — so families
-// type only the name. Drop a leading or trailing copy in case they typed it
-// anyway ("Class of 2027 - …", "… 2027", "… class of '27"), so it isn't
-// engraved twice.
+// The class year is added automatically in the family's chosen format (see
+// saber_year_formats()), so families type only the name. Drop a leading or
+// trailing copy in case they typed it anyway ("Class of 2027 - …", "… 2027",
+// "… class of '27"), so it isn't engraved twice. Not applied for the
+// no-year format, where whatever they typed is what they want.
 function saber_strip_year(string $s, string $year): string {
     if ($year === '') return $s;
     $y = '(?:class\s+of\s+)?(?:' . preg_quote($year, '~') . "|'" . preg_quote(substr($year, -2), '~') . ')';
@@ -756,16 +756,31 @@ function saber_strip_year(string $s, string $year): string {
     return trim(preg_replace('~[\s,\-]+' . $y . '$~i', '', $s));
 }
 
-// 'before' or 'after' (the default, also for rows saved before families
-// could choose).
+// How the class year is combined with the name, keyed by the value stored in
+// saber_inscriptions.year_position (VARCHAR(6), so keys stay ≤ 6 chars).
+// {N} = name, {Y} = class year. Order here is the order families see.
+// 'before'/'after' keep their original meaning for rows already saved.
+function saber_year_formats(): array {
+    return [
+        'before' => 'Class of {Y} - {N}',
+        'yrbef'  => '{Y} - {N}',
+        'after'  => '{N} - Class of {Y}',
+        'yraft'  => '{N} - {Y}',
+        'yrspc'  => '{N} {Y}',
+        'none'   => '{N}',
+    ];
+}
+
+// A valid format key; 'after' (the default) for anything unknown, including
+// rows saved before families could choose.
 function saber_year_position(?string $position): string {
-    return $position === 'before' ? 'before' : 'after';
+    return isset(saber_year_formats()[(string)$position]) ? (string)$position : 'after';
 }
 
 // Full text to engrave: the stored name part plus the class year.
 function saber_engraving(string $name, string $year, ?string $position = 'after'): string {
     if ($year === '') return $name;
-    return saber_year_position($position) === 'before' ? "Class of {$year} - {$name}" : "{$name} - Class of {$year}";
+    return strtr(saber_year_formats()[saber_year_position($position)], ['{N}' => $name, '{Y}' => $year]);
 }
 
 // Whether migrate_saber_year_position.sql has added the year_position

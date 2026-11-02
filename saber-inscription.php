@@ -46,7 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode(['success' => false, 'error' => INSCRIPTION_UNAVAILABLE_MSG]);
         exit();
     }
-    echo json_encode(['success' => true, 'year' => $c['year'], 'open' => $c['open'], 'max' => SABER_INSCRIPTION_MAX]);
+    // Formats only when they can be stored; otherwise the page shows none and
+    // everything prints in the default format.
+    echo json_encode([
+        'success' => true, 'year' => $c['year'], 'open' => $c['open'], 'max' => SABER_INSCRIPTION_MAX,
+        'formats' => saber_has_year_position($pdo) ? saber_year_formats() : null,
+        'defaultFormat' => 'after',
+    ]);
     exit();
 }
 
@@ -172,10 +178,11 @@ if ($action === 'save') {
     }
 
     // Stored without the year; saber_engraving() appends it for display/print.
-    $inscription = saber_strip_year(clean_saber_inscription((string)($payload['inscription'] ?? '')), $c['year']);
-    // Until migrate_saber_year_position.sql runs there's nowhere to store
-    // 'before', so report the 'after' that will actually be printed.
+    // Until migrate_saber_year_position.sql runs there's nowhere to store a
+    // choice, so report the default that will actually be printed.
     $position    = saber_has_year_position($pdo) ? saber_year_position((string)($payload['position'] ?? 'after')) : 'after';
+    $inscription = clean_saber_inscription((string)($payload['inscription'] ?? ''));
+    if ($position !== 'none') $inscription = saber_strip_year($inscription, $c['year']);
     if ($err = saber_inscription_error($inscription)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => $err]);
