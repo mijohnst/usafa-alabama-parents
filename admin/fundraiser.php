@@ -61,10 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign !== '' && $post_action === 'inscription_save') {
     csrf_verify();
     $member_id = (int)($_POST['member_id'] ?? 0);
-    $text      = clean_saber_inscription((string)($_POST['inscription'] ?? ''));
     $ystmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
     $ystmt->execute([$year_key]);
     $roster_year = trim((string)$ystmt->fetchColumn());
+    $text = saber_strip_year(clean_saber_inscription((string)($_POST['inscription'] ?? '')), $roster_year);
     $mstmt = $pdo->prepare('SELECT class_year FROM members WHERE id = ? AND archived = 0');
     $mstmt->execute([$member_id]);
     $member_year = $mstmt->fetchColumn();
@@ -427,7 +427,7 @@ echo show_flash();
     <p style="font-size:.82rem;color:#9aa5b4;margin-bottom:1rem">
       Families of Class of <?= h($year ?: '—') ?> cadets enter what goes on the saber at
       <a href="<?= h($public_url) ?>" target="_blank" rel="noopener"><?= h($public_url) ?></a>, verifying with cadet last name + birthday + email on file (no login).
-      They can change it until you close inscriptions. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
+      They type the name only; the class year is added after it automatically on the PDF and in their confirmation email. They can change it until you close inscriptions. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
     </p>
     <?php if (!$is_active): ?>
       <div class="alert alert-error">This isn't the active campaign, so the public page isn't collecting for it. Its list is shown for reference.</div>
@@ -467,6 +467,7 @@ echo show_flash();
               <input type="hidden" name="action" value="inscription_save">
               <input type="hidden" name="member_id" value="<?= (int)$r['id'] ?>">
               <input type="text" name="inscription" value="<?= h((string)($r['inscription'] ?? '')) ?>" maxlength="<?= SABER_INSCRIPTION_MAX ?>" placeholder="Not submitted" style="flex:1;min-width:180px;font-weight:600">
+              <span style="align-self:center;font-weight:600;color:#5a6a7a"><?= h($year) ?></span>
               <button type="submit" class="btn btn-secondary btn-sm">Save</button>
             </form>
           </td>

@@ -730,11 +730,26 @@ function clean_saber_inscription(string $raw): string {
     return trim(preg_replace('/\s+/', ' ', $s));
 }
 
+// The class year is engraved after the name automatically (blade format is
+// "Name 2027"), so families type only the name. Drop a trailing copy of the
+// year ("… 2027" / "… '27") in case they typed it anyway, so it isn't
+// engraved twice.
+function saber_strip_year(string $s, string $year): string {
+    if ($year === '') return $s;
+    $yy = substr($year, -2);
+    return trim(preg_replace('~[\s,]+(?:' . preg_quote($year, '~') . "|'" . preg_quote($yy, '~') . ')$~', '', $s));
+}
+
+// Full text to engrave: the stored name part plus the class year.
+function saber_engraving(string $name, string $year): string {
+    return trim($name . ' ' . $year);
+}
+
 // Null when the cleaned inscription is acceptable, otherwise the message to
 // show. Plain ASCII letters, digits, spaces, and basic punctuation only.
 function saber_inscription_error(string $s): ?string {
-    if ($s === '') return 'Please enter the inscription.';
-    if (mb_strlen($s) > SABER_INSCRIPTION_MAX) return 'The inscription can be at most ' . SABER_INSCRIPTION_MAX . ' characters (including spaces).';
+    if ($s === '') return 'Please enter the name to engrave.';
+    if (mb_strlen($s) > SABER_INSCRIPTION_MAX) return 'The name can be at most ' . SABER_INSCRIPTION_MAX . ' characters (including spaces) — the class year is added on top of that.';
     if (!preg_match('~^[A-Za-z0-9 .,\'"&/#()\-]+$~', $s)) return 'The inscription can only use letters, numbers, spaces, and . , \' " & / # ( ) -';
     return null;
 }

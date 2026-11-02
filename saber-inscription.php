@@ -165,7 +165,8 @@ if ($action === 'save') {
         exit();
     }
 
-    $inscription = clean_saber_inscription((string)($payload['inscription'] ?? ''));
+    // Stored without the year; saber_engraving() appends it for display/print.
+    $inscription = saber_strip_year(clean_saber_inscription((string)($payload['inscription'] ?? '')), $c['year']);
     if ($err = saber_inscription_error($inscription)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => $err]);
@@ -201,7 +202,7 @@ if ($action === 'save') {
               . "Saber Inscription Received\n"
               . str_repeat('─', 48) . "\n\n"
               . "We received the saber inscription for Cadet {$cadet} (Class of {$c['year']}):\n\n"
-              . "    {$inscription}\n\n"
+              . "    " . saber_engraving($inscription, $c['year']) . "\n\n"
               . "Please check the spelling, capitalization, and punctuation carefully — it\n"
               . "will be engraved exactly as shown above.\n\n"
               . "Need to fix something? Use the same page again before inscriptions close:\n$link\n\n"

@@ -35,11 +35,14 @@
     .form-group input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 2px rgba(0, 53, 148, 0.15); }
     .form-group .hint { font-size: 0.78rem; color: var(--gray); margin-top: 0.3rem; display: flex; justify-content: space-between; gap: 1rem; }
     .form-group .hint .over { color: var(--accent); font-weight: 600; }
+    #charCount { white-space: nowrap; }
 
     /* Engraving preview */
     .preview { background: linear-gradient(180deg, #f4f5f6 0%, #d9dcdf 100%); border: 1px solid var(--silver2); border-radius: 4px; padding: 1.25rem 1rem; margin: .25rem 0 1.25rem; text-align: center; }
     .preview-label { font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--gray); margin-bottom: .5rem; }
-    .preview-text { font-family: var(--font-display); font-size: 1.45rem; color: #2b2f33; letter-spacing: .04em; word-break: break-word; min-height: 1.8rem; }
+    /* Plain mixed-case serif, like the lettering etched on the blade —
+       not the site's Cinzel, which would wrongly suggest all capitals. */
+    .preview-text { font-family: "Times New Roman", Times, "Liberation Serif", serif; font-size: 1.9rem; color: #3a3d40; text-shadow: 0 1px 0 rgba(255,255,255,.7); word-break: break-word; min-height: 1.8rem; }
     .preview-text.empty { color: #9aa0a6; font-size: 1rem; font-family: var(--font-body); font-style: italic; letter-spacing: 0; }
     .form-group input[readonly] { background: #eef0f2; color: var(--gray); cursor: not-allowed; }
     .family-banner.closed { border-left-color: var(--accent); }
@@ -193,8 +196,8 @@
         <div class="family-banner" id="familyBanner"></div>
         <div class="form-group">
           <label for="inscription">Inscription *</label>
-          <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2nd Lt John A. Smith 2026" />
-          <div class="hint"><span>Include any rank or title prefix (like 2nd Lt) and the class year, exactly as you want it engraved, with the same capital letters and punctuation. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
+          <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2nd Lt John A. Smith" />
+          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any prefix (like 2nd Lt). The class year is added after the name automatically. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
         </div>
         <div class="preview" id="previewBox" aria-live="polite">
           <div class="preview-label">Will be engraved as</div>
@@ -223,6 +226,7 @@
     var token = '';
     var maxLen = 40;
     var isOpen = false;
+    var classYear = '';
     var ALLOWED = /^[A-Za-z0-9 .,'"&\/#()\-]*$/;
 
     function $(id) { return document.getElementById(id); }
@@ -250,6 +254,14 @@
     function cleaned(s) {
       return s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
     }
+    // The class year is engraved automatically, so drop it if they typed it
+    // anyway (same as saber_strip_year() server-side) — never engraved twice.
+    function nameOnly(s) {
+      s = cleaned(s);
+      if (!classYear) return s;
+      var re = new RegExp("[\\s,]+(?:" + classYear + "|'" + classYear.slice(-2) + ")$");
+      return s.replace(re, '').trim();
+    }
 
     // ── Campaign status ─────────────────────────────────────────────────
     fetch('saber-inscription.php')
@@ -260,7 +272,7 @@
         isOpen = !!d.open;
         $('inscription').maxLength = maxLen;
         $('heroSub').textContent = 'For families of Class of ' + d.year + ' cadets';
-        $('inscription').placeholder = 'e.g. 2nd Lt John A. Smith ' + d.year;
+        classYear = String(d.year || '');
         $('formCard').style.display = 'block';
         updatePreview();
       })
@@ -328,10 +340,9 @@
 
     // ── Step 2: preview + save ──────────────────────────────────────────
     function updatePreview() {
-      var raw = $('inscription').value;
-      var val = cleaned(raw);
+      var val = nameOnly($('inscription').value);
       var p = $('previewText');
-      if (val) { p.textContent = val; p.className = 'preview-text'; }
+      if (val) { p.textContent = val + (classYear ? ' ' + classYear : ''); p.className = 'preview-text'; }
       else { p.textContent = 'Start typing above'; p.className = 'preview-text empty'; }
       var cnt = $('charCount');
       cnt.textContent = val.length + ' / ' + maxLen;
@@ -346,10 +357,10 @@
 
     $('saveBtn').addEventListener('click', async function() {
       var btn = this;
-      var val = cleaned($('inscription').value);
+      var val = nameOnly($('inscription').value);
       clearStatus('saveStatus');
-      if (!val) { showStatus('saveStatus', 'Please enter the inscription.', 'error'); return; }
-      if (val.length > maxLen) { showStatus('saveStatus', 'The inscription can be at most ' + maxLen + ' characters (including spaces).', 'error'); return; }
+      if (!val) { showStatus('saveStatus', 'Please enter the name to engrave.', 'error'); return; }
+      if (val.length > maxLen) { showStatus('saveStatus', 'The name can be at most ' + maxLen + ' characters (including spaces) — the class year is added on top of that.', 'error'); return; }
       if (!ALLOWED.test(val)) { showStatus('saveStatus', "The inscription can only use letters, numbers, spaces, and . , ' \" & / # ( ) -", 'error'); return; }
       if (!$('confirmCheck').checked) { showStatus('saveStatus', 'Please check the box confirming you’ve proofread the inscription.', 'error'); return; }
       var label = btn.textContent;
