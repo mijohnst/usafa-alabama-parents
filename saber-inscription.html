@@ -41,6 +41,8 @@
     .preview-label { font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--gray); margin-bottom: .5rem; }
     .preview-text { font-family: var(--font-display); font-size: 1.45rem; color: #2b2f33; letter-spacing: .04em; word-break: break-word; min-height: 1.8rem; }
     .preview-text.empty { color: #9aa0a6; font-size: 1rem; font-family: var(--font-body); font-style: italic; letter-spacing: 0; }
+    .form-group input[readonly] { background: #eef0f2; color: var(--gray); cursor: not-allowed; }
+    .family-banner.closed { border-left-color: var(--accent); }
 
     .confirm-row { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: 1.25rem; font-size: .92rem; color: var(--navy); }
     .confirm-row input { margin-top: .25rem; width: auto; }
@@ -191,10 +193,10 @@
         <div class="family-banner" id="familyBanner"></div>
         <div class="form-group">
           <label for="inscription">Inscription *</label>
-          <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. C1C JOHN A. SMITH" />
-          <div class="hint"><span>Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only. Type it exactly as it should appear, including capital letters.</span><span id="charCount"></span></div>
+          <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2nd Lt John A. Smith" />
+          <div class="hint"><span>Include any rank or title prefix (like 2nd Lt) exactly as you want it engraved, with the same capital letters and punctuation. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
         </div>
-        <div class="preview" aria-live="polite">
+        <div class="preview" id="previewBox" aria-live="polite">
           <div class="preview-label">Will be engraved as</div>
           <div class="preview-text empty" id="previewText">Start typing above</div>
         </div>
@@ -302,9 +304,16 @@
           $('saveBtn').textContent = 'Update Inscription';
         }
         if (!isOpen) {
+          // Closed: nothing is editable. Show what's on file read-only, or
+          // hide the empty box entirely so it doesn't look like a broken form.
+          $('familyBanner').className = 'family-banner closed';
           $('inscription').readOnly = true;
           $('confirmRow').style.display = 'none';
           $('saveBtn').style.display = 'none';
+          if (!d.existing) {
+            $('inscription').parentNode.style.display = 'none';
+            $('previewBox').style.display = 'none';
+          }
         }
         updatePreview();
         $('lookupStep').style.display = 'none';
