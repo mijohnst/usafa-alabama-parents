@@ -1626,8 +1626,9 @@ if (document.readyState === 'loading') {
 })();
 </script>
 
-<!-- Air Force vs. Army watch party splash (2026-11-07). Shows once per
-     browser, never on a deep link (#section), and stops on its own after
+<!-- Air Force vs. Army watch party splash (2026-11-07). Shows on every new
+     visit (once per browser tab session, so clicking back to the homepage
+     mid-visit doesn't re-open it), never on a deep link (#section), and stops on its own after
      the game day — the whole block can be deleted any time after that. -->
 <style>
 #game-splash{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,12,32,.78)}
@@ -1740,7 +1741,7 @@ if (document.readyState === 'loading') {
   if (!force) {
     if (new Date() >= new Date(2026, 10, 8)) return;
     if (location.hash) return;
-    try { if (localStorage.getItem(KEY)) return; } catch (e) {}
+    try { if (sessionStorage.getItem(KEY)) return; } catch (e) {}
   }
 
   var el = document.getElementById('game-splash');
@@ -1754,7 +1755,7 @@ if (document.readyState === 'loading') {
     el.classList.remove('show');
     document.body.style.overflow = '';
     document.removeEventListener('keydown', onKey);
-    try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
   function onKey(e) { if (e.key === 'Escape') close(); }
