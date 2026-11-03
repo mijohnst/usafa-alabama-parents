@@ -1625,5 +1625,117 @@ if (document.readyState === 'loading') {
   });
 })();
 </script>
+
+<!-- Air Force vs. Army watch party splash (2026-11-07). Shows once per
+     browser, never on a deep link (#section), and stops on its own after
+     the game day — the whole block can be deleted any time after that. -->
+<style>
+#game-splash{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,12,32,.78)}
+#game-splash.show{display:flex;animation:gsFade .25s ease-out}
+@keyframes gsFade{from{opacity:0}to{opacity:1}}
+.gs-card{position:relative;width:100%;max-width:780px;max-height:calc(100vh - 32px);overflow:auto;border-radius:16px;color:#fff;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6);
+  background:
+    radial-gradient(circle at 8% 6%,rgba(255,255,255,.55) 0 2px,transparent 3px) 0 0/22px 22px no-repeat,
+    radial-gradient(ellipse at 12% 0,rgba(255,255,255,.35),transparent 32%),
+    radial-gradient(ellipse at 88% 0,rgba(255,255,255,.35),transparent 32%),
+    linear-gradient(180deg,#0b3f66 0%,#1477a8 48%,#0f5d86 66%,#2f8a3a 66.2%,#25742f 100%)}
+.gs-card::before,.gs-card::after{content:'';position:absolute;top:22%;bottom:30%;width:22%;pointer-events:none}
+.gs-card::before{left:0;background:repeating-linear-gradient(-55deg,#003594 0 22px,#fff 22px 30px,#8A8D8F 30px 40px,transparent 40px 62px);clip-path:polygon(0 0,100% 30%,100% 100%,0 100%);opacity:.9}
+.gs-card::after{right:0;background:repeating-linear-gradient(55deg,#111 0 22px,#d2b977 22px 30px,#555 30px 40px,transparent 40px 62px);clip-path:polygon(0 30%,100% 0,100% 100%,0 100%);opacity:.9}
+.gs-field{position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:repeating-linear-gradient(90deg,transparent 0 11%,rgba(255,255,255,.28) 11% 11.4%)}
+.gs-inner{position:relative;z-index:1;padding:28px 20px 22px}
+.gs-close{position:absolute;top:10px;right:12px;z-index:2;width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,.8);background:rgba(0,0,0,.35);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+.gs-close:hover,.gs-close:focus-visible{background:rgba(0,0,0,.6)}
+.gs-title{font-family:'Bowlby One',Impact,'Arial Black',sans-serif;font-weight:400;margin:0;line-height:1;font-size:clamp(2rem,7.5vw,4rem);letter-spacing:.01em}
+.gs-af{color:#1f5fd6;-webkit-text-stroke:2px #fff;paint-order:stroke fill;text-shadow:0 4px 0 #001a4d,0 6px 12px rgba(0,0,0,.5)}
+.gs-vs{color:#fff;font-size:.55em;margin:0 .3em;text-shadow:0 3px 0 #000}
+.gs-army{color:#d2b977;-webkit-text-stroke:2px #111;paint-order:stroke fill;text-shadow:0 4px 0 #000,0 6px 12px rgba(0,0,0,.5)}
+.gs-sub{display:flex;align-items:center;justify-content:center;gap:.6rem;margin:.55rem 0 .2rem;font-family:'Bowlby One',Impact,sans-serif;font-style:italic;font-size:clamp(1.25rem,4.6vw,2.4rem);transform:skewX(-8deg)}
+.gs-orange{background:linear-gradient(180deg,#ffd23f 0%,#ff8a00 60%,#e85d00 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #3a1a00)}
+.gs-stars{color:#ffb000;font-style:normal;font-size:.6em;letter-spacing:.2em;text-shadow:0 2px 0 #000}
+.gs-stars b{color:#1f5fd6;font-weight:400}
+.gs-time{font-family:'Bowlby One',Impact,sans-serif;font-size:clamp(1.4rem,5vw,2.5rem);margin:0}
+.gs-ball{display:block;width:clamp(90px,18vw,140px);height:auto;margin:.4rem auto .2rem;filter:drop-shadow(0 6px 8px rgba(0,0,0,.5));transform:rotate(-18deg)}
+.gs-ribbon{position:relative;display:inline-block;margin:.3rem 0 .6rem;padding:.35rem 2.2rem;background:#fff;border:4px solid #003594;font-family:'Bowlby One',Impact,sans-serif;font-size:clamp(1.3rem,5vw,2.3rem);color:#003594;box-shadow:0 5px 0 #001a4d}
+.gs-ribbon::before,.gs-ribbon::after{content:'';position:absolute;top:10px;bottom:-12px;width:28px;background:#003594;z-index:-1}
+.gs-ribbon::before{left:-22px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,35% 50%)}
+.gs-ribbon::after{right:-22px;clip-path:polygon(0 0,100% 0,65% 50%,100% 100%,0 100%)}
+.gs-ribbon small{display:block;font-size:.42em;letter-spacing:.25em;color:#A6192E;line-height:1.2}
+.gs-where{margin:0;font-family:'Source Sans 3',sans-serif;font-weight:600;text-shadow:0 2px 4px rgba(0,0,0,.8);line-height:1.3}
+.gs-where .gs-venue{font-size:clamp(1.2rem,4vw,1.8rem);font-weight:700}
+.gs-where a{color:#fff;text-decoration:none;font-size:clamp(1rem,3.2vw,1.35rem)}
+.gs-where a:hover{text-decoration:underline}
+.gs-rsvp{display:inline-block;margin-top:.35rem;color:#ffb000!important;font-weight:700;font-size:clamp(1.1rem,3.6vw,1.5rem)!important}
+.gs-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:.6rem;margin-top:1rem}
+.gs-btn{display:inline-block;padding:.6rem 1.3rem;border-radius:999px;font-family:'Source Sans 3',sans-serif;font-weight:700;font-size:1rem;text-decoration:none;cursor:pointer;border:2px solid #fff}
+.gs-btn-primary{background:#ffb000;border-color:#ffb000;color:#002554}
+.gs-btn-ghost{background:rgba(0,0,0,.35);color:#fff}
+@media (max-width:560px){.gs-card::before,.gs-card::after{width:14%;opacity:.55}.gs-inner{padding:44px 14px 18px}.gs-af,.gs-army{-webkit-text-stroke:1.5px}.gs-title span{display:inline-block}.gs-sub .gs-stars{display:none}.gs-ribbon{padding:.35rem 1.2rem}}
+@media (prefers-reduced-motion:reduce){#game-splash.show{animation:none}}
+</style>
+
+<div id="game-splash" role="dialog" aria-modal="true" aria-labelledby="gs-heading">
+  <div class="gs-card">
+    <div class="gs-field" aria-hidden="true"></div>
+    <button type="button" class="gs-close" aria-label="Close">&times;</button>
+    <div class="gs-inner">
+      <h2 class="gs-title" id="gs-heading"><span class="gs-af">AIR FORCE</span><span class="gs-vs">vs.</span><span class="gs-army">ARMY</span></h2>
+      <div class="gs-sub"><span class="gs-stars" aria-hidden="true"><b>&#9733;</b> &#9733;</span><span class="gs-orange">GAME WATCH PARTY</span><span class="gs-stars" aria-hidden="true">&#9733; <b>&#9733;</b></span></div>
+      <p class="gs-time gs-orange">6:30 PM</p>
+      <svg class="gs-ball" viewBox="0 0 120 70" aria-hidden="true">
+        <ellipse cx="60" cy="35" rx="56" ry="31" fill="#7a3b17"/>
+        <ellipse cx="60" cy="35" rx="56" ry="31" fill="url(#gsBallShade)"/>
+        <path d="M14 22 Q20 35 14 48 M106 22 Q100 35 106 48" stroke="#fff" stroke-width="4" fill="none"/>
+        <path d="M38 35 H82" stroke="#fff" stroke-width="3"/>
+        <path d="M44 29v12M51 29v12M58 29v12M65 29v12M72 29v12M78 29v12" stroke="#fff" stroke-width="3"/>
+        <defs><radialGradient id="gsBallShade" cx=".38" cy=".3" r=".75"><stop offset="0" stop-color="#c46a32"/><stop offset=".6" stop-color="#8a4219" stop-opacity=".6"/><stop offset="1" stop-color="#3d1806" stop-opacity=".9"/></radialGradient></defs>
+      </svg>
+      <div class="gs-ribbon"><small>SATURDAY</small>NOVEMBER 7TH</div>
+      <p class="gs-where">
+        <span class="gs-venue">At Field Day</span><br>
+        <a href="https://www.google.com/maps/search/?api=1&amp;query=6123+University+Dr+NW,+Huntsville,+AL" target="_blank" rel="noopener">6123 University Dr NW, Huntsville, AL</a><br>
+        <a class="gs-rsvp" href="tel:+13215913484">RSVP Ray 321.591.3484</a>
+      </p>
+      <div class="gs-actions">
+        <a class="gs-btn gs-btn-primary" href="https://www.google.com/maps/search/?api=1&amp;query=6123+University+Dr+NW,+Huntsville,+AL" target="_blank" rel="noopener">Get Directions</a>
+        <button type="button" class="gs-btn gs-btn-ghost" data-gs-close>Continue to Site</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var KEY = 'splash-af-army-2026';
+  // Hide once game day is over (midnight after Nov 7, visitor's local time).
+  if (new Date() >= new Date(2026, 10, 8)) return;
+  if (location.hash) return;
+  try { if (localStorage.getItem(KEY)) return; } catch (e) {}
+
+  var el = document.getElementById('game-splash');
+  var font = document.createElement('link');
+  font.rel = 'stylesheet';
+  font.href = 'https://fonts.googleapis.com/css2?family=Bowlby+One&display=swap';
+  document.head.appendChild(font);
+
+  var lastFocus = document.activeElement;
+  function close() {
+    el.classList.remove('show');
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', onKey);
+    try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+
+  el.addEventListener('click', function(e) {
+    if (e.target === el || e.target.closest('.gs-close,[data-gs-close]')) close();
+  });
+  document.addEventListener('keydown', onKey);
+  el.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  el.querySelector('.gs-close').focus();
+})();
+</script>
 </body>
 </html>
