@@ -209,7 +209,7 @@
         <div class="form-group">
           <label for="inscription">Inscription *</label>
           <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2d Lt John A. Smith" />
-          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any rank (the Air Force abbreviation is &ldquo;2d Lt&rdquo;). Don't type the class year; &ldquo;- Class of <span class="yr">2027</span>&rdquo; is added after the name automatically. If the line is too long, the engraver stacks it onto two lines in smaller text. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
+          <div class="hint"><span>Type the name exactly as you want it engraved, with the same capital letters and punctuation, including any rank (the Air Force abbreviation is &ldquo;2d Lt&rdquo;). Don't type the class year; it's added after the name automatically in the format you pick below. If the line is too long, the engraver stacks it onto two lines in smaller text. Letters, numbers, spaces, and . , ' " &amp; / # ( ) - only.</span><span id="charCount"></span></div>
         </div>
         <!-- Options come from saber_year_formats() via the GET response. -->
         <fieldset class="form-group year-position" id="positionGroup" style="display:none">
@@ -285,7 +285,7 @@
     // column exists, in which case everything prints in the default format.
     var formats = null;
     var defaultFormat = 'after';
-    var DEFAULT_PATTERN = '{N} - Class of {Y}';
+    var DEFAULT_PATTERN = '{N} – Class of {Y}';
     function position() {
       var el = document.querySelector('input[name="position"]:checked');
       return el ? el.value : defaultFormat;
@@ -305,8 +305,7 @@
     function buildFormatOptions() {
       var box = $('positionOptions');
       box.innerHTML = '';
-      // Nothing to choose with a single format (the saber company's only
-      // one is "Name - Class of 2027").
+      // Nothing to choose when only one format is offered.
       if (!formats || Object.keys(formats).length < 2) return;
       Object.keys(formats).forEach(function(key) {
         var label = document.createElement('label');
@@ -320,7 +319,7 @@
         });
         var span = document.createElement('span');
         span.className = 'pos-example';
-        span.textContent = key === 'none' ? 'Name only (no year)' : fill(formats[key], 'Name');
+        span.textContent = key === 'none' ? 'Name only (no year)' : fill(formats[key], 'First Name Last Name');
         label.appendChild(input); label.appendChild(span);
         box.appendChild(label);
       });

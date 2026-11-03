@@ -786,15 +786,16 @@ function saber_strip_year(string $s, string $year): string {
 // How the class year is combined with the name, keyed by the value stored in
 // saber_inscriptions.year_position (VARCHAR(6), so keys stay ≤ 6 chars).
 // {N} = name, {Y} = class year. Order here is the order families see.
-// The saber company only engraves "Name - Class of 2027" (Nov 2026: "keep
-// the name – class structure only"; names too long for one line are
-// stacked by them in smaller text), so there's one format and no choice is
-// shown. Rows saved earlier with another key fall back to it via
-// saber_year_position(). Add entries here to offer a choice again — the
-// public page and officer list show one automatically when there's > 1.
+// The saber company engraves only name-then-class-year structures (Nov 2026;
+// names too long for one line are stacked by them in smaller text), so these
+// are the only two offered. 'after' stays the default for rows saved before
+// families could choose; unknown keys fall back to it via
+// saber_year_position(). The public page and officer list show a choice
+// automatically whenever there's more than one entry.
 function saber_year_formats(): array {
     return [
-        'after' => '{N} - Class of {Y}',
+        'year'  => '{N} {Y}',
+        'after' => "{N} \u{2013} Class of {Y}",
     ];
 }
 

@@ -533,7 +533,7 @@ echo show_flash();
     <p style="font-size:.82rem;color:#9aa5b4;margin-bottom:1rem">
       Families of Class of <?= h($year ?: '—') ?> cadets enter what goes on the saber at
       <a href="<?= h($public_url) ?>" target="_blank" rel="noopener"><?= h($public_url) ?></a>, verifying with cadet last name + birthday + email on file (no login).
-      They type the name only; &ldquo;- Class of <?= h($year ?: '2027') ?>&rdquo; is added automatically (the only format the saber company engraves). They can change it until you close inscriptions or the deadline passes. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
+      They type the name only and pick how the class year is added: &ldquo;Name <?= h($year ?: '2027') ?>&rdquo; or &ldquo;Name &ndash; Class of <?= h($year ?: '2027') ?>&rdquo;. They can change it until you close inscriptions or the deadline passes. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
       <br><strong>Awarded</strong> = this cadet is actually getting a saber (paid members first, then the lottery). Once anyone is marked Awarded, the PDFs list only awarded cadets.
     </p>
     <?php if (!$is_active): ?>
