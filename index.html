@@ -1735,9 +1735,13 @@ if (document.readyState === 'loading') {
 (function() {
   var KEY = 'splash-af-army-2026';
   // Hide once game day is over (midnight after Nov 7, visitor's local time).
-  if (new Date() >= new Date(2026, 10, 8)) return;
-  if (location.hash) return;
-  try { if (localStorage.getItem(KEY)) return; } catch (e) {}
+  // ?splash forces it to show again (for checking it after you've closed it).
+  var force = /[?&]splash\b/.test(location.search);
+  if (!force) {
+    if (new Date() >= new Date(2026, 10, 8)) return;
+    if (location.hash) return;
+    try { if (localStorage.getItem(KEY)) return; } catch (e) {}
+  }
 
   var el = document.getElementById('game-splash');
   var font = document.createElement('link');
