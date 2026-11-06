@@ -197,7 +197,7 @@
       <!-- FIND YOUR RECORD -->
       <div id="lookupSection">
         <h3>Find Your Record</h3>
-        <p>Enter your cadet's last name, birthday, and a parent email address already on file.</p>
+        <p>Enter your cadet's last name, birthday, and a parent email address already on file. We'll email you a short code to confirm it's you.</p>
         <div id="lookupFields">
           <div class="form-row-3">
             <div class="form-group">
@@ -213,7 +213,7 @@
               <input type="email" id="lookupEmail" required />
             </div>
           </div>
-          <button type="button" id="lookupBtn" class="cta-button">Find My Record</button>
+          <button type="button" id="lookupBtn" class="cta-button">Email Me a Code</button>
         </div>
         <div id="lookupStatus"></div>
         <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Having trouble finding your record? Contact site support at <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue)">siteadmin@alabamafalcons.org</a>.</p>
@@ -283,7 +283,7 @@
     document.getElementById('lookupBirthday').addEventListener('keydown', lookupEnterKey);
     document.getElementById('lookupEmail').addEventListener('keydown', lookupEnterKey);
 
-    // Two steps: Find My Record emails a code to the address typed, and the
+    // Two steps: Email Me a Code emails a code to the address typed, and the
     // code is exchanged for the family's letters (see email-code.js).
     EmailCode.attach({
       endpoint: 'parent-letters-lookup.php',

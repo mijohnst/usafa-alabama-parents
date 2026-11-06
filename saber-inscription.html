@@ -184,7 +184,7 @@
       <!-- STEP 1: FIND YOUR FAMILY -->
       <div id="lookupStep">
         <div class="form-divider-label">Find Your Family</div>
-        <p class="lead">Enter your cadet's last name, birthday, and a parent's or the cadet's email address already on file with the club. No portal login needed.</p>
+        <p class="lead">Enter your cadet's last name, birthday, and a parent's or the cadet's email address already on file with the club. No portal login needed &mdash; we'll email you a short code to confirm it's you.</p>
         <div id="lookupFields">
           <div class="form-row-3">
             <div class="form-group">
@@ -200,7 +200,7 @@
               <input type="email" id="lookupEmail" autocomplete="email" />
             </div>
           </div>
-          <button type="button" id="lookupBtn" class="cta-button">Continue</button>
+          <button type="button" id="lookupBtn" class="cta-button">Email Me a Code</button>
         </div>
         <div id="lookupStatus" class="status" role="status" aria-live="polite"></div>
         <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Can't find your record? Contact <a href="mailto:secretary@alabamafalcons.org" style="color:var(--blue)">secretary@alabamafalcons.org</a>.</p>
@@ -361,7 +361,7 @@
       });
     });
 
-    // Continue emails a code to the address typed, and the code is
+    // Email Me a Code emails a code to the address typed, and the code is
     // exchanged for the inscription token (see email-code.js).
     EmailCode.attach({
       endpoint: 'saber-inscription.php',

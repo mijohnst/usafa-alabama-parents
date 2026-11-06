@@ -465,7 +465,7 @@
         <h4>Pay Dues Online</h4>
       </div>
       <div class="box-content">
-        <p>Look up your cadet below to pay online instantly with PayPal, a debit/credit card, or (where available on your device) Venmo or Apple Pay &mdash; no need to email a receipt, your membership updates automatically.</p>
+        <p>Look up your cadet below to pay online instantly with PayPal, a debit/credit card, or (where available on your device) Venmo or Apple Pay &mdash; no need to email a receipt, your membership updates automatically. We'll email you a short code to confirm it's you.</p>
 
         <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
           <label for="duesWebsite">Leave this field empty</label>
@@ -489,7 +489,7 @@
                 <input type="email" id="duesEmail" required />
               </div>
             </div>
-            <button type="button" id="duesLookupBtn" class="cta-button">Find My Cadet</button>
+            <button type="button" id="duesLookupBtn" class="cta-button">Email Me a Code</button>
           </div>
           <div id="duesLookupStatus" role="status" aria-live="polite"></div>
           <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Having trouble? Contact <a href="mailto:treasurer@alabamafalcons.org" style="color:var(--blue)">treasurer@alabamafalcons.org</a>.</p>
@@ -761,7 +761,7 @@
       document.getElementById('duesBirthday').addEventListener('keydown', duesEnterKey);
       document.getElementById('duesEmail').addEventListener('keydown', duesEnterKey);
 
-      // Two steps: Find My Cadet emails a code to the address typed, and the
+      // Two steps: Email Me a Code emails a code to the address typed, and the
       // code is exchanged for the payable years (see email-code.js).
       EmailCode.attach({
         endpoint: 'dues-pay-lookup.php',

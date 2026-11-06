@@ -799,12 +799,12 @@ if (volForm) {
           '<div class="vol-opp-actions"><button type="button" class="btn btn-dark vol-opp-claim-btn">Claim a Spot</button></div>'
           + '<div class="vol-opp-claim-form" style="display:none">'
           + '<div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true"><label>Leave this field empty</label><input type="text" class="vol-opp-website" tabindex="-1" autocomplete="off"></div>'
-          + '<p class="vol-opp-desc" style="margin:0 0 .75rem">Verify your family with your cadet\'s last name, birthday, and a parent\'s or the cadet\'s email on file — no login needed.</p>'
+          + '<p class="vol-opp-desc" style="margin:0 0 .75rem">Verify your family with your cadet\'s last name, birthday, and a parent\'s or the cadet\'s email on file — no login needed. We\'ll email you a short code to confirm it\'s you.</p>'
           + '<div class="vol-opp-fields">'
           + '<div class="form-row"><div class="form-group"><label>Cadet Last Name *</label><input type="text" class="vol-opp-last"></div>'
           + '<div class="form-group"><label>Cadet Birthday *</label><input type="date" class="vol-opp-birthday"></div></div>'
           + '<div class="form-group"><label>Parent\'s or Cadet\'s Email on File *</label><input type="email" class="vol-opp-email"></div>'
-          + '<button type="button" class="btn btn-dark vol-opp-submit-btn">Confirm Sign-Up</button>'
+          + '<button type="button" class="btn btn-dark vol-opp-submit-btn">Email Me a Code</button>'
           + '</div>'
           + '<div class="vol-opp-status"></div></div>'
         )
@@ -821,7 +821,7 @@ if (volForm) {
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   }
 
-  // Confirm Sign-Up emails a code to the address typed; the claim is made
+  // Email Me a Code emails a code to the address typed; the claim is made
   // only once the code checks out (see email-code.js).
   function attachOppClaim(btn) {
     var card     = btn.closest('.vol-opp-card');
