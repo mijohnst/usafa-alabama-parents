@@ -8,6 +8,9 @@
  * after a single use — writing a letter and saving/downloading it can take
  * several separate requests, so it stays valid (and gets refreshed) for
  * the whole session window instead of a one-shot submit.
+ * Two steps: the lookup emails a one-time code to the address typed
+ * (admin/email-code.php); only a correct code (action = "verify") returns
+ * the token and the family's letters.
  */
 
 header('Content-Type: application/json');
@@ -15,6 +18,7 @@ header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/email-code.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -58,35 +62,35 @@ if (honeypot_tripped($payload)) {
     exit();
 }
 
-if (rate_limited($pdo, 'parent_letters_lookup')) {
-    http_response_code(429);
-    echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email secretary@alabamafalcons.org.']);
-    exit();
-}
-
 function s(array $p, string $key): string {
     return trim($p[$key] ?? '');
 }
 
-$last     = s($payload, 'cadetLastName');
-$birthday = s($payload, 'cadetBirthday');
-$email    = s($payload, 'email');
+if (s($payload, 'action') === 'verify') {
+    // ── Step 2: a correct emailed code opens the family's letters ────────
+    [$m] = email_code_verified_member($pdo, 'letters', $payload, 'secretary@alabamafalcons.org');
+} else {
+    // ── Step 1: look up the record and email a code ──────────────────────
+    if (rate_limited($pdo, 'parent_letters_lookup')) {
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email secretary@alabamafalcons.org.']);
+        exit();
+    }
 
-if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, and the email address on file."]);
-    exit();
-}
+    $last     = s($payload, 'cadetLastName');
+    $birthday = s($payload, 'cadetBirthday');
+    $email    = s($payload, 'email');
 
-// Shared identity check (admin/lib.php), parent emails only.
-$m = find_member_by_identity($pdo, $last, $birthday, $email, false);
+    if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, and the email address on file."]);
+        exit();
+    }
 
-if (!$m) {
-    echo json_encode([
-        'success' => false,
-        'error'   => "We couldn't find a matching record. Please double-check the cadet's last name, birthday, and the email on file, or contact secretary@alabamafalcons.org."
-    ]);
-    exit();
+    // Shared identity check (admin/lib.php), parent emails only. Code to the
+    // address typed; a non-match gets an identical-looking decoy.
+    $m = find_member_by_identity($pdo, $last, $birthday, $email, false);
+    email_code_respond_for_member($pdo, 'letters', $m, $email, 'write or view your parent letters', 'secretary@alabamafalcons.org');
 }
 
 start_verification_session();

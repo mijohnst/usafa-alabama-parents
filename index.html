@@ -269,6 +269,7 @@
     @media(max-width:560px){.footer-grid{grid-template-columns:1fr;}}
   </style>
   <script src="shared-nav.js" defer></script>
+  <script src="email-code.js?v=1"></script>
 </head>
 <body>
 
@@ -763,9 +764,7 @@ if (volForm) {
         form.style.display = form.style.display === 'none' ? 'block' : 'none';
       });
     });
-    list.querySelectorAll('.vol-opp-submit-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() { submitOppClaim(btn); });
-    });
+    list.querySelectorAll('.vol-opp-submit-btn').forEach(attachOppClaim);
     // Shared links from admin/volunteer-opportunities.php ("Copy Link") are
     // https://alabamafalcons.org/#opp-ID. These cards only exist after this
     // fetch, so the browser's own jump-to-anchor (and the generic re-scroll
@@ -801,10 +800,12 @@ if (volForm) {
           + '<div class="vol-opp-claim-form" style="display:none">'
           + '<div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true"><label>Leave this field empty</label><input type="text" class="vol-opp-website" tabindex="-1" autocomplete="off"></div>'
           + '<p class="vol-opp-desc" style="margin:0 0 .75rem">Verify your family with your cadet\'s last name, birthday, and a parent\'s or the cadet\'s email on file — no login needed.</p>'
+          + '<div class="vol-opp-fields">'
           + '<div class="form-row"><div class="form-group"><label>Cadet Last Name *</label><input type="text" class="vol-opp-last"></div>'
           + '<div class="form-group"><label>Cadet Birthday *</label><input type="date" class="vol-opp-birthday"></div></div>'
           + '<div class="form-group"><label>Parent\'s or Cadet\'s Email on File *</label><input type="email" class="vol-opp-email"></div>'
           + '<button type="button" class="btn btn-dark vol-opp-submit-btn">Confirm Sign-Up</button>'
+          + '</div>'
           + '<div class="vol-opp-status"></div></div>'
         )
       + '</div>';
@@ -820,41 +821,40 @@ if (volForm) {
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   }
 
-  function submitOppClaim(btn) {
+  // Confirm Sign-Up emails a code to the address typed; the claim is made
+  // only once the code checks out (see email-code.js).
+  function attachOppClaim(btn) {
     var card     = btn.closest('.vol-opp-card');
     var form     = btn.closest('.vol-opp-claim-form');
     var statusEl = form.querySelector('.vol-opp-status');
-    var last     = form.querySelector('.vol-opp-last').value.trim();
-    var birthday = form.querySelector('.vol-opp-birthday').value;
-    var email    = form.querySelector('.vol-opp-email').value.trim();
-    var website  = form.querySelector('.vol-opp-website').value;
 
-    // Visibility comes from the CSS classes alone (.vol-opp-status hidden,
-    // .error/.success shown) — an inline display:none here used to override
-    // them, so every error message stayed invisible and the button just
-    // looked like it did nothing.
-    statusEl.className = 'vol-opp-status'; statusEl.style.display = '';
-    if (!last || !birthday || !email) {
-      statusEl.textContent = "Please enter your cadet's last name, birthday, and the email on file.";
-      statusEl.className = 'vol-opp-status error';
-      return;
-    }
-
-    var originalText = btn.textContent;
-    btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>Please wait…';
-
-    // Never leave the button stuck on "Submitting…" if the server stalls —
-    // give up after 25s and fall through to the error message below.
-    var ctrl = window.AbortController ? new AbortController() : null;
-    var stall = ctrl ? setTimeout(function() { ctrl.abort(); }, 25000) : null;
-
-    fetch('volunteer-opportunity-claim.php', {
-      signal: ctrl ? ctrl.signal : undefined,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ opportunity_id: card.getAttribute('data-id'), cadetLastName: last, cadetBirthday: birthday, email: email, website: website })
-    }).then(function(r) { if (stall) clearTimeout(stall); return r.json(); }).then(function(data) {
-      if (data.success) {
+    EmailCode.attach({
+      endpoint: 'volunteer-opportunity-claim.php',
+      button:   btn,
+      fields:   form.querySelector('.vol-opp-fields'),
+      status:   statusEl,
+      contact:  'info@alabamafalcons.org',
+      // Visibility comes from the CSS classes alone (.vol-opp-status hidden,
+      // .error/.success shown) — an inline display:none here used to override
+      // them, so every error message stayed invisible.
+      showStatus: function(msg, kind) {
+        statusEl.textContent = msg;
+        statusEl.className = 'vol-opp-status' + (msg && kind ? ' ' + kind : '');
+      },
+      collect: function() {
+        var last     = form.querySelector('.vol-opp-last').value.trim();
+        var birthday = form.querySelector('.vol-opp-birthday').value;
+        var email    = form.querySelector('.vol-opp-email').value.trim();
+        if (!last || !birthday || !email) {
+          return { error: "Please enter your cadet's last name, birthday, and the email on file." };
+        }
+        return {
+          email: email,
+          payload: { opportunity_id: card.getAttribute('data-id'), cadetLastName: last, cadetBirthday: birthday, email: email,
+                     website: form.querySelector('.vol-opp-website').value }
+        };
+      },
+      onVerified: function(data) {
         form.innerHTML = '<p class="vol-opp-status success" style="display:block">' + escHtml(data.message || "You're signed up — thank you!") + '</p>';
         var spotsEl  = card.querySelector('.vol-opp-spots');
         var claimBtn = card.querySelector('.vol-opp-claim-btn');
@@ -866,15 +866,7 @@ if (volForm) {
           if (newFilled >= total) spotsEl.classList.add('full');
         }
         if (claimBtn) claimBtn.style.display = 'none';
-      } else {
-        statusEl.textContent = data.error || 'Something went wrong. Please try again or email info@alabamafalcons.org.';
-        statusEl.className = 'vol-opp-status error';
-        btn.disabled = false; btn.textContent = originalText;
       }
-    }).catch(function() {
-      statusEl.textContent = 'Something went wrong. Please try again or email info@alabamafalcons.org.';
-      statusEl.className = 'vol-opp-status error';
-      btn.disabled = false; btn.textContent = originalText;
     });
   }
 })();

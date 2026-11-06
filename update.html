@@ -92,6 +92,7 @@
     @media (max-width: 768px) { .hero h1 { font-size: 2rem; } }
   </style>
   <script src="shared-nav.js" defer></script>
+  <script src="email-code.js?v=1"></script>
 </head>
 <body>
 
@@ -192,22 +193,24 @@
         <div id="lookupSection">
           <div class="form-divider-label" id="fs-lookup">Find Your Record</div>
           <p style="color:var(--gray);font-size:0.95rem;margin-bottom:1.25rem">Enter your cadet's last name, birthday, and a parent's or the cadet's email address already on file to pull up your family's current information.</p>
-          <div class="form-row-3">
-            <div class="form-group">
-              <label for="lookupLastName">Cadet Last Name *</label>
-              <input type="text" id="lookupLastName" required />
+          <div id="lookupFields">
+            <div class="form-row-3">
+              <div class="form-group">
+                <label for="lookupLastName">Cadet Last Name *</label>
+                <input type="text" id="lookupLastName" required />
+              </div>
+              <div class="form-group">
+                <label for="lookupBirthday">Cadet Birthday *</label>
+                <input type="date" id="lookupBirthday" required />
+              </div>
+              <div class="form-group">
+                <label for="lookupEmail">Parent's or Cadet's Email on File *</label>
+                <input type="email" id="lookupEmail" required />
+              </div>
             </div>
-            <div class="form-group">
-              <label for="lookupBirthday">Cadet Birthday *</label>
-              <input type="date" id="lookupBirthday" required />
-            </div>
-            <div class="form-group">
-              <label for="lookupEmail">Parent's or Cadet's Email on File *</label>
-              <input type="email" id="lookupEmail" required />
-            </div>
+            <button type="button" id="lookupBtn" class="cta-button">Find My Record</button>
           </div>
           <div id="lookupStatus"></div>
-          <button type="button" id="lookupBtn" class="cta-button">Find My Record</button>
           <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Having trouble finding your record? Contact site support at <a href="mailto:siteadmin@alabamafalcons.org" style="color:var(--blue)">siteadmin@alabamafalcons.org</a>.</p>
         </div>
 
@@ -562,24 +565,15 @@
         document.head.appendChild(s);
       }).catch(showPaypalUnavailable);
 
-      // Called from the main "Find My Record" success handler below, with
-      // the same identity fields already entered once. A failure here is
-      // silent — dues status is a bonus on this page, not its primary job,
-      // and must never block the info-update flow that already succeeded.
-      window.loadDuesStatus = async function(last, birthday, email) {
+      // Called from the main "Find My Record" success handler below with the
+      // dues block update-lookup.php includes in its verified response (the
+      // same shape dues-pay-lookup.php returns), so one emailed code covers
+      // both. A failure here is silent — dues status is a bonus on this
+      // page, not its primary job, and must never block the info-update
+      // flow that already succeeded.
+      window.loadDuesStatus = function(result) {
         try {
-          var resp = await fetch('dues-pay-lookup.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              cadetLastName: last,
-              cadetBirthday: birthday,
-              email: email,
-              website: document.getElementById('website').value
-            })
-          });
-          var result = await resp.json();
-          if (!result.success) return;
+          if (!result) return;
 
           duesVerifyToken = result.verifyToken;
           duesOptions = result.options || [];
@@ -748,61 +742,41 @@
     document.getElementById('lookupBirthday').addEventListener('keydown', lookupEnterKey);
     document.getElementById('lookupEmail').addEventListener('keydown', lookupEnterKey);
 
-    document.getElementById('lookupBtn').addEventListener('click', async function() {
-      var btn = this;
-      var statusEl = document.getElementById('lookupStatus');
-      var last     = document.getElementById('lookupLastName').value.trim();
-      var birthday = document.getElementById('lookupBirthday').value;
-      var email    = document.getElementById('lookupEmail').value.trim();
-
-      statusEl.style.display = 'none';
-      statusEl.className = '';
-
-      if (!last || !birthday || !email) {
-        statusEl.textContent = 'Please enter the cadet last name, birthday, and the email on file.';
-        statusEl.className = 'error';
-        statusEl.style.display = 'block';
-        return;
-      }
-
-      btn.textContent = 'Searching…';
-      btn.disabled = true;
-
-      try {
-        var resp = await fetch('update-lookup.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+    // Two steps: Find My Record emails a code to the address typed, and the
+    // code is exchanged for the record (see email-code.js).
+    EmailCode.attach({
+      endpoint: 'update-lookup.php',
+      button:   document.getElementById('lookupBtn'),
+      fields:   document.getElementById('lookupFields'),
+      status:   document.getElementById('lookupStatus'),
+      contact:  'secretary@alabamafalcons.org',
+      collect: function() {
+        var last     = document.getElementById('lookupLastName').value.trim();
+        var birthday = document.getElementById('lookupBirthday').value;
+        var email    = document.getElementById('lookupEmail').value.trim();
+        if (!last || !birthday || !email) {
+          return { error: 'Please enter the cadet last name, birthday, and the email on file.' };
+        }
+        return {
+          email: email,
+          payload: {
             cadetLastName: last,
             cadetBirthday: birthday,
             email: email,
             website: document.getElementById('website').value
-          })
-        });
-        var result = await resp.json();
-
-        if (result.success) {
-          populateForm(result.member);
-          document.getElementById('verifiedLastName').value = last;
-          document.getElementById('verifiedBirthday').value = birthday;
-          document.getElementById('verifiedEmail').value = email;
-          document.getElementById('verifyToken').value = result.verifyToken;
-          document.getElementById('lookupSection').style.display = 'none';
-          document.getElementById('formBody').style.display = 'block';
-          window.scrollTo({ top: document.getElementById('formBody').offsetTop - 100, behavior: 'smooth' });
-          window.loadDuesStatus(last, birthday, email);
-        } else {
-          statusEl.textContent = result.error || "We couldn't find a matching record.";
-          statusEl.className = 'error';
-          statusEl.style.display = 'block';
-        }
-      } catch (err) {
-        statusEl.textContent = 'Error looking up your record. Please try again or contact secretary@alabamafalcons.org';
-        statusEl.className = 'error';
-        statusEl.style.display = 'block';
-      } finally {
-        btn.textContent = 'Find My Record';
-        btn.disabled = false;
+          }
+        };
+      },
+      onVerified: function(result) {
+        populateForm(result.member);
+        document.getElementById('verifiedLastName').value = document.getElementById('lookupLastName').value.trim();
+        document.getElementById('verifiedBirthday').value = document.getElementById('lookupBirthday').value;
+        document.getElementById('verifiedEmail').value = document.getElementById('lookupEmail').value.trim();
+        document.getElementById('verifyToken').value = result.verifyToken;
+        document.getElementById('lookupSection').style.display = 'none';
+        document.getElementById('formBody').style.display = 'block';
+        window.scrollTo({ top: document.getElementById('formBody').offsetTop - 100, behavior: 'smooth' });
+        window.loadDuesStatus(result.dues);
       }
     });
 

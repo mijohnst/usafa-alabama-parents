@@ -296,6 +296,50 @@ function cadet_dues_years(string $class_year): array {
     return $years;
 }
 
+// A verified family's dues options plus a fresh token in the dues_verified
+// session pool that dues-pay-create-order.php trusts. Shared by
+// dues-pay-lookup.php (payment.html) and update-lookup.php (update.html
+// shows dues status after Find My Record), so one emailed code covers both.
+function dues_verified_payload(array $m): array {
+    $cadet_years = cadet_dues_years($m['class_year'] ?? '');
+    $paid_years  = parse_dues_years($m['membership_paid_years']);
+    $payable     = array_values(array_diff($cadet_years, $paid_years));
+
+    start_verification_session();
+    $verify_token = bin2hex(random_bytes(24));
+    if (!isset($_SESSION['dues_verified']) || !is_array($_SESSION['dues_verified'])) {
+        $_SESSION['dues_verified'] = [];
+    }
+    foreach ($_SESSION['dues_verified'] as $t => $entry) {
+        if (($entry['expires'] ?? 0) < time()) unset($_SESSION['dues_verified'][$t]);
+    }
+    $_SESSION['dues_verified'][$verify_token] = [
+        'member_id'     => (int)$m['id'],
+        'expires'       => time() + 1800, // 30 minutes
+        'pending_order' => null,
+    ];
+
+    // cadetYears/paidYears let the front end mirror dues_years_price()'s own
+    // $75/year-with-$275-bundle-discount rule to compute an accurate running
+    // total for *any* combination the parent checks — a per-checkbox price
+    // walked in list order was misleading (it dumped the whole 4-year bundle
+    // discount onto whichever box happened to be last), and wouldn't match
+    // what dues-pay-create-order.php actually charges if that box were
+    // checked alone. This can't leak anything the payable list doesn't
+    // already imply, since cadetYears - payable = paidYears anyway.
+    return [
+        'verifyToken' => $verify_token,
+        'cadetName'   => trim(cadet_full_name($m)),
+        'options'     => array_map(function ($year) { return ['year' => $year]; }, $payable),
+        'cadetYears'  => $cadet_years,
+        'paidYears'   => $paid_years,
+        // Lets a caller show "currently paid" (this specific club year is
+        // covered) rather than just "has ever paid any year" — same
+        // definition membership_paid on the members table itself uses.
+        'currentYear' => membership_year(),
+    ];
+}
+
 // Splits the stored comma-separated column back into an array. Tolerant
 // of null/empty (a member with no dues history yet).
 function parse_dues_years(?string $csv): array {

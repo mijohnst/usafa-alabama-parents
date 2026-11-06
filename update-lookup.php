@@ -4,10 +4,14 @@
  * Same identity check as job-drop-lookup.php and parent-letters-lookup.php
  * (cadet last name + birthday + an email already on file), except this one
  * (and dues-pay-lookup.php, which shares the update.html lookup) also
- * accepts the cadet's own email, not just a parent's. Verifies before
- * returning that family's current
- * record, so the Update form can be pre-filled. Never creates or modifies
- * anything.
+ * accepts the cadet's own email, not just a parent's. Two steps:
+ *   1. Lookup — on a match, emails a one-time code to the address typed
+ *      (admin/email-code.php). The response is the same whether or not
+ *      anything matched.
+ *   2. Verify (action = "verify") — a correct code returns that family's
+ *      current record, so the Update form can be pre-filled, plus the
+ *      token update-handler.php trusts.
+ * Never creates or modifies anything.
  */
 
 header('Content-Type: application/json');
@@ -17,6 +21,7 @@ header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/email-code.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -49,41 +54,40 @@ if (honeypot_tripped($payload)) {
 
 $pdo = get_pdo();
 
-if (rate_limited($pdo, 'update_lookup')) {
-    http_response_code(429);
-    echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email secretary@alabamafalcons.org.']);
-    exit();
-}
-
 function s(array $p, string $key): string {
     return trim($p[$key] ?? '');
 }
 
-$last     = s($payload, 'cadetLastName');
-$birthday = s($payload, 'cadetBirthday');
-$email    = s($payload, 'email');
+if (s($payload, 'action') === 'verify') {
+    // ── Step 2: a correct emailed code returns the record ────────────────
+    [$m] = email_code_verified_member($pdo, 'update', $payload, 'secretary@alabamafalcons.org');
+} else {
+    // ── Step 1: look up the record and email a code ──────────────────────
+    if (rate_limited($pdo, 'update_lookup')) {
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email secretary@alabamafalcons.org.']);
+        exit();
+    }
 
-if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, and the email address on file."]);
-    exit();
-}
+    $last     = s($payload, 'cadetLastName');
+    $birthday = s($payload, 'cadetBirthday');
+    $email    = s($payload, 'email');
 
-// Matched in PHP against a normalized, suffix-stripped last name rather
-// than a strict SQL `=` — a legacy record whose suffix is still crammed
-// into cadet_last_name (e.g. "Jimmerson Jr", from before cadet_suffix
-// existed) would otherwise never match a lookup for the clean "Jimmerson"
-// a parent naturally types now that Suffix is its own field.
-// One shared implementation (admin/lib.php) for every public identity
-// check, so a fix there reaches all of them at once.
-$m = find_member_by_identity($pdo, $last, $birthday, $email);
+    if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, and the email address on file."]);
+        exit();
+    }
 
-if (!$m) {
-    echo json_encode([
-        'success' => false,
-        'error'   => "We couldn't find a matching record. Please double-check the cadet's last name, birthday, and the email on file, or contact secretary@alabamafalcons.org."
-    ]);
-    exit();
+    // One shared identity check (admin/lib.php) for every public form — it
+    // matches the last name normalized and suffix-stripped, so a legacy
+    // "Jimmerson Jr" record still matches a lookup for "Jimmerson".
+    $m = find_member_by_identity($pdo, $last, $birthday, $email);
+
+    // The code goes only to the address typed (one already on this record).
+    // No match gets a decoy challenge, so the response is identical either
+    // way and the form can't be used to learn who's on file.
+    email_code_respond_for_member($pdo, 'update', $m, $email, 'update your family information', 'secretary@alabamafalcons.org');
 }
 
 // Bind this specific record to a random per-lookup token, not one shared
@@ -142,4 +146,7 @@ echo json_encode([
         'parent2State'     => $g('parent2_state'),
         'parent2Zip'       => $g('parent2_zip'),
     ],
+    // update.html shows dues status under the form; included here so the
+    // family doesn't need a second emailed code from dues-pay-lookup.php.
+    'dues'    => dues_verified_payload($m),
 ]);

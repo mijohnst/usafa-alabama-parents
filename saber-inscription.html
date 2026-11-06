@@ -81,6 +81,7 @@
     @media (max-width: 768px) { .hero h1 { font-size: 1.9rem; } .section { padding: 2rem 1rem; } .form-section { padding: 1.25rem; } }
   </style>
   <script src="shared-nav.js" defer></script>
+  <script src="email-code.js?v=1"></script>
 </head>
 <body>
 
@@ -184,22 +185,24 @@
       <div id="lookupStep">
         <div class="form-divider-label">Find Your Family</div>
         <p class="lead">Enter your cadet's last name, birthday, and a parent's or the cadet's email address already on file with the club. No portal login needed.</p>
-        <div class="form-row-3">
-          <div class="form-group">
-            <label for="lookupLastName">Cadet Last Name *</label>
-            <input type="text" id="lookupLastName" autocomplete="family-name" />
+        <div id="lookupFields">
+          <div class="form-row-3">
+            <div class="form-group">
+              <label for="lookupLastName">Cadet Last Name *</label>
+              <input type="text" id="lookupLastName" autocomplete="family-name" />
+            </div>
+            <div class="form-group">
+              <label for="lookupBirthday">Cadet Birthday *</label>
+              <input type="date" id="lookupBirthday" />
+            </div>
+            <div class="form-group">
+              <label for="lookupEmail">Email on File *</label>
+              <input type="email" id="lookupEmail" autocomplete="email" />
+            </div>
           </div>
-          <div class="form-group">
-            <label for="lookupBirthday">Cadet Birthday *</label>
-            <input type="date" id="lookupBirthday" />
-          </div>
-          <div class="form-group">
-            <label for="lookupEmail">Email on File *</label>
-            <input type="email" id="lookupEmail" autocomplete="email" />
-          </div>
+          <button type="button" id="lookupBtn" class="cta-button">Continue</button>
         </div>
         <div id="lookupStatus" class="status" role="status" aria-live="polite"></div>
-        <button type="button" id="lookupBtn" class="cta-button">Continue</button>
         <p style="font-size:.8rem;color:var(--gray);margin-top:.85rem">Can't find your record? Contact <a href="mailto:secretary@alabamafalcons.org" style="color:var(--blue)">secretary@alabamafalcons.org</a>.</p>
       </div>
 
@@ -358,20 +361,30 @@
       });
     });
 
-    $('lookupBtn').addEventListener('click', async function() {
-      var btn = this;
-      var last = $('lookupLastName').value.trim();
-      var birthday = $('lookupBirthday').value;
-      var email = $('lookupEmail').value.trim();
-      clearStatus('lookupStatus');
-      if (!last || !birthday || !email) {
-        showStatus('lookupStatus', "Please enter the cadet's last name, birthday, and the email on file.", 'error');
-        return;
-      }
-      btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>Please wait…';
-      try {
-        var d = await post({ action: 'lookup', cadetLastName: last, cadetBirthday: birthday, email: email, website: $('website').value });
-        if (!d.success) { showStatus('lookupStatus', d.error || "We couldn't find a matching record.", 'error'); return; }
+    // Continue emails a code to the address typed, and the code is
+    // exchanged for the inscription token (see email-code.js).
+    EmailCode.attach({
+      endpoint: 'saber-inscription.php',
+      button:   $('lookupBtn'),
+      fields:   $('lookupFields'),
+      status:   $('lookupStatus'),
+      contact:  'secretary@alabamafalcons.org',
+      showStatus: function(msg, kind) {
+        if (msg) showStatus('lookupStatus', msg, kind); else clearStatus('lookupStatus');
+      },
+      collect: function() {
+        var last = $('lookupLastName').value.trim();
+        var birthday = $('lookupBirthday').value;
+        var email = $('lookupEmail').value.trim();
+        if (!last || !birthday || !email) {
+          return { error: "Please enter the cadet's last name, birthday, and the email on file." };
+        }
+        return {
+          email: email,
+          payload: { action: 'lookup', cadetLastName: last, cadetBirthday: birthday, email: email, website: $('website').value }
+        };
+      },
+      onVerified: function(d) {
         token = d.token;
         isOpen = !!d.open;
         $('familyBanner').innerHTML = '';
@@ -405,10 +418,6 @@
         updatePreview();
         $('lookupStep').style.display = 'none';
         $('inscriptionStep').style.display = 'block';
-      } catch (err) {
-        showStatus('lookupStatus', 'Something went wrong. Please try again, or contact secretary@alabamafalcons.org.', 'error');
-      } finally {
-        btn.disabled = false; btn.textContent = 'Continue';
       }
     });
 

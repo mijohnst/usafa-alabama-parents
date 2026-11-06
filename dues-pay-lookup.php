@@ -5,8 +5,10 @@
  * birthday + an email already on file — either parent's or, unlike Job
  * Drop, the cadet's own), and also unlike Job Drop this
  * isn't restricted to one class_year — any cadet with an unpaid year can
- * pay. Issues its own token in its own session pool (dues_verified) so it
- * doesn't interact with any other verification flow.
+ * pay. Two steps: the lookup emails a one-time code to the address typed
+ * (admin/email-code.php), and only a correct code (action = "verify")
+ * returns the payable years and a token in its own session pool
+ * (dues_verified), so it doesn't interact with any other verification flow.
  */
 
 header('Content-Type: application/json');
@@ -14,6 +16,7 @@ header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/email-code.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -44,74 +47,36 @@ if (honeypot_tripped($payload)) {
 
 $pdo = get_pdo();
 
-if (rate_limited($pdo, 'dues_pay_lookup')) {
-    http_response_code(429);
-    echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email treasurer@alabamafalcons.org.']);
-    exit();
-}
-
 function s(array $p, string $key): string {
     return trim($p[$key] ?? '');
 }
 
-$last     = s($payload, 'cadetLastName');
-$email    = s($payload, 'email');
-$birthday = s($payload, 'cadetBirthday');
+if (s($payload, 'action') === 'verify') {
+    // ── Step 2: a correct emailed code returns the payable years ─────────
+    [$m] = email_code_verified_member($pdo, 'dues', $payload, 'treasurer@alabamafalcons.org');
+} else {
+    // ── Step 1: look up the record and email a code ──────────────────────
+    if (rate_limited($pdo, 'dues_pay_lookup')) {
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email treasurer@alabamafalcons.org.']);
+        exit();
+    }
 
-if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, and the email address on file."]);
-    exit();
+    $last     = s($payload, 'cadetLastName');
+    $email    = s($payload, 'email');
+    $birthday = s($payload, 'cadetBirthday');
+
+    if ($last === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, and the email address on file."]);
+        exit();
+    }
+
+    // Shared identity check (admin/lib.php) — same rules as update-lookup.php.
+    $m = find_member_by_identity($pdo, $last, $birthday, $email);
+
+    // Code to the address typed; a non-match gets an identical-looking decoy.
+    email_code_respond_for_member($pdo, 'dues', $m, $email, 'pay your membership dues', 'treasurer@alabamafalcons.org');
 }
 
-// Shared identity check (admin/lib.php) — same rules as update-lookup.php.
-$m = find_member_by_identity($pdo, $last, $birthday, $email);
-
-if (!$m) {
-    echo json_encode([
-        'success' => false,
-        'error'   => "We couldn't find a matching record. Please double-check the cadet's last name, birthday, and the email on file, or contact treasurer@alabamafalcons.org."
-    ]);
-    exit();
-}
-
-$cadet_years = cadet_dues_years($m['class_year'] ?? '');
-$paid_years  = parse_dues_years($m['membership_paid_years']);
-$payable     = array_values(array_diff($cadet_years, $paid_years));
-
-// cadetYears/paidYears let the front end mirror dues_years_price()'s own
-// $75/year-with-$275-bundle-discount rule (see admin/lib.php) to compute an
-// accurate running total for *any* combination the parent checks — a
-// per-checkbox price walked in list order was misleading (it dumped the
-// whole 4-year bundle discount onto whichever box happened to be last),
-// and wouldn't match what dues-pay-create-order.php actually charges if
-// that box were checked alone. This can't leak anything the payable list
-// doesn't already imply, since cadetYears - payable = paidYears anyway.
-$options = array_map(function ($year) { return ['year' => $year]; }, $payable);
-
-start_verification_session();
-$verify_token = bin2hex(random_bytes(24));
-if (!isset($_SESSION['dues_verified']) || !is_array($_SESSION['dues_verified'])) {
-    $_SESSION['dues_verified'] = [];
-}
-foreach ($_SESSION['dues_verified'] as $t => $entry) {
-    if (($entry['expires'] ?? 0) < time()) unset($_SESSION['dues_verified'][$t]);
-}
-$_SESSION['dues_verified'][$verify_token] = [
-    'member_id'     => (int)$m['id'],
-    'expires'       => time() + 1800, // 30 minutes
-    'pending_order' => null,
-];
-
-echo json_encode([
-    'success'     => true,
-    'verifyToken' => $verify_token,
-    'cadetName'   => trim(cadet_full_name($m)),
-    'options'     => $options,
-    'cadetYears'  => $cadet_years,
-    'paidYears'   => $paid_years,
-    // Lets a caller show "currently paid" (this specific club year is
-    // covered) rather than just "has ever paid any year" — same definition
-    // membership_paid on the members table itself uses (see admin/lib.php).
-    'currentYear' => membership_year(),
-]);
+echo json_encode(['success' => true] + dues_verified_payload($m));

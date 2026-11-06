@@ -2,6 +2,7 @@
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
 require_once __DIR__ . '/admin/mailer.php';
+require_once __DIR__ . '/admin/email-code.php';
 
 header('Content-Type: application/json');
 // Must be set on every response, not just the OPTIONS preflight — see
@@ -31,32 +32,40 @@ if (honeypot_tripped($data)) {
 
 $pdo = get_pdo();
 
-// 15 per 15 min per IP (not the 5 default): a household shares one IP,
-// and every claim must now match a real roster family anyway, so a few
-// parents signing up for several spots shouldn't trip the throttle.
-if (rate_limited($pdo, 'volunteer_claim', 15, 15)) {
-    http_response_code(429);
-    echo json_encode(['success' => false, 'error' => 'Too many submissions from your network. Please try again later or email us directly at info@alabamafalcons.org.']);
-    exit;
-}
+if (($data['action'] ?? '') === 'verify') {
+    // ── Step 2: a correct emailed code makes the claim ───────────────────
+    [$member, $binding] = email_code_verified_member($pdo, 'volunteer', $data, 'info@alabamafalcons.org');
+    $opportunity_id = (int)($binding['opportunity_id'] ?? 0);
+    $email          = $binding['email'];
+} else {
+    // ── Step 1: check the family and email a code ────────────────────────
+    // 15 per 15 min per IP (not the 5 default): a household shares one IP,
+    // and every claim must now match a real roster family anyway, so a few
+    // parents signing up for several spots shouldn't trip the throttle.
+    if (rate_limited($pdo, 'volunteer_claim', 15, 15)) {
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Too many submissions from your network. Please try again later or email us directly at info@alabamafalcons.org.']);
+        exit;
+    }
 
-$opportunity_id = (int)($data['opportunity_id'] ?? 0);
-$last     = trim((string)($data['cadetLastName'] ?? ''));
-$birthday = trim((string)($data['cadetBirthday'] ?? ''));
-$email    = trim((string)($data['email'] ?? ''));
+    $opportunity_id = (int)($data['opportunity_id'] ?? 0);
+    $last     = trim((string)($data['cadetLastName'] ?? ''));
+    $birthday = trim((string)($data['cadetBirthday'] ?? ''));
+    $email    = trim((string)($data['email'] ?? ''));
 
-if (!$opportunity_id || $last === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
-    http_response_code(400); echo json_encode(['success' => false, 'error' => "Please enter your cadet's last name, birthday, and the email address on file."]); exit();
-}
+    if (!$opportunity_id || $last === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
+        http_response_code(400); echo json_encode(['success' => false, 'error' => "Please enter your cadet's last name, birthday, and the email address on file."]); exit();
+    }
 
-// Verified against the roster the same way as update.html and
-// event-signup.html (find_member_by_identity() in admin/lib.php), so a
-// claim is tied to a real member family instead of a typed-in "guest"
-// name. The name recorded is whoever on that record owns the email used.
-$member = find_member_by_identity($pdo, $last, $birthday, $email);
-if (!$member) {
-    echo json_encode(['success' => false, 'error' => "We couldn't find a matching record. Please double-check your cadet's last name, birthday, and the email on file, or contact secretary@alabamafalcons.org."]);
-    exit();
+    // Verified against the roster the same way as update.html and
+    // event-signup.html (find_member_by_identity() in admin/lib.php), so a
+    // claim is tied to a real member family instead of a typed-in "guest"
+    // name, and then by a code to the address typed (a non-match gets an
+    // identical-looking decoy). The name recorded is whoever on that record
+    // owns the email used.
+    $member = find_member_by_identity($pdo, $last, $birthday, $email);
+    email_code_respond_for_member($pdo, 'volunteer', $member, $email, 'confirm your volunteer sign-up', 'info@alabamafalcons.org',
+        ['opportunity_id' => $opportunity_id]);
 }
 $member_id = (int)$member['id'];
 $lc = strtolower($email);

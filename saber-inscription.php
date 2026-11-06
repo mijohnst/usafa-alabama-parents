@@ -8,7 +8,9 @@
  * email on file, via find_member_by_identity() in admin/lib.php).
  *
  *   GET                         → campaign year, open/closed, max length
- *   POST {action:'lookup', ...} → verify the family, issue a token
+ *   POST {action:'lookup', ...} → check the family, email a code
+ *                                 (admin/email-code.php)
+ *   POST {action:'verify', ...} → a correct code issues the token
  *   POST {action:'save',   ...} → save their inscription (token)
  *
  * Save trusts only the per-lookup token in the verification session (never
@@ -26,6 +28,7 @@ header('Access-Control-Allow-Origin: https://alabamafalcons.org');
 
 require_once __DIR__ . '/admin/auth.php';
 require_once __DIR__ . '/admin/form-guard.php';
+require_once __DIR__ . '/admin/email-code.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -76,47 +79,50 @@ if (!isset($_SESSION['saber_inscription_verified']) || !is_array($_SESSION['sabe
     $_SESSION['saber_inscription_verified'] = [];
 }
 
-// ── lookup ───────────────────────────────────────────────────────────────
-if ($action === 'lookup') {
-    $not_found = "We couldn't find a matching record. Please double-check the cadet's last name, birthday, and the email on file, or contact secretary@alabamafalcons.org.";
-
-    if (honeypot_tripped($payload)) {
-        echo json_encode(['success' => false, 'error' => $not_found]);
-        exit();
-    }
-    if (rate_limited($pdo, 'saber_inscription_lookup', 10, 15)) {
-        http_response_code(429);
-        echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email secretary@alabamafalcons.org.']);
-        exit();
-    }
-
+// ── lookup (emails a code) / verify (code → token) ───────────────────────
+if ($action === 'lookup' || $action === 'verify') {
     $c = saber_inscription_campaign($pdo);
     if (!$c) {
         echo json_encode(['success' => false, 'error' => INSCRIPTION_UNAVAILABLE_MSG]);
         exit();
     }
 
-    $last     = trim((string)($payload['cadetLastName'] ?? ''));
-    $birthday = trim((string)($payload['cadetBirthday'] ?? ''));
-    $email    = trim((string)($payload['email'] ?? ''));
-    if ($last === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, and the email address on file."]);
-        exit();
-    }
+    if ($action === 'verify') {
+        [$m, $binding] = email_code_verified_member($pdo, 'saber_inscription', $payload, 'secretary@alabamafalcons.org');
+        $email = $binding['email'];
+    } else {
+        $not_found = "We couldn't find a matching record. Please double-check the cadet's last name, birthday, and the email on file, or contact secretary@alabamafalcons.org.";
 
-    $m = find_member_by_identity($pdo, $last, $birthday, $email);
-    if (!$m) {
-        echo json_encode(['success' => false, 'error' => $not_found]);
-        exit();
-    }
-    // Checked after the full 3-part match (not as a lookup filter) so a
-    // family whose record has the wrong class year gets told why, instead
-    // of a misleading "no matching record".
-    $on_file = trim((string)($m['class_year'] ?? ''));
-    if ($on_file !== $c['year']) {
-        echo json_encode(['success' => false, 'error' => "This form is only for families of Class of {$c['year']} cadets, and our records show your cadet in the Class of " . ($on_file !== '' ? $on_file : '(not set)') . ". If that's wrong, please update it at alabamafalcons.org/update.html or email secretary@alabamafalcons.org."]);
-        exit();
+        if (honeypot_tripped($payload)) {
+            echo json_encode(['success' => false, 'error' => $not_found]);
+            exit();
+        }
+        if (rate_limited($pdo, 'saber_inscription_lookup', 10, 15)) {
+            http_response_code(429);
+            echo json_encode(['success' => false, 'error' => 'Too many attempts from your network. Please try again later or email secretary@alabamafalcons.org.']);
+            exit();
+        }
+
+        $last     = trim((string)($payload['cadetLastName'] ?? ''));
+        $birthday = trim((string)($payload['cadetBirthday'] ?? ''));
+        $email    = trim((string)($payload['email'] ?? ''));
+        if ($last === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => "Please enter the cadet's last name, birthday, and the email address on file."]);
+            exit();
+        }
+
+        $m = find_member_by_identity($pdo, $last, $birthday, $email);
+        // Checked after the full 3-part match (not as a lookup filter) so a
+        // family whose record has the wrong class year gets told why, instead
+        // of a misleading "no matching record" — but only once their code
+        // checks out (a binding 'error'), so it can't reveal who's on file.
+        $extra = [];
+        $on_file = $m ? trim((string)($m['class_year'] ?? '')) : '';
+        if ($m && $on_file !== $c['year']) {
+            $extra['error'] = "This form is only for families of Class of {$c['year']} cadets, and our records show your cadet in the Class of " . ($on_file !== '' ? $on_file : '(not set)') . ". If that's wrong, please update it at alabamafalcons.org/update.html or email secretary@alabamafalcons.org.";
+        }
+        email_code_respond_for_member($pdo, 'saber_inscription', $m, $email, 'enter your cadet\'s saber inscription', 'secretary@alabamafalcons.org', $extra);
     }
 
     // Prune expired tokens so the pool doesn't grow across a long session.
