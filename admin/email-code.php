@@ -45,9 +45,9 @@ function email_code_hash(string $challenge_id, string $code): string {
     return hash('sha256', $challenge_id . '|' . $code);
 }
 
-function email_code_generate(): string {
+function email_code_generate(int $length = EMAIL_CODE_LENGTH): string {
     $code = '';
-    for ($i = 0; $i < EMAIL_CODE_LENGTH; $i++) {
+    for ($i = 0; $i < $length; $i++) {
         $code .= EMAIL_CODE_ALPHABET[random_int(0, strlen(EMAIL_CODE_ALPHABET) - 1)];
     }
     return $code;
@@ -237,4 +237,64 @@ function email_code_verified_member(PDO $pdo, string $pool, array $payload, stri
 function email_code_respond_for_member(PDO $pdo, string $pool, ?array $m, string $email, string $purpose, string $contact, array $extra = []): void {
     $binding = $m ? ['member_id' => (int)$m['id'], 'email' => strtolower($email)] + $extra : null;
     email_code_respond_issued($pdo, $pool, $binding, $email, $purpose, $contact);
+}
+
+// ── Portal login codes (admin/login.php) ──────────────────────────────────
+// The second step of portal login. Unlike the public lookups, the person has
+// already proven the password, so there's no decoy: errors are shown as-is.
+// The code always goes to users.email — never to an address typed at login,
+// or a stolen password plus the attacker's own inbox would get straight in.
+// Longer than the lookup codes (31^6 ≈ 887 million) because a portal login
+// can reach payouts, member data and bulk email.
+const LOGIN_CODE_LENGTH       = 6;
+const LOGIN_CODE_MAX_ATTEMPTS = 5;
+const LOGIN_CODE_RESEND_WAIT  = 30;   // seconds between sends
+const LOGIN_CODE_DAILY_CAP    = 15;   // codes per account per 24 hours
+const LOGIN_PENDING_TTL       = 1800; // password step is good for 30 minutes
+
+// Partly hides an address for display: "jsmith@gmail.com" → "j*****@gmail.com".
+function mask_email(string $email): string {
+    $at = strrpos($email, '@');
+    if ($at === false || $at < 1) return '***';
+    return mb_substr($email, 0, 1) . str_repeat('*', max(3, min(8, $at - 1))) . substr($email, $at);
+}
+
+// Emails a fresh login code for $user and stores its hash in
+// $_SESSION['pending_login'] (which the caller has already created).
+// Returns '' on success, or an error message to show.
+function login_code_send(PDO $pdo, array $user): string {
+    $email = trim((string)($user['email'] ?? ''));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return "Your account doesn't have a valid email address on file, so we can't send you a login code. "
+             . 'Please contact siteadmin@alabamafalcons.org.';
+    }
+    $request = email_code_record_request($pdo, 'user:' . (int)$user['id']);
+    if ($request && $request['count'] > LOGIN_CODE_DAILY_CAP) {
+        error_log('login-code: daily cap reached for user ' . (int)$user['id']);
+        return 'Too many login codes have been sent to this account today. '
+             . 'Please try again tomorrow or contact siteadmin@alabamafalcons.org.';
+    }
+
+    $code = email_code_generate(LOGIN_CODE_LENGTH);
+    $salt = bin2hex(random_bytes(16));
+    $body = "Your portal login code is:\n\n"
+          . "    $code\n\n"
+          . "(Letters and numbers; capitals don't matter.) Enter it on the alabamafalcons.org login page to finish signing in. "
+          . "The code expires in 10 minutes.\n\n"
+          . "If you didn't just try to log in, someone may know your password. Please change it after logging in, "
+          . "and let siteadmin@alabamafalcons.org know.\n\n"
+          . "USAFA Parents Club of Alabama\n"
+          . "alabamafalcons.org";
+    if (!send_notification($email, "Your portal login code: $code", $body)) {
+        email_code_unrecord_request($pdo, $request);
+        return "We couldn't send your login code right now. Please try \"Send a new code\" in a minute, "
+             . 'or contact siteadmin@alabamafalcons.org.';
+    }
+
+    $_SESSION['pending_login']['salt']     = $salt;
+    $_SESSION['pending_login']['hash']     = email_code_hash($salt, $code);
+    $_SESSION['pending_login']['attempts'] = 0;
+    $_SESSION['pending_login']['expires']  = time() + EMAIL_CODE_TTL;
+    $_SESSION['pending_login']['sent_at']  = time();
+    return '';
 }
