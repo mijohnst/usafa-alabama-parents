@@ -439,11 +439,20 @@ function csrf_field(): string {
     return '<input type="hidden" name="csrf" value="' . $_SESSION['csrf'] . '">';
 }
 
-function csrf_verify(): void {
-    if (empty($_POST['csrf']) || !hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'])) {
-        http_response_code(403); die('Invalid request token.');
+// True (and rotates the token) when the posted CSRF token matches. For pages
+// that need to recover gracefully instead of dying — see login.php.
+function csrf_valid(): bool {
+    if (empty($_POST['csrf']) || !is_string($_POST['csrf']) || !hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'])) {
+        return false;
     }
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
+    return true;
+}
+
+function csrf_verify(): void {
+    if (!csrf_valid()) {
+        http_response_code(403); die('Invalid request token.');
+    }
 }
 
 function flash(string $type, string $msg): void {

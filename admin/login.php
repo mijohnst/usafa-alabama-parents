@@ -10,7 +10,26 @@ $next_allowlist = ['volunteer-signup.php'];
 $next = $_POST['next'] ?? $_GET['next'] ?? '';
 $next = in_array($next, $next_allowlist, true) ? $next : 'dashboard.php';
 
+// Never let the browser reuse a cached copy of this page: a login form
+// restored from cache (phone tab reopened, back button, switching to the
+// email app for the code and back) carries a CSRF token from a session that
+// may be gone, and submitting it used to dead-end on "Invalid request token."
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+
 if (!empty($_SESSION['logged_in'])) { header('Location: ' . $next); exit; }
+
+function login_flash(string $type, string $msg): void {
+    $_SESSION['login_flash'] = ['type' => $type, 'msg' => $msg];
+}
+
+// One CSRF check for every POST on this page. A stale token (expired
+// session, old tab) sends the person back to a fresh form with a message
+// instead of a bare error page; whatever step they were on is kept if the
+// session still has it.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_valid()) {
+    login_flash('error', 'Your login page had expired, so that wasn’t submitted. Please try again.');
+    header('Location: login.php' . ($next !== 'dashboard.php' ? '?next=' . urlencode($next) : '')); exit;
+}
 
 $pdo   = get_pdo();
 $error = '';
@@ -18,7 +37,6 @@ $bootstrap = users_table_empty($pdo);
 
 // ── Bootstrap: create first admin user ────────────────────────────────────
 if ($bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['bootstrap'])) {
-    csrf_verify();
     $name  = trim($_POST['name']  ?? '');
     $email = trim($_POST['email'] ?? '');
     $uname = trim($_POST['username'] ?? '');
@@ -38,9 +56,6 @@ if ($bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['bootst
 // Every code-screen action is a plain form POST that redirects back here
 // (post/redirect/get), so each render gets a fresh CSRF token and a page
 // refresh never resubmits a stale one. Messages ride in login_flash.
-function login_flash(string $type, string $msg): void {
-    $_SESSION['login_flash'] = ['type' => $type, 'msg' => $msg];
-}
 
 // The pending account, re-read so a deactivation or password change made
 // after the password step still stops the login.
@@ -61,7 +76,6 @@ if ($pending && (int)$pending['started'] + LOGIN_PENDING_TTL < time()) {
 
 $code_action = $_POST['code_action'] ?? '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $code_action !== '') {
-    csrf_verify();
     $user = $pending ? pending_login_user($pdo, $pending) : null;
     if ($pending && !$user) {
         unset($_SESSION['pending_login']);
@@ -105,7 +119,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $code_action !== '') {
 
 // ── Normal login ───────────────────────────────────────────────────────────
 if (!$bootstrap && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['bootstrap'])) {
-    csrf_verify();
     $username_input = trim($_POST['username'] ?? '');
 
     // Per-account lockout below only ever engages once a submitted username
