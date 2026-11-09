@@ -28,10 +28,46 @@ function start_session(): void {
         // unchanged) — this only affects how long an open tab can idle, not
         // whether a session survives closing the browser.
         ini_set('session.gc_maxlifetime', '14400');
+        // That ini_set alone wasn't enough: session files from every site
+        // on the account share one folder, and both the public forms'
+        // sessions (lib.php's start_verification_session(), which runs
+        // PHP's cleanup with the host's ~24-minute default) and cPanel's
+        // own session-cleanup cron (which ignores ini_set entirely) delete
+        // any file older than the host default — wiping open login pages
+        // and idle officers' sessions. Keeping admin sessions in a private
+        // folder outside the web root puts them out of reach of both;
+        // PHP's own cleanup then runs here with the 4-hour lifetime above.
+        $dir = admin_session_dir();
+        if ($dir !== null) {
+            session_save_path($dir);
+            ini_set('session.gc_probability', '1');
+            ini_set('session.gc_divisor', '100');
+        }
         session_name('usafa_admin');
         session_set_cookie_params(['httponly' => true, 'samesite' => 'Strict', 'secure' => request_is_https()]);
         session_start();
     }
+}
+
+// Private session folder beside (not inside) the web root, e.g.
+// /home/<account>/usafa_sessions/admin on the live server. Null — fall back
+// to PHP's default folder — if it can't be created or written, so a
+// permissions problem degrades to the old behavior instead of breaking login.
+function admin_session_dir(): ?string {
+    $dir = dirname(__DIR__, 2) . '/usafa_sessions/admin';
+    if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+        error_log("auth: could not create admin session folder $dir — using PHP's default");
+        return null;
+    }
+    if (!is_writable($dir)) {
+        error_log("auth: admin session folder $dir is not writable — using PHP's default");
+        return null;
+    }
+    // Belt and braces in case the hosting layout ever puts this folder
+    // inside the web root: session files must never be downloadable.
+    $guard = dirname($dir) . '/.htaccess';
+    if (!is_file($guard)) @file_put_contents($guard, "Require all denied\nDeny from all\n");
+    return $dir;
 }
 
 function require_login(): void {

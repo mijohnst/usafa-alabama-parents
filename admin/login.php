@@ -27,6 +27,13 @@ function login_flash(string $type, string $msg): void {
 // instead of a bare error page; whatever step they were on is kept if the
 // session still has it.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_valid()) {
+    // Enough to tell "browser didn't send the cookie" from "server lost the
+    // session" in the error log, without logging any token or ID.
+    error_log(sprintf('login: stale CSRF — cookie sent: %s, session had token: %s, form had token: %s, save path: %s',
+        isset($_COOKIE['usafa_admin']) ? 'yes' : 'no',
+        empty($_SESSION['csrf']) ? 'no' : 'yes',
+        empty($_POST['csrf']) ? 'no' : 'yes',
+        session_save_path() ?: 'default'));
     login_flash('error', 'Your login page had expired, so that wasn’t submitted. Please try again.');
     header('Location: login.php' . ($next !== 'dashboard.php' ? '?next=' . urlencode($next) : '')); exit;
 }
