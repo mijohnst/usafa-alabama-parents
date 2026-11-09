@@ -282,25 +282,8 @@ if ($campaign !== '') {
     $stmt->execute([$campaign]);
     $raised_online = (float)$stmt->fetchColumn();
 
-    // donor_comment/show_name/honoree_last_name columns only exist after
-    // their respective migrations run — fall back one column set at a time
-    // so this page still works against an un-migrated database rather than
-    // erroring outright.
-    try {
-        $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at, donor_comment, show_name, honoree_last_name FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
-        $stmt->execute([$campaign]);
-        $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (\PDOException $e) {
-        try {
-            $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at, donor_comment, show_name FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
-            $stmt->execute([$campaign]);
-            $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e2) {
-            $stmt = $pdo->prepare("SELECT donor_name, donor_email, amount, captured_at FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC LIMIT 25");
-            $stmt->execute([$campaign]);
-            $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-    }
+    // Same column fallbacks as the PDF — see campaign_donations() in lib.php.
+    $recent = campaign_donations($pdo, $campaign, 25);
 }
 
 // Grouped by honoree for handing each cadet a list of who gave in their
@@ -458,7 +441,12 @@ echo show_flash();
 </div>
 
 <div class="card" style="max-width:1100px">
-  <h2 style="margin-bottom:1rem">Recent Online Donations</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+    <h2 style="margin:0">Recent Online Donations</h2>
+    <?php if (!empty($recent)): ?>
+    <a class="btn btn-primary btn-sm" href="donations-pdf.php?campaign=<?= urlencode($campaign) ?>">Download PDF (All Donations)</a>
+    <?php endif; ?>
+  </div>
   <?php if (empty($recent)): ?>
     <p style="color:#9aa5b4;font-size:.85rem">No online donations captured for this campaign yet.</p>
   <?php else: ?>

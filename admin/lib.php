@@ -716,6 +716,32 @@ function active_campaign_slug(PDO $pdo): ?string {
     }
 }
 
+// A campaign's captured online donations, newest first ($limit null = all).
+// Shared by admin/fundraiser.php's "Recent Online Donations" table and its
+// PDF (admin/donations-pdf.php). donor_comment/show_name/honoree_last_name
+// only exist after their migrations ran, so this falls back one column set
+// at a time against an un-migrated database; missing keys mean "not
+// collected", which both callers display as a dash.
+function campaign_donations(PDO $pdo, string $campaign, ?int $limit = null): array {
+    $tail = " FROM paypal_donations WHERE campaign = ? AND status = 'captured' ORDER BY captured_at DESC"
+          . ($limit !== null ? ' LIMIT ' . max(1, $limit) : '');
+    $column_sets = [
+        'donor_name, donor_email, amount, captured_at, donor_comment, show_name, honoree_last_name',
+        'donor_name, donor_email, amount, captured_at, donor_comment, show_name',
+        'donor_name, donor_email, amount, captured_at',
+    ];
+    foreach ($column_sets as $i => $cols) {
+        try {
+            $stmt = $pdo->prepare('SELECT ' . $cols . $tail);
+            $stmt->execute([$campaign]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            if ($i === count($column_sets) - 1) throw $e;
+        }
+    }
+    return [];
+}
+
 // Creates a brand-new campaign row plus its site_settings rows in one call,
 // and marks it active (atomically deactivating whatever was active before)
 // — this is what lets a treasurer start next year's Saber Fund drive
