@@ -463,12 +463,13 @@ echo show_flash();
     <p style="color:#9aa5b4;font-size:.85rem">No online donations captured for this campaign yet.</p>
   <?php else: ?>
   <table>
-    <thead><tr><th>Date</th><th>Donor</th><th>Amount</th><th>Public?</th><th>In Honor Of</th><th>Comment</th></tr></thead>
+    <thead><tr><th>Date</th><th>Donor</th><th>Email</th><th>Amount</th><th>Public?</th><th>In Honor Of</th><th>Comment</th></tr></thead>
     <tbody>
       <?php foreach ($recent as $r): ?>
       <tr>
         <td><?= h(date('M j, Y', strtotime($r['captured_at']))) ?></td>
-        <td><?= h($r['donor_name'] ?: $r['donor_email']) ?></td>
+        <td><?= h($r['donor_name'] ?: '—') ?></td>
+        <td><?= !empty($r['donor_email']) ? '<a href="mailto:' . h($r['donor_email']) . '">' . h($r['donor_email']) . '</a>' : '—' ?></td>
         <td>$<?= number_format($r['amount'], 2) ?></td>
         <td><?= !array_key_exists('show_name', $r) ? '—' : ((int)$r['show_name'] === 0 ? 'Anonymous' : 'Shown') ?></td>
         <td><?= h($r['honoree_last_name'] ?? '') ?: '—' ?></td>
