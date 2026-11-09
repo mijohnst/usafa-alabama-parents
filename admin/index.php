@@ -105,6 +105,28 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $members = $stmt->fetchAll();
 
+// Empty Active search → count how many ARCHIVED profiles match the same
+// filters, so the page can point there instead of a bare "No members found".
+// Graduating a class archives it (graduate-class.php), so "Graduate" + Active
+// is otherwise a guaranteed-empty dead end. Reuses $where/$params with only
+// the archived clause (always the last element) swapped.
+$archived_matches = 0;
+$archived_link    = '';
+if (empty($members) && $archived !== '1') {
+    $alt_where = $where;
+    $alt_where[count($alt_where) - 1] = 'archived = 1';
+    $alt = $pdo->prepare('SELECT COUNT(*) FROM members WHERE ' . implode(' AND ', $alt_where));
+    $alt->execute($params);
+    $archived_matches = (int)$alt->fetchColumn();
+    if ($archived_matches > 0) {
+        $q = $_GET;
+        unset($q['export']);
+        $q['year']     = $years; // keep the default year set on a bare load
+        $q['archived'] = '1';
+        $archived_link = 'index.php?' . http_build_query($q);
+    }
+}
+
 // ── CSV export ─────────────────────────────────────────────────────────────
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
@@ -548,7 +570,11 @@ function setCurrentYrs() {
   </thead>
   <tbody>
   <?php if (empty($members)): ?>
-    <tr><td colspan="<?= can_mark_dues()?8:7 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.</td></tr>
+    <tr><td colspan="<?= can_mark_dues()?8:7 ?>" style="text-align:center;padding:2rem;color:#5a6a7a">No members found.<?php if ($archived_matches > 0): ?>
+      <br><a href="<?= h($archived_link) ?>" style="display:inline-block;margin-top:.6rem;font-weight:600">
+        <?= $archived_matches ?> archived profile<?= $archived_matches === 1 ? '' : 's' ?> match<?= $archived_matches === 1 ? 'es' : '' ?> — show <?= $archived_matches === 1 ? 'it' : 'them' ?> →</a>
+      <?php if (in_array('Graduate', $years, true)): ?><div style="font-size:.85rem;margin-top:.35rem">Graduated classes are archived, so set Status to <strong>Archived</strong> to see them.</div><?php endif; ?>
+    <?php endif; ?></td></tr>
   <?php endif; ?>
   <?php foreach ($members as $m): ?>
     <?php
