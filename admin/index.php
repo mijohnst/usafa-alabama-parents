@@ -29,6 +29,10 @@ $squadron  = trim($_GET['squadron']  ?? '');
 $split_only = isset($_GET['split']);
 $dup_only   = isset($_GET['dup']);
 $archived  = $_GET['archived']   ?? '0';
+// Graduating a class archives it (graduate-class.php), so "Graduate" alone
+// under Active can never match anyone — treat that choice as Archived. Set
+// here, before the duplicate scan and the Status dropdown read $archived.
+if ($years && !array_diff($years, ['Graduate'])) $archived = '1';
 $sort      = $_GET['sort']       ?? 'class_year';
 $dir       = $_GET['dir']        ?? 'asc';
 
