@@ -6,7 +6,8 @@
  *
  * $title: e.g. "Class of 2027 Saber Inscriptions"
  * $rows:  list of ['cadet' => full name, 'inscription' => text] — only cadets
- *         with an inscription; $missing is a list of cadet names without one.
+ *         with an inscription; $missing is a list of cadet names without one;
+ *         $optedOut lists cadets whose families declined a saber (sheet only).
  *
  * Two layouts:
  *   'sheet' — one table of every inscription, to send with a combined order.
@@ -41,7 +42,7 @@ function saber_fit_size(tFPDF $pdf, string $text, float $w, float $max, float $m
     return $min;
 }
 
-function build_saber_inscriptions_pdf(string $title, array $rows, array $missing, string $layout = 'sheet'): tFPDF {
+function build_saber_inscriptions_pdf(string $title, array $rows, array $missing, string $layout = 'sheet', array $optedOut = []): tFPDF {
     $pdf = new SaberInscriptionsPDF('P', 'in', 'Letter');
     $pdf->AliasNbPages();
     $pdf->AddFont(VR_FONT, '', 'LiberationSans-Regular.ttf', true);
@@ -54,12 +55,12 @@ function build_saber_inscriptions_pdf(string $title, array $rows, array $missing
     if ($layout === 'slips' && $rows) {
         saber_pdf_slips($pdf, $title, $rows);
     } else {
-        saber_pdf_sheet($pdf, $title, $rows, $missing);
+        saber_pdf_sheet($pdf, $title, $rows, $missing, $optedOut);
     }
     return $pdf;
 }
 
-function saber_pdf_sheet(tFPDF $pdf, string $title, array $rows, array $missing): void {
+function saber_pdf_sheet(tFPDF $pdf, string $title, array $rows, array $missing, array $optedOut = []): void {
     // Columns sum to 7.0in — Letter width (8.5in) minus 0.75in margins.
     $col      = ['n' => 0.4, 'cadet' => 2.0, 'ins' => 4.6];
     $pad_x    = 0.08;
@@ -131,17 +132,27 @@ function saber_pdf_sheet(tFPDF $pdf, string $title, array $rows, array $missing)
 
     // Cadets in the class with nothing submitted — so whoever places the
     // order can see at a glance who still needs chasing.
-    if ($missing) {
-        $pdf->SetFont(VR_FONT, '', 10);
-        $lines = vr_wrap($pdf, implode(', ', $missing), 7.0);
-        $block_h = 0.25 + 0.3 + count($lines) * 0.2;
-        if ($pdf->GetY() + $block_h > $bottom_y) $pdf->AddPage(); else $pdf->Ln(0.25);
-        $pdf->SetFont(VR_FONT, 'B', 11);
-        $pdf->SetTextColor(166, 25, 46);
-        $pdf->Cell(0, 0.3, 'No inscription yet (' . count($missing) . ')', 0, 1, 'L');
-        $pdf->SetFont(VR_FONT, '', 10);
-        $pdf->SetTextColor(60, 74, 87);
-        foreach ($lines as $l) $pdf->Cell(0, 0.2, $l, 0, 1, 'L');
+    saber_pdf_name_list($pdf, 'No inscription yet (' . count($missing) . ')', $missing, [166, 25, 46], $bottom_y);
+    // Families who declined — not on the order; listed so nobody chases them.
+    saber_pdf_name_list($pdf, 'Opted out, no saber (' . count($optedOut) . ')', $optedOut, [90, 106, 122], $bottom_y);
+}
+
+// A heading plus a comma-separated list of cadet names, moved to a new page
+// first if it won't fit. Breaks are manual (auto page break is off).
+function saber_pdf_name_list(tFPDF $pdf, string $heading, array $names, array $rgb, float $bottom_y): void {
+    if (!$names) return;
+    $pdf->SetFont(VR_FONT, '', 10);
+    $lines = vr_wrap($pdf, implode(', ', $names), 7.0);
+    $block_h = 0.25 + 0.3 + count($lines) * 0.2;
+    if ($pdf->GetY() + $block_h > $bottom_y) $pdf->AddPage(); else $pdf->Ln(0.25);
+    $pdf->SetFont(VR_FONT, 'B', 11);
+    $pdf->SetTextColor(...$rgb);
+    $pdf->Cell(0, 0.3, $heading, 0, 1, 'L');
+    $pdf->SetFont(VR_FONT, '', 10);
+    $pdf->SetTextColor(60, 74, 87);
+    foreach ($lines as $l) {
+        if ($pdf->GetY() + 0.2 > $bottom_y) $pdf->AddPage();
+        $pdf->Cell(0, 0.2, $l, 0, 1, 'L');
     }
 }
 

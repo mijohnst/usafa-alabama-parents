@@ -11,7 +11,9 @@
  *   POST {action:'lookup', ...} → check the family, email a code
  *                                 (admin/email-code.php)
  *   POST {action:'verify', ...} → a correct code issues the token
- *   POST {action:'save',   ...} → save their inscription (token)
+ *   POST {action:'save',   ...} → save their inscription (token), or
+ *                                 with choice:'optout' record that the
+ *                                 cadet doesn't want a saber
  *
  * Save trusts only the per-lookup token in the verification session (never
  * a resubmitted member id). Like event-signup.php the token is NOT consumed
@@ -55,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'success' => true, 'year' => $c['year'], 'open' => $c['open'], 'max' => SABER_INSCRIPTION_MAX,
         'formats' => saber_has_year_position($pdo) ? saber_year_formats() : null,
         'defaultFormat' => 'after',
+        'optOut' => saber_has_opt_out($pdo), // false until migrate_saber_opt_out.sql runs
         'deadline' => saber_deadline_label($c['deadline']),
     ]);
     exit();
@@ -139,13 +142,16 @@ if ($action === 'lookup' || $action === 'verify') {
 
     $existing = null;
     $position = 'after';
+    $opted_out = false;
     try {
         $pos_col = saber_has_year_position($pdo) ? 'year_position AS year_position' : "'after' AS year_position";
-        $s = $pdo->prepare("SELECT inscription, {$pos_col} FROM saber_inscriptions WHERE campaign_slug = ? AND member_id = ?");
+        $opt_col = saber_has_opt_out($pdo) ? 'opted_out AS opted_out' : '0 AS opted_out';
+        $s = $pdo->prepare("SELECT inscription, {$pos_col}, {$opt_col} FROM saber_inscriptions WHERE campaign_slug = ? AND member_id = ?");
         $s->execute([$c['slug'], (int)$m['id']]);
         $row = $s->fetch(PDO::FETCH_ASSOC);
         if ($row) {
-            $existing = (string)$row['inscription'];
+            $opted_out = (int)$row['opted_out'] === 1;
+            $existing = $opted_out ? null : (string)$row['inscription'];
             $position = saber_year_position($row['year_position']);
         }
     } catch (PDOException $e) {
@@ -159,6 +165,7 @@ if ($action === 'lookup' || $action === 'verify') {
         'cadet'    => cadet_full_name($m),
         'existing' => $existing,
         'position' => $position,
+        'optedOut' => $opted_out,
         'open'     => $c['open'],
     ]);
     exit();
@@ -181,6 +188,50 @@ if ($action === 'save') {
     }
     if (!$c['open']) {
         echo json_encode(['success' => false, 'error' => INSCRIPTION_CLOSED_MSG]);
+        exit();
+    }
+
+    // ── Opt out: the family doesn't want a saber from the fund ──────────
+    if (($payload['choice'] ?? '') === 'optout') {
+        if (!saber_has_opt_out($pdo)) {
+            echo json_encode(['success' => false, 'error' => "Opting out can't be recorded online yet. Please email treasurer@alabamafalcons.org."]);
+            exit();
+        }
+        $member_id = (int)$entry['member_id'];
+        try {
+            $m = $pdo->prepare('SELECT * FROM members WHERE id = ? AND archived = 0');
+            $m->execute([$member_id]);
+            $member = $m->fetch(PDO::FETCH_ASSOC);
+            if (!$member || trim((string)$member['class_year']) !== $c['year']) {
+                echo json_encode(['success' => false, 'error' => INSCRIPTION_UNAVAILABLE_MSG]);
+                exit();
+            }
+            save_saber_opt_out($pdo, $c['slug'], $member_id, $entry['email'], 'Parent');
+        } catch (PDOException $e) {
+            error_log('saber-inscription opt-out: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => "That couldn't be saved right now. Please email treasurer@alabamafalcons.org."]);
+            exit();
+        }
+
+        send_json_and_continue(['success' => true, 'optedOut' => true]);
+
+        try {
+            require_once __DIR__ . '/admin/mailer.php';
+            $cadet = cadet_full_name($member);
+            $body = CLUB_NAME . "\n"
+                  . "Saber Opt-Out Received\n"
+                  . str_repeat('─', 48) . "\n\n"
+                  . "You told us Cadet {$cadet} (Class of {$c['year']}) does not need a saber\n"
+                  . "from the Saber Fund. Your cadet will not be included in the saber order.\n\n"
+                  . "Changed your mind? Use the same page again to enter an inscription before\n"
+                  . "inscriptions close" . ($c['deadline'] !== '' ? ' on ' . saber_deadline_label($c['deadline']) : '') . ":\n"
+                  . SITE_URL . "saber-inscription.html\n\n"
+                  . "Questions? Contact treasurer@alabamafalcons.org.\n\n"
+                  . str_repeat('─', 48) . "\n" . CLUB_NAME . "\n" . SITE_URL;
+            send_notification($entry['email'], "Saber opt-out received: Cadet {$cadet}", $body);
+        } catch (\Throwable $e) {
+            error_log('saber-inscription: opt-out email failed — ' . $e->getMessage());
+        }
         exit();
     }
 

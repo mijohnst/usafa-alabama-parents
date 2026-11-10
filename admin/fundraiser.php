@@ -73,13 +73,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign
     if ($roster_year === '' || $member_year === false || trim((string)$member_year) !== $roster_year) {
         flash('error', "That cadet isn't in this campaign's class year.");
     } elseif ($text === '') {
-        $pdo->prepare('DELETE FROM saber_inscriptions WHERE campaign_slug = ? AND member_id = ?')->execute([$campaign, $member_id]);
+        // Leaves an opt-out alone — Save on an empty, opted-out row shouldn't
+        // silently undo it (that's what Undo Opt-Out is for).
+        $pdo->prepare('DELETE FROM saber_inscriptions WHERE campaign_slug = ? AND member_id = ?' . (saber_has_opt_out($pdo) ? ' AND opted_out = 0' : ''))->execute([$campaign, $member_id]);
         flash('success', 'Inscription removed.');
     } elseif ($err = saber_inscription_error($text)) {
         flash('error', h($err));
     } else {
         save_saber_inscription($pdo, $campaign, $member_id, $text, null, (string)($_SESSION['user_name'] ?? 'Officer'), (string)($_POST['position'] ?? 'after'));
         flash('success', 'Inscription saved.');
+    }
+    header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
+}
+
+// Officer marks (or undoes) a family's opt-out — for families who call or
+// email instead of using the public page. Undo deletes the row, back to
+// "not submitted".
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign !== '' && $post_action === 'inscription_optout') {
+    csrf_verify();
+    $member_id = (int)($_POST['member_id'] ?? 0);
+    $ystmt = $pdo->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    $ystmt->execute([$year_key]);
+    $roster_year = trim((string)$ystmt->fetchColumn());
+    $mstmt = $pdo->prepare('SELECT class_year FROM members WHERE id = ? AND archived = 0');
+    $mstmt->execute([$member_id]);
+    $member_year = $mstmt->fetchColumn();
+    if (!saber_has_opt_out($pdo)) {
+        flash('error', 'Opt-outs are not set up yet — run migrate_saber_opt_out.sql in phpMyAdmin first.');
+    } elseif ($roster_year === '' || $member_year === false || trim((string)$member_year) !== $roster_year) {
+        flash('error', "That cadet isn't in this campaign's class year.");
+    } elseif (($_POST['opted_out'] ?? '') === '1') {
+        save_saber_opt_out($pdo, $campaign, $member_id, null, (string)($_SESSION['user_name'] ?? 'Officer'));
+        flash('success', 'Marked as opted out — this cadet is left off the saber order.');
+    } else {
+        $pdo->prepare('DELETE FROM saber_inscriptions WHERE campaign_slug = ? AND member_id = ? AND opted_out = 1')->execute([$campaign, $member_id]);
+        flash('success', 'Opt-out removed.');
     }
     header('Location: fundraiser.php?campaign=' . urlencode($campaign) . '#inscriptions'); exit;
 }
@@ -140,6 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_edit_inscriptions && $campaign
     $sent = 0; $failed = 0; $families = 0;
     foreach ($roster as $r) {
         if ((string)($r['inscription'] ?? '') !== '') continue;
+        if ((int)$r['opted_out'] === 1) continue; // already answered: no saber
         if ($any_awarded && (int)$r['awarded'] !== 1) continue;
         $to = array_unique(array_filter(array_map('strtolower', array_map('trim', [(string)$r['parent1_email'], (string)$r['parent2_email']])),
             fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL)));
@@ -515,8 +544,10 @@ echo show_flash();
       $deadline_passed = saber_deadline_passed($inscriptions_deadline);
       $effectively_open = $inscriptions_open && !$deadline_passed;
       // Who a reminder would go to right now (same rule as the handler).
+      $has_opt_out = saber_has_opt_out($pdo);
+      $opted_out_count = count(array_filter($inscription_roster, fn($r) => (int)$r['opted_out'] === 1));
       $remind_count = count(array_filter($inscription_roster, fn($r) =>
-          (string)($r['inscription'] ?? '') === '' && ($awarded_count === 0 || (int)$r['awarded'] === 1)
+          (string)($r['inscription'] ?? '') === '' && (int)$r['opted_out'] !== 1 && ($awarded_count === 0 || (int)$r['awarded'] === 1)
           && (filter_var(trim((string)$r['parent1_email']), FILTER_VALIDATE_EMAIL) || filter_var(trim((string)$r['parent2_email']), FILTER_VALIDATE_EMAIL))));
       $show_formats = count(saber_year_formats()) > 1;
       [$reminded_at, $reminded_n] = array_pad(explode('|', $inscriptions_reminded, 2), 2, '');
@@ -526,7 +557,11 @@ echo show_flash();
       <a href="<?= h($public_url) ?>" target="_blank" rel="noopener"><?= h($public_url) ?></a>, verifying with cadet last name + birthday + email on file (no login).
       They type the name only and pick how the class year is added: &ldquo;Name <?= h($year ?: '2027') ?>&rdquo; or &ldquo;Name &ndash; Class of <?= h($year ?: '2027') ?>&rdquo;. They can change it until you close inscriptions or the deadline passes. Edit any entry below, including for families who email or call instead. Clearing the box and saving removes it.
       <br><strong>Awarded</strong> = this cadet is actually getting a saber (paid members first, then the lottery). Once anyone is marked Awarded, the PDFs list only awarded cadets.
+      <br><strong>Opted out</strong> = the family said their cadet doesn't need a saber. They're skipped by reminders and left off the PDFs (listed separately at the bottom of the list PDF).
     </p>
+    <?php if (!$has_opt_out): ?>
+      <div class="alert alert-error">The opt-out choice needs <code>migrate_saber_opt_out.sql</code> run in phpMyAdmin. Until then, families only see the inscription box.</div>
+    <?php endif; ?>
     <?php if (!$is_active): ?>
       <div class="alert alert-error">This isn't the active campaign, so the public page isn't collecting for it. Its list is shown for reference.</div>
     <?php endif; ?>
@@ -538,6 +573,7 @@ echo show_flash();
       <span style="font-size:.9rem">
         <strong style="color:<?= $effectively_open ? '#1b5e20' : '#A6192E' ?>"><?= $effectively_open ? 'Open' : ($inscriptions_open && $deadline_passed ? 'Closed (deadline passed)' : 'Closed') ?></strong>
         &middot; <strong><?= $with_text ?></strong> of <?= count($inscription_roster) ?> submitted
+        <?php if ($opted_out_count): ?>&middot; <strong><?= $opted_out_count ?></strong> opted out<?php endif; ?>
         <?php if ($awarded_count): ?>&middot; <strong><?= $awarded_with_text ?></strong> of <?= $awarded_count ?> awarded submitted<?php endif; ?>
       </span>
       <form method="POST" style="margin:0">
@@ -583,6 +619,7 @@ echo show_flash();
         <?php foreach ($inscription_roster as $r):
           $r_text = (string)($r['inscription'] ?? '');
           $r_awarded = (int)$r['awarded'] === 1;
+          $r_opted_out = (int)$r['opted_out'] === 1;
           $name_mismatch = $r_text !== '' && !saber_inscription_has_last_name($r_text, $r);
           $changed_since_print = $r_text !== '' && $inscriptions_printed_at !== '' && !empty($r['updated_at']) && strtotime($r['updated_at']) > strtotime($inscriptions_printed_at);
         ?>
@@ -614,10 +651,24 @@ echo show_flash();
                 <?php endforeach; ?>
               </select>
               <?php endif; ?>
-              <input type="text" name="inscription" value="<?= h($r_text) ?>" maxlength="<?= SABER_INSCRIPTION_MAX ?>" placeholder="Not submitted" style="flex:1;min-width:180px;font-weight:600">
+              <input type="text" name="inscription" value="<?= h($r_text) ?>" maxlength="<?= SABER_INSCRIPTION_MAX ?>" placeholder="<?= $r_opted_out ? 'Opted out — no saber' : 'Not submitted' ?>" style="flex:1;min-width:180px;font-weight:600">
               <?php if (!$show_formats): ?><span style="align-self:center;font-weight:600;color:#5a6a7a;white-space:nowrap">- Class of <?= h($year) ?></span><?php endif; ?>
               <button type="submit" class="btn btn-secondary btn-sm">Save</button>
             </form>
+            <?php if ($has_opt_out && ($r_opted_out || $r_text === '')): ?>
+              <form method="POST" style="margin:.3rem 0 0;display:flex;gap:.5rem;align-items:center;font-size:.78rem">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="inscription_optout">
+                <input type="hidden" name="member_id" value="<?= (int)$r['id'] ?>">
+                <input type="hidden" name="opted_out" value="<?= $r_opted_out ? '0' : '1' ?>">
+                <?php if ($r_opted_out): ?><span style="background:#eceff1;color:#37474f;border-radius:99px;padding:.1rem .5rem;font-weight:600">Opted out</span><?php endif; ?>
+                <button type="submit" class="btn btn-secondary btn-sm" style="padding:.15rem .5rem;font-size:.75rem"
+                  onclick="return confirm('<?= $r_opted_out ? 'Remove the opt-out? This cadet goes back to Not submitted.' : 'Mark this cadet as opted out (no saber)?' ?>')"><?= $r_opted_out ? 'Undo Opt-Out' : 'Mark Opted Out' ?></button>
+              </form>
+              <?php if ($r_opted_out && $r_awarded): ?>
+                <div style="font-size:.75rem;color:#A6192E;margin-top:.2rem">⚠ Marked Awarded but the family opted out. Remove the award so the saber can go to another cadet.</div>
+              <?php endif; ?>
+            <?php endif; ?>
             <?php if ($name_mismatch): ?>
               <div style="font-size:.75rem;color:#A6192E;margin-top:.2rem">⚠ Doesn't contain the last name on file (&ldquo;<?= h((string)$r['cadet_last_name']) ?>&rdquo;) — check spelling.</div>
             <?php endif; ?>

@@ -895,6 +895,33 @@ function saber_has_year_position(PDO $pdo): bool {
     return $has;
 }
 
+// Whether migrate_saber_opt_out.sql has added the opted_out column — a
+// family telling us their cadet doesn't want a saber from the fund. Until
+// it runs, the opt-out choice is hidden and everything reads as 0.
+function saber_has_opt_out(PDO $pdo): bool {
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (bool)$pdo->query("SHOW COLUMNS FROM `saber_inscriptions` LIKE 'opted_out'")->fetch();
+        } catch (\PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
+}
+
+// Record that a cadet's family declined a saber: blank inscription,
+// opted_out = 1. Saving an inscription later (family or officer) clears it.
+function save_saber_opt_out(PDO $pdo, string $slug, int $memberId, ?string $email, string $updatedBy): void {
+    $pdo->prepare(
+        "INSERT INTO saber_inscriptions (campaign_slug, member_id, inscription, opted_out, submitted_email, updated_by)
+         VALUES (?, ?, '', 1, ?, ?)
+         ON DUPLICATE KEY UPDATE inscription = '', opted_out = 1,
+                                 submitted_email = COALESCE(VALUES(submitted_email), submitted_email),
+                                 updated_by = VALUES(updated_by), updated_at = NOW()"
+    )->execute([$slug, $memberId, $email, mb_substr($updatedBy, 0, 100)]);
+}
+
 // Null when the cleaned inscription is acceptable, otherwise the message to
 // show. Plain ASCII letters, digits, spaces, and basic punctuation only.
 function saber_inscription_error(string $s): ?string {
@@ -952,11 +979,12 @@ function saber_inscription_roster(PDO $pdo, string $slug, string $classYear): ?a
     $has_awards = saber_awards_available($pdo);
     $awarded = $has_awards ? '(sa.id IS NOT NULL) AS awarded' : '0 AS awarded';
     $award_join = $has_awards ? 'LEFT JOIN saber_awards sa ON sa.member_id = m.id AND sa.campaign_slug = ?' : '';
+    $opted = saber_has_opt_out($pdo) ? 'COALESCE(si.opted_out, 0) AS opted_out' : '0 AS opted_out';
     try {
         $stmt = $pdo->prepare(
             "SELECT m.id, m.cadet_first_name, m.cadet_middle_name, m.cadet_last_name, m.cadet_suffix,
                     m.parent1_email, m.parent2_email,
-                    m.membership_paid, si.inscription, si.updated_at, si.updated_by, {$pos}, {$awarded}
+                    m.membership_paid, si.inscription, si.updated_at, si.updated_by, {$pos}, {$awarded}, {$opted}
              FROM members m
              LEFT JOIN saber_inscriptions si ON si.member_id = m.id AND si.campaign_slug = ?
              {$award_join}
@@ -973,6 +1001,10 @@ function saber_inscription_roster(PDO $pdo, string $slug, string $classYear): ?a
 // Insert or replace one cadet's inscription. $updatedBy is 'Parent' for the
 // public form or the officer's name for an admin edit.
 function save_saber_inscription(PDO $pdo, string $slug, int $memberId, string $inscription, ?string $email, string $updatedBy, string $position = 'after'): void {
+    // Saving a name means they want the saber after all.
+    if (saber_has_opt_out($pdo)) {
+        $pdo->prepare('UPDATE saber_inscriptions SET opted_out = 0 WHERE campaign_slug = ? AND member_id = ?')->execute([$slug, $memberId]);
+    }
     if (saber_has_year_position($pdo)) {
         $pdo->prepare(
             'INSERT INTO saber_inscriptions (campaign_slug, member_id, inscription, year_position, submitted_email, updated_by)

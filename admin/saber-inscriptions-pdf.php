@@ -47,9 +47,13 @@ if ($any_awarded) {
 
 $rows = [];
 $missing = [];
+$opted_out = [];
 foreach ($roster as $r) {
     $name = cadet_full_name($r);
-    if ((string)($r['inscription'] ?? '') !== '') {
+    if ((int)$r['opted_out'] === 1) {
+        // Never on the order, even if someone also marked them Awarded.
+        $opted_out[] = $name;
+    } elseif ((string)($r['inscription'] ?? '') !== '') {
         $rows[] = ['cadet' => $name, 'inscription' => saber_engraving((string)$r['inscription'], $year, $r['year_position'] ?? 'after')];
     } else {
         $missing[] = $name;
@@ -57,7 +61,7 @@ foreach ($roster as $r) {
 }
 
 $title = ($year !== '' ? "Class of {$year} " : '') . 'Saber Inscriptions';
-$pdf = build_saber_inscriptions_pdf($title, $rows, $missing, $layout);
+$pdf = build_saber_inscriptions_pdf($title, $rows, $missing, $layout, $opted_out);
 
 // So the officer list can flag entries edited after this printout.
 saber_save_setting($pdo, "fundraiser_{$campaign}_inscriptions_printed_at", 'Saber inscriptions last PDF', date('Y-m-d H:i:s'));

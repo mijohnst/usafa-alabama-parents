@@ -209,6 +209,26 @@
       <!-- STEP 2: INSCRIPTION -->
       <div id="inscriptionStep" style="display:none">
         <div class="family-banner" id="familyBanner"></div>
+        <!-- Shown only when the server supports opt-outs (GET optOut). -->
+        <fieldset class="form-group year-position" id="choiceGroup" style="display:none">
+          <legend>What would you like to do? *</legend>
+          <div class="pos-options">
+            <label><input type="radio" name="choice" value="personalize" checked> <span>Personalize my cadet's saber</span></label>
+            <label><input type="radio" name="choice" value="optout"> <span>Opt out &mdash; my cadet doesn't need a saber</span></label>
+          </div>
+        </fieldset>
+
+        <div id="optOutFields" style="display:none">
+          <p class="lead" id="optOutText">Choose this if your cadet already has a saber or is getting one another way. Your cadet won't be included in the Saber Fund order, which helps us get sabers to more classmates. You can change your mind here until inscriptions close.</p>
+          <label class="confirm-row" id="optOutConfirmRow">
+            <input type="checkbox" id="optOutCheck" />
+            <span>I understand my cadet will not receive a saber from the Saber Fund.</span>
+          </label>
+          <div id="optOutStatus" class="status" role="status" aria-live="polite"></div>
+          <button type="button" id="optOutBtn" class="cta-button">Confirm Opt-Out</button>
+        </div>
+
+        <div id="personalizeFields">
         <div class="form-group">
           <label for="inscription">Inscription *</label>
           <input type="text" id="inscription" autocomplete="off" spellcheck="true" placeholder="e.g. 2d Lt John A. Smith" />
@@ -229,6 +249,7 @@
         </label>
         <div id="saveStatus" class="status" role="status" aria-live="polite"></div>
         <button type="button" id="saveBtn" class="cta-button">Save Inscription</button>
+        </div>
       </div>
     </div>
   </section>
@@ -289,6 +310,33 @@
     var formats = null;
     var defaultFormat = 'after';
     var DEFAULT_PATTERN = '{N} – Class of {Y}';
+    var optOutAvailable = false;
+    var optedOut = false; // what's saved on file right now
+
+    // Personalize vs. opt out — shows one panel or the other.
+    function choice() {
+      var el = document.querySelector('input[name="choice"]:checked');
+      return el ? el.value : 'personalize';
+    }
+    function setChoice(v) {
+      var el = document.querySelector('input[name="choice"][value="' + v + '"]');
+      if (el) el.checked = true;
+      applyChoice();
+    }
+    function applyChoice() {
+      var out = choice() === 'optout';
+      $('optOutFields').style.display = out ? 'block' : 'none';
+      $('personalizeFields').style.display = out ? 'none' : 'block';
+      clearStatus('saveStatus');
+      clearStatus('optOutStatus');
+    }
+    document.querySelectorAll('input[name="choice"]').forEach(function(el) {
+      el.addEventListener('change', function() {
+        $('optOutCheck').checked = false;
+        $('confirmCheck').checked = false;
+        applyChoice();
+      });
+    });
     function position() {
       var el = document.querySelector('input[name="position"]:checked');
       return el ? el.value : defaultFormat;
@@ -341,6 +389,7 @@
         classYear = String(d.year || '');
         formats = d.formats || null;
         defaultFormat = d.defaultFormat || 'after';
+        optOutAvailable = !!d.optOut;
         buildFormatOptions();
         document.querySelectorAll('.hint .yr').forEach(function(el) { el.textContent = classYear; });
         if (d.deadline && isOpen) {
@@ -389,13 +438,28 @@
         isOpen = !!d.open;
         $('familyBanner').innerHTML = '';
         $('familyBanner').appendChild(document.createTextNode(d.family));
+        optedOut = !!d.optedOut;
         var small = document.createElement('small');
         if (!isOpen) {
-          small.textContent = d.existing ? 'Inscriptions are closed. This is what we have on file for your cadet. To request a change, email treasurer@alabamafalcons.org.' : 'Inscriptions are closed. To submit one now, email treasurer@alabamafalcons.org.';
+          small.textContent = optedOut ? 'Inscriptions are closed. Our records show you opted out of a saber for your cadet. To change that, email treasurer@alabamafalcons.org.'
+            : d.existing ? 'Inscriptions are closed. This is what we have on file for your cadet. To request a change, email treasurer@alabamafalcons.org.' : 'Inscriptions are closed. To submit one now, email treasurer@alabamafalcons.org.';
+        } else if (optedOut) {
+          small.textContent = "You've opted out of a saber for your cadet. Changed your mind? Choose \"Personalize\" below and enter an inscription.";
         } else {
-          small.textContent = d.existing ? "We already have an inscription on file. You can change it below until inscriptions close." : "Enter the inscription for your cadet's saber below.";
+          small.textContent = d.existing ? "We already have an inscription on file. You can change it below until inscriptions close." : "Enter the inscription for your cadet's saber below, or opt out if your cadet doesn't need one.";
         }
         $('familyBanner').appendChild(small);
+        if (optOutAvailable && isOpen) $('choiceGroup').style.display = 'block';
+        if (optedOut) {
+          setChoice('optout');
+          $('optOutBtn').textContent = 'Opted Out ✓';
+          $('optOutConfirmRow').style.display = 'none';
+        }
+        if (!isOpen && optedOut) {
+          // Nothing to show or edit — the banner says it all.
+          $('optOutFields').style.display = 'none';
+          $('personalizeFields').style.display = 'none';
+        }
         if (d.existing) {
           $('inscription').value = d.existing;
           setPosition(d.position);
@@ -437,6 +501,31 @@
       clearStatus('saveStatus');
       updatePreview();
     });
+    $('optOutBtn').addEventListener('click', async function() {
+      var btn = this;
+      clearStatus('optOutStatus');
+      if (optedOut) { showStatus('optOutStatus', "You're already opted out. To get a saber instead, choose \"Personalize\" above.", 'success'); return; }
+      if (!$('optOutCheck').checked) { showStatus('optOutStatus', 'Please check the box to confirm.', 'error'); return; }
+      var label = btn.textContent;
+      btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>Please wait…';
+      try {
+        var d = await post({ action: 'save', token: token, choice: 'optout' });
+        if (!d.success) { showStatus('optOutStatus', d.error || 'Could not save that.', 'error'); btn.textContent = label; return; }
+        optedOut = true;
+        $('inscription').value = '';
+        updatePreview();
+        $('saveBtn').textContent = 'Save Inscription';
+        $('optOutConfirmRow').style.display = 'none';
+        btn.textContent = 'Opted Out ✓';
+        showStatus('optOutStatus', "Done — your cadet won't be included in the saber order. A confirmation has been emailed to you. You can change this here until inscriptions close.", 'success');
+      } catch (err) {
+        showStatus('optOutStatus', 'Something went wrong. Please try again, or contact treasurer@alabamafalcons.org.', 'error');
+        btn.textContent = label;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
     $('saveBtn').addEventListener('click', async function() {
       var btn = this;
       var val = nameOnly($('inscription').value);
@@ -454,6 +543,11 @@
         setPosition(d.position);
         updatePreview();
         showStatus('saveStatus', 'Saved! A copy has been emailed to you. You can change it here anytime until inscriptions close.', 'success');
+        // Saving a name cancels any earlier opt-out (server does the same).
+        optedOut = false;
+        $('optOutBtn').textContent = 'Confirm Opt-Out';
+        $('optOutConfirmRow').style.display = '';
+        $('optOutCheck').checked = false;
         btn.textContent = 'Update Inscription';
         $('confirmCheck').checked = false;
       } catch (err) {
