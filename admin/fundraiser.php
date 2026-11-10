@@ -623,10 +623,11 @@ echo show_flash();
           $name_mismatch = $r_text !== '' && !saber_inscription_has_last_name($r_text, $r);
           $changed_since_print = $r_text !== '' && $inscriptions_printed_at !== '' && !empty($r['updated_at']) && strtotime($r['updated_at']) > strtotime($inscriptions_printed_at);
         ?>
-        <tr<?= $r_awarded ? ' style="background:#fffbea"' : '' ?>>
+        <tr<?= $r_opted_out ? ' style="background:#f1f3f5;color:#6b7785"' : ($r_awarded ? ' style="background:#fffbea"' : '') ?>>
           <td>
             <?= h(cadet_full_name($r)) ?>
             <?php if ((int)$r['membership_paid'] === 1): ?><span style="font-size:.7rem;background:#e8f5e9;color:#1b5e20;border-radius:99px;padding:.1rem .45rem;margin-left:.3rem">Paid</span><?php endif; ?>
+            <?php if ($r_opted_out): ?><div style="margin-top:.25rem"><span style="font-size:.72rem;background:#37474f;color:#fff;border-radius:99px;padding:.12rem .5rem;font-weight:700" title="<?= h('Opted out ' . (!empty($r['updated_at']) ? date('M j, Y', strtotime($r['updated_at'])) : '') . ' by ' . (string)($r['updated_by'] ?? '')) ?>">🚫 Opted out — no saber</span></div><?php endif; ?>
           </td>
           <?php if ($has_awards): ?>
           <td>
