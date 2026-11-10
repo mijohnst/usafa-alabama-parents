@@ -41,7 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cols = implode(', ', array_map(fn($f) => "`$f`", FIELDS));
         $placeholders = implode(', ', array_map(fn($f) => ":$f", FIELDS));
         $stmt = $pdo->prepare("INSERT INTO members ($cols) VALUES ($placeholders)");
-        $stmt->execute($m);
+        // Bind exactly FIELDS — $m also carries membership_paid_years (for
+        // redisplay), and native prepares reject an extra bound value.
+        $params = [];
+        foreach (FIELDS as $f) $params[$f] = $m[$f];
+        $stmt->execute($params);
         save_dues_years($pdo, (int)$pdo->lastInsertId(), $dues_years);
         $pdo->commit();
         flash('success', 'Member added successfully.');
