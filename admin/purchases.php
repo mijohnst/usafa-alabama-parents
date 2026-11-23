@@ -321,9 +321,10 @@ admin_header('Finance');
             <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
             <input type="hidden" name="action" value="reopen">
             <input type="hidden" name="note" id="ron-<?= (int)$p['id'] ?>">
-            <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap"
-              title="Payee was wrong? Fix it via Edit first, then reopen — this sends the purchase back to Approved so you can Submit Payment again. The old payment details are kept in Notes."
-              onclick="reopenPayment(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['payment_method'] ?? '')) ?>')">↺ Reopen Payment</button>
+            <button type="button" class="btn btn-secondary btn-sm"
+              title="Reopen payment — payee was wrong? Fix it via Edit first, then reopen to Submit Payment again."
+              aria-label="Reopen payment"
+              onclick="openReopenModal(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['vendor'])) ?>', '$<?= number_format($p['amount_total'],2) ?>', '<?= h(addslashes($p['payment_method'] ?? '')) ?>', '<?= h(addslashes(PURCHASE_STATUSES[$p['status']] ?? $p['status'])) ?>')">↺</button>
           </form>
           <?php endif; ?>
           <?php if (is_treasurer()): ?>
@@ -412,6 +413,28 @@ admin_header('Finance');
     <div style="display:flex;gap:.75rem;margin-top:1.25rem">
       <button onclick="confirmReimburse()" class="btn btn-primary" style="flex:1">Confirm Payment Submitted</button>
       <button onclick="closeReimburseModal()" class="btn btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reopen payment modal -->
+<div id="reopen-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);padding:1.75rem;max-width:440px;width:90%;margin:1rem">
+    <h2 style="font-size:1rem;color:#002554;margin-bottom:.25rem">Are you sure you want to reopen this payment?</h2>
+    <p id="reopen-modal-desc" style="font-size:.85rem;color:#5a6a7a;margin-bottom:.9rem"></p>
+    <div style="background:#fff8e1;border:1px solid #f0d58a;border-radius:4px;padding:.65rem .8rem;font-size:.82rem;color:#5a4a1a;margin-bottom:1rem;line-height:1.45">
+      This sends the purchase back to <strong>Approved</strong> so you can Submit Payment again. Its paid date and payment notes are cleared (a copy is saved to Notes).<br><br>
+      Payee on file: <strong id="reopen-modal-payee"></strong><br>
+      If that's still wrong, cancel and fix it with <strong>Edit</strong> first. If the original payment actually went out, recover it before paying again.
+    </div>
+    <div class="form-group">
+      <label for="reopen-modal-reason">Reason *</label>
+      <textarea id="reopen-modal-reason" rows="3" placeholder="e.g. Venmo handle was mistyped — payment never went through. Paying via PayPal instead." style="width:100%;padding:.6rem .75rem;border:1px solid #d0d5dd;border-radius:4px;font-family:inherit;font-size:.9rem;resize:vertical"></textarea>
+      <div id="reopen-modal-error" style="display:none;color:#b02a37;font-size:.8rem;margin-top:.3rem">Please enter a reason.</div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem">
+      <button type="button" onclick="confirmReopen()" class="btn btn-primary" style="flex:1">Yes, Reopen Payment</button>
+      <button type="button" onclick="closeReopenModal()" class="btn btn-secondary">Cancel</button>
     </div>
   </div>
 </div>
@@ -513,16 +536,34 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeReceiptModal();
 });
 
-function reopenPayment(id, currentMethod) {
-  var reason = prompt('Reopen this payment for resubmit?\n\nCurrent payee: ' + (currentMethod || '(none)') +
-    '\nIf that is still wrong, Cancel and fix it with Edit first.\n\nReason (required, saved to Notes):', '');
-  if (reason === null) return;
-  reason = reason.trim();
-  if (!reason) { alert('A reason is required.'); return; }
-  if (!confirm('Send this purchase back to Approved? The Submitted/Paid status and its notes are cleared (a copy is kept in Notes).')) return;
+var _reopenId = null;
+function openReopenModal(id, vendor, amount, currentMethod, statusLabel) {
+  _reopenId = id;
+  document.getElementById('reopen-modal-desc').textContent = vendor + ' — ' + amount + ' (currently ' + statusLabel + ')';
+  document.getElementById('reopen-modal-payee').textContent = currentMethod || '(none)';
+  document.getElementById('reopen-modal-reason').value = '';
+  document.getElementById('reopen-modal-error').style.display = 'none';
+  document.getElementById('reopen-modal').style.display = 'flex';
+  document.getElementById('reopen-modal-reason').focus();
+}
+function closeReopenModal() {
+  document.getElementById('reopen-modal').style.display = 'none';
+  _reopenId = null;
+}
+function confirmReopen() {
+  var reason = document.getElementById('reopen-modal-reason').value.trim();
+  if (!reason) { document.getElementById('reopen-modal-error').style.display = 'block'; return; }
+  var id = _reopenId;
   document.getElementById('ron-' + id).value = reason;
+  closeReopenModal();
   document.getElementById('ro-' + id).submit();
 }
+document.getElementById('reopen-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeReopenModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeReopenModal();
+});
 
 function validVenmoHandle(v) {
   // One '@' (the leading one), no spaces — mirrors purchase_payment_method_error() in auth.php.
