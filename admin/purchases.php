@@ -313,6 +313,19 @@ admin_header('Finance');
               onclick="doAction('pf-<?= (int)$p['id'] ?>','pn-<?= (int)$p['id'] ?>','Note (optional):','Confirm this purchase has been paid?')">✓ Mark Paid</button>
           </form>
           <?php endif; ?>
+          <?php if (is_treasurer() && in_array($p['status'], ['submitted', 'paid'], true)
+                    && empty($p['paypal_payout_batch_id'])
+                    && !in_array($p['paypal_payout_status'] ?? '', ['SENDING', 'NEEDS_MANUAL_CHECK'], true)): ?>
+          <form id="ro-<?= (int)$p['id'] ?>" method="POST" action="purchase-action.php" style="margin:0">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+            <input type="hidden" name="action" value="reopen">
+            <input type="hidden" name="note" id="ron-<?= (int)$p['id'] ?>">
+            <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap"
+              title="Payee was wrong? Fix it via Edit first, then reopen — this sends the purchase back to Approved so you can Submit Payment again. The old payment details are kept in Notes."
+              onclick="reopenPayment(<?= (int)$p['id'] ?>, '<?= h(addslashes($p['payment_method'] ?? '')) ?>')">↺ Reopen Payment</button>
+          </form>
+          <?php endif; ?>
           <?php if (is_treasurer()): ?>
           <a href="check-request.php?id=<?= (int)$p['id'] ?>" class="btn btn-secondary btn-sm" title="Print check/reimbursement request">🖨️</a>
           <?php endif; ?>
@@ -465,6 +478,7 @@ function confirmReimburse() {
     var venmo = document.getElementById('modal-venmo-id').value.trim();
     if (!venmo) { alert('Please enter the Venmo ID.'); return; }
     if (venmo.charAt(0) !== '@') venmo = '@' + venmo;
+    if (!validVenmoHandle(venmo)) { alert('Venmo ID must be a single @handle — one "@", no spaces. Have an email address instead? Choose PayPal.'); return; }
     fullMethod = 'Venmo ' + venmo;
   } else if (method === 'PayPal') {
     var paypal = document.getElementById('modal-paypal-email').value.trim();
@@ -498,6 +512,22 @@ document.getElementById('receipt-modal').addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeReceiptModal();
 });
+
+function reopenPayment(id, currentMethod) {
+  var reason = prompt('Reopen this payment for resubmit?\n\nCurrent payee: ' + (currentMethod || '(none)') +
+    '\nIf that is still wrong, Cancel and fix it with Edit first.\n\nReason (required, saved to Notes):', '');
+  if (reason === null) return;
+  reason = reason.trim();
+  if (!reason) { alert('A reason is required.'); return; }
+  if (!confirm('Send this purchase back to Approved? The Submitted/Paid status and its notes are cleared (a copy is kept in Notes).')) return;
+  document.getElementById('ron-' + id).value = reason;
+  document.getElementById('ro-' + id).submit();
+}
+
+function validVenmoHandle(v) {
+  // One '@' (the leading one), no spaces — mirrors purchase_payment_method_error() in auth.php.
+  return /^@[^\s@]+$/.test(v);
+}
 
 function doAction(formId, noteId, notePrompt, confirmMsg, notePrefix) {
   var note = prompt(notePrompt, '');

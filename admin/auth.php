@@ -681,6 +681,34 @@ const COMMITTEES = ['Fundraising', 'Events & Socials', 'Communications', 'Care P
 
 const REGIONS = ['', 'North', 'Central', 'South'];
 const PAYMENT_METHODS   = ['', 'Check', 'Venmo', 'PayPal'];
+
+// Validates a composed purchases.payment_method ("Venmo @handle", "PayPal
+// name@x.com", "Check #123") — returns an error message, or null if OK.
+// Added 2026-11-23 after a mistyped Venmo handle got a purchase marked
+// paid to the wrong payee. Venmo: exactly one '@' (the leading one) and no
+// spaces, which catches an email pasted into the Venmo box and "@@name".
+// PayPal: must be a real email address. Every write path (purchase-form,
+// the Submit Payment modal, send_paypal) runs this server-side.
+function purchase_payment_method_error(string $pm): ?string {
+    if ($pm === '') return 'Payment Method is required.';
+    if (str_starts_with($pm, 'Venmo ')) {
+        $handle = trim(substr($pm, 6));
+        if ($handle === '' || $handle === '@') return 'Venmo ID is required.';
+        if ($handle[0] !== '@' || substr_count($handle, '@') !== 1 || preg_match('/\s/', $handle)) {
+            return 'Venmo ID must be a single @handle (one "@", no spaces) — e.g. @Jane-Smith. If you have an email address, choose PayPal instead.';
+        }
+        return null;
+    }
+    if (str_starts_with($pm, 'PayPal ')) {
+        return filter_var(trim(substr($pm, 7)), FILTER_VALIDATE_EMAIL) ? null : 'PayPal requires a valid email address (e.g. name@example.com).';
+    }
+    if (str_starts_with($pm, 'Check #')) {
+        return trim(substr($pm, 7)) === '' ? 'Check number is required.' : null;
+    }
+    if ($pm === 'Venmo') return 'Venmo ID is required.';
+    if ($pm === 'PayPal') return 'PayPal email is required.';
+    return in_array($pm, PAYMENT_METHODS, true) ? null : 'Unrecognized payment method.';
+}
 const TICKET_CATEGORIES = ['', 'Website Issue', 'Admin Portal Issue', 'Email / Google Workspace', 'Login / Password Help', 'Add Event to Calendar', 'Site Suggestion', 'Other'];
 const TICKET_STATUSES   = ['open'=>'Open','in_progress'=>'In Progress','resolved'=>'Resolved'];
 const TICKET_PRIORITIES = ['low'=>'Low','medium'=>'Medium','high'=>'High'];

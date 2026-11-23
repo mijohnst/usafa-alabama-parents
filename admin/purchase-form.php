@@ -80,15 +80,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // year-end.php, pending-reimbursements.php) working without changes.
     if ($payment_method === 'Venmo') {
         $venmo_id = trim($_POST['venmo_id'] ?? '');
-        if ($venmo_id === '') $errors[] = 'Venmo ID is required.';
-        else {
-            if ($venmo_id[0] !== '@') $venmo_id = '@' . $venmo_id;
-            $payment_method = 'Venmo ' . $venmo_id;
-        }
+        if ($venmo_id !== '' && $venmo_id[0] !== '@') $venmo_id = '@' . $venmo_id;
+        $payment_method = 'Venmo ' . $venmo_id;
     } elseif ($payment_method === 'PayPal') {
-        $paypal_email = trim($_POST['paypal_email'] ?? '');
-        if (!filter_var($paypal_email, FILTER_VALIDATE_EMAIL)) $errors[] = 'A valid PayPal email is required.';
-        else $payment_method = 'PayPal ' . $paypal_email;
+        $payment_method = 'PayPal ' . trim($_POST['paypal_email'] ?? '');
+    }
+    if ($payment_method !== '' && ($pm_err = purchase_payment_method_error($payment_method))) {
+        $errors[] = $pm_err;
+        // Keep the typed value for redisplay but never store a half-composed one.
     }
     // Only admins/treasurers may re-attribute; everyone else is locked to their own ID
     $submitted_by = (is_admin() || is_treasurer())
@@ -479,7 +478,7 @@ if (!empty($real_errors)): ?>
       </div>
       <div class="form-group" id="pm_venmo_group" style="display:none">
         <label>Venmo ID *</label>
-        <input type="text" name="venmo_id" id="pm_venmo_id" placeholder="@username" value="<?= h($venmo_prefill) ?>">
+        <input type="text" name="venmo_id" id="pm_venmo_id" placeholder="@username" value="<?= h($venmo_prefill) ?>" pattern="@?[^\s@]+" title="A single Venmo @handle — one &quot;@&quot;, no spaces. Have an email address instead? Choose PayPal.">
       </div>
       <div class="form-group" id="pm_paypal_group" style="display:none">
         <label>PayPal Email *</label>

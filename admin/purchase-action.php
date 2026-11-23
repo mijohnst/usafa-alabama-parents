@@ -13,7 +13,7 @@ $note           = trim($_POST['note']            ?? '');
 $payment_method = trim($_POST['payment_method']  ?? '');
 $pdo    = get_pdo();
 
-if (!$id || !in_array($action, ['approve','submit','paid','send_paypal','check_paypal_status','archive','unarchive'])) {
+if (!$id || !in_array($action, ['approve','submit','paid','send_paypal','check_paypal_status','archive','unarchive','reopen'])) {
     flash('error', 'Invalid request.');
     header('Location: purchases.php'); exit;
 }
@@ -98,6 +98,10 @@ if ($action === 'approve') {
         flash('error', 'Only approved purchases can have payment submitted.');
         header('Location: purchases.php'); exit;
     }
+    if ($pm_err = purchase_payment_method_error($payment_method)) {
+        flash('error', 'Payment not submitted: ' . $pm_err);
+        header('Location: purchases.php'); exit;
+    }
     // reimbursed_note is the pre-4-step-workflow column name — still holds
     // this step's note (how/when payment was sent), see migrate_add_purchase_paid_step.sql.
     $pdo->prepare('UPDATE purchases SET status = ?, reimbursed_note = ?, payment_method = ?, updated_at = NOW() WHERE id = ?')
@@ -148,6 +152,10 @@ if ($action === 'approve') {
     $stored_pm = $p['payment_method'] ?? '';
     if (!str_starts_with($stored_pm, 'PayPal ')) {
         flash('error', 'This purchase\'s payment method is not PayPal.');
+        header('Location: purchases.php'); exit;
+    }
+    if ($pm_err = purchase_payment_method_error($stored_pm)) {
+        flash('error', 'Not sent: ' . $pm_err . ' Fix it on the purchase\'s Edit page first.');
         header('Location: purchases.php'); exit;
     }
     $paypal_email = trim(substr($stored_pm, 7));
@@ -214,6 +222,64 @@ if ($action === 'approve') {
     } else {
         flash('error', 'Could not check PayPal status: ' . $result['error']);
     }
+
+} elseif ($action === 'reopen') {
+    // Reopen for resubmit (added 2026-11-23): a purchase was marked
+    // Submitted/Paid to the wrong payee (e.g. a mistyped Venmo handle) and
+    // the payee has since been corrected on the Edit page. Sends it back to
+    // Approved so the treasurer runs Submit Payment again against the
+    // corrected payee. The old payment details are written into notes
+    // first, so the history survives the reset.
+    if (!is_treasurer()) {
+        flash('error', 'Only the treasurer can reopen a payment.');
+        header('Location: purchases.php'); exit;
+    }
+    if (!in_array($p['status'], ['submitted', 'paid'], true)) {
+        flash('error', 'Only purchases that are Submitted or Paid can be reopened for resubmit.');
+        header('Location: purchases.php'); exit;
+    }
+    // A real PayPal payout means money already moved through our own
+    // account. Reopening would clear that record, and the payout batch id
+    // is fixed per purchase, so a resend would be rejected anyway. Sort it
+    // out in PayPal first.
+    $pp_status = (string)($p['paypal_payout_status'] ?? '');
+    if (!empty($p['paypal_payout_batch_id']) || in_array($pp_status, ['SENDING', 'NEEDS_MANUAL_CHECK'], true)) {
+        flash('error', 'This purchase has a PayPal payout on record (status: ' . ($pp_status ?: 'sent') . '). Resolve it in the PayPal dashboard ("purchase-' . $id . '") — it can\'t be reopened here.');
+        header('Location: purchases.php'); exit;
+    }
+    if ($note === '') {
+        flash('error', 'A reason is required to reopen a payment.');
+        header('Location: purchases.php'); exit;
+    }
+
+    $history = sprintf(
+        "[%s — %s] Payment reopened for resubmit. Was: %s%s, method \"%s\"%s%s. Reason: %s",
+        date('Y-m-d'),
+        current_user_name(),
+        PURCHASE_STATUSES[$p['status']] ?? $p['status'],
+        !empty($p['paid_at']) ? ' ' . date('Y-m-d', strtotime($p['paid_at'])) : '',
+        (string)($p['payment_method'] ?? ''),
+        !empty($p['reimbursed_note']) ? ', submit note "' . $p['reimbursed_note'] . '"' : '',
+        !empty($p['paid_note']) ? ', paid note "' . $p['paid_note'] . '"' : '',
+        $note
+    );
+    $new_notes = trim((string)($p['notes'] ?? '')) === '' ? $history : rtrim((string)$p['notes']) . "\n\n" . $history;
+
+    // Guarded on the status we just read, so a double-click (or the
+    // treasurer acting in two tabs) can't reopen twice.
+    $upd = $pdo->prepare("UPDATE purchases
+                             SET status = 'approved', notes = ?, reimbursed_note = '', paid_note = '',
+                                 paid_at = NULL, paypal_payout_status = NULL, updated_at = NOW()
+                           WHERE id = ? AND status = ?");
+    $upd->execute([$new_notes, $id, $p['status']]);
+    if ($upd->rowCount() !== 1) {
+        flash('error', 'Could not reopen — the purchase changed in the meantime. Refresh and try again.');
+        header('Location: purchases.php'); exit;
+    }
+    // Pull it back out of the archive so it can't hide from the queue.
+    try { $pdo->prepare('UPDATE purchases SET archived = 0 WHERE id = ?')->execute([$id]); } catch (\PDOException $e) {}
+
+    flash('success', 'Payment reopened — the purchase is back to Approved. Check the payee and use 💸 Submit Payment to pay it again.');
 
 } elseif ($action === 'archive' || $action === 'unarchive') {
     // Treasurer only, same gate as the other payment-lifecycle actions above.

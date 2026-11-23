@@ -239,6 +239,8 @@ function confirmPrReimburse() {
     var venmo = document.getElementById('pr-venmo-id').value.trim();
     if (!venmo) { alert('Please enter the Venmo ID.'); return; }
     if (venmo.charAt(0) !== '@') venmo = '@' + venmo;
+    // One '@' (the leading one), no spaces — mirrors purchase_payment_method_error() in auth.php.
+    if (!/^@[^\s@]+$/.test(venmo)) { alert('Venmo ID must be a single @handle — one "@", no spaces. Have an email address instead? Choose PayPal.'); return; }
     fullMethod = 'Venmo ' + venmo;
   } else if (method === 'PayPal') {
     var paypal = document.getElementById('pr-paypal-email').value.trim();
